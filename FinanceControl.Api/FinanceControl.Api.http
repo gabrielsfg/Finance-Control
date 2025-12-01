@@ -1,0 +1,6 @@
+@FinanceControl.Api_HostAddress = http://localhost:5016
+
+GET {{FinanceControl.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
