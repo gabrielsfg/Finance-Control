@@ -69,5 +69,19 @@ nunit-*.xml
 # Visual Studio Code (caso alguém do time use)
 .vscode/
 
+#Ignorar arquivos de IDE
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+.wsuo
+
 # Misc
 .DS_Store
+
+## Build results
+[Bb]in/
+[Oo]bj/

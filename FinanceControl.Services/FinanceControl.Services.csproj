@@ -6,4 +6,15 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <Folder Include="Extensions\" />
+      <Folder Include="Validations\" />
+      <Folder Include="Services\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FluentValidation" Version="12.1.1" />
+      <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    </ItemGroup>
+
 </Project>
