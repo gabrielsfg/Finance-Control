@@ -16,6 +16,7 @@ namespace FinanceControl.Data.Data
         }
 
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<User> Users { get; set; }
 
         public override int SaveChanges()
         {
