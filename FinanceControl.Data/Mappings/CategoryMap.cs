@@ -9,16 +9,13 @@ using System.Threading.Tasks;
 
 namespace FinanceControl.Data.Mappings
 {
-    public class UserMap : IEntityTypeConfiguration<User>
+    public class CategoryMap : IEntityTypeConfiguration<Category>
     {
-        public void Configure(EntityTypeBuilder<User> builder)
+        public void Configure(EntityTypeBuilder<Category> builder)
         {
-            builder.ToTable("Users");
-            builder.HasKey(u => u.Id);
-            builder.Property(u => u.Email);
-            builder.Property(u => u.PasswordHash);
-            builder.Property(u => u.Name);
-            builder.Property(u => u.IsActive).HasDefaultValue(1);
+            builder.ToTable("Categories");
+            builder.HasKey(c => c.Id);
+            builder.Property(c => c.Name);
             builder.Property(u => u.CreatedAt)
                 .HasColumnType("timestamp without time zone")
                 .HasDefaultValueSql("timezone('America/Sao_Paulo', now())")
@@ -27,6 +24,11 @@ namespace FinanceControl.Data.Mappings
             builder.Property(u => u.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
                 .ValueGeneratedOnAdd();
+
+            builder.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

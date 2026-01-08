@@ -4,7 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FinanceControl.Domain.Entities;
-using FinanceControl.Shared.Dtos;
+using FinanceControl.Shared.Dtos.Request;
+using FinanceControl.Shared.Dtos.Respose;
 using FinanceControl.Shared.Models;
 
 namespace FinanceControl.Domain.Interfaces.Service

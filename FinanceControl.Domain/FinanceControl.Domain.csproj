@@ -7,10 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Interfaces\Repository\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\FinanceControl.Shared\FinanceControl.Shared.csproj" />
     </ItemGroup>
 

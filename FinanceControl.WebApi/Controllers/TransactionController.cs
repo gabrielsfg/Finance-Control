@@ -1,6 +1,7 @@
 ﻿using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Service;
-using FinanceControl.Shared.Dtos;
+using FinanceControl.Shared.Dtos.Request;
+using FinanceControl.Shared.Dtos.Respose;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

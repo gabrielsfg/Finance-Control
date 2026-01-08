@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FinanceControl.Shared.Dtos
+namespace FinanceControl.Shared.Dtos.Request
 {
     public class UserLoginRequestDto
     {
