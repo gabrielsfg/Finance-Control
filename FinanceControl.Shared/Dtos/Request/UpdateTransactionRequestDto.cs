@@ -1,4 +1,4 @@
-namespace FinanceControl.Shared.Dtos;
+namespace FinanceControl.Shared.Dtos.Request;
 
 public class UpdateTransactionRequestDto
 {

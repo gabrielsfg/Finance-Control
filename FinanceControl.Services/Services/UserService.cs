@@ -3,6 +3,7 @@ using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
+using FinanceControl.Shared.Dtos.Request;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;

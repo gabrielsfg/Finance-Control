@@ -1,7 +1,8 @@
 ﻿using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Service;
-using FinanceControl.Shared.Dtos;
+using FinanceControl.Shared.Dtos.Request;
+using FinanceControl.Shared.Dtos.Respose;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -20,7 +21,7 @@ namespace FinanceControl.Services.Services
             _context = context;
         }
 
-        public async Task<Result<CreateCategoryResponseDto>> CreateCategoryAsync(CreateCategoryRequestDto requestDto, int userId)
+        public async Task<Result<CategoryResponseDto>> CreateCategoryAsync(CreateCategoryRequestDto requestDto, int userId)
         {
             Category category = new Category
             {
@@ -31,11 +32,58 @@ namespace FinanceControl.Services.Services
             await _context.Categories.AddAsync(category);
             await _context.SaveChangesAsync();
 
-            return Result<CreateCategoryResponseDto>.Success(new CreateCategoryResponseDto
+            return Result<CategoryResponseDto>.Success(new CategoryResponseDto
             {
                 Id = category.Id,
                 Name = category.Name
             });
+        }
+        public async Task<GetCategoriesResponseDto> GetCategoriesAsync(int userId)
+        {
+            var categories = await _context.Categories.Where(c => c.UserId == userId).OrderBy(c => c.Name).ToListAsync();
+
+            var categoriesDto = categories.Select(c => new CategoryResponseDto
+            {
+                Id = c.Id,
+                Name = c.Name,
+            });
+
+            var response = new GetCategoriesResponseDto()
+            {
+                Categories = categoriesDto
+            };
+
+            return response;
+        }
+
+        public async Task<Result<GetCategoriesResponseDto>> PatchCategoryByIdAsync(PatchCategoryRequestDto requestDto, int userId)
+        {
+            var categoryToPatch = await _context.Categories
+                .FirstOrDefaultAsync(c => c.UserId.Equals(userId) && c.Id.Equals(requestDto.Id));
+
+            if (categoryToPatch == null)
+                return Result<GetCategoriesResponseDto>.Failure("Category not found.");
+
+            categoryToPatch.Name = requestDto.Name;
+            await _context.SaveChangesAsync();
+
+            var categories = await GetCategoriesAsync(userId);
+            return Result<GetCategoriesResponseDto>.Success(categories);
+        }
+
+        public async Task<Result<GetCategoriesResponseDto>> DeleteCategoryByIdAsync(int id, int userId)
+        {
+            var categoryToDelete = await _context.Categories
+                .FirstOrDefaultAsync(c => c.UserId.Equals(userId) && c.Id.Equals(id));
+
+            if (categoryToDelete == null)
+                return Result<GetCategoriesResponseDto>.Failure("Category not found.");
+
+            _context.Remove(categoryToDelete);
+            await _context.SaveChangesAsync();
+
+            var categories = await GetCategoriesAsync(userId);
+            return Result<GetCategoriesResponseDto>.Success(categories);
         }
     }
 }

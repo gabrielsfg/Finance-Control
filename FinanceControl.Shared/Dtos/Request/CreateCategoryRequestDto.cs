@@ -4,11 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FinanceControl.Shared.Dtos
+namespace FinanceControl.Shared.Dtos.Request
 {
-    public class CreateCategoryResponseDto
+    public class CreateCategoryRequestDto
     {
-        public int Id { get; set; }
         public string Name { get; set; }
     }
 }

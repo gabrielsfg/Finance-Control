@@ -1,5 +1,6 @@
 ﻿using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Shared.Dtos;
+using FinanceControl.Shared.Dtos.Request;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
