@@ -48,7 +48,7 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
-        [HttpGet("{id: int")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetAccountByIdAsync([FromRoute] int id)
         {
             var userId = GetUserId();
@@ -76,11 +76,14 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result.Value);
         }
 
-        [HttpDelete("{id: int}")]
-        public async Task<IActionResult> DeleteAccountByIdAsync([FromQuery]int id)
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteAccountByIdAsync([FromRoute]int id)
         {
             var userId = GetUserId();
             var result = await _accountService.DeleteAccountByIdAsync(id, userId);
+
+            if (result.IsFailure)
+                return NotFound(new { error = result.Error });
             return Ok(result.Value);
         }
     }
