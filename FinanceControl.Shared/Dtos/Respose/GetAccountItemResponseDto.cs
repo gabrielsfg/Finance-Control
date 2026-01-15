@@ -11,5 +11,6 @@ namespace FinanceControl.Shared.Dtos.Respose
         public int Id { get; set; }
         public string Name { get; set; }
         public int CurrentAmout { get; set; }
+        public Boolean IsDefaultAccount { get; set; }
     }
 }

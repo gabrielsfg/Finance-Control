@@ -31,8 +31,20 @@ namespace FinanceControl.Services.Services
                 Name = requestDto.Name,
                 CurrentBalance = requestDto.CurrentBalance,
                 GoalAmount = requestDto.GoalAmount,
-                IsDefaultAccount = true
+                IsDefaultAccount = requestDto.IsDefaultAccount
             };
+
+            var hasAnyAccount = await _context.Accounts.AnyAsync(a => a.UserId == userId);
+            if (!hasAnyAccount)
+            { 
+                account.IsDefaultAccount = true; 
+            } else if (account.IsDefaultAccount)
+            {
+                var currentDefault = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId.Equals(userId) && a.IsDefaultAccount == true);
+
+                if (currentDefault != null)
+                    currentDefault.IsDefaultAccount = false;
+            }
 
             await _context.Accounts.AddAsync(account);
             await _context.SaveChangesAsync();
@@ -50,7 +62,8 @@ namespace FinanceControl.Services.Services
                 {
                     Id = a.Id,
                     Name = a.Name,
-                    CurrentAmout = a.CurrentBalance
+                    CurrentAmout = a.CurrentBalance,
+                    IsDefaultAccount = a.IsDefaultAccount
                 })
                 .ToListAsync();
 
