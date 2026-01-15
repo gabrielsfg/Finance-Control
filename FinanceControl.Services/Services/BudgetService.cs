@@ -29,7 +29,7 @@ namespace FinanceControl.Services.Services
             {
                 Name = requestDto.Name,
                 StartDate = requestDto.StartDate,
-                Reccurrence = Enum.Parse<EnumBudgetRecurrence>(requestDto.Reccurence),
+                Reccurrence = Enum.Parse<EnumBudgetRecurrence>(requestDto.Reccurrence, ignoreCase: true),
                 UserId = userId,
             };
 
@@ -89,7 +89,7 @@ namespace FinanceControl.Services.Services
 
             budget.Name = requestDto.Name;
             budget.StartDate = requestDto.StartDate;
-            budget.Reccurrence = Enum.Parse<EnumBudgetRecurrence>(requestDto.Reccurrence);
+            budget.Reccurrence = Enum.Parse<EnumBudgetRecurrence>(requestDto.Reccurrence, ignoreCase: true);
 
             await _context.SaveChangesAsync();
             var budgetResult = await GetBudgetByIdAsync(requestDto.Id, userId);

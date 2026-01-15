@@ -10,6 +10,6 @@ namespace FinanceControl.Shared.Dtos.Request
     {
         public string Name {  get; set; }
         public int StartDate { get; set; }
-        public string Reccurence { get; set; }
+        public string Reccurrence { get; set; }
     }
 }
