@@ -1,6 +1,7 @@
 using System.Text;
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Interfaces.Service;
+using FinanceControl.Services.Extensions;
 using FinanceControl.Services.Services;
 using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
@@ -14,11 +15,7 @@ using Microsoft.OpenApi;
 var builder = WebApplication.CreateBuilder(args);
 
 //DI Services
-builder.Services.AddScoped<ITransactionService, TransactionService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<IAccountService, AccountService>();
-builder.Services.AddScoped<IBudgetService, BudgetService>();
+builder.Services.AddAplicationServices();
 
 
 //DI Repositories
