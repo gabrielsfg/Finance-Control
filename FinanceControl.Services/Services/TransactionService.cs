@@ -93,7 +93,7 @@ public class TransactionService : ITransactionService
 
     public async Task UpdateTransactionAsyncById(UpdateTransactionRequestDto requestDto)
     {
-        var transactionToPatch = await _context.Transactions.SingleAsync(t => t.Id.Equals(requestDto.TransactionId));
+        var transactionToPatch = await _context.Transactions.SingleAsync(t => t.Id == requestDto.TransactionId);
 
         if (transactionToPatch == null)
             throw new Exception($"Transaction with ID {requestDto.TransactionId} not found");
@@ -111,7 +111,7 @@ public class TransactionService : ITransactionService
 
     public async Task DeleteTransactionById(int transactionId)
     {
-        var transaction = await _context.Transactions.SingleAsync(t => t.Id.Equals(transactionId));
+        var transaction = await _context.Transactions.SingleAsync(t => t.Id == transactionId);
 
         if(transaction == null)
             throw new Exception($"Transaction with ID: {transactionId} not found");

@@ -6,6 +6,7 @@ using FinanceControl.Shared.Dtos.Respose;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,6 +24,11 @@ namespace FinanceControl.Services.Services
 
         public async Task<Result<IEnumerable<GetSubCategoryResponseDto>>> CreateSubCategoryAsync(CreateSubCategoryRequestDto requestDto, int userId)
         {
+            var categoryValidator = await ValidateCategoryByIdAsync(requestDto.CategoryId, userId);
+
+            if (!categoryValidator)
+                return Result<IEnumerable<GetSubCategoryResponseDto>>.Failure("Mother Category not found.");
+
             var subCategory = new SubCategory()
             {
                 Name = requestDto.Name,
@@ -39,7 +45,7 @@ namespace FinanceControl.Services.Services
 
         public async Task<IEnumerable<GetSubCategoryResponseDto>> GetAllSubCategoryAsync(int userId)
         {
-            var subCategories = await _context.SubCategories.Where(s => s.UserId.Equals(userId)).Select(s => new GetSubCategoryResponseDto
+            var subCategories = await _context.SubCategories.Where(s => s.UserId == userId).Select(s => new GetSubCategoryResponseDto
             {
                 Name = s.Name,
                 CategoryId = s.CategoryId,
@@ -51,27 +57,30 @@ namespace FinanceControl.Services.Services
 
         public async Task<GetSubCategoryResponseDto?> GetSubCategoryByIdAsync(int id, int userId)
         {
-            var subCategory = await _context.SubCategories.FirstOrDefaultAsync(s => s.UserId.Equals(userId) && s.Id.Equals(id));
-
-            if (subCategory == null)
-                return null;
-
-            var result = new GetSubCategoryResponseDto()
-            {
-                Name = subCategory.Name,
-                CategoryId = subCategory.CategoryId,
-                Id = subCategory.Id
-            };
-
-            return result;
+            return await _context.SubCategories
+                .Where(s => s.UserId == userId && s.Id == id)
+                .Select(s => new GetSubCategoryResponseDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    CategoryId = s.CategoryId
+                })
+                .FirstOrDefaultAsync();
         }
 
         public async Task<Result<IEnumerable<GetSubCategoryResponseDto>>> UpdateSubCategoryAsync(UpdateSubCategoryRequestDto requestDto, int userId)
         {
-            var subCategory = await _context.SubCategories.FirstOrDefaultAsync(s => s.UserId.Equals(userId) && s.Id.Equals(requestDto.Id));
+            var categoryValidator = await ValidateCategoryByIdAsync(requestDto.CategoryId, userId);
+
+            if (!categoryValidator)
+                return Result<IEnumerable<GetSubCategoryResponseDto>>.Failure("Mother Category not found.");
+
+
+            var subCategory = await _context.SubCategories.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == requestDto.Id);
 
             if (subCategory == null)
-                return null;
+                return Result<IEnumerable<GetSubCategoryResponseDto>>.Failure("SubCategory not found.");
+
 
             subCategory.Name = requestDto.Name;
             subCategory.CategoryId = requestDto.CategoryId;
@@ -84,10 +93,10 @@ namespace FinanceControl.Services.Services
 
         public async Task<Result<IEnumerable<GetSubCategoryResponseDto>>> DeleteSubCategoryAsync(int id, int userId)
         {
-            var subCategory = _context.SubCategories.FirstOrDefault(s => s.UserId.Equals(userId) && s.Id.Equals(id));
+            var subCategory = await _context.SubCategories.FirstOrDefaultAsync(s => s.UserId== userId && s.Id == id);
 
             if (subCategory == null)
-                return null;
+                return Result<IEnumerable<GetSubCategoryResponseDto>>.Failure("SubCategory not found.");
 
             _context.Remove(subCategory);
             await _context.SaveChangesAsync();
@@ -95,6 +104,12 @@ namespace FinanceControl.Services.Services
             var result = await GetAllSubCategoryAsync(userId);
 
             return Result<IEnumerable<GetSubCategoryResponseDto>>.Success(result);
+        }
+
+        private async Task<Boolean> ValidateCategoryByIdAsync(int categoryId, int userId)
+        {
+            var category = await _context.Categories.Where(x => x.UserId == userId && x.Id == categoryId).AnyAsync();
+            return category;
         }
     }
 }

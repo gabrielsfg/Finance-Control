@@ -56,7 +56,7 @@ namespace FinanceControl.Services.Services
         public async Task<Result<GetCategoriesResponseDto>> UpdateCategoryByIdAsync(UpdateCategoryRequestDto requestDto, int userId)
         {
             var categoryToPatch = await _context.Categories
-                .FirstOrDefaultAsync(c => c.UserId.Equals(userId) && c.Id.Equals(requestDto.Id));
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.Id == requestDto.Id);
 
             if (categoryToPatch == null)
                 return Result<GetCategoriesResponseDto>.Failure("Category not found.");
@@ -71,7 +71,7 @@ namespace FinanceControl.Services.Services
         public async Task<Result<GetCategoriesResponseDto>> DeleteCategoryByIdAsync(int id, int userId)
         {
             var categoryToDelete = await _context.Categories
-                .FirstOrDefaultAsync(c => c.UserId.Equals(userId) && c.Id.Equals(id));
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.Id == id);
 
             if (categoryToDelete == null)
                 return Result<GetCategoriesResponseDto>.Failure("Category not found.");

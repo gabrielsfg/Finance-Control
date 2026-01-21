@@ -40,7 +40,7 @@ namespace FinanceControl.Services.Services
                 account.IsDefaultAccount = true; 
             } else if (account.IsDefaultAccount)
             {
-                var currentDefault = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId.Equals(userId) && a.IsDefaultAccount == true);
+                var currentDefault = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId == userId && a.IsDefaultAccount == true);
 
                 if (currentDefault != null)
                     currentDefault.IsDefaultAccount = false;
@@ -56,7 +56,7 @@ namespace FinanceControl.Services.Services
         public async Task<GetAllAccountResponseDto> GetAllAccountAsync(int userId)
         {
             var accounts = await _context.Accounts
-                .Where(a => a.UserId.Equals(userId))
+                .Where(a => a.UserId == userId)
                 .OrderBy(a => a.Name)
                 .Select(a => new GetAccountItemResponseDto
                 {
@@ -75,7 +75,7 @@ namespace FinanceControl.Services.Services
 
         public async Task<GetAccountByIdResponseDto> GetAccountByIdAsync(int id, int userId)
         {
-            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId.Equals(userId) && a.Id.Equals(id));
+            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId == userId && a.Id == id);
 
             if (account == null)
                 return null;
@@ -92,7 +92,7 @@ namespace FinanceControl.Services.Services
 
         public async Task<Result<GetAllAccountResponseDto>> UpdateAccountAsync(UpdateAccountRequestDto requestDto, int userId)
         {
-            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId.Equals(userId) && a.Id.Equals(requestDto.Id));
+            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId == userId && a.Id == requestDto.Id);
 
             if (account == null)
                 return Result<GetAllAccountResponseDto>.Failure("Account not found.");
@@ -109,7 +109,7 @@ namespace FinanceControl.Services.Services
 
         public async Task<Result<GetAllAccountResponseDto>> DeleteAccountByIdAsync(int id, int userId)
         {
-            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId.Equals(userId) && a.Id.Equals(id));
+            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId == userId && a.Id == id);
 
             if (account == null)
                 return Result<GetAllAccountResponseDto>.Failure("Account not found.");

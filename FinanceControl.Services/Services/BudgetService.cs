@@ -41,7 +41,7 @@ namespace FinanceControl.Services.Services
 
         public async Task<List<GetAllBudgetResponseDto>> GetAllBudgetAsync(int userId)
         {
-            var budgets = await _context.Budgets.Where(b => b.UserId.Equals(userId)).Select(b => new GetAllBudgetResponseDto
+            var budgets = await _context.Budgets.Where(b => b.UserId == userId).Select(b => new GetAllBudgetResponseDto
             {
                 Id = b.Id,
                 Name = b.Name,
@@ -53,7 +53,7 @@ namespace FinanceControl.Services.Services
 
         public async Task<GetBudgetByIdResponseDto> GetBudgetByIdAsync(int id, int userId)
         {
-            var budget = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId.Equals(userId) && b.Id.Equals(id));
+            var budget = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId == userId && b.Id == id);
 
             if (budget == null)
                 return null;
@@ -82,7 +82,7 @@ namespace FinanceControl.Services.Services
 
         public async Task<Result<GetBudgetByIdResponseDto>> UpdateBudgetAsync(UpdateBudgetRequestDto requestDto, int userId)
         {
-            var budget = _context.Budgets.FirstOrDefault(b => b.UserId.Equals(userId) && b.Id.Equals(requestDto.Id));
+            var budget = _context.Budgets.FirstOrDefault(b => b.UserId == userId && b.Id == requestDto.Id);
 
             if (budget == null)
                 return Result<GetBudgetByIdResponseDto>.Failure("Budget not found.");
@@ -98,7 +98,7 @@ namespace FinanceControl.Services.Services
 
         public async Task<Result<List<GetAllBudgetResponseDto>>> DeleteBudgetAsync(int id, int userId)
         {
-            var budget = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId.Equals(userId) && b.Id.Equals(id));
+            var budget = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId == userId && b.Id == id);
 
             if(budget == null)
                 return Result<List<GetAllBudgetResponseDto>>.Failure("Budget not found.");
