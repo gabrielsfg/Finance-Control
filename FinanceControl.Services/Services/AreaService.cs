@@ -25,7 +25,7 @@ namespace FinanceControl.Services.Services
         {
             var validate = await ValidateBudgetByIdAsync(requestDto.BudgetId, userId);
             if (!validate)
-                return Result<IEnumerable<GetAllAreaItemResponseDto>>.Failure("Mother budger not found");
+                return Result<IEnumerable<GetAllAreaItemResponseDto>>.Failure("Mother budget not found");
 
             var area = new Area()
             {
@@ -34,7 +34,7 @@ namespace FinanceControl.Services.Services
                 Name = requestDto.Name
             };
 
-            await _context.Areas.AddAsync(area);
+            _context.Areas.Add(area);
             await _context.SaveChangesAsync();
 
             var result = await GetAllAreasAsync(requestDto.BudgetId, userId);
@@ -65,14 +65,17 @@ namespace FinanceControl.Services.Services
 
         public async Task<Result<IEnumerable<GetAllAreaItemResponseDto>>> UpdateAreaAsync(UpdateAreaRequestDto requestDto, int userId)
         {
-            var validate = await ValidateBudgetByIdAsync(requestDto.BudgetId, userId);
-            if (!validate)
-                return Result<IEnumerable<GetAllAreaItemResponseDto>>.Failure("Mother budget not found.");
-
-            var area = await _context.Areas.FirstOrDefaultAsync(a => a.UserId == userId && a.Id == requestDto.Id);
+            var area = await _context.Areas.FirstOrDefaultAsync(a => a.Id == requestDto.Id && a.UserId == userId);
 
             if (area == null)
                 return Result<IEnumerable<GetAllAreaItemResponseDto>>.Failure("Area not found.");
+
+            if (area.BudgetId != requestDto.BudgetId)
+            {
+                var budgetExists = await ValidateBudgetByIdAsync(requestDto.BudgetId, userId);
+                if (!budgetExists)
+                    return Result<IEnumerable<GetAllAreaItemResponseDto>>.Failure("Budget not found.");
+            }
 
             area.Name = requestDto.Name;
             area.BudgetId = requestDto.BudgetId;

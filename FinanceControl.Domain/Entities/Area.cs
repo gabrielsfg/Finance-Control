@@ -6,5 +6,6 @@ namespace FinanceControl.Domain.Entities
     {
         public int BudgetId { get; set; }
         public string Name { get; set; }
+        public ICollection<AreaCategory> AreaCategories { get; set; } = [];
     }
 }
