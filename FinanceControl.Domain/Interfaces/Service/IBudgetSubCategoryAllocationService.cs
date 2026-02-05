@@ -11,12 +11,12 @@ namespace FinanceControl.Domain.Interfaces.Service
 {
     public interface IBudgetSubCategoryAllocationService
     {
-        Task AddSubCategoryToBudgetAsync(AddSubCategoryToBudgetRequestDto requestDto, int userId);
+        Task<Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>> AddSubCategoryToBudgetAsync(AddSubCategoryToBudgetRequestDto requestDto, int userId);
         Task<Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>> GetAllSubCategoryAllocationByAreasAsync(List<int> areasId, int userId);
         Task<Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>> GetAllSubCategoryAllocationByBudgetAsync(int budgetId, int userId);
-        Task GetSubCategoryAllocationByIdAsync(int id, int userId);
-        Task UpdateBudgetSubCategoryAllocationAsync();
-        Task RemoveSubCategoryFromBudgetAsync();
+        Task<Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>> RemoveSubCategoryFromBudgetAsync(int allocationId, int budgetId, int userId);
+        Task<Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>> UpdateBudgetSubCategoryAllocationAsync(UpdateSubCategoryToBudgetRequestDto requestDto, int Id, int budgetId, int userId);
+        
 
     }
 }

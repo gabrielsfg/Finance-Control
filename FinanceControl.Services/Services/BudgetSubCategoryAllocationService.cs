@@ -5,11 +5,7 @@ using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Respose;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace FinanceControl.Services.Services
 {
@@ -22,8 +18,32 @@ namespace FinanceControl.Services.Services
             _context = context;
         }
 
-        public async Task AddSubCategoryToBudgetAsync(AddSubCategoryToBudgetRequestDto requestDto, int userId)
+        public async Task<Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>> AddSubCategoryToBudgetAsync(AddSubCategoryToBudgetRequestDto requestDto, int userId)
         {
+            var validateBudget = await ValidateBudgetByUserIdAsync(requestDto.BudgetId, userId);
+            if (!validateBudget)
+                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Invalid parameters.");
+
+            var validateArea = await ValidateAreaByUserIdAsync(requestDto.AreaId, userId);
+            if (!validateArea)
+                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Invalid parameters.");
+
+            var validateSubCategory = await ValidateSubCategoryByUserIdAsync(requestDto.SubCategoryId, userId);
+            if (!validateSubCategory)
+                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Invalid parameters.");
+
+            var validateAreaByBudget = await ValidateAreaByBudgetIdAsync(requestDto.AreaId, requestDto.BudgetId);
+            if (!validateAreaByBudget)
+                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Invalid parameters.");
+
+
+            var isDuplicate = await _context.BudgetSubcategoryAllocations
+                .AnyAsync(bsa => bsa.AreaId == requestDto.AreaId
+                && bsa.SubCategoryId == requestDto.SubCategoryId);
+
+            if (isDuplicate)
+                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Invalid parameters.");
+
             var allocation = new BudgetSubcategoryAllocation
             {
                 BudgetId = requestDto.BudgetId,
@@ -34,6 +54,13 @@ namespace FinanceControl.Services.Services
 
             _context.Add(allocation);
             await _context.SaveChangesAsync();
+
+            var area = new List<int>
+            {
+                requestDto.AreaId,
+            };
+
+            return await GetAllSubCategoryAllocationByAreasAsync(area, userId);
         }
 
         public async Task<Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>> GetAllSubCategoryAllocationByAreasAsync(List<int> areasId, int userId)
@@ -44,7 +71,7 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
 
             if (areas == null)
-                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Area not found.");
+                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Invalid parameters.");
 
             var allocations = await _context.BudgetSubcategoryAllocations
                 .Where(bsa => areasId.Contains(bsa.AreaId))
@@ -92,28 +119,57 @@ namespace FinanceControl.Services.Services
         {
             var validateBudget = await ValidateBudgetByUserIdAsync(budgetId, userId);
             if (!validateBudget)
-                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Budget not found.");
+                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Invalid parameters.");
 
             var areas = await _context.Areas.Where(a => a.BudgetId == budgetId).Select(a => a.Id).ToListAsync();
             if (!areas.Any())
-                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Area not found.");
+                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Invalid parameters.");
 
             return await GetAllSubCategoryAllocationByAreasAsync(areas, userId);
         }
 
-        public async Task GetSubCategoryAllocationByIdAsync(int id, int userId)
+        public async Task<Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>> RemoveSubCategoryFromBudgetAsync(int allocationId, int budgetId, int userId)
         {
-            throw new NotImplementedException();
+            var allocation = await _context.BudgetSubcategoryAllocations
+                .FirstOrDefaultAsync(bsa => bsa.Id == allocationId
+                && bsa.BudgetId == budgetId
+                && bsa.SubCategory.UserId == userId);
+
+            if (allocation == null)
+                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Invalid parameters.");
+
+            var areaResult = new List<int>
+            {
+                allocation.AreaId
+            };
+
+            _context.BudgetSubcategoryAllocations.Remove(allocation);
+            await _context.SaveChangesAsync();
+
+            return await GetAllSubCategoryAllocationByAreasAsync(areaResult, userId);
         }
 
-        public async Task RemoveSubCategoryFromBudgetAsync()
+        public async Task<Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>> UpdateBudgetSubCategoryAllocationAsync(UpdateSubCategoryToBudgetRequestDto requestDto, int Id, int budgetId, int userId)
         {
-            throw new NotImplementedException();
-        }
+            var allocation = await _context.BudgetSubcategoryAllocations
+                .FirstOrDefaultAsync(bsa => bsa.Id == Id
+                && bsa.BudgetId == budgetId
+                && bsa.SubCategory.UserId == userId);
 
-        public async Task UpdateBudgetSubCategoryAllocationAsync()
-        {
-            throw new NotImplementedException();
+            if (allocation == null)
+                return Result<IEnumerable<GetAllSubCategoryAllocationByAreaResponseDto>>.Failure("Invalid parameters.");
+
+            allocation.ExpectedValue = requestDto.ExpectedValue;
+
+            await _context.SaveChangesAsync();
+
+            var area = new List<int>
+            {
+                allocation.AreaId
+            };
+
+            return await GetAllSubCategoryAllocationByAreasAsync(area, userId);
+
         }
 
         private async Task<bool> ValidateBudgetByUserIdAsync(int budgetId, int userId)
