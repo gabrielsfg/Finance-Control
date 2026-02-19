@@ -1,0 +1,30 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# VSCode (global)
+.vscode/*
+!.vscode/extensions.json
+
+# Env (caso use no mono depois)
+.env
+.env.*
+
+# Logs
+*.log
+
+# Node (futuro front web)
+node_modules/
+dist/
+build/
+
+# Git
+*.orig
