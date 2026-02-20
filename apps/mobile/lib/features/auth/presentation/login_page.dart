@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/widgets/app_widgets.dart';
+import '../providers/auth_provider.dart';
+
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -10,13 +16,14 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  String? _errorMessage;
+  String? _emailError;
+  String? _passwordError;
+  String? _globalError;
 
   @override
   void dispose() {
@@ -25,203 +32,191 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
+  bool _validate() {
+    String? emailErr;
+    String? passErr;
+
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      emailErr = 'Informe seu e-mail';
+    } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+      emailErr = 'E-mail inválido';
+    }
+
+    if (_passwordController.text.isEmpty) {
+      passErr = 'Informe sua senha';
+    }
+
+    setState(() {
+      _emailError = emailErr;
+      _passwordError = passErr;
+    });
+
+    return emailErr == null && passErr == null;
+  }
+
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_validate()) return;
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _globalError = null;
     });
 
     try {
-      // TODO: chamar authRepository.login() e depois authNotifier.onLoginSuccess()
+      // TODO: call authRepository.login() then authNotifier.onLoginSuccess()
       // final result = await ref.read(authRepositoryProvider).login(
       //   email: _emailController.text.trim(),
       //   password: _passwordController.text,
       // );
-      // await ref.read(authNotifierProvider.notifier).onLoginSuccess(
-      //   accessToken: result.accessToken,
-      //   refreshToken: result.refreshToken,
-      // );
+      // TODO: remove dummy bypass before production
+      await ref.read(authNotifierProvider.notifier).onLoginSuccess(
+        accessToken: 'dummy-access-token',
+        refreshToken: 'dummy-refresh-token',
+      );
     } catch (e) {
-      setState(() => _errorMessage = _mapError(e));
+      setState(() => _globalError = 'E-mail ou senha incorretos.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  String _mapError(Object e) {
-    // TODO: mapear DioException para mensagens amigáveis
-    return 'E-mail ou senha incorretos.';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final t = AppThemeTokens.of(context);
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // ── Header ────────────────────────────────────────────
-                    // TODO: substituir pelo logo/header do Figma
-                    const _AuthHeader(
-                      title: 'Entrar',
-                      subtitle: 'Bem-vindo de volta',
-                    ),
-                    const SizedBox(height: 40),
+      body: AppBackground(
+        scrollable: false,
+        child: SizedBox.expand(
+          child: SafeArea(
+            child: Padding(
+              padding: AppSpacing.screenPadding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 12),
 
-                    // ── Error banner ──────────────────────────────────────
-                    if (_errorMessage != null) ...[
-                      _ErrorBanner(message: _errorMessage!),
-                      const SizedBox(height: 16),
-                    ],
+                  // ── Theme toggle ───────────────────────────────────────────
+                  const Align(
+                    alignment: Alignment.centerRight,
+                    child: ThemeToggleButton(),
+                  ),
+                  const SizedBox(height: 24),
 
-                    // ── Email ─────────────────────────────────────────────
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      autocorrect: false,
-                      decoration: const InputDecoration(
-                        labelText: 'E-mail',
-                        prefixIcon: Icon(Icons.email_outlined),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Informe seu e-mail';
-                        }
-                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value.trim())) {
-                          return 'E-mail inválido';
-                        }
-                        return null;
-                      },
+                  // ── Logo ──────────────────────────────────────────────────
+                  const Center(child: AppLogo(size: 64)),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Text(
+                      'FinanceControl',
+                      style: AppTextStyles.h3(t.txtPrimary)
+                          .copyWith(fontWeight: FontWeight.w700),
                     ),
+                  ),
+                  const SizedBox(height: 52),
+
+                  // ── Heading ────────────────────────────────────────────────
+                  Text(
+                    'Bem-vindo de volta 👋',
+                    style: AppTextStyles.h1(t.txtPrimary),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Acesse sua conta para continuar',
+                    style: AppTextStyles.body(t.txtSecondary),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // ── Global error ───────────────────────────────────────────
+                  if (_globalError != null) ...[
+                    _ErrorBanner(message: _globalError!),
                     const SizedBox(height: 16),
+                  ],
 
-                    // ── Password ──────────────────────────────────────────
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        labelText: 'Senha',
-                        prefixIcon: const Icon(Icons.lock_outlined),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                          onPressed: () =>
-                              setState(() => _obscurePassword = !_obscurePassword),
+                  // ── Email ──────────────────────────────────────────────────
+                  AppInputField(
+                    placeholder: 'Email',
+                    controller: _emailController,
+                    errorText: _emailError,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    onChanged: (_) => setState(() => _emailError = null),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // ── Password ───────────────────────────────────────────────
+                  AppInputField(
+                    placeholder: 'Senha',
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    errorText: _passwordError,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: _submit,
+                    onChanged: (_) => setState(() => _passwordError = null),
+                    rightIcon: GestureDetector(
+                      onTap: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          size: 20,
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Informe sua senha';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: 8),
+                  ),
+                  const SizedBox(height: 28),
 
-                    // ── Forgot password ───────────────────────────────────
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          // TODO: implementar recuperação de senha
-                        },
-                        child: const Text('Esqueci a senha'),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                  // ── Submit button ──────────────────────────────────────────
+                  _isLoading
+                      ? Center(
+                          child: SizedBox(
+                            height: 48,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: t.primary,
+                                strokeWidth: 2.5,
+                              ),
+                            ),
+                          ),
+                        )
+                      : PrimaryButton(label: 'Entrar', onPressed: _submit),
 
-                    // ── Submit button ─────────────────────────────────────
-                    FilledButton(
-                      onPressed: _isLoading ? null : _submit,
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Entrar'),
-                    ),
-                    const SizedBox(height: 24),
+                  const Spacer(),
 
-                    // ── Register link ─────────────────────────────────────
-                    Row(
+                  // ── Register link ──────────────────────────────────────────
+                  Center(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Não tem uma conta?',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                          'Não tem conta? ',
+                          style: AppTextStyles.body(t.txtSecondary)
+                              .copyWith(fontSize: 14),
                         ),
-                        TextButton(
-                          onPressed: () => context.push('/register'),
-                          child: const Text('Criar conta'),
+                        GestureDetector(
+                          onTap: () => context.push('/register'),
+                          child: Text(
+                            'Cadastre-se',
+                            style: AppTextStyles.body(t.primary).copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 32),
+                ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Shared auth widgets (movidos para shared/widgets/auth/ quando o design chegar)
-// ────────────────────────────────────────────────────────────────────────────
-
-class _AuthHeader extends StatelessWidget {
-  const _AuthHeader({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // TODO: substituir pelo logo do Figma
-        Text(
-          'FinanceControl',
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 24),
-        Text(title, style: theme.textTheme.headlineMedium),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -233,22 +228,20 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final t = AppThemeTokens.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(12),
+        color: t.error.withValues(alpha: t.isDark ? 0.15 : 0.08),
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: t.error.withValues(alpha: 0.35)),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: colorScheme.onErrorContainer, size: 20),
-          const SizedBox(width: 12),
+          Icon(Icons.error_outline, color: t.error, size: 18),
+          const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: colorScheme.onErrorContainer),
-            ),
+            child: Text(message, style: AppTextStyles.bodySm(t.error)),
           ),
         ],
       ),

@@ -39,8 +39,11 @@ lib/
 │   │   └── app_router.dart      # GoRouter + auth redirect + _RouterListenable
 │   ├── storage/
 │   │   └── token_storage.dart   # JWT access/refresh token persistence
-│   └── theme/
-│       └── app_theme.dart       # Material 3 theme (update with Figma colors)
+│   ├── theme/
+│   │   └── app_theme.dart       # Material 3 theme (update with Figma colors)
+│   └── utils/
+│       ├── formatters.dart      # Currency, date, and number formatting utilities
+│       └── extensions.dart      # App-wide Dart extension methods
 ├── features/                    # One folder per domain
 │   ├── auth/
 │   │   ├── data/                # Repository + DTOs (Request/Response separated)
@@ -241,6 +244,18 @@ Enums are sent to the backend as their exact name string. Match the backend enum
 - `context.go('/path')` — replaces the navigation stack (use for bottom nav tabs)
 - `context.push('/path')` — pushes onto the stack (back button works)
 - Never use `Navigator.of(context)` — always use GoRouter
+
+### Formatters and utilities
+
+All formatting logic (currency, dates, percentages, labels) must live in `lib/core/utils/formatters.dart` or a dedicated file inside `lib/core/utils/`. Never define formatting functions inside a page or widget file. If a helper is used in more than one place, or could be used in more than one place, it belongs in `core/utils/`.
+
+### Page files
+
+Page files must contain only widgets. Do not define data classes, model classes, or helper functions inside a page file. Private data classes (`_SomeData`) defined in a page file are forbidden — if a class is needed, create it in the appropriate `data/models/` or `shared/` location.
+
+### Language
+
+All code must be written in English without exception. This includes variable names, class names, method names, comments, documentation, and any hardcoded placeholder or mock data used during development. Portuguese is not allowed anywhere in the codebase. UI-facing strings displayed to the user are the only exception, as they are part of the product copy.
 
 ### Widgets
 
