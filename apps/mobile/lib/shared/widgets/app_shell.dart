@@ -27,9 +27,7 @@ class AppShell extends StatelessWidget {
         backgroundColor: Colors.transparent,
         body: child,
         floatingActionButton: AppFAB(
-          onTap: () {
-            // TODO: navigate to transaction creation
-          },
+          onTap: () => context.push('/transactions/add'),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         bottomNavigationBar: AppNavBar(

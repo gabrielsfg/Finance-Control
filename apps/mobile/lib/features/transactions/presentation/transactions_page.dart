@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -18,20 +19,28 @@ final _kGroups = [
     date: DateTime(2026, 2, 19),
     items: [
       TransactionItem(
-        name: 'Café da manhã',
-        subtitle: 'Alimentação · Café',
+        name: 'Breakfast',
+        subtitle: 'Food · Café',
         amountCents: -1200,
         icon: Icons.coffee_outlined,
         color: const Color(0xFFF59E0B),
         date: DateTime(2026, 2, 19),
+        category: 'Food',
+        subcategory: 'Café',
+        account: 'Nubank',
+        type: 'Expense',
       ),
       TransactionItem(
-        name: 'Uber trabalho',
-        subtitle: 'Transporte · App',
+        name: 'Uber to work',
+        subtitle: 'Transport · Ride',
         amountCents: -1890,
         icon: Icons.directions_car_outlined,
         color: const Color(0xFF06B6D4),
         date: DateTime(2026, 2, 19),
+        category: 'Transport',
+        subcategory: 'Ride',
+        account: 'Nubank',
+        type: 'Expense',
       ),
     ],
   ),
@@ -40,19 +49,28 @@ final _kGroups = [
     items: [
       TransactionItem(
         name: 'iFood',
-        subtitle: 'Alimentação · Delivery',
+        subtitle: 'Food · Delivery',
         amountCents: -6790,
         icon: Icons.restaurant_outlined,
         color: const Color(0xFFEF4444),
         date: DateTime(2026, 2, 18),
+        category: 'Food',
+        subcategory: 'Delivery',
+        account: 'Nubank',
+        type: 'Expense',
       ),
       TransactionItem(
-        name: 'Salário',
-        subtitle: 'Receita',
+        name: 'Salary',
+        subtitle: 'Income · Work',
         amountCents: 520000,
         icon: Icons.trending_up,
         color: const Color(0xFF22C55E),
         date: DateTime(2026, 2, 18),
+        category: 'Income',
+        subcategory: 'Salary',
+        account: 'Nubank',
+        type: 'Income',
+        recurrence: 'Monthly',
       ),
     ],
   ),
@@ -60,12 +78,17 @@ final _kGroups = [
     date: DateTime(2026, 2, 15),
     items: [
       TransactionItem(
-        name: 'Aluguel',
-        subtitle: 'Moradia · Aluguel',
+        name: 'Rent',
+        subtitle: 'Housing · Rent',
         amountCents: -180000,
         icon: Icons.home_outlined,
         color: const Color(0xFF8B5CF6),
         date: DateTime(2026, 2, 15),
+        category: 'Housing',
+        subcategory: 'Rent',
+        account: 'Nubank',
+        type: 'Expense',
+        recurrence: 'Monthly',
       ),
     ],
   ),
@@ -73,20 +96,28 @@ final _kGroups = [
     date: DateTime(2026, 2, 14),
     items: [
       TransactionItem(
-        name: 'Farmácia',
-        subtitle: 'Saúde · Remédios',
+        name: 'Pharmacy',
+        subtitle: 'Health · Medicine',
         amountCents: -4580,
         icon: Icons.local_pharmacy_outlined,
         color: const Color(0xFFEF4444),
         date: DateTime(2026, 2, 14),
+        category: 'Health',
+        subcategory: 'Medicine',
+        account: 'Nubank',
+        type: 'Expense',
       ),
       TransactionItem(
         name: 'Uber',
-        subtitle: 'Transporte · App',
+        subtitle: 'Transport · Ride',
         amountCents: -3240,
         icon: Icons.directions_car_outlined,
         color: const Color(0xFF06B6D4),
         date: DateTime(2026, 2, 14),
+        category: 'Transport',
+        subcategory: 'Ride',
+        account: 'Nubank',
+        type: 'Expense',
       ),
     ],
   ),
@@ -159,7 +190,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
-              _SummaryHeader(
+              const _SummaryHeader(
                 income: _kIncome,
                 expense: _kExpense,
                 balance: _kBalance,
@@ -208,7 +239,7 @@ class _SummaryHeader extends StatelessWidget {
     return Column(
       children: [
         Text(
-          'Transações',
+          'Transactions',
           style: AppTextStyles.h2(t.txtPrimary).copyWith(
             fontWeight: FontWeight.w700,
             fontSize: 22,
@@ -221,7 +252,7 @@ class _SummaryHeader extends StatelessWidget {
             children: [
               Expanded(
                 child: _SummaryColumn(
-                  label: 'Receitas',
+                  label: 'Income',
                   value: formatCurrency(income),
                   color: t.success,
                 ),
@@ -229,7 +260,7 @@ class _SummaryHeader extends StatelessWidget {
               _VerticalDivider(),
               Expanded(
                 child: _SummaryColumn(
-                  label: 'Despesas',
+                  label: 'Expenses',
                   value: formatCurrency(expense),
                   color: t.error,
                 ),
@@ -237,7 +268,7 @@ class _SummaryHeader extends StatelessWidget {
               _VerticalDivider(),
               Expanded(
                 child: _SummaryColumn(
-                  label: 'Saldo',
+                  label: 'Balance',
                   value: formatCurrency(balance),
                   color: t.success,
                 ),
@@ -306,10 +337,10 @@ class _FilterChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const filters = [
-      (_TransactionFilter.all, 'Tudo'),
-      (_TransactionFilter.expenses, 'Despesas'),
-      (_TransactionFilter.income, 'Receitas'),
-      (_TransactionFilter.recurring, 'Recorrentes'),
+      (_TransactionFilter.all, 'All'),
+      (_TransactionFilter.expenses, 'Expenses'),
+      (_TransactionFilter.income, 'Income'),
+      (_TransactionFilter.recurring, 'Recurring'),
     ];
 
     return SingleChildScrollView(
@@ -426,8 +457,8 @@ class _TransactionGroupSection extends StatelessWidget {
   }
 
   String _groupLabel() {
-    if (_isToday(group.date)) return 'HOJE';
-    if (_isYesterday(group.date)) return 'ONTEM';
+    if (_isToday(group.date)) return 'TODAY';
+    if (_isYesterday(group.date)) return 'YESTERDAY';
     return formatDayHeader(group.date);
   }
 
@@ -485,47 +516,51 @@ class _TransactionRow extends StatelessWidget {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: item.color.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+        GestureDetector(
+          onTap: () => context.push('/transactions/detail', extra: item),
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: item.color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(item.icon, color: item.color, size: 20),
                 ),
-                child: Icon(item.icon, color: item.color, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.name,
-                      style: AppTextStyles.body(t.txtPrimary).copyWith(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        style: AppTextStyles.body(t.txtPrimary).copyWith(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.subtitle,
-                      style: AppTextStyles.bodySm(t.txtTertiary)
-                          .copyWith(fontSize: 12),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        item.subtitle,
+                        style: AppTextStyles.bodySm(t.txtTertiary)
+                            .copyWith(fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Text(
-                amountStr,
-                style: AppTextStyles.mono(amountColor, fontSize: 13).copyWith(
-                  fontWeight: FontWeight.w700,
+                Text(
+                  amountStr,
+                  style: AppTextStyles.mono(amountColor, fontSize: 13).copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         if (showDivider)

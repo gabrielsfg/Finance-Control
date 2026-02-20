@@ -9,6 +9,9 @@ import '../../features/auth/presentation/splash_page.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/budgets/presentation/budgets_page.dart';
 import '../../features/home/presentation/home_page.dart';
+import '../../features/transactions/data/models/transaction_item.dart';
+import '../../features/transactions/presentation/add_transaction_page.dart';
+import '../../features/transactions/presentation/transaction_detail_page.dart';
 import '../../features/transactions/presentation/transactions_page.dart';
 import '../../shared/widgets/app_shell.dart';
 
@@ -56,6 +59,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/transactions',
             builder: (_, _) => const TransactionsPage(),
+            routes: [
+              GoRoute(
+                path: 'add',
+                builder: (_, _) => const AddTransactionPage(),
+              ),
+              GoRoute(
+                path: 'detail',
+                builder: (context, state) {
+                  final transaction = state.extra as TransactionItem;
+                  return TransactionDetailPage(transaction: transaction);
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: '/budgets',

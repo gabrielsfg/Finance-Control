@@ -6,8 +6,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../transactions/data/models/transaction_item.dart';
 import '../data/models/category_preview.dart';
-import '../data/models/transaction_preview.dart';
 
 // ── Mock data (TODO: replace with Riverpod providers) ─────────────────────
 
@@ -18,23 +18,80 @@ const _kBalance = 384752;  // R$ 3.847,52
 const _kIncome  = 520000;  // R$ 5.200,00
 const _kExpense = 135248;  // R$ 1.352,48
 
-const _kBudgetName    = 'Custos Fixos';
+const _kBudgetName    = 'Fixed Costs';
 const _kBudgetPercent = 0.85;
 const _kBudgetSpent   = 161500; // R$ 1.615,00
 
 const _kCategories = [
-  CategoryPreview('Moradia',     Icons.home_outlined,             180000, Color(0xFF8B5CF6)),
-  CategoryPreview('Alimentação', Icons.restaurant_outlined,        48720, Color(0xFFF59E0B)),
-  CategoryPreview('Transporte',  Icons.directions_car_outlined,    21000, Color(0xFF06B6D4)),
-  CategoryPreview('Saúde',       Icons.favorite_outline,           15600, Color(0xFFEF4444)),
+  CategoryPreview('Housing',     Icons.home_outlined,             180000, Color(0xFF8B5CF6)),
+  CategoryPreview('Food',        Icons.restaurant_outlined,        48720, Color(0xFFF59E0B)),
+  CategoryPreview('Transport',   Icons.directions_car_outlined,    21000, Color(0xFF06B6D4)),
+  CategoryPreview('Health',      Icons.favorite_outline,           15600, Color(0xFFEF4444)),
 ];
 
-const _kTransactions = [
-  TransactionPreview('Aluguel',  'Moradia · Aluguel',      -180000, Icons.home_outlined,            Color(0xFF8B5CF6)),
-  TransactionPreview('iFood',    'Alimentação · Delivery',   -6790, Icons.restaurant_outlined,      Color(0xFFF59E0B)),
-  TransactionPreview('Uber',     'Transporte · App',          -3240, Icons.directions_car_outlined, Color(0xFF06B6D4)),
-  TransactionPreview('Salário',  'Receita · Trabalho',       520000, Icons.work_outline,            Color(0xFF22C55E)),
-  TransactionPreview('Farmácia', 'Saúde · Remédios',          -4580, Icons.local_pharmacy_outlined, Color(0xFFEF4444)),
+final _kTransactions = [
+  TransactionItem(
+    name: 'Rent',
+    subtitle: 'Housing · Rent',
+    amountCents: -180000,
+    icon: Icons.home_outlined,
+    color: const Color(0xFF8B5CF6),
+    date: DateTime(2026, 2, 15),
+    category: 'Housing',
+    subcategory: 'Rent',
+    account: 'Nubank',
+    type: 'Expense',
+    recurrence: 'Monthly',
+  ),
+  TransactionItem(
+    name: 'iFood',
+    subtitle: 'Food · Delivery',
+    amountCents: -6790,
+    icon: Icons.restaurant_outlined,
+    color: const Color(0xFFF59E0B),
+    date: DateTime(2026, 2, 18),
+    category: 'Food',
+    subcategory: 'Delivery',
+    account: 'Nubank',
+    type: 'Expense',
+  ),
+  TransactionItem(
+    name: 'Uber',
+    subtitle: 'Transport · Ride',
+    amountCents: -3240,
+    icon: Icons.directions_car_outlined,
+    color: const Color(0xFF06B6D4),
+    date: DateTime(2026, 2, 14),
+    category: 'Transport',
+    subcategory: 'Ride',
+    account: 'Nubank',
+    type: 'Expense',
+  ),
+  TransactionItem(
+    name: 'Salary',
+    subtitle: 'Income · Work',
+    amountCents: 520000,
+    icon: Icons.work_outline,
+    color: const Color(0xFF22C55E),
+    date: DateTime(2026, 2, 18),
+    category: 'Income',
+    subcategory: 'Salary',
+    account: 'Nubank',
+    type: 'Income',
+    recurrence: 'Monthly',
+  ),
+  TransactionItem(
+    name: 'Pharmacy',
+    subtitle: 'Health · Medicine',
+    amountCents: -4580,
+    icon: Icons.local_pharmacy_outlined,
+    color: const Color(0xFFEF4444),
+    date: DateTime(2026, 2, 14),
+    category: 'Health',
+    subcategory: 'Medicine',
+    account: 'Nubank',
+    type: 'Expense',
+  ),
 ];
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -94,7 +151,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Olá, $_kUserName 👋',
+                'Hello, $_kUserName 👋',
                 style: AppTextStyles.body(t.txtSecondary),
               ),
               const SizedBox(height: 2),
@@ -124,7 +181,7 @@ class _BalanceCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Saldo Total',
+            'Total Balance',
             textAlign: TextAlign.center,
             style: AppTextStyles.caption(t.txtSecondary)
                 .copyWith(fontSize: 12, letterSpacing: 0.5),
@@ -140,7 +197,7 @@ class _BalanceCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _MiniCard(
-                  label: 'RECEITAS',
+                  label: 'INCOME',
                   value: formatCurrency(_kIncome),
                   isIncome: true,
                 ),
@@ -148,7 +205,7 @@ class _BalanceCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: _MiniCard(
-                  label: 'DESPESAS',
+                  label: 'EXPENSES',
                   value: formatCurrency(_kExpense),
                   isIncome: false,
                 ),
@@ -235,7 +292,7 @@ class _BudgetCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'ORÇAMENTO ATIVO',
+                      'ACTIVE BUDGET',
                       style: AppTextStyles.caption(t.txtTertiary).copyWith(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
@@ -260,14 +317,14 @@ class _BudgetCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                '${formatCurrency(_kBudgetSpent)} gastos',
+                '${formatCurrency(_kBudgetSpent)} spent',
                 style: AppTextStyles.bodySm(t.txtSecondary),
               ),
               const Spacer(),
               GestureDetector(
                 onTap: () => context.go('/budgets'),
                 child: Text(
-                  'Ver orçamento →',
+                  'View budget →',
                   style: AppTextStyles.bodySm(t.primary)
                       .copyWith(fontWeight: FontWeight.w500),
                 ),
@@ -292,7 +349,7 @@ class _TopCategoriesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Top Categorias', style: AppTextStyles.h3(t.txtPrimary)),
+        Text('Top Categories', style: AppTextStyles.h3(t.txtPrimary)),
         const SizedBox(height: 14),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -377,14 +434,14 @@ class _RecentTransactionsSection extends StatelessWidget {
         Row(
           children: [
             Text(
-              'Transações Recentes',
+              'Recent Transactions',
               style: AppTextStyles.h3(t.txtPrimary),
             ),
             const Spacer(),
             GestureDetector(
               onTap: () => context.go('/transactions'),
               child: Text(
-                'Ver todas →',
+                'See all →',
                 style: AppTextStyles.bodySm(t.primary)
                     .copyWith(fontWeight: FontWeight.w500),
               ),
@@ -404,7 +461,7 @@ class _RecentTransactionsSection extends StatelessWidget {
 }
 
 class _TransactionItem extends StatelessWidget {
-  final TransactionPreview data;
+  final TransactionItem data;
   final bool showDivider;
 
   const _TransactionItem({required this.data, this.showDivider = true});
@@ -419,47 +476,51 @@ class _TransactionItem extends StatelessWidget {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: data.color.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+        GestureDetector(
+          onTap: () => context.push('/transactions/detail', extra: data),
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: data.color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(data.icon, color: data.color, size: 20),
                 ),
-                child: Icon(data.icon, color: data.color, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      data.name,
-                      style: AppTextStyles.body(t.txtPrimary).copyWith(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data.name,
+                        style: AppTextStyles.body(t.txtPrimary).copyWith(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      data.category,
-                      style: AppTextStyles.bodySm(t.txtTertiary),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        data.subtitle,
+                        style: AppTextStyles.bodySm(t.txtTertiary),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Text(
-                amountStr,
-                style: AppTextStyles.body(amountColor).copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
+                Text(
+                  amountStr,
+                  style: AppTextStyles.body(amountColor).copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         if (showDivider)
