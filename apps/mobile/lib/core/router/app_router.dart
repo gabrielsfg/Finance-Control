@@ -8,6 +8,9 @@ import '../../features/auth/presentation/register_page.dart';
 import '../../features/auth/presentation/splash_page.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/budgets/presentation/budgets_page.dart';
+import '../../features/budgets/presentation/create_budget_step1_page.dart';
+import '../../features/budgets/presentation/create_budget_step2_page.dart';
+import '../../features/budgets/presentation/create_budget_step3_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/transactions/data/models/transaction_item.dart';
 import '../../features/transactions/presentation/add_transaction_page.dart';
@@ -76,6 +79,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/budgets',
             builder: (_, _) => const BudgetsPage(),
+            routes: [
+              GoRoute(
+                path: 'create/step1',
+                builder: (_, _) => const CreateBudgetStep1Page(),
+              ),
+              GoRoute(
+                path: 'create/step2',
+                builder: (_, _) => const CreateBudgetStep2Page(),
+              ),
+              GoRoute(
+                path: 'create/step3',
+                builder: (_, _) => const CreateBudgetStep3Page(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/accounts',
