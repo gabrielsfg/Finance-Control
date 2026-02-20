@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/accounts/presentation/accounts_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/register_page.dart';
+import '../../features/auth/presentation/splash_page.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/budgets/presentation/budgets_page.dart';
 import '../../features/home/presentation/home_page.dart';
@@ -15,23 +16,28 @@ final routerProvider = Provider<GoRouter>((ref) {
   final notifier = _RouterListenable(ref);
 
   final router = GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/splash',
     refreshListenable: notifier,
     redirect: (context, state) {
       final authState = ref.read(authNotifierProvider);
 
-      // Não redireciona enquanto o estado está carregando
+      // Do not redirect while auth state is loading
       if (authState.isLoading) return null;
 
       final isAuthenticated = authState.valueOrNull?.isAuthenticated ?? false;
       final isOnAuthRoute = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register';
+          state.matchedLocation == '/register' ||
+          state.matchedLocation == '/splash';
 
       if (!isAuthenticated && !isOnAuthRoute) return '/login';
       if (isAuthenticated && isOnAuthRoute) return '/';
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (_, _) => const SplashPage(),
+      ),
       GoRoute(
         path: '/login',
         builder: (_, _) => const LoginPage(),
@@ -68,7 +74,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   return router;
 });
 
-/// Escuta mudanças no AuthState e notifica o GoRouter para reavaliar o redirect.
+/// Listens for AuthState changes and notifies GoRouter to re-evaluate the redirect.
 class _RouterListenable extends ChangeNotifier {
   _RouterListenable(Ref ref) {
     _subscription = ref.listen<AsyncValue<AuthState>>(

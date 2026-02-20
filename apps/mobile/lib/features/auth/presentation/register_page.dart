@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/widgets/app_widgets.dart';
+import '../providers/auth_provider.dart';
+
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 
@@ -10,7 +16,6 @@ class RegisterPage extends ConsumerStatefulWidget {
 }
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
-  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -19,7 +24,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  String? _errorMessage;
+  String? _nameError;
+  String? _emailError;
+  String? _passwordError;
+  String? _confirmPasswordError;
+  String? _globalError;
 
   @override
   void dispose() {
@@ -30,248 +39,266 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     super.dispose();
   }
 
+  bool _validate() {
+    String? nameErr;
+    String? emailErr;
+    String? passErr;
+    String? confirmErr;
+
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      nameErr = 'Informe seu nome';
+    } else if (name.length < 2) {
+      nameErr = 'Nome muito curto';
+    }
+
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      emailErr = 'Informe seu e-mail';
+    } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+      emailErr = 'E-mail inválido';
+    }
+
+    if (_passwordController.text.isEmpty) {
+      passErr = 'Informe uma senha';
+    } else if (_passwordController.text.length < 8) {
+      passErr = 'Mínimo 8 caracteres';
+    }
+
+    if (_confirmPasswordController.text.isEmpty) {
+      confirmErr = 'Confirme sua senha';
+    } else if (_confirmPasswordController.text != _passwordController.text) {
+      confirmErr = 'As senhas não coincidem';
+    }
+
+    setState(() {
+      _nameError = nameErr;
+      _emailError = emailErr;
+      _passwordError = passErr;
+      _confirmPasswordError = confirmErr;
+    });
+
+    return nameErr == null &&
+        emailErr == null &&
+        passErr == null &&
+        confirmErr == null;
+  }
+
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_validate()) return;
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _globalError = null;
     });
 
     try {
-      // TODO: chamar authRepository.register() e depois authNotifier.onLoginSuccess()
+      // TODO: call authRepository.register() then authNotifier.onLoginSuccess()
       // final result = await ref.read(authRepositoryProvider).register(
       //   name: _nameController.text.trim(),
       //   email: _emailController.text.trim(),
       //   password: _passwordController.text,
       // );
-      // await ref.read(authNotifierProvider.notifier).onLoginSuccess(
-      //   accessToken: result.accessToken,
-      //   refreshToken: result.refreshToken,
-      // );
+      // TODO: remove dummy bypass before production
+      await ref.read(authNotifierProvider.notifier).onLoginSuccess(
+        accessToken: 'dummy-access-token',
+        refreshToken: 'dummy-refresh-token',
+      );
     } catch (e) {
-      setState(() => _errorMessage = _mapError(e));
+      setState(() =>
+          _globalError = 'Não foi possível criar a conta. Tente novamente.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  String _mapError(Object e) {
-    // TODO: mapear DioException para mensagens amigáveis (ex: 409 = e-mail já cadastrado)
-    return 'Não foi possível criar a conta. Tente novamente.';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final t = AppThemeTokens.of(context);
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: AppBackground(
+        scrollable: true,
+        child: SafeArea(
+          child: Padding(
+            padding: AppSpacing.screenPadding.copyWith(top: 0, bottom: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+
+                // ── Header ─────────────────────────────────────────────────
+                Row(
                   children: [
-                    // ── Header ────────────────────────────────────────────
-                    // TODO: substituir pelo logo/header do Figma
-                    const _AuthHeader(
-                      title: 'Criar conta',
-                      subtitle: 'Comece a controlar suas finanças',
-                    ),
-                    const SizedBox(height: 40),
-
-                    // ── Error banner ──────────────────────────────────────
-                    if (_errorMessage != null) ...[
-                      _ErrorBanner(message: _errorMessage!),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // ── Name ──────────────────────────────────────────────
-                    TextFormField(
-                      controller: _nameController,
-                      keyboardType: TextInputType.name,
-                      textInputAction: TextInputAction.next,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Nome',
-                        prefixIcon: Icon(Icons.person_outlined),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Informe seu nome';
-                        }
-                        if (value.trim().length < 2) {
-                          return 'Nome muito curto';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ── Email ─────────────────────────────────────────────
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      autocorrect: false,
-                      decoration: const InputDecoration(
-                        labelText: 'E-mail',
-                        prefixIcon: Icon(Icons.email_outlined),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Informe seu e-mail';
-                        }
-                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value.trim())) {
-                          return 'E-mail inválido';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ── Password ──────────────────────────────────────────
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        labelText: 'Senha',
-                        prefixIcon: const Icon(Icons.lock_outlined),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                          onPressed: () =>
-                              setState(() => _obscurePassword = !_obscurePassword),
+                    GestureDetector(
+                      onTap: () => context.pop(),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: t.surfaceEl.withValues(
+                              alpha: t.isDark ? 0.4 : 0.6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.arrow_back_ios_new,
+                          size: 16,
+                          color: t.txtPrimary,
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Informe uma senha';
-                        }
-                        if (value.length < 8) {
-                          return 'A senha deve ter pelo menos 8 caracteres';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: 16),
-
-                    // ── Confirm password ──────────────────────────────────
-                    TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: _obscureConfirmPassword,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        labelText: 'Confirmar senha',
-                        prefixIcon: const Icon(Icons.lock_outlined),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                          onPressed: () => setState(
-                            () => _obscureConfirmPassword = !_obscureConfirmPassword,
-                          ),
-                        ),
+                    Expanded(
+                      child: Text(
+                        'Criar conta',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.h2(t.txtPrimary),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Confirme sua senha';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'As senhas não conferem';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: 32),
-
-                    // ── Submit button ─────────────────────────────────────
-                    FilledButton(
-                      onPressed: _isLoading ? null : _submit,
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Criar conta'),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // ── Login link ────────────────────────────────────────
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Já tem uma conta?',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => context.pop(),
-                          child: const Text('Entrar'),
-                        ),
-                      ],
-                    ),
+                    const ThemeToggleButton(),
                   ],
                 ),
-              ),
+                const SizedBox(height: 32),
+
+                // ── Heading ────────────────────────────────────────────────
+                Text(
+                  'Comece agora 🚀',
+                  style: AppTextStyles.h1(t.txtPrimary),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Crie sua conta e assuma o controle das suas finanças',
+                  style: AppTextStyles.body(t.txtSecondary),
+                ),
+                const SizedBox(height: 32),
+
+                // ── Global error ───────────────────────────────────────────
+                if (_globalError != null) ...[
+                  _ErrorBanner(message: _globalError!),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── Full name ──────────────────────────────────────────────
+                AppInputField(
+                  placeholder: 'Nome completo',
+                  controller: _nameController,
+                  errorText: _nameError,
+                  keyboardType: TextInputType.name,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  onChanged: (_) => setState(() => _nameError = null),
+                ),
+                const SizedBox(height: 14),
+
+                // ── Email ──────────────────────────────────────────────────
+                AppInputField(
+                  placeholder: 'Email',
+                  controller: _emailController,
+                  errorText: _emailError,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  onChanged: (_) => setState(() => _emailError = null),
+                ),
+                const SizedBox(height: 14),
+
+                // ── Password ───────────────────────────────────────────────
+                AppInputField(
+                  placeholder: 'Senha',
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  errorText: _passwordError,
+                  textInputAction: TextInputAction.next,
+                  onChanged: (_) => setState(() => _passwordError = null),
+                  rightIcon: GestureDetector(
+                    onTap: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // ── Confirm password ───────────────────────────────────────
+                AppInputField(
+                  placeholder: 'Confirmar senha',
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  errorText: _confirmPasswordError,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: _submit,
+                  onChanged: (_) =>
+                      setState(() => _confirmPasswordError = null),
+                  rightIcon: GestureDetector(
+                    onTap: () => setState(
+                      () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // ── Submit button ──────────────────────────────────────────
+                _isLoading
+                    ? Center(
+                        child: SizedBox(
+                          height: 48,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: t.primary,
+                              strokeWidth: 2.5,
+                            ),
+                          ),
+                        ),
+                      )
+                    : PrimaryButton(
+                        label: 'Criar conta',
+                        onPressed: _submit,
+                      ),
+                const SizedBox(height: 24),
+
+                // ── Login link ─────────────────────────────────────────────
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Já tem conta? ',
+                        style: AppTextStyles.body(t.txtSecondary)
+                            .copyWith(fontSize: 14),
+                      ),
+                      GestureDetector(
+                        onTap: () => context.pop(),
+                        child: Text(
+                          'Entrar',
+                          style: AppTextStyles.body(t.primary).copyWith(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Shared auth widgets — movidos para shared/widgets/auth/ quando o design chegar
-// ────────────────────────────────────────────────────────────────────────────
-
-class _AuthHeader extends StatelessWidget {
-  const _AuthHeader({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // TODO: substituir pelo logo do Figma
-        Text(
-          'FinanceControl',
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 24),
-        Text(title, style: theme.textTheme.headlineMedium),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -283,22 +310,20 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final t = AppThemeTokens.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(12),
+        color: t.error.withValues(alpha: t.isDark ? 0.15 : 0.08),
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: t.error.withValues(alpha: 0.35)),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: colorScheme.onErrorContainer, size: 20),
-          const SizedBox(width: 12),
+          Icon(Icons.error_outline, color: t.error, size: 18),
+          const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: colorScheme.onErrorContainer),
-            ),
+            child: Text(message, style: AppTextStyles.bodySm(t.error)),
           ),
         ],
       ),
