@@ -12,56 +12,53 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# IntelliJ / Android Studio
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code (local only — shared launch.json goes in .vscode/ if needed)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
 
-# Flutter/Dart/Pub related
+# Flutter / Dart / Pub
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
 
-# Symbolication related
-app.*.symbols
+# Code generation artifacts — never commit these
+**/*.g.dart
+**/*.freezed.dart
 
-# Obfuscation related
+# Symbolication / obfuscation
+app.*.symbols
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android build artifacts
 /android/app/debug
 /android/app/profile
 /android/app/release
 
-# Environment files
-.env
-.env.*
-
-# Android signing
+# Android signing — keep out of version control
 android/key.properties
 android/app/*.jks
 android/app/*.keystore
-
-# Android local config
 android/local.properties
 
-# VSCode local configs
-.vscode/settings.json
-.vscode/launch.json
-.vscode/tasks.json
+# iOS signing — managed by Xcode / CI
+ios/Flutter/flutter_export_environment.sh
 
-# Flutter test
+# Environment / secrets
+.env
+.env.*
+
+# Flutter test tool
 test/.dart_tool/
-
-

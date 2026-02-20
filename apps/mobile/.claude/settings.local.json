@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter pub get:*)",
+      "Bash(flutter pub:*)",
+      "Bash(dart run build_runner build:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(dir \"c:\\\\Users\\\\gabri\\\\Documents\\\\Code\\\\Finance-Control\\\\apps\\\\mobile\\\\test\"\" 2>&1 && dir \"c:UsersgabriDocumentsCodeFinance-Controlappsmobilelibcorerouter\"\")"
+    ]
+  }
+}
