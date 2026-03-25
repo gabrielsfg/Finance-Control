@@ -1,0 +1,52 @@
+name: finance_control_front
+description: "FinanceControl - Personal finance tracking app"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Navigation
+  go_router: ^14.2.7
+
+  # HTTP client
+  dio: ^5.7.0
+
+  # Secure storage (JWT token)
+  flutter_secure_storage: ^9.2.2
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Icons
+  lucide_icons: ^0.257.0
+
+  # Immutable models
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+  # Code generation (freezed + json_serializable apenas — sem riverpod_generator)
+  # riverpod_generator foi removido: ele puxa custom_lint_core → analyzer_plugin 0.12.x
+  # que é incompatível com o analyzer 7.6.x do Dart SDK 3.11.
+  # Usamos providers manuais em todo o projeto.
+  build_runner: ^2.4.12
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true

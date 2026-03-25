@@ -1,0 +1,10 @@
+include: package:flutter_lints/flutter.yaml
+
+# custom_lint plugin desabilitado temporariamente (incompatível com Dart SDK 3.11)
+
+linter:
+  rules:
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - prefer_final_fields
+    - avoid_unnecessary_containers
