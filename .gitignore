@@ -1,0 +1,52 @@
+﻿# ========================
+# .NET / C#
+# ========================
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.log
+TestResults/
+*.nupkg
+*.snupkg
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+
+# ========================
+# Flutter / Dart
+# ========================
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.g.dart
+*.freezed.dart
+pubspec.lock
+.packages
+.pub-cache/
+.pub/
+
+# ========================
+# Node / Web (futuro)
+# ========================
+node_modules/
+.env
+.env.local
+dist/
+.next/
+.nuxt/
+
+# ========================
+# Geral
+# ========================
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local source repos (not part of monorepo)
+Finance-Control-Api/
+Finance-Control-App/
+FinanceControlFilesDocumentation/
+.claude/
