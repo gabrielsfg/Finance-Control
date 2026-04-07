@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
+import 'dtos/auth_response_dto.dart';
 import 'dtos/login_request_dto.dart';
 import 'dtos/register_request_dto.dart';
 import 'dtos/register_response_dto.dart';
@@ -16,15 +17,14 @@ class AuthRepository {
 
   final Dio _dio;
 
-  /// Autentica o usuário e retorna o token JWT.
+  /// Autentica o usuário e retorna access + refresh tokens.
   /// Lança [DioException] em caso de falha (ex: 400 credenciais inválidas).
-  Future<String> login(LoginRequestDto dto) async {
+  Future<AuthResponseDto> login(LoginRequestDto dto) async {
     final response = await _dio.post(
       ApiEndpoints.login,
       data: dto.toJson(),
     );
-    // O backend retorna a string do token diretamente no body
-    return response.data as String;
+    return AuthResponseDto.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// Cria uma nova conta e retorna o usuário criado.
@@ -35,5 +35,15 @@ class AuthRepository {
       data: dto.toJson(),
     );
     return RegisterResponseDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Troca um refresh token por um novo par access + refresh tokens.
+  /// Lança [DioException] em caso de falha (ex: 401 token inválido/expirado).
+  Future<AuthResponseDto> refresh(String refreshToken) async {
+    final response = await _dio.post(
+      ApiEndpoints.refreshToken,
+      data: {'refreshToken': refreshToken},
+    );
+    return AuthResponseDto.fromJson(response.data as Map<String, dynamic>);
   }
 }

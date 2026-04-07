@@ -6,6 +6,7 @@ using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
 using FinanceControl.WebApi.Controllers.Base;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceControl.WebApi.Controllers
@@ -64,6 +65,57 @@ namespace FinanceControl.WebApi.Controllers
                 return Unauthorized("Invalid or expired refresh token.");
 
             return Ok(response);
+        }
+
+        [HttpGet("profile")]
+        [Authorize]
+        public async Task<IActionResult> GetProfileAsync()
+        {
+            var profile = await _userService.GetProfileAsync(GetUserId());
+            if (profile is null)
+                return NotFound();
+
+            return Ok(profile);
+        }
+
+        [HttpPatch("profile")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfileAsync([FromBody] UpdateUserProfileRequestDto requestDto)
+        {
+            var profile = await _userService.UpdateProfileAsync(GetUserId(), requestDto);
+            if (profile is null)
+                return BadRequest("Email already in use.");
+
+            return Ok(profile);
+        }
+
+        [HttpGet("preferences")]
+        [Authorize]
+        public async Task<IActionResult> GetPreferencesAsync()
+        {
+            var prefs = await _userService.GetPreferencesAsync(GetUserId());
+            if (prefs is null)
+                return NotFound();
+
+            return Ok(prefs);
+        }
+
+        [HttpPatch("preferences")]
+        [Authorize]
+        public async Task<IActionResult> UpdatePreferencesAsync([FromBody] UpdateUserPreferencesRequestDto requestDto)
+        {
+            var prefs = await _userService.UpdatePreferencesAsync(GetUserId(), requestDto);
+            if (prefs is null)
+                return NotFound();
+
+            return Ok(prefs);
+        }
+
+        [HttpGet("currencies")]
+        [Authorize]
+        public IActionResult GetCurrenciesAsync()
+        {
+            return Ok(_userService.GetAvailableCurrencies());
         }
     }
 }

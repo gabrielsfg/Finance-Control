@@ -41,7 +41,7 @@ class ApiClient {
     }
 
     _dio.interceptors.addAll([
-      _AuthInterceptor(storage, onUnauthorized: onUnauthorized),
+      _AuthInterceptor(_dio, storage, onUnauthorized: onUnauthorized),
       LogInterceptor(requestBody: true, responseBody: true),
     ]);
   }
@@ -52,10 +52,14 @@ class ApiClient {
 }
 
 class _AuthInterceptor extends Interceptor {
-  _AuthInterceptor(this._storage, {required this.onUnauthorized});
+  _AuthInterceptor(this._dio, this._storage, {required this.onUnauthorized});
 
+  final Dio _dio;
   final TokenStorage _storage;
   final Future<void> Function() onUnauthorized;
+
+  // Guard against recursive refresh attempts.
+  bool _isRefreshing = false;
 
   @override
   void onRequest(
@@ -70,10 +74,54 @@ class _AuthInterceptor extends Interceptor {
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (err.response?.statusCode == 401) {
-      onUnauthorized();
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    // Only attempt refresh for 401s that are NOT the refresh endpoint itself.
+    if (err.response?.statusCode == 401 &&
+        err.requestOptions.path != ApiEndpoints.refreshToken &&
+        !_isRefreshing) {
+      _isRefreshing = true;
+      try {
+        final refreshToken = await _storage.getRefreshToken();
+        if (refreshToken == null) {
+          await onUnauthorized();
+          handler.next(err);
+          return;
+        }
+
+        // Call the refresh endpoint directly with a plain Dio to avoid
+        // this interceptor re-triggering on a 401 from /refresh.
+        final refreshResponse = await _dio.post(
+          ApiEndpoints.refreshToken,
+          data: {'refreshToken': refreshToken},
+          options: Options(
+            // Skip this interceptor for the refresh call.
+            extra: {'skipAuthInterceptor': true},
+          ),
+        );
+
+        final newAccessToken = refreshResponse.data['accessToken'] as String;
+        final newRefreshToken = refreshResponse.data['refreshToken'] as String;
+
+        await _storage.saveTokens(
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+        );
+
+        // Retry the original request with the new access token.
+        final retryOptions = err.requestOptions;
+        retryOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+        final retryResponse = await _dio.fetch(retryOptions);
+        handler.resolve(retryResponse);
+      } on DioException {
+        // Refresh failed — log the user out.
+        await onUnauthorized();
+        handler.next(err);
+      } finally {
+        _isRefreshing = false;
+      }
+      return;
     }
+
     handler.next(err);
   }
 }

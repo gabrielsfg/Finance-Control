@@ -67,15 +67,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
 
     try {
-      final token = await ref.read(authRepositoryProvider).login(
+      final authResponse = await ref.read(authRepositoryProvider).login(
         LoginRequestDto(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         ),
       );
       await ref.read(authNotifierProvider.notifier).onLoginSuccess(
-        accessToken: token,
-        refreshToken: '',
+        accessToken: authResponse.accessToken,
+        refreshToken: authResponse.refreshToken,
       );
     } on DioException catch (e) {
       final status = e.response?.statusCode;

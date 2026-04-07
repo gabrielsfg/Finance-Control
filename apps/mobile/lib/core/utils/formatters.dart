@@ -84,13 +84,16 @@ class CentsInputFormatter extends TextInputFormatter {
   }
 }
 
-/// Formats an integer amount in cents to the Brazilian Real format.
+/// Formats an integer amount in cents as a currency string.
 ///
-/// Examples:
+/// [currencySymbol] defaults to "R$" (BRL). Pass the symbol from the user's
+/// preferences to render in another currency.
+///
+/// Examples (currencySymbol: "R$"):
 ///   formatCurrency(384752)  → "R$ 3.847,52"
 ///   formatCurrency(100)     → "R$ 1,00"
 ///   formatCurrency(-6790)   → "R$ 67,90"  (sign is the caller's responsibility)
-String formatCurrency(int cents) {
+String formatCurrency(int cents, {String currencySymbol = r'R$'}) {
   final str = (cents.abs() / 100).toStringAsFixed(2);
   final parts = str.split('.');
   final integerPart = parts[0];
@@ -99,7 +102,7 @@ String formatCurrency(int cents) {
     if (i > 0 && (integerPart.length - i) % 3 == 0) buf.write('.');
     buf.write(integerPart[i]);
   }
-  return 'R\$ $buf,${parts[1]}';
+  return '$currencySymbol $buf,${parts[1]}';
 }
 
 /// Returns the full Portuguese month name for the given 1-based month number.

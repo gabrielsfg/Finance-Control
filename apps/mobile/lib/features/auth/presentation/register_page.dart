@@ -108,14 +108,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         password: password,
       ));
 
-      final token = await repo.login(LoginRequestDto(
+      final authResponse = await repo.login(LoginRequestDto(
         email: email,
         password: password,
       ));
 
       await ref.read(authNotifierProvider.notifier).onLoginSuccess(
-        accessToken: token,
-        refreshToken: '',
+        accessToken: authResponse.accessToken,
+        refreshToken: authResponse.refreshToken,
       );
     } on DioException catch (e) {
       final status = e.response?.statusCode;

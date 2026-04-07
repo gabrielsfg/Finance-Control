@@ -8,6 +8,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../providers/user_preferences_provider.dart';
+import '../providers/user_provider.dart';
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
@@ -72,43 +74,43 @@ class _Header extends StatelessWidget {
 
 // ── Profile Card ───────────────────────────────────────────────────────────
 
-class _ProfileCard extends StatelessWidget {
+class _ProfileCard extends ConsumerWidget {
   const _ProfileCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = AppThemeTokens.of(context);
+    final profileAsync = ref.watch(userProfileProvider);
+
+    final name = profileAsync.valueOrNull?.name ?? '—';
+    final email = profileAsync.valueOrNull?.email ?? '—';
+    final initials = name != '—' && name.isNotEmpty
+        ? name.trim().split(' ').map((w) => w[0]).take(2).join().toUpperCase()
+        : '?';
 
     return GlassCard(
       child: Row(
         children: [
-          const AppAvatar(initials: '?', size: 56),
+          AppAvatar(initials: initials, size: 56),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '—',
+                  name,
                   style: AppTextStyles.h3(t.txtPrimary),
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '—',
+                  email,
                   style: AppTextStyles.bodySm(t.txtTertiary),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '',
-                  style: AppTextStyles.caption(t.txtDisabled),
                 ),
               ],
             ),
           ),
           GestureDetector(
-            onTap: () {
-              // TODO: navigate to edit profile
-            },
+            onTap: () => context.push('/profile/edit'),
             child: Container(
               width: 34,
               height: 34,
@@ -282,12 +284,16 @@ class _SettingRowWidget extends StatelessWidget {
 
 // ── Preferences Section ────────────────────────────────────────────────────
 
-class _PreferencesSection extends StatelessWidget {
+class _PreferencesSection extends ConsumerWidget {
   const _PreferencesSection();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = AppThemeTokens.of(context);
+    final prefs = ref.watch(userPreferencesProvider).valueOrNull;
+
+    final currencyLabel = prefs?.currencyCode ?? 'BRL';
+    final localeLabel = prefs?.locale == 'en-US' ? 'English' : 'Português';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,27 +306,20 @@ class _PreferencesSection extends StatelessWidget {
               iconColor: t.primary,
               label: 'Notifications',
               subtitle: 'Reminders and alerts',
-              onTap: () {
-                // TODO: navigate to notifications settings
-              },
             ),
             _SettingRow(
               icon: LucideIcons.globe,
               iconColor: const Color(0xFF06B6D4),
               label: 'Language',
-              trailingLabel: 'Português',
-              onTap: () {
-                // TODO: navigate to language settings
-              },
+              trailingLabel: localeLabel,
+              onTap: () => context.push('/profile/preferences'),
             ),
             _SettingRow(
               icon: LucideIcons.dollarSign,
               iconColor: const Color(0xFF22C55E),
               label: 'Currency',
-              trailingLabel: 'BRL',
-              onTap: () {
-                // TODO: navigate to currency settings
-              },
+              trailingLabel: currencyLabel,
+              onTap: () => context.push('/profile/preferences'),
             ),
           ],
         ),
@@ -355,28 +354,20 @@ class _AccountSection extends StatelessWidget {
               icon: LucideIcons.user,
               iconColor: t.primary,
               label: 'Edit Profile',
-              subtitle: 'Name, email, and password',
-              onTap: () {
-                // TODO: navigate to edit profile
-              },
+              subtitle: 'Name and email',
+              onTap: () => context.push('/profile/edit'),
             ),
             _SettingRow(
               icon: LucideIcons.shieldCheck,
               iconColor: const Color(0xFF06B6D4),
               label: 'Security',
               subtitle: 'PIN and biometrics',
-              onTap: () {
-                // TODO: navigate to security settings
-              },
             ),
             _SettingRow(
               icon: LucideIcons.download,
               iconColor: const Color(0xFFF59E0B),
               label: 'Export Data',
               subtitle: 'Download your transactions',
-              onTap: () {
-                // TODO: export data
-              },
             ),
           ],
         ),
@@ -398,29 +389,20 @@ class _SupportSection extends StatelessWidget {
         const _SectionHeader(title: 'Support'),
         _SettingsCard(
           items: [
-            _SettingRow(
+            const _SettingRow(
               icon: LucideIcons.helpCircle,
-              iconColor: const Color(0xFF8B5CF6),
+              iconColor: Color(0xFF8B5CF6),
               label: 'Help Center',
-              onTap: () {
-                // TODO: open help center
-              },
             ),
-            _SettingRow(
+            const _SettingRow(
               icon: LucideIcons.messageCircle,
-              iconColor: const Color(0xFF22C55E),
+              iconColor: Color(0xFF22C55E),
               label: 'Send Feedback',
-              onTap: () {
-                // TODO: open feedback form
-              },
             ),
-            _SettingRow(
+            const _SettingRow(
               icon: LucideIcons.star,
-              iconColor: const Color(0xFFF59E0B),
+              iconColor: Color(0xFFF59E0B),
               label: 'Rate the App',
-              onTap: () {
-                // TODO: open app store rating
-              },
             ),
           ],
         ),

@@ -12,5 +12,15 @@ namespace FinanceControl.Domain.Interfaces.Service
         Task<AuthResponseDto?> UserLoginAsync(UserLoginRequestDto requestDto);
 
         Task<AuthResponseDto?> RefreshTokenAsync(string refreshToken);
+
+        Task<UserProfileResponseDto?> GetProfileAsync(int userId);
+
+        Task<UserProfileResponseDto?> UpdateProfileAsync(int userId, UpdateUserProfileRequestDto requestDto);
+
+        Task<UserPreferencesResponseDto?> GetPreferencesAsync(int userId);
+
+        Task<UserPreferencesResponseDto?> UpdatePreferencesAsync(int userId, UpdateUserPreferencesRequestDto requestDto);
+
+        IReadOnlyList<CurrencyResponseDto> GetAvailableCurrencies();
     }
 }

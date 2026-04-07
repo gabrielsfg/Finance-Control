@@ -9,6 +9,8 @@ import '../../features/categories/presentation/categories_page.dart';
 import '../../features/categories/presentation/create_category_page.dart';
 import '../../features/categories/presentation/edit_categories_page.dart';
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/profile/presentation/edit_profile_page.dart';
+import '../../features/profile/presentation/preferences_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/auth/presentation/register_page.dart';
 import '../../features/auth/presentation/splash_page.dart';
@@ -152,6 +154,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/profile',
             builder: (_, _) => const ProfilePage(),
+            routes: [
+              GoRoute(
+                path: 'edit',
+                builder: (_, _) => const EditProfilePage(),
+              ),
+              GoRoute(
+                path: 'preferences',
+                builder: (_, _) => const PreferencesPage(),
+              ),
+            ],
           ),
         ],
       ),
