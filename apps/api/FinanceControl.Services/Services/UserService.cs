@@ -1,22 +1,17 @@
-﻿using FinanceControl.Data.Data;
+using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Service;
-using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
-using FluentValidation;
-using Microsoft.AspNetCore.Http;
+using FinanceControl.Shared.Dtos.Response;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace FinanceControl.Services.Services
 {
@@ -26,7 +21,7 @@ namespace FinanceControl.Services.Services
         private readonly IConfiguration _configuration;
 
         public UserService(
-            ApplicationDbContext context, 
+            ApplicationDbContext context,
             IConfiguration configuration)
         {
             _context = context;
@@ -72,21 +67,48 @@ namespace FinanceControl.Services.Services
             return user;
         }
 
-        public async Task<string?> UserLoginAsync(UserLoginRequestDto requestDto)
+        public async Task<AuthResponseDto?> UserLoginAsync(UserLoginRequestDto requestDto)
         {
             requestDto.Email = requestDto.Email.ToLower();
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == requestDto.Email);
             if (user is null)
                 return null;
-            
+
             if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, requestDto.Password) == PasswordVerificationResult.Failed)
                 return null;
 
-            return CreateToken(user);
+            return await CreateAuthResponseAsync(user);
         }
 
-        private string CreateToken(User user)
+        public async Task<AuthResponseDto?> RefreshTokenAsync(string refreshToken)
+        {
+            var stored = await _context.RefreshTokens
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.Token == refreshToken);
+
+            if (stored is null || stored.IsRevoked || stored.ExpiresAt <= DateTime.UtcNow)
+                return null;
+
+            stored.IsRevoked = true;
+            await _context.SaveChangesAsync();
+
+            return await CreateAuthResponseAsync(stored.User);
+        }
+
+        private async Task<AuthResponseDto> CreateAuthResponseAsync(User user)
+        {
+            var accessToken = CreateAccessToken(user);
+            var refreshToken = await CreateRefreshTokenAsync(user.Id);
+
+            return new AuthResponseDto
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            };
+        }
+
+        private string CreateAccessToken(User user)
         {
             var claims = new List<Claim>
             {
@@ -95,19 +117,35 @@ namespace FinanceControl.Services.Services
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetValue<string>("AppSettings:Token")!));
-
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
 
             var tokenDescriptor = new JwtSecurityToken(
                 issuer: _configuration.GetValue<string>("AppSettings:Issuer"),
                 audience: _configuration.GetValue<string>("AppSettings:Audience"),
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(10),
+                expires: DateTime.UtcNow.AddMinutes(30),
                 signingCredentials: creds
-                );
+            );
 
-            var response = new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
-            return response;
+            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
+        }
+
+        private async Task<string> CreateRefreshTokenAsync(int userId)
+        {
+            var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+
+            var refreshToken = new RefreshToken
+            {
+                UserId = userId,
+                Token = token,
+                ExpiresAt = DateTime.UtcNow.AddDays(30),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.RefreshTokens.Add(refreshToken);
+            await _context.SaveChangesAsync();
+
+            return token;
         }
     }
 }

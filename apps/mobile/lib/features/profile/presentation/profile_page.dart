@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../auth/providers/auth_provider.dart';
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
@@ -438,10 +439,7 @@ class _LogoutButton extends ConsumerWidget {
     final t = AppThemeTokens.of(context);
 
     return GestureDetector(
-      onTap: () {
-        // TODO: call ref.read(authNotifierProvider.notifier).logout()
-        // after auth is wired up
-      },
+      onTap: () => ref.read(authNotifierProvider.notifier).logout(),
       child: Container(
         height: 48,
         decoration: BoxDecoration(

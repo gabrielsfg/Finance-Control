@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:dio/dio.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../data/auth_repository.dart';
+import '../data/dtos/login_request_dto.dart';
+import '../data/dtos/register_request_dto.dart';
 import '../providers/auth_provider.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
@@ -93,20 +98,33 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     });
 
     try {
-      // TODO: call authRepository.register() then authNotifier.onLoginSuccess()
-      // final result = await ref.read(authRepositoryProvider).register(
-      //   name: _nameController.text.trim(),
-      //   email: _emailController.text.trim(),
-      //   password: _passwordController.text,
-      // );
-      // TODO: remove dummy bypass before production
+      final repo = ref.read(authRepositoryProvider);
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      await repo.register(RegisterRequestDto(
+        name: _nameController.text.trim(),
+        email: email,
+        password: password,
+      ));
+
+      final token = await repo.login(LoginRequestDto(
+        email: email,
+        password: password,
+      ));
+
       await ref.read(authNotifierProvider.notifier).onLoginSuccess(
-        accessToken: 'dummy-access-token',
-        refreshToken: 'dummy-refresh-token',
+        accessToken: token,
+        refreshToken: '',
       );
-    } catch (e) {
-      setState(() =>
-          _globalError = 'Não foi possível criar a conta. Tente novamente.');
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      final message = status == 400
+          ? 'E-mail já cadastrado.'
+          : 'Não foi possível criar a conta. Tente novamente.';
+      setState(() => _globalError = message);
+    } catch (_) {
+      setState(() => _globalError = 'Erro inesperado. Tente novamente.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

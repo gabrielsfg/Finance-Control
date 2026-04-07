@@ -4,7 +4,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../main.dart';
 
-// TODO: remove before production — temporary widget for visual testing
 class ThemeToggleButton extends ConsumerWidget {
   const ThemeToggleButton({super.key});
 

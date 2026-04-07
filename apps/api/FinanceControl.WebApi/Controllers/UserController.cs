@@ -1,11 +1,11 @@
-﻿using FinanceControl.Domain.Interfaces.Service;
+using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Services.Extensions;
 using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
+using FinanceControl.Shared.Dtos.Response;
 using FinanceControl.WebApi.Controllers.Base;
 using FluentValidation;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceControl.WebApi.Controllers
@@ -26,7 +26,7 @@ namespace FinanceControl.WebApi.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> RegisterUserAsync([FromBody]CreateUserRequestDto requestDto)
+        public async Task<IActionResult> RegisterUserAsync([FromBody] CreateUserRequestDto requestDto)
         {
             var validatonResult = _createUserValidator.Validate(requestDto);
             if (validatonResult.ToActionResult() is { } errorResult)
@@ -40,16 +40,30 @@ namespace FinanceControl.WebApi.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> UserLoginAsync([FromBody]UserLoginRequestDto requestDto)
+        public async Task<IActionResult> UserLoginAsync([FromBody] UserLoginRequestDto requestDto)
         {
             var validatonResult = _userLoginValidator.Validate(requestDto);
             if (validatonResult.ToActionResult() is { } errorResult)
                 return errorResult;
 
-            var token = await _userService.UserLoginAsync(requestDto);
-            if (token is null)
+            var response = await _userService.UserLoginAsync(requestDto);
+            if (response is null)
                 return BadRequest("Invalid email or password.");
-            return Ok(token);
+
+            return Ok(response);
+        }
+
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshTokenAsync([FromBody] RefreshTokenRequestDto requestDto)
+        {
+            if (string.IsNullOrWhiteSpace(requestDto.RefreshToken))
+                return BadRequest("Refresh token is required.");
+
+            var response = await _userService.RefreshTokenAsync(requestDto.RefreshToken);
+            if (response is null)
+                return Unauthorized("Invalid or expired refresh token.");
+
+            return Ok(response);
         }
     }
 }

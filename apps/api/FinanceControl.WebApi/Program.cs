@@ -70,6 +70,8 @@ builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly, includeInte
 
 var app = builder.Build();
 
+app.UseMiddleware<FinanceControl.WebApi.Middleware.GlobalExceptionMiddleware>();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

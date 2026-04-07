@@ -1911,7 +1911,8 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                 // Add button
                 GestureDetector(
                   onTap: () {
-                    // TODO: navigate to add account page
+                    Navigator.of(context).pop();
+                    context.push('/accounts/create');
                   },
                   child: Container(
                     width: 32,
@@ -1943,7 +1944,8 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
               return GestureDetector(
                 onTap: _editMode
                     ? () {
-                        // TODO: navigate to edit account page
+                        Navigator.of(context).pop();
+                        context.push('/accounts/${acc.id}/edit');
                       }
                     : () {
                         widget.onSelected(acc.id, acc.name);

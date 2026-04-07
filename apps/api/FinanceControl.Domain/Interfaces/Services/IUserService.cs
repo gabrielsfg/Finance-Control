@@ -1,11 +1,7 @@
 ﻿using FinanceControl.Domain.Entities;
 using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using FinanceControl.Shared.Dtos.Response;
 
 namespace FinanceControl.Domain.Interfaces.Service
 {
@@ -13,6 +9,8 @@ namespace FinanceControl.Domain.Interfaces.Service
     {
         Task<User?> RegisterUserAsync(CreateUserRequestDto requestDto);
 
-        Task<string?> UserLoginAsync(UserLoginRequestDto requestDto);
+        Task<AuthResponseDto?> UserLoginAsync(UserLoginRequestDto requestDto);
+
+        Task<AuthResponseDto?> RefreshTokenAsync(string refreshToken);
     }
 }
