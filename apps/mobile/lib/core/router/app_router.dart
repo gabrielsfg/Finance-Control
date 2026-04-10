@@ -8,7 +8,9 @@ import '../../features/accounts/presentation/edit_account_page.dart';
 import '../../features/categories/presentation/categories_page.dart';
 import '../../features/categories/presentation/create_category_page.dart';
 import '../../features/categories/presentation/edit_categories_page.dart';
+import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/auth/presentation/reset_password_page.dart';
 import '../../features/profile/presentation/edit_profile_page.dart';
 import '../../features/profile/presentation/preferences_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
@@ -63,6 +65,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (_, _) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, _) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (_, _) => const ResetPasswordPage(),
       ),
       GoRoute(
         path: '/transactions/add',

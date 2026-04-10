@@ -213,6 +213,39 @@ namespace FinanceControl.Services.Services
             };
         }
 
+        public async Task<string?> ForgotPasswordAsync(string email)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email.ToLower().Trim());
+            if (user is null)
+                return null;
+
+            var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+            user.PasswordResetToken = token;
+            user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddHours(1);
+
+            await _context.SaveChangesAsync();
+
+            // TODO: send token via email (email service not yet integrated)
+            return token;
+        }
+
+        public async Task<bool> ResetPasswordAsync(string token, string newPassword)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u =>
+                u.PasswordResetToken == token &&
+                u.PasswordResetTokenExpiresAt > DateTime.UtcNow);
+
+            if (user is null)
+                return false;
+
+            user.PasswordHash = new PasswordHasher<User>().HashPassword(user, newPassword);
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiresAt = null;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         private async Task<AuthResponseDto> CreateAuthResponseAsync(User user)
         {
             var accessToken = CreateAccessToken(user);

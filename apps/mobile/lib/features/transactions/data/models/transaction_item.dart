@@ -25,6 +25,8 @@ class TransactionItem {
   final int? parentTransactionId;
   final int? installmentNumber;
   final int? totalInstallments;
+  final int? areaId;
+  final String? areaName;
 
   const TransactionItem({
     required this.id,
@@ -43,6 +45,8 @@ class TransactionItem {
     this.parentTransactionId,
     this.installmentNumber,
     this.totalInstallments,
+    this.areaId,
+    this.areaName,
   });
 
   factory TransactionItem.fromDto(GetTransactionResponseDto dto) {
@@ -66,6 +70,8 @@ class TransactionItem {
       parentTransactionId: dto.parentTransactionId,
       installmentNumber: dto.installmentNumber,
       totalInstallments: dto.totalInstallments,
+      areaId: dto.areaId,
+      areaName: dto.areaName,
     );
   }
 }

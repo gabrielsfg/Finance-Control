@@ -22,5 +22,9 @@ namespace FinanceControl.Domain.Interfaces.Service
         Task<UserPreferencesResponseDto?> UpdatePreferencesAsync(int userId, UpdateUserPreferencesRequestDto requestDto);
 
         IReadOnlyList<CurrencyResponseDto> GetAvailableCurrencies();
+
+        Task<string?> ForgotPasswordAsync(string email);
+
+        Task<bool> ResetPasswordAsync(string token, string newPassword);
     }
 }

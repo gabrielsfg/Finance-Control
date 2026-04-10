@@ -12,6 +12,7 @@ import '../../../shared/widgets/app_widgets.dart';
 import '../data/dtos/update_account_request_dto.dart';
 import '../data/models/account_detail.dart';
 import '../providers/accounts_provider.dart';
+import '../../transactions/providers/transaction_filter_provider.dart';
 
 class EditAccountPage extends ConsumerStatefulWidget {
   final int accountId;
@@ -111,11 +112,10 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
   }
 
   Future<void> _delete() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showDeleteConfirmDialog(
       context: context,
-      builder: (ctx) => _DeleteConfirmDialog(
-        accountName: _nameController.text.trim(),
-      ),
+      title: 'Delete Account',
+      itemName: _nameController.text.trim(),
     );
     if (confirmed != true) return;
 
@@ -258,6 +258,8 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
                     if (detail.recentTransactions.isNotEmpty) ...[
                       _RecentTransactionsSection(
                         transactions: detail.recentTransactions,
+                        accountId: detail.id,
+                        accountName: detail.name,
                       ),
                       const SizedBox(height: 28),
                     ],
@@ -414,13 +416,19 @@ class _ToggleRow extends StatelessWidget {
 
 // ── Recent Transactions Section ───────────────────────────────────────────────
 
-class _RecentTransactionsSection extends StatelessWidget {
+class _RecentTransactionsSection extends ConsumerWidget {
   final List<RecentTransaction> transactions;
+  final int accountId;
+  final String accountName;
 
-  const _RecentTransactionsSection({required this.transactions});
+  const _RecentTransactionsSection({
+    required this.transactions,
+    required this.accountId,
+    required this.accountName,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = AppThemeTokens.of(context);
 
     return Column(
@@ -435,8 +443,12 @@ class _RecentTransactionsSection extends StatelessWidget {
             ),
             const Spacer(),
             GestureDetector(
-              // TODO: navigate to transactions page with account filter
-              onTap: () {},
+              onTap: () {
+                ref
+                    .read(transactionFilterProvider.notifier)
+                    .updateAccount(accountId, accountName);
+                context.go('/transactions');
+              },
               child: Text(
                 'View all',
                 style: AppTextStyles.caption(t.primary)
@@ -620,42 +632,6 @@ class _ActionButtons extends StatelessWidget {
                     ),
             ),
           ],
-        ),
-      ],
-    );
-  }
-}
-
-// ── Delete Confirm Dialog ─────────────────────────────────────────────────────
-
-class _DeleteConfirmDialog extends StatelessWidget {
-  final String accountName;
-
-  const _DeleteConfirmDialog({required this.accountName});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-
-    return AlertDialog(
-      backgroundColor: t.bg,
-      title: Text('Delete Account',
-          style: AppTextStyles.h3(t.txtPrimary)),
-      content: Text(
-        'Are you sure you want to delete "$accountName"? This action cannot be undone.',
-        style: AppTextStyles.body(t.txtSecondary),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text('Cancel',
-              style: AppTextStyles.body(t.txtTertiary)),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text('Delete',
-              style: AppTextStyles.body(t.error)
-                  .copyWith(fontWeight: FontWeight.w700)),
         ),
       ],
     );

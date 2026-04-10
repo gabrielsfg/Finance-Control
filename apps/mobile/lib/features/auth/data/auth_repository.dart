@@ -46,4 +46,22 @@ class AuthRepository {
     );
     return AuthResponseDto.fromJson(response.data as Map<String, dynamic>);
   }
+
+  /// Requests a password reset token for [email].
+  /// Returns the reset token (dev mode — production sends it via email).
+  Future<String?> forgotPassword(String email) async {
+    final response = await _dio.post(
+      ApiEndpoints.forgotPassword,
+      data: {'email': email},
+    );
+    return (response.data as Map<String, dynamic>)['resetToken'] as String?;
+  }
+
+  /// Resets the password using [token] obtained from [forgotPassword].
+  Future<void> resetPassword(String token, String newPassword) async {
+    await _dio.post(
+      ApiEndpoints.resetPassword,
+      data: {'token': token, 'newPassword': newPassword},
+    );
+  }
 }

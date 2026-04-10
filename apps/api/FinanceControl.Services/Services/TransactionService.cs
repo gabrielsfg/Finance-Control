@@ -505,7 +505,15 @@ namespace FinanceControl.Services.Services
                     PaymentType = t.PaymentType,
                     InstallmentNumber = t.InstallmentNumber,
                     TotalInstallments = t.TotalInstallments,
-                    IsPaid = t.IsPaid
+                    IsPaid = t.IsPaid,
+                    AreaId = _context.BudgetSubcategoryAllocations
+                        .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
+                        .Select(a => (int?)a.AreaId)
+                        .FirstOrDefault(),
+                    AreaName = _context.BudgetSubcategoryAllocations
+                        .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
+                        .Select(a => a.Area.Name)
+                        .FirstOrDefault(),
                 });
         }
 
@@ -530,7 +538,15 @@ namespace FinanceControl.Services.Services
                     PaymentType = t.PaymentType,
                     InstallmentNumber = t.InstallmentNumber,
                     TotalInstallments = t.TotalInstallments,
-                    IsPaid = t.IsPaid
+                    IsPaid = t.IsPaid,
+                    AreaId = _context.BudgetSubcategoryAllocations
+                        .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
+                        .Select(a => (int?)a.AreaId)
+                        .FirstOrDefault(),
+                    AreaName = _context.BudgetSubcategoryAllocations
+                        .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
+                        .Select(a => a.Area.Name)
+                        .FirstOrDefault(),
                 })
                 .ToListAsync();
 

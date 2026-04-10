@@ -7,6 +7,8 @@ abstract class ApiEndpoints {
   static const String login = '/api/user/login';
   static const String register = '/api/user/register';
   static const String refreshToken = '/api/user/refresh';
+  static const String forgotPassword = '/api/user/forgot-password';
+  static const String resetPassword = '/api/user/reset-password';
   static const String userProfile = '/api/user/profile';
   static const String userPreferences = '/api/user/preferences';
   static const String userCurrencies = '/api/user/currencies';
@@ -54,6 +56,7 @@ abstract class ApiEndpoints {
   static const String budgetAreas = '/api/area';
   static String areaById(int id) => '/api/area/$id';
   static String budgetAreasByBudget(int budgetId) => '/api/area?budgetId=$budgetId';
+  static const String allAreas = '/api/area/all';
 
   // Budget Allocations
   static String budgetAllocations(int budgetId) =>

@@ -61,14 +61,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
 
-    return Row(
-      children: [
-        Expanded(
-          child: Text('Profile', style: AppTextStyles.h1(t.txtPrimary)),
-        ),
-        const ThemeToggleButton(),
-      ],
-    );
+    return Text('Profile', style: AppTextStyles.h1(t.txtPrimary));
   }
 }
 

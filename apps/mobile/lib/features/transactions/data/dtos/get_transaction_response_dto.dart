@@ -21,6 +21,8 @@ class GetTransactionResponseDto {
     this.parentTransactionId,
     this.installmentNumber,
     this.totalInstallments,
+    this.areaId,
+    this.areaName,
   });
 
   final int id;
@@ -48,6 +50,8 @@ class GetTransactionResponseDto {
   final int? parentTransactionId;
   final int? installmentNumber;
   final int? totalInstallments;
+  final int? areaId;
+  final String? areaName;
 
   factory GetTransactionResponseDto.fromJson(Map<String, dynamic> json) =>
       _$GetTransactionResponseDtoFromJson(json);

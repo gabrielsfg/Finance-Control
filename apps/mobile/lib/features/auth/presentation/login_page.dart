@@ -104,14 +104,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 12),
-
-                  // ── Theme toggle ───────────────────────────────────────────
-                  const Align(
-                    alignment: Alignment.centerRight,
-                    child: ThemeToggleButton(),
-                  ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 36),
 
                   // ── Logo ──────────────────────────────────────────────────
                   const Center(child: AppLogo(size: 64)),
@@ -177,7 +170,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: () => context.push('/forgot-password'),
+                      child: Text(
+                        'Forgot password?',
+                        style: AppTextStyles.body(t.primary).copyWith(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
                   // ── Submit button ──────────────────────────────────────────
                   _isLoading

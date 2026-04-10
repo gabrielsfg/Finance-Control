@@ -173,7 +173,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                         style: AppTextStyles.h2(t.txtPrimary),
                       ),
                     ),
-                    const ThemeToggleButton(),
                   ],
                 ),
                 const SizedBox(height: 32),

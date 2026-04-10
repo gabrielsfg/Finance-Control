@@ -46,6 +46,14 @@ namespace FinanceControl.WebApi.Controllers
             return Created($"/api/area", result.Value);
         }
 
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllAreasByUserAsync()
+        {
+            var userId = GetUserId();
+            var result = await _areaService.GetAllAreasByUserAsync(userId);
+            return Ok(result);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAllAreaAsync([FromQuery] int budgetId)
         {

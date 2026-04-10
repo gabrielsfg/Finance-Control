@@ -211,27 +211,13 @@ class TransactionDetailPage extends ConsumerWidget {
                         onPressed: isLoading
                             ? null
                             : () async {
-                                final confirm = await showDialog<bool>(
+                                final confirmed =
+                                    await showDeleteConfirmDialog(
                                   context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: const Text('Delete transaction'),
-                                    content: const Text(
-                                        'Are you sure? This action cannot be undone.'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, true),
-                                        child: const Text('Delete'),
-                                      ),
-                                    ],
-                                  ),
+                                  title: 'Delete Transaction',
+                                  itemName: transaction.subCategoryName,
                                 );
-                                if (confirm == true && context.mounted) {
+                                if (confirmed == true && context.mounted) {
                                   ref
                                       .read(transactionActionProvider.notifier)
                                       .delete(transaction.id);

@@ -97,8 +97,6 @@ class _Header extends StatelessWidget {
             ),
           ),
         ),
-        const ThemeToggleButton(),
-        const SizedBox(width: 10),
         _AddAccountButton(),
       ],
     );

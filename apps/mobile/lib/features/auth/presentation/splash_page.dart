@@ -66,9 +66,7 @@ class _SplashPageState extends State<SplashPage> {
 
                 // ── Page dots ─────────────────────────────────────────────
                 const _PageDots(activeIndex: 1),
-                const SizedBox(height: 16),
-                const ThemeToggleButton(),
-                const SizedBox(height: 32),
+                const SizedBox(height: 48),
               ],
             ),
           ),

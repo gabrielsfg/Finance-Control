@@ -169,34 +169,10 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
   }
 
   Future<void> _deleteBudget() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showDeleteConfirmDialog(
       context: context,
-      builder: (ctx) {
-        final t = AppThemeTokens.of(ctx);
-        return AlertDialog(
-          backgroundColor:
-              t.isDark ? const Color(0xFF1C1830) : Colors.white,
-          title: Text('Delete budget?',
-              style: AppTextStyles.h3(t.txtPrimary)),
-          content: Text(
-            'This will permanently delete "${widget.budget.name}" and all its data.',
-            style: AppTextStyles.body(t.txtSecondary).copyWith(fontSize: 14),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child:
-                  Text('Cancel', style: AppTextStyles.body(t.txtTertiary)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text('Delete',
-                  style: AppTextStyles.body(t.error)
-                      .copyWith(fontWeight: FontWeight.w700)),
-            ),
-          ],
-        );
-      },
+      title: 'Delete Budget',
+      itemName: widget.budget.name,
     );
     if (confirmed != true || !mounted) return;
     setState(() => _isLoading = true);

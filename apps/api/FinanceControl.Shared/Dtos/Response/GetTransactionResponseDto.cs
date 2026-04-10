@@ -20,5 +20,7 @@ namespace FinanceControl.Shared.Dtos.Response
         public int? InstallmentNumber { get; set; }
         public int? TotalInstallments { get; set; }
         public bool IsPaid { get; set; }
+        public int? AreaId { get; set; }
+        public string? AreaName { get; set; }
     }
 }

@@ -13,6 +13,7 @@ namespace FinanceControl.Domain.Interfaces.Service
     {
         Task<Result<IEnumerable<GetAllAreaItemResponseDto>>> CreateAreaAsync(CreateAreaRequestDto requestDto, int userId);
         Task<IEnumerable<GetAllAreaItemResponseDto>> GetAllAreasAsync(int budgetId, int userId);
+        Task<IEnumerable<GetAllAreaItemResponseDto>> GetAllAreasByUserAsync(int userId);
         Task<GetAreaByIdResponseDto?> GetAreaByIdAsync(int id, int userId);
         Task<Result<IEnumerable<GetAllAreaItemResponseDto>>> UpdateAreaAsync(UpdateAreaRequestDto requestDto, int userId);
         Task<Result<IEnumerable<GetAllAreaItemResponseDto>>> DeleteAreaAsync(int id, int userId);

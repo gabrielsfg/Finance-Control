@@ -127,7 +127,6 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-        const ThemeToggleButton(),
       ],
     );
   }

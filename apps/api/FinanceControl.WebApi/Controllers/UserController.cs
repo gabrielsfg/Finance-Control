@@ -117,5 +117,31 @@ namespace FinanceControl.WebApi.Controllers
         {
             return Ok(_userService.GetAvailableCurrencies());
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPasswordAsync([FromBody] ForgotPasswordRequestDto requestDto)
+        {
+            if (string.IsNullOrWhiteSpace(requestDto.Email))
+                return BadRequest("Email is required.");
+
+            var token = await _userService.ForgotPasswordAsync(requestDto.Email);
+
+            // Always return 200 to avoid email enumeration.
+            // Token is returned directly (dev mode — replace with email delivery in production).
+            return Ok(new { resetToken = token });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPasswordAsync([FromBody] ResetPasswordRequestDto requestDto)
+        {
+            if (string.IsNullOrWhiteSpace(requestDto.Token) || string.IsNullOrWhiteSpace(requestDto.NewPassword))
+                return BadRequest("Token and new password are required.");
+
+            var success = await _userService.ResetPasswordAsync(requestDto.Token, requestDto.NewPassword);
+            if (!success)
+                return BadRequest("Invalid or expired reset token.");
+
+            return Ok(new { message = "Password reset successfully." });
+        }
     }
 }

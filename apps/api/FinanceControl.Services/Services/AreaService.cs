@@ -50,7 +50,21 @@ namespace FinanceControl.Services.Services
             }).ToListAsync();
 
             return areas;
+        }
 
+        public async Task<IEnumerable<GetAllAreaItemResponseDto>> GetAllAreasByUserAsync(int userId)
+        {
+            var areas = await _context.Areas
+                .Where(a => a.UserId == userId)
+                .GroupBy(a => a.Name)
+                .Select(g => new GetAllAreaItemResponseDto
+                {
+                    Id = g.First().Id,
+                    Name = g.Key,
+                })
+                .ToListAsync();
+
+            return areas;
         }
 
         public async Task<GetAreaByIdResponseDto?> GetAreaByIdAsync(int id, int userId)

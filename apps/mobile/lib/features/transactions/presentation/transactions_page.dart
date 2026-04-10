@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,11 +10,10 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/transaction_item.dart';
+import '../providers/transaction_filter_provider.dart';
+import '../providers/transaction_filtered_provider.dart';
 import '../providers/transaction_provider.dart';
-
-// ── Filter enum ────────────────────────────────────────────────────────────
-
-enum _TransactionFilter { all, expenses, income, recurring }
+import 'filter_sheet.dart';
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
@@ -24,42 +25,30 @@ class TransactionsPage extends ConsumerStatefulWidget {
 }
 
 class _TransactionsPageState extends ConsumerState<TransactionsPage> {
-  _TransactionFilter _filter = _TransactionFilter.all;
-  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  final _searchController = TextEditingController();
+  Timer? _debounce;
 
-  void _previousMonth() {
-    setState(() {
-      _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month - 1);
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      ref.read(transactionFilterProvider.notifier).updateSearch(value);
     });
   }
 
-  void _nextMonth() {
-    setState(() {
-      _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1);
-    });
-  }
-
-  List<TransactionItem> _applyFilters(List<TransactionItem> all) {
-    // Filter by selected month
-    var filtered = all.where((t) {
-      return t.date.year == _selectedMonth.year &&
-          t.date.month == _selectedMonth.month;
-    }).toList();
-
-    // Filter by type/recurrence
-    filtered = switch (_filter) {
-      _TransactionFilter.expenses =>
-        filtered.where((t) => t.type == 'Expense').toList(),
-      _TransactionFilter.income =>
-        filtered.where((t) => t.type == 'Income').toList(),
-      _TransactionFilter.recurring =>
-        filtered.where((t) => t.paymentType == 'Recurring').toList(),
-      _TransactionFilter.all => filtered,
-    };
-
-    // Sort newest first
-    filtered.sort((a, b) => b.date.compareTo(a.date));
-    return filtered;
+  void _openFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const FilterSheet(),
+    );
   }
 
   List<TransactionGroup> _groupByDate(List<TransactionItem> items) {
@@ -76,6 +65,9 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.viewPaddingOf(context).bottom;
     final asyncTx = ref.watch(transactionsNotifierProvider);
+    final filtered = ref.watch(transactionFilteredProvider);
+    final filterState = ref.watch(transactionFilterProvider);
+    final activeCount = filterState.activeFilterCount;
 
     return AppBackground(
       scrollable: false,
@@ -84,8 +76,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
         child: asyncTx.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('Error: $e')),
-          data: (allTransactions) {
-            final filtered = _applyFilters(allTransactions);
+          data: (_) {
             final groups = _groupByDate(filtered);
 
             final income = filtered
@@ -109,15 +100,11 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                         balance: balance,
                       ),
                       const SizedBox(height: 16),
-                      _FilterChips(
-                        selected: _filter,
-                        onChanged: (f) => setState(() => _filter = f),
-                      ),
-                      const SizedBox(height: 16),
-                      _MonthNavigator(
-                        month: _selectedMonth,
-                        onPrevious: _previousMonth,
-                        onNext: _nextMonth,
+                      _SearchBar(
+                        controller: _searchController,
+                        onChanged: _onSearchChanged,
+                        filterCount: activeCount,
+                        onFilterTap: _openFilterSheet,
                       ),
                       const SizedBox(height: 8),
                     ]),
@@ -130,7 +117,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 80),
                         child: Text(
-                          'No transactions this month',
+                          'No transactions found',
                           style: AppTextStyles.body(
                             AppThemeTokens.of(context).txtTertiary,
                           ),
@@ -157,6 +144,107 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
           },
         ),
       ),
+    );
+  }
+}
+
+// ── Search Bar ──────────────────────────────────────────────────────────────
+
+class _SearchBar extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final int filterCount;
+  final VoidCallback onFilterTap;
+
+  const _SearchBar({
+    required this.controller,
+    required this.onChanged,
+    required this.filterCount,
+    required this.onFilterTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: t.isDark
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : t.primary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              style: AppTextStyles.body(t.txtPrimary).copyWith(fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Search transactions...',
+                hintStyle:
+                    AppTextStyles.body(t.txtTertiary).copyWith(fontSize: 14),
+                prefixIcon:
+                    Icon(Icons.search_rounded, size: 20, color: t.txtTertiary),
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: onFilterTap,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: filterCount > 0
+                      ? t.primary.withValues(alpha: 0.15)
+                      : (t.isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : t.primary.withValues(alpha: 0.06)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.tune_rounded,
+                  size: 20,
+                  color: filterCount > 0 ? t.primary : t.txtTertiary,
+                ),
+              ),
+              if (filterCount > 0)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: t.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$filterCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -268,117 +356,6 @@ class _VerticalDivider extends StatelessWidget {
   }
 }
 
-// ── Filter Chips ────────────────────────────────────────────────────────────
-
-class _FilterChips extends StatelessWidget {
-  final _TransactionFilter selected;
-  final ValueChanged<_TransactionFilter> onChanged;
-
-  const _FilterChips({required this.selected, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    const filters = [
-      (_TransactionFilter.all, 'All'),
-      (_TransactionFilter.expenses, 'Expenses'),
-      (_TransactionFilter.income, 'Income'),
-      (_TransactionFilter.recurring, 'Recurring'),
-    ];
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      clipBehavior: Clip.none,
-      child: Row(
-        children: filters.map((entry) {
-          final (filter, label) = entry;
-          final isActive = selected == filter;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: AppChip(
-              label: label,
-              active: isActive,
-              onTap: () => onChanged(filter),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-// ── Month Navigator ─────────────────────────────────────────────────────────
-
-class _MonthNavigator extends StatelessWidget {
-  final DateTime month;
-  final VoidCallback onPrevious;
-  final VoidCallback onNext;
-
-  const _MonthNavigator({
-    required this.month,
-    required this.onPrevious,
-    required this.onNext,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-    final label = formatMonthYear(month);
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        GestureDetector(
-          onTap: onPrevious,
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : t.primary.withValues(alpha: 0.08),
-            ),
-            child: Center(
-              child: Text(
-                '‹',
-                style: TextStyle(fontSize: 22, color: t.txtSecondary, height: 1),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Text(
-          label,
-          style: AppTextStyles.body(t.txtPrimary).copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(width: 16),
-        GestureDetector(
-          onTap: onNext,
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : t.primary.withValues(alpha: 0.08),
-            ),
-            child: Center(
-              child: Text(
-                '›',
-                style: TextStyle(fontSize: 22, color: t.txtSecondary, height: 1),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 // ── Transaction Group Section ───────────────────────────────────────────────
 
 class _TransactionGroupSection extends StatelessWidget {
@@ -471,7 +448,8 @@ class _TransactionRow extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: (isExpense ? t.error : t.success).withValues(alpha: 0.15),
+                    color:
+                        (isExpense ? t.error : t.success).withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Center(

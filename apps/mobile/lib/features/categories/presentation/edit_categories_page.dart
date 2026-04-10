@@ -424,8 +424,12 @@ class _CategoryGroupState extends ConsumerState<_CategoryGroup> {
   }
 
   Future<void> _delete() async {
-    final confirmed = await _showDeleteConfirm();
-    if (!confirmed) return;
+    final confirmed = await showDeleteConfirmDialog(
+      context: context,
+      title: 'Delete Category',
+      itemName: widget.category.name,
+    );
+    if (confirmed != true) return;
     setState(() => _deleting = true);
     try {
       await ref
@@ -435,41 +439,10 @@ class _CategoryGroupState extends ConsumerState<_CategoryGroup> {
       if (mounted) {
         setState(() => _deleting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao deletar categoria.')),
+          const SnackBar(content: Text('Failed to delete category.')),
         );
       }
     }
-  }
-
-  Future<bool> _showDeleteConfirm() async {
-    final t = AppThemeTokens.of(context);
-    return await showDialog<bool>(
-          context: context,
-          builder: (_) => AlertDialog(
-            backgroundColor:
-                t.isDark ? const Color(0xFF1C1830) : Colors.white,
-            title: Text('Deletar categoria',
-                style: AppTextStyles.h3(t.txtPrimary)),
-            content: Text(
-              'Deseja deletar "${widget.category.name}"? Esta ação não pode ser desfeita.',
-              style: AppTextStyles.body(t.txtSecondary),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text('Cancelar',
-                    style: AppTextStyles.body(t.txtTertiary)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text('Deletar',
-                    style: AppTextStyles.body(t.error)
-                        .copyWith(fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-        ) ??
-        false;
   }
 
   @override
@@ -627,36 +600,13 @@ class _SubcategoryRowState extends ConsumerState<_SubcategoryRow> {
   bool _deleting = false;
 
   Future<void> _delete() async {
-    final t = AppThemeTokens.of(context);
-    final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (_) => AlertDialog(
-            backgroundColor:
-                t.isDark ? const Color(0xFF1C1830) : Colors.white,
-            title: Text('Deletar subcategoria',
-                style: AppTextStyles.h3(t.txtPrimary)),
-            content: Text(
-              'Deseja deletar "${widget.subcategory.name}"? Esta ação não pode ser desfeita.',
-              style: AppTextStyles.body(t.txtSecondary),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text('Cancelar',
-                    style: AppTextStyles.body(t.txtTertiary)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text('Deletar',
-                    style: AppTextStyles.body(t.error)
-                        .copyWith(fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    final confirmed = await showDeleteConfirmDialog(
+      context: context,
+      title: 'Delete Subcategory',
+      itemName: widget.subcategory.name,
+    );
 
-    if (!confirmed) return;
+    if (confirmed != true) return;
     setState(() => _deleting = true);
     try {
       await ref
@@ -667,7 +617,7 @@ class _SubcategoryRowState extends ConsumerState<_SubcategoryRow> {
       if (mounted) {
         setState(() => _deleting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao deletar subcategoria.')),
+          const SnackBar(content: Text('Failed to delete subcategory.')),
         );
       }
     }
