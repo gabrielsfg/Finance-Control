@@ -21,12 +21,12 @@ namespace FinanceControl.Data.Mappings
                 .HasConversion<string>()
                 .IsRequired();
             builder.Property(bsa => bsa.CreatedAt)
-                .HasColumnType("timestamp without time zone")
-                .HasDefaultValueSql("timezone('America/Sao_Paulo', now())")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now()")
                 .IsRequired()
                 .ValueGeneratedOnAdd();
             builder.Property(bsa => bsa.UpdatedAt)
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .ValueGeneratedOnAdd();
 
             builder.HasOne(bsa => bsa.Budget)

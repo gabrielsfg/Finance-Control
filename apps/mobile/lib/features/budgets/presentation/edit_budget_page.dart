@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/app_locale.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../categories/data/models/category.dart';
@@ -673,6 +674,7 @@ class _EditAreaCardState extends State<_EditAreaCard> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final area = widget.area;
     final isIncome = area.allocationType == 'Income';
     final accentColor = isIncome ? t.success : t.error;
@@ -704,7 +706,7 @@ class _EditAreaCardState extends State<_EditAreaCard> {
                           if (total > 0) ...[
                             const SizedBox(height: 2),
                             Text(
-                              '$prefix${formatCurrency(total)}',
+                              '$prefix${fmt.formatCurrency(total)}',
                               style: AppTextStyles.mono(accentColor,
                                       fontSize: 13)
                                   .copyWith(fontWeight: FontWeight.w700),

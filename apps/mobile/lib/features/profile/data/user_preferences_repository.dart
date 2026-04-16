@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
+import 'dtos/bank_response_dto.dart';
 import 'dtos/currency_response_dto.dart';
 import 'dtos/update_user_preferences_request_dto.dart';
 import 'dtos/user_preferences_response_dto.dart';
@@ -35,10 +36,17 @@ class UserPreferencesRepository {
     );
   }
 
-  Future<List<CurrencyResponseDto>> getCurrencies() async {
-    final response = await _dio.get(ApiEndpoints.userCurrencies);
+  Future<List<CurrencyResponseDto>> getCurrencies({String base = 'USD'}) async {
+    final response = await _dio.get(ApiEndpoints.currencies(base: base));
     return (response.data as List)
         .map((e) => CurrencyResponseDto.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<BankResponseDto>> getBanks(String country) async {
+    final response = await _dio.get(ApiEndpoints.banks(country));
+    return (response.data as List)
+        .map((e) => BankResponseDto.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 }

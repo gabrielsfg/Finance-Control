@@ -15,6 +15,7 @@ class CreateTransactionRequestDto {
     this.description,
     this.totalInstallments,
     this.recurrence,
+    this.paymentMethod,
   });
 
   final int subCategoryId;
@@ -40,6 +41,9 @@ class CreateTransactionRequestDto {
 
   /// Required when paymentType == "Recurring". Must not be null or "None".
   final String? recurrence;
+
+  /// "Credit" | "Debit" | null
+  final String? paymentMethod;
 
   Map<String, dynamic> toJson() => _$CreateTransactionRequestDtoToJson(this);
 }

@@ -17,8 +17,10 @@ class TransactionItem {
   /// "OneTime" | "Installment" | "Recurring"
   final String paymentType;
 
+  /// "Credit" | "Debit" | null (legacy transactions default to Debit in UI)
+  final String? paymentMethod;
+
   final DateTime date;
-  final bool isPaid;
   final int? budgetId;
   final String? description;
   final int? recurringTransactionId;
@@ -38,7 +40,7 @@ class TransactionItem {
     required this.type,
     required this.paymentType,
     required this.date,
-    required this.isPaid,
+    this.paymentMethod,
     this.budgetId,
     this.description,
     this.recurringTransactionId,
@@ -62,8 +64,8 @@ class TransactionItem {
       amountCents: signedCents,
       type: dto.type,
       paymentType: dto.paymentType,
+      paymentMethod: dto.paymentMethod,
       date: DateTime.parse(dto.transactionDate),
-      isPaid: dto.isPaid,
       budgetId: dto.budgetId,
       description: dto.description,
       recurringTransactionId: dto.recurringTransactionId,

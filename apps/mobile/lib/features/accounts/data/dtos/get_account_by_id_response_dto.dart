@@ -7,21 +7,31 @@ class GetAccountByIdResponseDto {
   const GetAccountByIdResponseDto({
     required this.id,
     required this.name,
+    required this.type,
     required this.currentAmount,
-    this.initialAmount,
     required this.isDefaultAccount,
-    this.excludeFromNetWorth = false,
     this.goalAmount,
+    this.billingDueDay,
+    this.creditLimit,
     required this.recentTransactions,
   });
 
   final int id;
   final String name;
+
+  /// "Checking" | "Savings" | "Credit" | "Cash"
+  final String type;
+
   final int currentAmount;
-  final int? initialAmount;
   final bool isDefaultAccount;
-  final bool excludeFromNetWorth;
   final int? goalAmount;
+
+  /// Only present when type == "Credit".
+  final int? billingDueDay;
+
+  /// Only present when type == "Credit". In cents.
+  final int? creditLimit;
+
   final List<RecentTransactionDto> recentTransactions;
 
   factory GetAccountByIdResponseDto.fromJson(Map<String, dynamic> json) =>

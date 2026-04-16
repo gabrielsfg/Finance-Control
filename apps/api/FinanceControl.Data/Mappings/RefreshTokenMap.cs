@@ -12,11 +12,11 @@ namespace FinanceControl.Data.Mappings
             builder.HasKey(r => r.Id);
             builder.Property(r => r.Token).IsRequired();
             builder.Property(r => r.ExpiresAt)
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .IsRequired();
             builder.Property(r => r.CreatedAt)
-                .HasColumnType("timestamp without time zone")
-                .HasDefaultValueSql("timezone('America/Sao_Paulo', now())")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now()")
                 .IsRequired()
                 .ValueGeneratedOnAdd();
             builder.Property(r => r.IsRevoked).HasDefaultValue(false);

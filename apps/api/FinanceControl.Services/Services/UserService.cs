@@ -1,9 +1,11 @@
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Service;
+using FinanceControl.Services.Seeds;
 using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
+using FinanceControl.Shared.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -12,6 +14,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using LoginResult = FinanceControl.Shared.Dtos.Response.LoginResult;
 
 namespace FinanceControl.Services.Services
 {
@@ -45,43 +48,45 @@ namespace FinanceControl.Services.Services
             _context.Add(user);
             await _context.SaveChangesAsync();
 
-            var systemCategory = new Category
-            {
-                UserId = user.Id,
-                Name = "BalanceUpdate",
-                IsSystem = true
-            };
-            _context.Categories.Add(systemCategory);
-            await _context.SaveChangesAsync();
-
-            var systemSubCategory = new SubCategory
-            {
-                UserId = user.Id,
-                CategoryId = systemCategory.Id,
-                Name = "BalanceUpdate",
-                IsSystem = true
-            };
-            _context.SubCategories.Add(systemSubCategory);
-
             _context.UserPreferences.Add(new UserPreferences { UserId = user.Id });
-
             await _context.SaveChangesAsync();
+
+            await SeedUserDataAsync(user.Id, user.PreferredLanguage);
 
             return user;
         }
 
-        public async Task<AuthResponseDto?> UserLoginAsync(UserLoginRequestDto requestDto)
+        public async Task<LoginResult> UserLoginAsync(UserLoginRequestDto requestDto)
         {
+            const int maxFailedAttempts = 5;
+            const int lockoutMinutes = 15;
+
             requestDto.Email = requestDto.Email.ToLower();
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == requestDto.Email);
             if (user is null)
-                return null;
+                return LoginResult.Failed();
+
+            if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
+                return LoginResult.Locked(user.LockoutEnd.Value - DateTime.UtcNow);
 
             if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, requestDto.Password) == PasswordVerificationResult.Failed)
-                return null;
+            {
+                user.FailedLoginAttempts++;
+                if (user.FailedLoginAttempts >= maxFailedAttempts)
+                {
+                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(lockoutMinutes);
+                    user.FailedLoginAttempts = 0;
+                }
+                await _context.SaveChangesAsync();
+                return LoginResult.Failed();
+            }
 
-            return await CreateAuthResponseAsync(user);
+            user.FailedLoginAttempts = 0;
+            user.LockoutEnd = null;
+            await _context.SaveChangesAsync();
+
+            return LoginResult.Success(await CreateAuthResponseAsync(user));
         }
 
         public async Task<AuthResponseDto?> RefreshTokenAsync(string refreshToken)
@@ -105,10 +110,13 @@ namespace FinanceControl.Services.Services
             if (prefs is null)
                 return null;
 
+            var user = await _context.Users.FindAsync(userId);
+
             return new UserPreferencesResponseDto
             {
                 CurrencyCode = prefs.CurrencyCode,
-                Locale = prefs.Locale
+                Locale = prefs.Locale,
+                Country = user?.Country
             };
         }
 
@@ -118,55 +126,26 @@ namespace FinanceControl.Services.Services
             if (prefs is null)
                 return null;
 
+            var user = await _context.Users.FindAsync(userId);
+            if (user is null)
+                return null;
+
             if (!string.IsNullOrWhiteSpace(requestDto.CurrencyCode))
                 prefs.CurrencyCode = requestDto.CurrencyCode.Trim().ToUpper();
 
             if (!string.IsNullOrWhiteSpace(requestDto.Locale))
                 prefs.Locale = requestDto.Locale.Trim();
 
+            if (!string.IsNullOrWhiteSpace(requestDto.Country))
+                user.Country = requestDto.Country.Trim().ToUpper();
+
             await _context.SaveChangesAsync();
 
             return new UserPreferencesResponseDto
             {
                 CurrencyCode = prefs.CurrencyCode,
-                Locale = prefs.Locale
-            };
-        }
-
-        public IReadOnlyList<CurrencyResponseDto> GetAvailableCurrencies()
-        {
-            return new List<CurrencyResponseDto>
-            {
-                new() { Code = "BRL", Name = "Brazilian Real",           Symbol = "R$"  },
-                new() { Code = "USD", Name = "United States Dollar",     Symbol = "$"   },
-                new() { Code = "EUR", Name = "Euro",                     Symbol = "€"   },
-                new() { Code = "GBP", Name = "British Pound Sterling",   Symbol = "£"   },
-                new() { Code = "JPY", Name = "Japanese Yen",             Symbol = "¥"   },
-                new() { Code = "CNY", Name = "Chinese Yuan",             Symbol = "¥"   },
-                new() { Code = "CAD", Name = "Canadian Dollar",          Symbol = "CA$" },
-                new() { Code = "AUD", Name = "Australian Dollar",        Symbol = "A$"  },
-                new() { Code = "CHF", Name = "Swiss Franc",              Symbol = "Fr"  },
-                new() { Code = "HKD", Name = "Hong Kong Dollar",         Symbol = "HK$" },
-                new() { Code = "SGD", Name = "Singapore Dollar",         Symbol = "S$"  },
-                new() { Code = "SEK", Name = "Swedish Krona",            Symbol = "kr"  },
-                new() { Code = "NOK", Name = "Norwegian Krone",          Symbol = "kr"  },
-                new() { Code = "DKK", Name = "Danish Krone",             Symbol = "kr"  },
-                new() { Code = "NZD", Name = "New Zealand Dollar",       Symbol = "NZ$" },
-                new() { Code = "MXN", Name = "Mexican Peso",             Symbol = "$"   },
-                new() { Code = "ARS", Name = "Argentine Peso",           Symbol = "$"   },
-                new() { Code = "CLP", Name = "Chilean Peso",             Symbol = "$"   },
-                new() { Code = "COP", Name = "Colombian Peso",           Symbol = "$"   },
-                new() { Code = "PEN", Name = "Peruvian Sol",             Symbol = "S/." },
-                new() { Code = "INR", Name = "Indian Rupee",             Symbol = "₹"   },
-                new() { Code = "KRW", Name = "South Korean Won",         Symbol = "₩"   },
-                new() { Code = "IDR", Name = "Indonesian Rupiah",        Symbol = "Rp"  },
-                new() { Code = "TRY", Name = "Turkish Lira",             Symbol = "₺"   },
-                new() { Code = "RUB", Name = "Russian Ruble",            Symbol = "₽"   },
-                new() { Code = "ZAR", Name = "South African Rand",       Symbol = "R"   },
-                new() { Code = "SAR", Name = "Saudi Riyal",              Symbol = "﷼"   },
-                new() { Code = "AED", Name = "UAE Dirham",               Symbol = "د.إ" },
-                new() { Code = "PLN", Name = "Polish Zloty",             Symbol = "zł"  },
-                new() { Code = "THB", Name = "Thai Baht",                Symbol = "฿"   },
+                Locale = prefs.Locale,
+                Country = user.Country
             };
         }
 
@@ -244,6 +223,130 @@ namespace FinanceControl.Services.Services
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<bool> LogoutAsync(string refreshToken)
+        {
+            var stored = await _context.RefreshTokens
+                .FirstOrDefaultAsync(r => r.Token == refreshToken);
+
+            if (stored is null || stored.IsRevoked)
+                return false;
+
+            stored.IsRevoked = true;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeleteAccountAsync(int userId, string password)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user is null)
+                return false;
+
+            if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, password) == PasswordVerificationResult.Failed)
+                return false;
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ResetDataAsync(int userId, string password)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user is null)
+                return false;
+
+            if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, password) == PasswordVerificationResult.Failed)
+                return false;
+
+            // Delete all financial data
+            var transactions = _context.Transactions.Where(t => t.UserId == userId);
+            _context.Transactions.RemoveRange(transactions);
+
+            var recurringTransactions = _context.RecurringTransactions.Where(t => t.UserId == userId);
+            _context.RecurringTransactions.RemoveRange(recurringTransactions);
+
+            var budgetAllocations = _context.BudgetSubcategoryAllocations
+                .Where(a => _context.Budgets.Any(b => b.Id == a.BudgetId && b.UserId == userId));
+            _context.BudgetSubcategoryAllocations.RemoveRange(budgetAllocations);
+
+            var areaCategories = _context.AreaCategories
+                .Where(ac => _context.Areas.Any(a => a.Id == ac.AreaId && a.UserId == userId));
+            _context.AreaCategories.RemoveRange(areaCategories);
+
+            var budgets = _context.Budgets.Where(b => b.UserId == userId);
+            _context.Budgets.RemoveRange(budgets);
+
+            var areas = _context.Areas.Where(a => a.UserId == userId);
+            _context.Areas.RemoveRange(areas);
+
+            var accounts = _context.Accounts.Where(a => a.UserId == userId);
+            _context.Accounts.RemoveRange(accounts);
+
+            var subCategories = _context.SubCategories.Where(s => s.UserId == userId);
+            _context.SubCategories.RemoveRange(subCategories);
+
+            var categories = _context.Categories.Where(c => c.UserId == userId);
+            _context.Categories.RemoveRange(categories);
+
+            var refreshTokens = _context.RefreshTokens.Where(r => r.UserId == userId);
+            _context.RefreshTokens.RemoveRange(refreshTokens);
+
+            await _context.SaveChangesAsync();
+
+            // Re-seed default data (same as RegisterUserAsync)
+            var restoredUser = await _context.Users.FindAsync(userId);
+            await SeedUserDataAsync(userId, restoredUser?.PreferredLanguage);
+
+            return true;
+        }
+
+        private async Task SeedUserDataAsync(int userId, string? preferredLanguage)
+        {
+            // System category (internal use — balance adjustments)
+            var systemCategory = new Category { UserId = userId, Name = "BalanceUpdate", IsSystem = true };
+            _context.Categories.Add(systemCategory);
+            await _context.SaveChangesAsync();
+
+            _context.SubCategories.Add(new SubCategory
+            {
+                UserId = userId,
+                CategoryId = systemCategory.Id,
+                Name = "BalanceUpdate",
+                IsSystem = true
+            });
+
+            // Default categories and subcategories
+            foreach (var (categoryName, subcategoryNames) in UserSeedData.GetCategories(preferredLanguage))
+            {
+                var category = new Category { UserId = userId, Name = categoryName, IsSystem = false };
+                _context.Categories.Add(category);
+                await _context.SaveChangesAsync();
+
+                foreach (var subName in subcategoryNames)
+                {
+                    _context.SubCategories.Add(new SubCategory
+                    {
+                        UserId = userId,
+                        CategoryId = category.Id,
+                        Name = subName,
+                        IsSystem = false
+                    });
+                }
+            }
+
+            // Default account (Wallet / Carteira)
+            _context.Accounts.Add(new Account
+            {
+                UserId = userId,
+                Name = UserSeedData.GetWalletName(preferredLanguage),
+                Type = EnumAccountType.Cash,
+                IsDefaultAccount = true
+            });
+
+            await _context.SaveChangesAsync();
         }
 
         private async Task<AuthResponseDto> CreateAuthResponseAsync(User user)

@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/formatters.dart';
+import '../../../core/utils/app_locale.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/transaction_item.dart';
 import '../providers/transaction_provider.dart';
@@ -18,11 +18,12 @@ class TransactionDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final actionState = ref.watch(transactionActionProvider);
     final isExpense = transaction.amountCents < 0;
     final amountColor = isExpense ? t.error : t.success;
     final sign = isExpense ? '- ' : '+ ';
-    final amountStr = '$sign${formatCurrency(transaction.amountCents.abs())}';
+    final amountStr = '$sign${fmt.formatCurrency(transaction.amountCents.abs())}';
 
     ref.listen(transactionActionProvider, (_, next) {
       if (next is TransactionActionSuccess) {
@@ -146,7 +147,7 @@ class TransactionDetailPage extends ConsumerWidget {
                             ),
                             _DetailRow(
                               label: 'Date',
-                              value: formatDate(transaction.date),
+                              value: fmt.formatDate(transaction.date),
                             ),
                             _DetailRow(
                               label: 'Type',
@@ -156,6 +157,12 @@ class TransactionDetailPage extends ConsumerWidget {
                             _DetailRow(
                               label: 'Payment',
                               value: transaction.paymentType,
+                            ),
+                            _DetailRow(
+                              label: 'Method',
+                              value: transaction.paymentMethod == 'Credit'
+                                  ? 'Credit'
+                                  : 'Debit',
                             ),
                             if (transaction.paymentType == 'Recurring')
                               _DetailRow(
@@ -175,11 +182,6 @@ class TransactionDetailPage extends ConsumerWidget {
                                 label: 'Budget',
                                 value: '#${transaction.budgetId}',
                               ),
-                            _DetailRow(
-                              label: 'Status',
-                              value: transaction.isPaid ? 'Paid' : 'Pending',
-                              showDivider: transaction.description != null,
-                            ),
                             if (transaction.description != null)
                               _DetailRow(
                                 label: 'Description',

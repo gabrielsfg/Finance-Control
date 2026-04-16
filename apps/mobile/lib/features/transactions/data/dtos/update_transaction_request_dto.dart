@@ -11,6 +11,7 @@ class UpdateTransactionRequestDto {
     required this.transactionDate,
     this.budgetId,
     this.description,
+    this.paymentMethod,
   });
 
   final int subCategoryId;
@@ -25,6 +26,9 @@ class UpdateTransactionRequestDto {
   /// null to unlink from budget.
   final int? budgetId;
   final String? description;
+
+  /// "Credit" | "Debit" | null
+  final String? paymentMethod;
 
   Map<String, dynamic> toJson() => _$UpdateTransactionRequestDtoToJson(this);
 }

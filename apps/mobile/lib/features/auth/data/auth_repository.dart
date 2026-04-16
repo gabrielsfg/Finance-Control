@@ -64,4 +64,30 @@ class AuthRepository {
       data: {'token': token, 'newPassword': newPassword},
     );
   }
+
+  /// Invalidates the refresh token on the server.
+  Future<void> logout(String refreshToken) async {
+    await _dio.post(
+      ApiEndpoints.logout,
+      data: {'refreshToken': refreshToken},
+    );
+  }
+
+  /// Permanently deletes the authenticated user's account.
+  /// Throws [DioException] with status 400 if [password] is wrong.
+  Future<void> deleteAccount(String password) async {
+    await _dio.delete(
+      ApiEndpoints.deleteAccount,
+      data: {'password': password},
+    );
+  }
+
+  /// Deletes all financial data for the authenticated user (keeps the account).
+  /// Throws [DioException] with status 400 if [password] is wrong.
+  Future<void> resetData(String password) async {
+    await _dio.post(
+      ApiEndpoints.resetData,
+      data: {'password': password},
+    );
+  }
 }

@@ -6,7 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/formatters.dart';
+import '../../../core/utils/app_locale.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/account.dart';
 import '../providers/accounts_provider.dart';
@@ -140,6 +140,7 @@ class _NetWorthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
 
     return GlassCard(
       child: Column(
@@ -156,7 +157,7 @@ class _NetWorthCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            formatCurrency(netWorthCents),
+            fmt.formatCurrency(netWorthCents),
             textAlign: TextAlign.center,
             style: AppTextStyles.moneyLg(t.txtPrimary).copyWith(fontSize: 34),
           ),
@@ -344,7 +345,7 @@ class _AccountCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  formatCurrency(account.balanceCents),
+                  AppLocaleScope.of(context).formatCurrency(account.balanceCents),
                   style: AppTextStyles.moneyMd(balanceColor)
                       .copyWith(fontSize: 15),
                 ),

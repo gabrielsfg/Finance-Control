@@ -9,8 +9,11 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/bank_picker_sheet.dart';
 import '../data/dtos/create_account_request_dto.dart';
 import '../providers/accounts_provider.dart';
+
+const _accountTypes = ['Checking', 'Savings', 'Credit', 'Cash'];
 
 class CreateAccountPage extends ConsumerStatefulWidget {
   const CreateAccountPage({super.key});
@@ -21,21 +24,26 @@ class CreateAccountPage extends ConsumerStatefulWidget {
 
 class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
   final _nameController = TextEditingController();
-  final _balanceController = TextEditingController();
   final _goalController = TextEditingController();
+  final _billingDayController = TextEditingController();
+  final _creditLimitController = TextEditingController();
 
+  String _type = 'Checking';
+  String? _selectedBank;
   bool _isDefault = true;
-  bool _excludeFromNetWorth = false;
   bool _isLoading = false;
 
   String? _nameError;
   String? _submitError;
 
+  bool get _isCredit => _type == 'Credit';
+
   @override
   void dispose() {
     _nameController.dispose();
-    _balanceController.dispose();
     _goalController.dispose();
+    _billingDayController.dispose();
+    _creditLimitController.dispose();
     super.dispose();
   }
 
@@ -62,12 +70,19 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
 
     try {
       final goalCents = _parseCents(_goalController.text);
+      final billingDay = int.tryParse(_billingDayController.text.trim());
+      final creditLimitCents = _parseCents(_creditLimitController.text);
+
       await ref.read(accountsNotifierProvider.notifier).createAccount(
             CreateAccountRequestDto(
               name: _nameController.text.trim(),
-              currentBalance: _parseCents(_balanceController.text),
+              type: _type,
               isDefaultAccount: _isDefault,
               goalAmount: goalCents > 0 ? goalCents : null,
+              billingDueDay: _isCredit ? billingDay : null,
+              creditLimit: _isCredit && creditLimitCents > 0
+                  ? creditLimitCents
+                  : null,
             ),
           );
       if (mounted) context.pop();
@@ -121,10 +136,13 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                // ── Balance input (full-width, grows with content) ────────
-                _BalanceInput(controller: _balanceController),
+                // ── Account type selector ─────────────────────────────────
+                _AccountTypeSelector(
+                  selected: _type,
+                  onChanged: (v) => setState(() => _type = v),
+                ),
                 const SizedBox(height: 20),
-                // ── Fields ────────────────────────────────────────────────
+                // ── Name ──────────────────────────────────────────────────
                 AppInputField(
                   label: 'Account name',
                   placeholder: 'e.g. Nubank, Cash, Savings',
@@ -137,6 +155,16 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                   },
                 ),
                 const SizedBox(height: 14),
+                // ── Bank picker ───────────────────────────────────────────
+                _BankPickerField(
+                  selected: _selectedBank,
+                  onTap: () async {
+                    final bank = await showBankPickerSheet(context);
+                    if (bank != null) setState(() => _selectedBank = bank);
+                  },
+                ),
+                const SizedBox(height: 14),
+                // ── Goal ──────────────────────────────────────────────────
                 AppInputField(
                   label: 'Goal (optional)',
                   placeholder: '0,00',
@@ -149,30 +177,40 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                   textInputAction: TextInputAction.done,
                   leftIcon: const Icon(LucideIcons.target, size: 16),
                 ),
+                // ── Credit-only fields ────────────────────────────────────
+                if (_isCredit) ...[
+                  const SizedBox(height: 14),
+                  AppInputField(
+                    label: 'Credit limit',
+                    placeholder: '0,00',
+                    controller: _creditLimitController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      const CentsInputFormatter(),
+                    ],
+                    textInputAction: TextInputAction.next,
+                    leftIcon: const Icon(LucideIcons.creditCard, size: 16),
+                  ),
+                  const SizedBox(height: 14),
+                  AppInputField(
+                    label: 'Billing due day',
+                    placeholder: '1 – 31',
+                    controller: _billingDayController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    textInputAction: TextInputAction.done,
+                    leftIcon: const Icon(LucideIcons.calendarDays, size: 16),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 // ── Toggles ───────────────────────────────────────────────
                 GlassCard(
-                  child: Column(
-                    children: [
-                      _ToggleRow(
-                        label: 'Default Account',
-                        subtitle: 'Pre-select in new transactions',
-                        value: _isDefault,
-                        onChanged: (v) => setState(() => _isDefault = v),
-                      ),
-                      Divider(
-                        height: 20,
-                        thickness: 1,
-                        color: t.divider.withValues(alpha: 0.4),
-                      ),
-                      _ToggleRow(
-                        label: 'Exclude from Net Worth',
-                        subtitle: 'For investment accounts',
-                        value: _excludeFromNetWorth,
-                        onChanged: (v) =>
-                            setState(() => _excludeFromNetWorth = v),
-                      ),
-                    ],
+                  child: _ToggleRow(
+                    label: 'Default Account',
+                    subtitle: 'Pre-select in new transactions',
+                    value: _isDefault,
+                    onChanged: (v) => setState(() => _isDefault = v),
                   ),
                 ),
                 if (_submitError != null) ...[
@@ -200,75 +238,148 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
   }
 }
 
-// ── Balance Input ─────────────────────────────────────────────────────────────
+// ── Bank Picker Field ─────────────────────────────────────────────────────────
 
-class _BalanceInput extends StatelessWidget {
-  final TextEditingController controller;
+class _BankPickerField extends StatelessWidget {
+  const _BankPickerField({required this.selected, required this.onTap});
 
-  const _BalanceInput({required this.controller});
+  final String? selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Bank (optional)',
+          style: AppTextStyles.caption(t.txtSecondary)
+              .copyWith(fontSize: 12, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 5),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: t.isDark
+                  ? const Color(0xFF1C1830).withValues(alpha: 0.85)
+                  : const Color(0xFFEDE9FE).withValues(alpha: 0.5),
+              borderRadius: AppRadius.baseAll,
+              border: Border.all(
+                color: t.isDark
+                    ? Colors.white.withValues(alpha: 0.09)
+                    : const Color(0xFF7C3AED).withValues(alpha: 0.18),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 10),
+                Icon(LucideIcons.landmark, size: 16, color: t.txtTertiary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    selected ?? 'Select bank...',
+                    style: AppTextStyles.body(
+                      selected != null ? t.txtPrimary : t.txtTertiary,
+                    ).copyWith(fontSize: 14),
+                  ),
+                ),
+                Icon(LucideIcons.chevronsUpDown, size: 14, color: t.txtTertiary),
+                const SizedBox(width: 12),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Account Type Selector ─────────────────────────────────────────────────────
+
+class _AccountTypeSelector extends StatelessWidget {
+  final String selected;
+  final ValueChanged<String> onChanged;
+
+  const _AccountTypeSelector({
+    required this.selected,
+    required this.onChanged,
+  });
+
+  static const _icons = {
+    'Checking': LucideIcons.building2,
+    'Savings': LucideIcons.piggyBank,
+    'Credit': LucideIcons.creditCard,
+    'Cash': LucideIcons.banknote,
+  };
 
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'CURRENT BALANCE',
-          style: AppTextStyles.caption(t.txtTertiary).copyWith(
-            fontSize: 10,
+          'Account type',
+          style: AppTextStyles.caption(t.txtSecondary).copyWith(
             fontWeight: FontWeight.w600,
-            letterSpacing: 1.0,
           ),
         ),
         const SizedBox(height: 10),
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              'R\$',
-              style: AppTextStyles.mono(t.txtSecondary, fontSize: 26)
-                  .copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(width: 6),
-            IntrinsicWidth(
-              child: TextField(
-                controller: controller,
-                keyboardType: const TextInputType.numberWithOptions(
-                  signed: true,
-                  decimal: false,
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d\-]')),
-                  const CentsInputFormatter(allowNegative: true),
-                ],
-                style: AppTextStyles.moneyLg(t.txtPrimary).copyWith(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -1,
-                ),
-                decoration: InputDecoration(
-                  hintText: '0,00',
-                  hintStyle: AppTextStyles.moneyLg(
-                    t.txtPrimary.withValues(alpha: 0.35),
-                  ).copyWith(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -1,
+          children: _accountTypes.map((type) {
+            final isSelected = type == selected;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => onChanged(type),
+                child: Container(
+                  margin: EdgeInsets.only(
+                    right: type != _accountTypes.last ? 8 : 0,
                   ),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? t.primary.withValues(alpha: t.isDark ? 0.2 : 0.1)
+                        : t.isDark
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : Colors.white.withValues(alpha: 0.8),
+                    borderRadius: AppRadius.mdAll,
+                    border: Border.all(
+                      color: isSelected
+                          ? t.primary.withValues(alpha: 0.6)
+                          : t.divider.withValues(alpha: 0.4),
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        _icons[type]!,
+                        size: 18,
+                        color: isSelected ? t.primary : t.txtTertiary,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        type,
+                        style: AppTextStyles.caption(
+                          isSelected ? t.primary : t.txtSecondary,
+                        ).copyWith(
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+            );
+          }).toList(),
         ),
       ],
     );

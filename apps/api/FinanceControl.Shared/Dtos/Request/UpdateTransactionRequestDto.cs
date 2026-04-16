@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using FinanceControl.Shared.Enums;
 
 namespace FinanceControl.Shared.Dtos.Request
 {
@@ -14,5 +10,6 @@ namespace FinanceControl.Shared.Dtos.Request
         public int Value { get; set; }
         public string Description { get; set; }
         public DateOnly TransactionDate { get; set; }
+        public EnumPaymentMethod? PaymentMethod { get; set; }
     }
 }

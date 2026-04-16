@@ -61,6 +61,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
   int _installmentCount = 2;
   String? _recurrence;
   bool _includeInBudget = true;
+  bool _isCredit = false;
 
   // Validation errors
   String? _accountError;
@@ -138,6 +139,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
           _paymentType == _PaymentType.installment ? _installmentCount : null,
       recurrence:
           _paymentType == _PaymentType.recurring ? _recurrence : null,
+      paymentMethod: _isCredit ? 'Credit' : 'Debit',
     );
 
     await ref.read(createTransactionProvider.notifier).submit(dto);
@@ -459,7 +461,21 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
 
                     const SizedBox(height: 12),
 
-                    // Card 4 — Include in budget
+                    // Card 4 — Payment method (Credit / Debit)
+                    _FormCard(
+                      children: [
+                        _PaymentMethodToggle(
+                          isCredit: _isCredit,
+                          onChanged: isLoading
+                              ? null
+                              : (v) => setState(() => _isCredit = v),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Card 5 — Include in budget
                     _FormCard(
                       children: [
                         _IncludeInBudgetRow(
@@ -1047,6 +1063,59 @@ class _PaymentChip extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Payment Method Toggle ───────────────────────────────────────────────────
+
+class _PaymentMethodToggle extends StatelessWidget {
+  final bool isCredit;
+  final ValueChanged<bool>? onChanged;
+
+  const _PaymentMethodToggle({
+    required this.isCredit,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Payment method',
+            style: AppTextStyles.caption(t.txtSecondary).copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _PaymentChip(
+                  label: 'Debit',
+                  active: !isCredit,
+                  onTap: onChanged == null ? null : () => onChanged!(false),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _PaymentChip(
+                  label: 'Credit',
+                  active: isCredit,
+                  onTap: onChanged == null ? null : () => onChanged!(true),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

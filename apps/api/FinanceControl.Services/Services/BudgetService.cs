@@ -97,7 +97,7 @@ namespace FinanceControl.Services.Services
             if (budget == null)
                 return null;
 
-            var startDate = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, budget.StartDate);
+            var startDate = new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, budget.StartDate);
 
             var finishDate = budget.Recurrence switch
             {
@@ -126,7 +126,7 @@ namespace FinanceControl.Services.Services
             if (budget == null)
                 return null;
 
-            var startDate = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, budget.StartDate);
+            var startDate = new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, budget.StartDate);
 
             var finishDate = budget.Recurrence switch
             {
@@ -336,7 +336,7 @@ namespace FinanceControl.Services.Services
                     .ThenInclude(al => al.SubCategory)
                 .ToListAsync();
 
-            var startDate = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, budget.StartDate);
+            var startDate = new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, budget.StartDate);
 
             var finishDate = budget.Recurrence switch
             {

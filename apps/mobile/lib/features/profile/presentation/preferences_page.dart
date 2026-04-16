@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/theme_mode_provider.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/dtos/currency_response_dto.dart';
 import '../data/dtos/update_user_preferences_request_dto.dart';
@@ -21,8 +22,20 @@ class PreferencesPage extends ConsumerStatefulWidget {
 class _PreferencesPageState extends ConsumerState<PreferencesPage> {
   String? _selectedCurrency;
   String? _selectedLocale;
+  bool _countryInitialized = false;
+  bool _timezoneInitialized = false;
   bool _isSaving = false;
   String? _submitError;
+
+  final _countryController = TextEditingController();
+  final _timezoneController = TextEditingController();
+
+  @override
+  void dispose() {
+    _countryController.dispose();
+    _timezoneController.dispose();
+    super.dispose();
+  }
 
   static const _locales = [
     _LocaleOption(code: 'pt-BR', label: 'Português (Brasil)'),
@@ -30,10 +43,14 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
   ];
 
   Future<void> _save() async {
-    if (_selectedCurrency == null && _selectedLocale == null) {
-      context.pop();
+    final countryValue = _countryController.text.trim().toUpperCase();
+    if (countryValue.isNotEmpty && countryValue.length != 2) {
+      setState(() => _submitError = 'Country must be a 2-letter ISO code (e.g. BR, US).');
       return;
     }
+
+    final countryToSend = countryValue.isEmpty ? null : countryValue;
+    final timezoneValue = _timezoneController.text.trim();
 
     setState(() {
       _isSaving = true;
@@ -41,12 +58,25 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
     });
 
     try {
-      await ref.read(userPreferencesProvider.notifier).updatePreferences(
-            UpdateUserPreferencesRequestDto(
-              currencyCode: _selectedCurrency,
-              locale: _selectedLocale,
-            ),
-          );
+      // Save timezone locally if it changed
+      if (timezoneValue.isNotEmpty) {
+        final currentTz = ref.read(localSettingsProvider).valueOrNull?.timezone;
+        if (timezoneValue != currentTz) {
+          await ref.read(localSettingsProvider.notifier).setTimezone(timezoneValue);
+        }
+      }
+
+      // Only call the backend if there's something to update
+      if (_selectedCurrency != null || _selectedLocale != null || countryToSend != null) {
+        await ref.read(userPreferencesProvider.notifier).updatePreferences(
+              UpdateUserPreferencesRequestDto(
+                currencyCode: _selectedCurrency,
+                locale: _selectedLocale,
+                country: countryToSend,
+              ),
+            );
+      }
+
       if (mounted) context.pop();
     } catch (_) {
       setState(() => _submitError = 'Could not save preferences. Try again.');
@@ -65,6 +95,20 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
         _selectedCurrency ?? prefsAsync.valueOrNull?.currencyCode ?? 'BRL';
     final currentLocale =
         _selectedLocale ?? prefsAsync.valueOrNull?.locale ?? 'pt-BR';
+
+    final localSettings = ref.watch(localSettingsProvider).valueOrNull;
+
+    // Initialise country field from loaded prefs (only once)
+    if (!_countryInitialized && prefsAsync.valueOrNull?.country != null) {
+      _countryInitialized = true;
+      _countryController.text = prefsAsync.valueOrNull!.country!;
+    }
+
+    // Initialise timezone field from local settings (only once)
+    if (!_timezoneInitialized && localSettings != null) {
+      _timezoneInitialized = true;
+      _timezoneController.text = localSettings.timezone;
+    }
 
     return Scaffold(
       body: AppBackground(
@@ -114,6 +158,65 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
                   selected: currentLocale,
                   onChanged: (locale) =>
                       setState(() => _selectedLocale = locale),
+                ),
+
+                const SizedBox(height: 28),
+
+                // ── Theme ────────────────────────────────────────────────
+                _SectionLabel(title: 'Theme'),
+                const SizedBox(height: 10),
+                _ThemeSelector(
+                  selected: ref.watch(themeModeProvider),
+                  onChanged: (mode) => ref
+                      .read(localSettingsProvider.notifier)
+                      .setThemeMode(mode),
+                ),
+
+                const SizedBox(height: 28),
+
+                // ── Country ──────────────────────────────────────────────
+                _SectionLabel(title: 'Country'),
+                const SizedBox(height: 10),
+                AppInputField(
+                  placeholder: 'ISO 3166-1 alpha-2 (e.g. BR, US)',
+                  controller: _countryController,
+                  keyboardType: TextInputType.text,
+                  textCapitalization: TextCapitalization.characters,
+                  textInputAction: TextInputAction.done,
+                ),
+
+                const SizedBox(height: 28),
+
+                // ── Timezone ─────────────────────────────────────────────
+                _SectionLabel(title: 'Timezone'),
+                const SizedBox(height: 10),
+                AppInputField(
+                  placeholder: 'IANA timezone (e.g. America/Sao_Paulo)',
+                  controller: _timezoneController,
+                  keyboardType: TextInputType.text,
+                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.only(left: 2),
+                  child: Text(
+                    'Used for date grouping and day boundaries.',
+                    style: AppTextStyles.caption(
+                      AppThemeTokens.of(context).txtTertiary,
+                    ).copyWith(fontSize: 11),
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                // ── First Day of Week ─────────────────────────────────────
+                _SectionLabel(title: 'First Day of Week'),
+                const SizedBox(height: 10),
+                _FirstDaySelector(
+                  selected: localSettings?.firstDayOfWeek ?? 0,
+                  onChanged: (day) => ref
+                      .read(localSettingsProvider.notifier)
+                      .setFirstDayOfWeek(day),
                 ),
 
                 const SizedBox(height: 32),
@@ -234,9 +337,7 @@ class _CurrencySelectorState extends ConsumerState<_CurrencySelector> {
       _filtered = q.isEmpty
           ? widget.currencies
           : widget.currencies
-              .where((c) =>
-                  c.code.toLowerCase().contains(q) ||
-                  c.name.toLowerCase().contains(q))
+              .where((c) => c.code.toLowerCase().contains(q))
               .toList();
     });
   }
@@ -269,7 +370,7 @@ class _CurrencySelectorState extends ConsumerState<_CurrencySelector> {
           child: ListView.separated(
             shrinkWrap: true,
             itemCount: _filtered.length,
-            separatorBuilder: (_, __) => Divider(
+            separatorBuilder: (_, _) => Divider(
               height: 1,
               thickness: 1,
               indent: 16,
@@ -290,7 +391,7 @@ class _CurrencySelectorState extends ConsumerState<_CurrencySelector> {
                   child: Row(
                     children: [
                       SizedBox(
-                        width: 44,
+                        width: 52,
                         child: Text(
                           currency.code,
                           style: AppTextStyles.body(
@@ -301,19 +402,12 @@ class _CurrencySelectorState extends ConsumerState<_CurrencySelector> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          currency.name,
+                          '1 USD = ${currency.rate.toStringAsFixed(4)} ${currency.code}',
                           style: AppTextStyles.bodySm(t.txtSecondary),
                         ),
                       ),
-                      Text(
-                        currency.symbol,
-                        style: AppTextStyles.body(t.txtTertiary)
-                            .copyWith(fontSize: 13),
-                      ),
-                      const SizedBox(width: 10),
                       if (isSelected)
                         Icon(LucideIcons.check, size: 16, color: t.primary)
                       else
@@ -415,6 +509,140 @@ class _LocaleSelector extends StatelessWidget {
           );
         }),
       ),
+    );
+  }
+}
+
+// ── Theme Selector ─────────────────────────────────────────────────────────
+
+class _ThemeSelector extends StatelessWidget {
+  const _ThemeSelector({required this.selected, required this.onChanged});
+
+  final ThemeMode selected;
+  final ValueChanged<ThemeMode> onChanged;
+
+  static const _options = [
+    (mode: ThemeMode.system, label: 'System', icon: LucideIcons.monitor),
+    (mode: ThemeMode.light, label: 'Light', icon: LucideIcons.sun),
+    (mode: ThemeMode.dark, label: 'Dark', icon: LucideIcons.moon),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+
+    return Row(
+      children: _options.map((opt) {
+        final isSelected = opt.mode == selected;
+        final isLast = opt == _options.last;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => onChanged(opt.mode),
+            child: Container(
+              margin: EdgeInsets.only(right: isLast ? 0 : 8),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? t.primary.withValues(alpha: t.isDark ? 0.2 : 0.1)
+                    : t.isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.white.withValues(alpha: 0.8),
+                borderRadius: AppRadius.mdAll,
+                border: Border.all(
+                  color: isSelected
+                      ? t.primary.withValues(alpha: 0.6)
+                      : t.divider.withValues(alpha: 0.4),
+                  width: isSelected ? 1.5 : 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    opt.icon,
+                    size: 18,
+                    color: isSelected ? t.primary : t.txtTertiary,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    opt.label,
+                    style: AppTextStyles.caption(
+                      isSelected ? t.primary : t.txtSecondary,
+                    ).copyWith(
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ── First Day of Week Selector ─────────────────────────────────────────────
+
+class _FirstDaySelector extends StatelessWidget {
+  const _FirstDaySelector({required this.selected, required this.onChanged});
+
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  static const _days = [
+    (index: 0, label: 'Sun'),
+    (index: 1, label: 'Mon'),
+    (index: 2, label: 'Tue'),
+    (index: 3, label: 'Wed'),
+    (index: 4, label: 'Thu'),
+    (index: 5, label: 'Fri'),
+    (index: 6, label: 'Sat'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+
+    return Row(
+      children: _days.map((day) {
+        final isSelected = day.index == selected;
+        final isLast = day.index == 6;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => onChanged(day.index),
+            child: Container(
+              margin: EdgeInsets.only(right: isLast ? 0 : 6),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? t.primary.withValues(alpha: t.isDark ? 0.2 : 0.1)
+                    : t.isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.white.withValues(alpha: 0.8),
+                borderRadius: AppRadius.mdAll,
+                border: Border.all(
+                  color: isSelected
+                      ? t.primary.withValues(alpha: 0.6)
+                      : t.divider.withValues(alpha: 0.4),
+                  width: isSelected ? 1.5 : 1,
+                ),
+              ),
+              child: Text(
+                day.label,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.caption(
+                  isSelected ? t.primary : t.txtSecondary,
+                ).copyWith(
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

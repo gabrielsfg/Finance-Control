@@ -6,15 +6,26 @@ part 'create_account_request_dto.g.dart';
 class CreateAccountRequestDto {
   const CreateAccountRequestDto({
     required this.name,
-    required this.currentBalance,
+    required this.type,
     required this.isDefaultAccount,
     this.goalAmount,
+    this.billingDueDay,
+    this.creditLimit,
   });
 
   final String name;
-  final int currentBalance;
+
+  /// "Checking" | "Savings" | "Credit" | "Cash"
+  final String type;
+
   final bool isDefaultAccount;
   final int? goalAmount;
+
+  /// Only sent when type == "Credit".
+  final int? billingDueDay;
+
+  /// Only sent when type == "Credit". In cents.
+  final int? creditLimit;
 
   Map<String, dynamic> toJson() => _$CreateAccountRequestDtoToJson(this);
 }

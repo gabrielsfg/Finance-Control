@@ -2,9 +2,18 @@
 ///
 /// All formatting logic for currency, dates, percentages, and labels must live
 /// here. Never define formatting functions inside a page or widget file.
+///
+/// Prefer using [AppLocale] (via [AppLocaleScope.of(context)]) directly in
+/// widgets so that formatting automatically adapts to the user's locale.
+/// The free functions below are kept for call sites that don't have access to
+/// a BuildContext (e.g. repositories, notifiers).
 library;
 
 import 'package:flutter/services.dart';
+
+import 'app_locale.dart';
+
+// ── CentsInputFormatter ────────────────────────────────────────────────────
 
 /// A [TextInputFormatter] that formats monetary input as cents-based currency.
 ///
@@ -12,19 +21,28 @@ import 'package:flutter/services.dart';
 /// is true). The formatter automatically inserts the decimal separator so that
 /// the last two digits are always the cent portion.
 ///
-/// Examples (allowNegative: false):
-///   typing "4"    → "0,04"
-///   typing "43"   → "0,43"
-///   typing "432"  → "4,32"
-///   typing "43254"→ "432,54"
+/// Uses pt-BR separators by default (comma decimal, period thousands).
+/// Pass [locale] (e.g. "en-US") to switch to period decimal / comma thousands.
 ///
-/// To read the value back as cents, call [CentsInputFormatter.parseCents].
+/// Examples (pt-BR):
+///   typing "4"     → "0,04"
+///   typing "43"    → "0,43"
+///   typing "432"   → "4,32"
+///   typing "43254" → "432,54"
 class CentsInputFormatter extends TextInputFormatter {
-  const CentsInputFormatter({this.allowNegative = false});
+  const CentsInputFormatter({
+    this.allowNegative = false,
+    this.locale = 'pt-BR',
+  });
 
   final bool allowNegative;
 
-  /// Parses a formatted string (e.g. "-1.234,56") back to cents.
+  /// BCP 47 locale tag used to pick decimal/thousands separators.
+  final String locale;
+
+  bool get _useCommaDecimal => locale.startsWith('pt');
+
+  /// Parses a formatted string (e.g. "-1.234,56" or "-1,234.56") back to cents.
   static int parseCents(String formatted) {
     final isNegative = formatted.startsWith('-');
     final digits = formatted.replaceAll(RegExp(r'[^\d]'), '');
@@ -41,8 +59,6 @@ class CentsInputFormatter extends TextInputFormatter {
     final isNegative = allowNegative && raw.startsWith('-');
     final digits = raw.replaceAll(RegExp(r'[^\d]'), '');
 
-    // If the user just typed '-' and no digits yet, keep the '-' as-is so
-    // they can continue typing digits.
     if (isNegative && digits.isEmpty) {
       return const TextEditingValue(
         text: '-',
@@ -50,7 +66,7 @@ class CentsInputFormatter extends TextInputFormatter {
       );
     }
 
-    final formatted = _format(digits, isNegative);
+    final formatted = _format(digits, isNegative, _useCommaDecimal);
 
     return TextEditingValue(
       text: formatted,
@@ -58,99 +74,72 @@ class CentsInputFormatter extends TextInputFormatter {
     );
   }
 
-  static String _format(String digits, bool isNegative) {
+  static String _format(String digits, bool isNegative, bool commaDecimal) {
     if (digits.isEmpty) return '';
 
-    // Pad to at least 3 digits so we always have a cent portion.
     final padded = digits.padLeft(3, '0');
-
     final rawInt = padded.substring(0, padded.length - 2);
     final centPart = padded.substring(padded.length - 2);
 
-    // Strip leading zeros from the integer part (keep at least one digit).
     final intPart = rawInt.replaceFirst(RegExp(r'^0+'), '').isEmpty
         ? '0'
         : rawInt.replaceFirst(RegExp(r'^0+'), '');
 
-    // Insert thousand separators in the integer part.
+    final thousandsSep = commaDecimal ? '.' : ',';
+    final decimalSep = commaDecimal ? ',' : '.';
+
     final buf = StringBuffer();
     for (var i = 0; i < intPart.length; i++) {
-      if (i > 0 && (intPart.length - i) % 3 == 0) buf.write('.');
+      if (i > 0 && (intPart.length - i) % 3 == 0) buf.write(thousandsSep);
       buf.write(intPart[i]);
     }
 
-    final result = '$buf,$centPart';
+    final result = '$buf$decimalSep$centPart';
     return isNegative ? '-$result' : result;
   }
 }
 
-/// Formats an integer amount in cents as a currency string.
-///
-/// [currencySymbol] defaults to "R$" (BRL). Pass the symbol from the user's
-/// preferences to render in another currency.
-///
-/// Examples (currencySymbol: "R$"):
-///   formatCurrency(384752)  → "R$ 3.847,52"
-///   formatCurrency(100)     → "R$ 1,00"
-///   formatCurrency(-6790)   → "R$ 67,90"  (sign is the caller's responsibility)
+// ── Convenience free functions (delegate to AppLocale.defaultLocale) ───────
+//
+// These exist for backward-compatibility and for code that runs outside a
+// widget tree (providers, repositories). In widgets, prefer:
+//   final fmt = AppLocaleScope.of(context);
+//   fmt.formatCurrency(cents);
+
+/// Formats [cents] as a currency string.
+/// Defaults to BRL / pt-BR formatting. Prefer [AppLocale.formatCurrency] in widgets.
 String formatCurrency(int cents, {String currencySymbol = r'R$'}) {
-  final str = (cents.abs() / 100).toStringAsFixed(2);
-  final parts = str.split('.');
-  final integerPart = parts[0];
-  final buf = StringBuffer();
-  for (var i = 0; i < integerPart.length; i++) {
-    if (i > 0 && (integerPart.length - i) % 3 == 0) buf.write('.');
-    buf.write(integerPart[i]);
-  }
-  return '$currencySymbol $buf,${parts[1]}';
+  // Honour explicit override (used in wishlist pre-fill logic, etc.)
+  final locale = AppLocale(
+    currencyCode: 'BRL',
+    currencySymbol: currencySymbol,
+    locale: 'pt-BR',
+    country: 'BR',
+    timezone: 'America/Sao_Paulo',
+    firstDayOfWeek: 0,
+  );
+  return locale.formatCurrency(cents);
 }
 
-/// Returns the full Portuguese month name for the given 1-based month number.
-///
-/// Used for UI display only (product copy — Portuguese is intentional here).
-String monthName(int month) => const [
-      '',
-      'Janeiro',
-      'Fevereiro',
-      'Março',
-      'Abril',
-      'Maio',
-      'Junho',
-      'Julho',
-      'Agosto',
-      'Setembro',
-      'Outubro',
-      'Novembro',
-      'Dezembro',
-    ][month];
+/// Returns the full month name in pt-BR.
+/// Prefer [AppLocale.monthName] in widgets.
+String monthName(int month) => AppLocale.defaultLocale.monthName(month);
 
-/// Returns the abbreviated Portuguese month name for the given 1-based month number.
-///
-/// Examples: 1 → "Jan", 2 → "Fev", 3 → "Mar"
-String shortMonthName(int month) => const [
-      '',
-      'Jan',
-      'Fev',
-      'Mar',
-      'Abr',
-      'Mai',
-      'Jun',
-      'Jul',
-      'Ago',
-      'Set',
-      'Out',
-      'Nov',
-      'Dez',
-    ][month];
+/// Returns the abbreviated month name in pt-BR.
+/// Prefer [AppLocale.shortMonthName] in widgets.
+String shortMonthName(int month) =>
+    AppLocale.defaultLocale.shortMonthName(month);
 
-/// Returns a formatted date string like "19 FEV" for use in transaction group headers.
-String formatDayHeader(DateTime date) {
-  return '${date.day} ${shortMonthName(date.month).toUpperCase()}';
-}
+/// Returns a formatted day header like "19 FEV" in pt-BR.
+/// Prefer [AppLocale.formatDayHeader] in widgets.
+String formatDayHeader(DateTime date) =>
+    AppLocale.defaultLocale.formatDayHeader(date);
 
-/// Returns a formatted month/year string like "Fevereiro 2026".
-String formatMonthYear(DateTime date) => '${monthName(date.month)} ${date.year}';
+/// Returns a formatted month/year string like "Fevereiro 2026" in pt-BR.
+/// Prefer [AppLocale.formatMonthYear] in widgets.
+String formatMonthYear(DateTime date) =>
+    AppLocale.defaultLocale.formatMonthYear(date);
 
-/// Returns a formatted date string like "18/02/2026".
-String formatDate(DateTime date) =>
-    '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+/// Returns a formatted date string like "18/02/2026" in pt-BR.
+/// Prefer [AppLocale.formatDate] in widgets.
+String formatDate(DateTime date) => AppLocale.defaultLocale.formatDate(date);

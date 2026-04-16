@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/token_storage.dart';
+import '../data/auth_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Auth State
@@ -44,7 +45,16 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    await ref.read(tokenStorageProvider).clearTokens();
+    final storage = ref.read(tokenStorageProvider);
+    final refreshToken = await storage.getRefreshToken();
+    if (refreshToken != null) {
+      try {
+        await ref.read(authRepositoryProvider).logout(refreshToken);
+      } catch (_) {
+        // Server-side invalidation is best-effort; proceed with local logout.
+      }
+    }
+    await storage.clearTokens();
     state = const AsyncData(AuthState.unauthenticated());
   }
 }

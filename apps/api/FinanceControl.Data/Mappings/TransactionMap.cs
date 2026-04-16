@@ -24,16 +24,17 @@ namespace FinanceControl.Data.Mappings
             builder.Property(t => t.PaymentType)
                 .HasConversion<string>()
                 .IsRequired();
+            builder.Property(t => t.PaymentMethod)
+                .HasConversion<string>();
             builder.Property(t => t.InstallmentNumber);
             builder.Property(t => t.TotalInstallments);
-            builder.Property(t => t.IsPaid).IsRequired();
             builder.Property(t => t.CreatedAt)
-                .HasColumnType("timestamp without time zone")
-                .HasDefaultValueSql("timezone('America/Sao_Paulo', now())")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now()")
                 .IsRequired()
                 .ValueGeneratedOnAdd();
             builder.Property(t => t.UpdatedAt)
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .ValueGeneratedOnAdd();
 
             builder.HasOne<User>()

@@ -7,11 +7,15 @@ abstract class ApiEndpoints {
   static const String login = '/api/user/login';
   static const String register = '/api/user/register';
   static const String refreshToken = '/api/user/refresh';
+  static const String logout = '/api/user/logout';
   static const String forgotPassword = '/api/user/forgot-password';
   static const String resetPassword = '/api/user/reset-password';
   static const String userProfile = '/api/user/profile';
+  static const String deleteAccount = '/api/user/me';
+  static const String resetData = '/api/user/me/reset-data';
   static const String userPreferences = '/api/user/preferences';
-  static const String userCurrencies = '/api/user/currencies';
+  static String currencies({String base = 'USD'}) => '/api/currencies?base=$base';
+  static String banks(String country) => '/api/banks?country=$country';
 
   // Main page
   static const String mainPageSummary = '/api/mainpage/summary';
@@ -34,9 +38,6 @@ abstract class ApiEndpoints {
   static String cancelRecurringTransaction(int recurringId) =>
       '/api/transaction/$recurringId/recurring/cancel';
 
-  // Categories (transaction picker — includes system categories)
-  static const String categories = '/api/categories';
-
   // Categories (user-owned — CRUD)
   static const String userCategories = '/api/category';
   static String userCategoryById(int id) => '/api/category/$id';
@@ -46,6 +47,13 @@ abstract class ApiEndpoints {
   static const String subcategories = '/api/SubCategory';
   static String subcategoryById(int id) => '/api/SubCategory/$id';
   static String deleteSubcategory(int id) => '/api/SubCategory/$id';
+
+  // Wishlist
+  static const String wishlist = '/api/wishlist';
+  static String wishlistById(int id) => '/api/wishlist/$id';
+  static String wishlistPrice(int id) => '/api/wishlist/$id/price';
+  static String wishlistPurchase(int id) => '/api/wishlist/$id/purchase';
+  static String wishlistPriceHistory(int id) => '/api/wishlist/$id/price-history';
 
   // Budgets
   static const String budgets = '/api/budget';

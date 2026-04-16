@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/formatters.dart';
+import '../../../core/utils/app_locale.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/budget_models.dart';
 import '../providers/budget_provider.dart';
@@ -273,8 +273,9 @@ class _OverviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final period =
-        '${formatDate(budget.startDate)} – ${formatDate(budget.endDate)}';
+        '${fmt.formatDate(budget.startDate)} – ${fmt.formatDate(budget.endDate)}';
     final balance = budget.actualIncomeCents - budget.actualExpenseCents;
 
     return GlassCard(
@@ -332,14 +333,14 @@ class _OverviewCard extends StatelessWidget {
               Expanded(
                 child: _OverviewStat(
                   label: 'Expected income',
-                  value: formatCurrency(budget.expectedIncomeCents),
+                  value: fmt.formatCurrency(budget.expectedIncomeCents),
                   color: t.success.withValues(alpha: 0.7),
                 ),
               ),
               Expanded(
                 child: _OverviewStat(
                   label: 'Expected expenses',
-                  value: '- ${formatCurrency(budget.expectedExpenseCents)}',
+                  value: '- ${fmt.formatCurrency(budget.expectedExpenseCents)}',
                   color: t.error.withValues(alpha: 0.7),
                   align: TextAlign.end,
                 ),
@@ -352,14 +353,14 @@ class _OverviewCard extends StatelessWidget {
               Expanded(
                 child: _OverviewStat(
                   label: 'Received',
-                  value: formatCurrency(budget.actualIncomeCents),
+                  value: fmt.formatCurrency(budget.actualIncomeCents),
                   color: t.success,
                 ),
               ),
               Expanded(
                 child: _OverviewStat(
                   label: 'Spent',
-                  value: '- ${formatCurrency(budget.actualExpenseCents)}',
+                  value: '- ${fmt.formatCurrency(budget.actualExpenseCents)}',
                   color: t.error,
                   align: TextAlign.end,
                 ),
@@ -391,7 +392,7 @@ class _OverviewCard extends StatelessWidget {
                         .copyWith(fontSize: 11),
                   ),
                   Text(
-                    '${balance < 0 ? '- ' : ''}${formatCurrency(balance.abs())}',
+                    '${balance < 0 ? '- ' : ''}${fmt.formatCurrency(balance.abs())}',
                     style: AppTextStyles.mono(
                       balance >= 0 ? t.success : t.error,
                       fontSize: 12,
@@ -462,6 +463,7 @@ class _AreaCardState extends State<_AreaCard> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final area = widget.area;
     final percentStr = '${(area.spentPercent * 100).round()}%';
     final isIncome = area.isIncome;
@@ -524,7 +526,7 @@ class _AreaCardState extends State<_AreaCard> {
                     Row(
                       children: [
                         Text(
-                          formatCurrency(area.spentCents),
+                          fmt.formatCurrency(area.spentCents),
                           style: AppTextStyles.mono(
                             area.spentPercent >= 1.0
                                 ? t.error
@@ -535,7 +537,7 @@ class _AreaCardState extends State<_AreaCard> {
                           ).copyWith(fontWeight: FontWeight.w600),
                         ),
                         Text(
-                          '/${formatCurrency(area.allocatedCents)} $actionLabel',
+                          '/${fmt.formatCurrency(area.allocatedCents)} $actionLabel',
                           style: AppTextStyles.bodySm(t.txtTertiary)
                               .copyWith(fontSize: 11),
                         ),
@@ -585,6 +587,7 @@ class _SubcategoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final isOver = sub.spentCents > sub.allocatedCents;
     final accentColor = sub.isExpense ? t.error : t.success;
     final actionLabel = sub.isExpense ? 'spent' : 'received';
@@ -611,7 +614,7 @@ class _SubcategoryRow extends StatelessWidget {
                   ),
                   if (isOver)
                     Text(
-                      '+${formatCurrency(sub.spentCents - sub.allocatedCents)} over',
+                      '+${fmt.formatCurrency(sub.spentCents - sub.allocatedCents)} over',
                       style: AppTextStyles.caption(t.error)
                           .copyWith(fontSize: 10),
                     ),
@@ -622,14 +625,14 @@ class _SubcategoryRow extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    formatCurrency(sub.spentCents),
+                    fmt.formatCurrency(sub.spentCents),
                     style: AppTextStyles.mono(
                       isOver ? t.error : accentColor,
                       fontSize: 11,
                     ).copyWith(fontWeight: FontWeight.w600),
                   ),
                   Text(
-                    '/${formatCurrency(sub.allocatedCents)} $actionLabel',
+                    '/${fmt.formatCurrency(sub.allocatedCents)} $actionLabel',
                     style: AppTextStyles.mono(t.txtTertiary, fontSize: 11),
                   ),
                 ],
@@ -671,6 +674,7 @@ class _OtherExpensesCardState extends State<_OtherExpensesCard> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
 
     // Aggregate by subcategory name for a cleaner display
     final Map<String, int> aggregated = {};
@@ -728,7 +732,7 @@ class _OtherExpensesCardState extends State<_OtherExpensesCard> {
                       children: [
                         if (totalExpense > 0)
                           Text(
-                            '- ${formatCurrency(totalExpense)} spent',
+                            '- ${fmt.formatCurrency(totalExpense)} spent',
                             style: AppTextStyles.bodySm(t.error)
                                 .copyWith(fontSize: 11),
                           ),
@@ -738,7 +742,7 @@ class _OtherExpensesCardState extends State<_OtherExpensesCard> {
                                   .copyWith(fontSize: 11)),
                         if (totalIncome > 0)
                           Text(
-                            '${formatCurrency(totalIncome)} received',
+                            '${fmt.formatCurrency(totalIncome)} received',
                             style: AppTextStyles.bodySm(t.success)
                                 .copyWith(fontSize: 11),
                           ),
@@ -776,7 +780,7 @@ class _OtherExpensesCardState extends State<_OtherExpensesCard> {
                             ),
                           ),
                           Text(
-                            '${isExpense ? '- ' : ''}${formatCurrency(cents)}',
+                            '${isExpense ? '- ' : ''}${fmt.formatCurrency(cents)}',
                             style: AppTextStyles.mono(
                               isExpense ? t.error : t.success,
                               fontSize: 13,

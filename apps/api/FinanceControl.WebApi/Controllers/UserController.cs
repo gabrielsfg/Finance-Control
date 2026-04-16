@@ -8,6 +8,7 @@ using FinanceControl.WebApi.Controllers.Base;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace FinanceControl.WebApi.Controllers
 {
@@ -18,15 +19,22 @@ namespace FinanceControl.WebApi.Controllers
         private readonly IUserService _userService;
         private readonly IValidator<CreateUserRequestDto> _createUserValidator;
         private readonly IValidator<UserLoginRequestDto> _userLoginValidator;
+        private readonly IValidator<UpdateUserPreferencesRequestDto> _updatePreferencesValidator;
 
-        public UserController(IUserService userService, IValidator<CreateUserRequestDto> createUserValidator, IValidator<UserLoginRequestDto> userLoginValidator)
+        public UserController(
+            IUserService userService,
+            IValidator<CreateUserRequestDto> createUserValidator,
+            IValidator<UserLoginRequestDto> userLoginValidator,
+            IValidator<UpdateUserPreferencesRequestDto> updatePreferencesValidator)
         {
             _userService = userService;
             _createUserValidator = createUserValidator;
             _userLoginValidator = userLoginValidator;
+            _updatePreferencesValidator = updatePreferencesValidator;
         }
 
         [HttpPost("register")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> RegisterUserAsync([FromBody] CreateUserRequestDto requestDto)
         {
             var validatonResult = _createUserValidator.Validate(requestDto);
@@ -41,20 +49,29 @@ namespace FinanceControl.WebApi.Controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> UserLoginAsync([FromBody] UserLoginRequestDto requestDto)
         {
             var validatonResult = _userLoginValidator.Validate(requestDto);
             if (validatonResult.ToActionResult() is { } errorResult)
                 return errorResult;
 
-            var response = await _userService.UserLoginAsync(requestDto);
-            if (response is null)
+            var result = await _userService.UserLoginAsync(requestDto);
+
+            if (result.IsLockedOut)
+            {
+                var seconds = (int)Math.Ceiling(result.LockoutRemaining!.Value.TotalSeconds);
+                return StatusCode(423, new { message = "Account is locked. Try again later.", retryAfterSeconds = seconds });
+            }
+
+            if (result.AuthResponse is null)
                 return BadRequest("Invalid email or password.");
 
-            return Ok(response);
+            return Ok(result.AuthResponse);
         }
 
         [HttpPost("refresh")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> RefreshTokenAsync([FromBody] RefreshTokenRequestDto requestDto)
         {
             if (string.IsNullOrWhiteSpace(requestDto.RefreshToken))
@@ -104,6 +121,10 @@ namespace FinanceControl.WebApi.Controllers
         [Authorize]
         public async Task<IActionResult> UpdatePreferencesAsync([FromBody] UpdateUserPreferencesRequestDto requestDto)
         {
+            var validationResult = _updatePreferencesValidator.Validate(requestDto);
+            if (validationResult.ToActionResult() is { } errorResult)
+                return errorResult;
+
             var prefs = await _userService.UpdatePreferencesAsync(GetUserId(), requestDto);
             if (prefs is null)
                 return NotFound();
@@ -111,14 +132,48 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(prefs);
         }
 
-        [HttpGet("currencies")]
+[HttpPost("logout")]
         [Authorize]
-        public IActionResult GetCurrenciesAsync()
+        public async Task<IActionResult> LogoutAsync([FromBody] LogoutRequestDto requestDto)
         {
-            return Ok(_userService.GetAvailableCurrencies());
+            if (string.IsNullOrWhiteSpace(requestDto.RefreshToken))
+                return BadRequest("Refresh token is required.");
+
+            await _userService.LogoutAsync(requestDto.RefreshToken);
+
+            return NoContent();
+        }
+
+        [HttpDelete("me")]
+        [Authorize]
+        public async Task<IActionResult> DeleteAccountAsync([FromBody] DeleteAccountRequestDto requestDto)
+        {
+            if (string.IsNullOrWhiteSpace(requestDto.Password))
+                return BadRequest("Password is required.");
+
+            var success = await _userService.DeleteAccountAsync(GetUserId(), requestDto.Password);
+            if (!success)
+                return BadRequest("Invalid password.");
+
+            return NoContent();
+        }
+
+        [HttpPost("me/reset-data")]
+        [Authorize]
+        public async Task<IActionResult> ResetDataAsync([FromBody] ResetDataRequestDto requestDto)
+        {
+            if (string.IsNullOrWhiteSpace(requestDto.Password))
+                return BadRequest("Password is required.");
+
+            var success = await _userService.ResetDataAsync(GetUserId(), requestDto.Password);
+            if (!success)
+                return BadRequest("Invalid password.");
+
+            return NoContent();
         }
 
         [HttpPost("forgot-password")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> ForgotPasswordAsync([FromBody] ForgotPasswordRequestDto requestDto)
         {
             if (string.IsNullOrWhiteSpace(requestDto.Email))
@@ -132,6 +187,7 @@ namespace FinanceControl.WebApi.Controllers
         }
 
         [HttpPost("reset-password")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> ResetPasswordAsync([FromBody] ResetPasswordRequestDto requestDto)
         {
             if (string.IsNullOrWhiteSpace(requestDto.Token) || string.IsNullOrWhiteSpace(requestDto.NewPassword))

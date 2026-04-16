@@ -1,4 +1,4 @@
-﻿using FinanceControl.Domain.Common;
+using FinanceControl.Domain.Common;
 
 namespace FinanceControl.Domain.Entities
 {
@@ -10,5 +10,10 @@ namespace FinanceControl.Domain.Entities
         public Boolean IsActive { get; set; } = true;
         public string? PasswordResetToken { get; set; }
         public DateTime? PasswordResetTokenExpiresAt { get; set; }
+        public int FailedLoginAttempts { get; set; } = 0;
+        public DateTime? LockoutEnd { get; set; }
+        public string PreferredCurrency { get; set; } = "BRL";
+        public string PreferredLanguage { get; set; } = "pt-BR";
+        public string? Country { get; set; }
     }
 }

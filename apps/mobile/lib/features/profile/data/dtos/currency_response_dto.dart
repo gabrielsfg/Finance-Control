@@ -6,13 +6,11 @@ part 'currency_response_dto.g.dart';
 class CurrencyResponseDto {
   const CurrencyResponseDto({
     required this.code,
-    required this.name,
-    required this.symbol,
+    required this.rate,
   });
 
   final String code;
-  final String name;
-  final String symbol;
+  final double rate;
 
   factory CurrencyResponseDto.fromJson(Map<String, dynamic> json) =>
       _$CurrencyResponseDtoFromJson(json);

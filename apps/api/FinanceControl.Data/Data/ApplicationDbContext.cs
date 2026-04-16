@@ -22,6 +22,8 @@ namespace FinanceControl.Data.Data
         public DbSet<RecurringTransaction> RecurringTransactions { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<UserPreferences> UserPreferences { get; set; }
+        public DbSet<WishlistItem> WishlistItems { get; set; }
+        public DbSet<WishlistItemPriceHistory> WishlistItemPriceHistory { get; set; }
 
         public override int SaveChanges()
         {
@@ -37,19 +39,14 @@ namespace FinanceControl.Data.Data
 
         private void UpdateOrCreateEntity()
         {
-            var entries = ChangeTracker .Entries<BaseEntity>();
-            var dateTimeBrasilia = TimeZoneInfo
-                .ConvertTimeFromUtc(
-                    DateTime.UtcNow,
-                    TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time")
-                );
+            var entries = ChangeTracker.Entries<BaseEntity>();
 
             foreach (var entry in entries)
             {
                 if (entry.State == EntityState.Added)
-                    entry.Property("CreatedAt").CurrentValue = dateTimeBrasilia;
+                    entry.Property("CreatedAt").CurrentValue = DateTime.UtcNow;
                 else if (entry.State == EntityState.Modified)
-                    entry.Property("UpdatedAt").CurrentValue = dateTimeBrasilia;
+                    entry.Property("UpdatedAt").CurrentValue = DateTime.UtcNow;
             }
         }
 
