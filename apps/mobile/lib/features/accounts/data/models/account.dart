@@ -12,7 +12,7 @@ class Account {
   final int id;
   final String name;
 
-  /// "Checking" | "Savings" | "Credit" | "Cash"
+  /// "Debit" | "Checking" | "Savings" | "Credit" | "Cash"
   final String type;
 
   final int balanceCents;

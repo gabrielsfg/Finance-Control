@@ -16,7 +16,7 @@ import '../data/models/account_detail.dart';
 import '../providers/accounts_provider.dart';
 import '../../transactions/providers/transaction_filter_provider.dart';
 
-const _accountTypes = ['Checking', 'Savings', 'Credit', 'Cash'];
+const _accountTypes = ['Debit', 'Checking', 'Savings', 'Credit', 'Cash'];
 
 class EditAccountPage extends ConsumerStatefulWidget {
   final int accountId;
@@ -407,6 +407,7 @@ class _AccountTypeSelector extends StatelessWidget {
   });
 
   static const _icons = {
+    'Debit': LucideIcons.wallet,
     'Checking': LucideIcons.building2,
     'Savings': LucideIcons.piggyBank,
     'Credit': LucideIcons.creditCard,

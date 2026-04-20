@@ -13,7 +13,7 @@ import '../../../shared/widgets/bank_picker_sheet.dart';
 import '../data/dtos/create_account_request_dto.dart';
 import '../providers/accounts_provider.dart';
 
-const _accountTypes = ['Checking', 'Savings', 'Credit', 'Cash'];
+const _accountTypes = ['Debit', 'Checking', 'Savings', 'Credit', 'Cash'];
 
 class CreateAccountPage extends ConsumerStatefulWidget {
   const CreateAccountPage({super.key});
@@ -310,6 +310,7 @@ class _AccountTypeSelector extends StatelessWidget {
   });
 
   static const _icons = {
+    'Debit': LucideIcons.wallet,
     'Checking': LucideIcons.building2,
     'Savings': LucideIcons.piggyBank,
     'Credit': LucideIcons.creditCard,

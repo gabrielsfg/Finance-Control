@@ -56,6 +56,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
   String? _subcategoryName;
   int? _accountId;
   String? _accountName;
+  String? _accountType;
   DateTime _date = DateTime.now();
   _PaymentType _paymentType = _PaymentType.oneTime;
   int _installmentCount = 2;
@@ -220,11 +221,12 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
       builder: (_) => _AccountPickerSheet(
         accounts: accounts,
         selectedId: _accountId,
-        onSelected: (id, name) {
+        onSelected: (id, name, type) {
           setState(() {
             _accountId = id;
             _accountName = name;
-            _accountError = null;
+            _accountType = type;
+            _isCredit = type == 'Credit';
           });
         },
       ),
@@ -272,6 +274,8 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
           setState(() {
             _accountId = defaultAcc.id;
             _accountName = defaultAcc.name;
+            _accountType = defaultAcc.type;
+            _isCredit = defaultAcc.type == 'Credit';
           });
         }
       });
@@ -461,17 +465,18 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
 
                     const SizedBox(height: 12),
 
-                    // Card 4 — Payment method (Credit / Debit)
-                    _FormCard(
-                      children: [
-                        _PaymentMethodToggle(
-                          isCredit: _isCredit,
-                          onChanged: isLoading
-                              ? null
-                              : (v) => setState(() => _isCredit = v),
-                        ),
-                      ],
-                    ),
+                    // Card 4 — Payment method (Checking only — others are fixed)
+                    if (_accountType == 'Checking')
+                      _FormCard(
+                        children: [
+                          _PaymentMethodToggle(
+                            isCredit: _isCredit,
+                            onChanged: isLoading
+                                ? null
+                                : (v) => setState(() => _isCredit = v),
+                          ),
+                        ],
+                      ),
 
                     const SizedBox(height: 12),
 
@@ -1900,7 +1905,7 @@ class _PickerCreateSubcategorySheetState
 class _AccountPickerSheet extends StatefulWidget {
   final List<Account> accounts;
   final int? selectedId;
-  final void Function(int id, String name) onSelected;
+  final void Function(int id, String name, String type) onSelected;
 
   const _AccountPickerSheet({
     required this.accounts,
@@ -2017,7 +2022,7 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                         context.push('/accounts/${acc.id}/edit');
                       }
                     : () {
-                        widget.onSelected(acc.id, acc.name);
+                        widget.onSelected(acc.id, acc.name, acc.type);
                         Navigator.of(context).pop();
                       },
                 behavior: HitTestBehavior.opaque,
