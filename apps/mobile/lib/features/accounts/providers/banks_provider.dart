@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/app_locale.dart';
 import '../../profile/data/user_preferences_repository.dart';
-import '../../profile/providers/user_preferences_provider.dart';
 
-/// Loads banks for the user's current country preference.
-/// Falls back to BR if country is null.
+/// Loads banks for the user's current country, derived from [appLocaleProvider].
+/// Falls back to 'BR' if country is empty.
 final banksProvider = AsyncNotifierProvider<BanksNotifier, List<String>>(
   BanksNotifier.new,
 );
@@ -12,8 +12,8 @@ final banksProvider = AsyncNotifierProvider<BanksNotifier, List<String>>(
 class BanksNotifier extends AsyncNotifier<List<String>> {
   @override
   Future<List<String>> build() async {
-    final prefs = await ref.watch(userPreferencesProvider.future);
-    final country = prefs.country?.toUpperCase() ?? 'BR';
+    final locale = ref.watch(appLocaleProvider);
+    final country = locale.country.isNotEmpty ? locale.country : 'BR';
     return _fetch(country);
   }
 

@@ -21,6 +21,7 @@ namespace FinanceControl.Services.Services
 
         public async Task<Result<IEnumerable<GetAccountItemResponseDto>>> CreateAccountAsync(CreateAccountRequestDto requestDto, int userId)
         {
+            var hasCreditFields = requestDto.Type == EnumAccountType.Credit || requestDto.Type == EnumAccountType.Checking;
             var account = new Account()
             {
                 UserId = userId,
@@ -28,8 +29,8 @@ namespace FinanceControl.Services.Services
                 Type = requestDto.Type,
                 GoalAmount = requestDto.GoalAmount,
                 IsDefaultAccount = requestDto.IsDefaultAccount,
-                BillingDueDay = requestDto.Type == EnumAccountType.Credit ? requestDto.BillingDueDay : null,
-                CreditLimit = requestDto.Type == EnumAccountType.Credit ? requestDto.CreditLimit : null,
+                BillingDueDay = hasCreditFields ? requestDto.BillingDueDay : null,
+                CreditLimit = hasCreditFields ? requestDto.CreditLimit : null,
             };
 
             var hasAnyAccount = await _context.Accounts.AnyAsync(a => a.UserId == userId);
@@ -46,6 +47,32 @@ namespace FinanceControl.Services.Services
 
             await _context.Accounts.AddAsync(account);
             await _context.SaveChangesAsync();
+
+            if (requestDto.InitialBalance.HasValue && requestDto.InitialBalance.Value != 0)
+            {
+                var otherIncomeSubCategoryId = await _context.SubCategories
+                    .Where(s => s.UserId == userId &&
+                                (s.Name == "Other income" || s.Name == "Outras receitas"))
+                    .Select(s => (int?)s.Id)
+                    .FirstOrDefaultAsync();
+
+                if (otherIncomeSubCategoryId.HasValue)
+                {
+                    var isExpense = requestDto.InitialBalance.Value < 0;
+                    _context.Transactions.Add(new Transaction
+                    {
+                        UserId = userId,
+                        AccountId = account.Id,
+                        SubCategoryId = otherIncomeSubCategoryId.Value,
+                        Value = Math.Abs(requestDto.InitialBalance.Value),
+                        Type = isExpense ? EnumTransactionType.Expense : EnumTransactionType.Income,
+                        PaymentType = EnumPaymentType.OneTime,
+                        TransactionDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                        Description = "Initial balance",
+                    });
+                    await _context.SaveChangesAsync();
+                }
+            }
 
             var accounts = await GetAllAccountAsync(userId);
             return Result<IEnumerable<GetAccountItemResponseDto>>.Success(accounts);
@@ -129,12 +156,13 @@ namespace FinanceControl.Services.Services
             if (account == null)
                 return Result<IEnumerable<GetAccountItemResponseDto>>.Failure("Account not found.");
 
+            var hasCreditFieldsUpdate = requestDto.Type == EnumAccountType.Credit || requestDto.Type == EnumAccountType.Checking;
             account.Name = requestDto.Name;
             account.Type = requestDto.Type;
             account.GoalAmount = requestDto.GoalAmount;
             account.IsDefaultAccount = requestDto.IsDefaultAccount;
-            account.BillingDueDay = requestDto.Type == EnumAccountType.Credit ? requestDto.BillingDueDay : null;
-            account.CreditLimit = requestDto.Type == EnumAccountType.Credit ? requestDto.CreditLimit : null;
+            account.BillingDueDay = hasCreditFieldsUpdate ? requestDto.BillingDueDay : null;
+            account.CreditLimit = hasCreditFieldsUpdate ? requestDto.CreditLimit : null;
 
             await _context.SaveChangesAsync();
 

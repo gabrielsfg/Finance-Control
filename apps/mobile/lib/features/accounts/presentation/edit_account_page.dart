@@ -30,26 +30,25 @@ class EditAccountPage extends ConsumerStatefulWidget {
 class _EditAccountPageState extends ConsumerState<EditAccountPage> {
   final _nameController = TextEditingController();
   final _goalController = TextEditingController();
-  final _billingDayController = TextEditingController();
   final _creditLimitController = TextEditingController();
 
   String _type = 'Checking';
   String? _selectedBank;
   bool _isDefault = false;
   bool _initialized = false;
+  int? _billingDay;
 
   String? _nameError;
   String? _submitError;
   bool _isSaving = false;
   bool _isDeleting = false;
 
-  bool get _isCredit => _type == 'Credit';
+  bool get _hasCreditFields => _type == 'Credit' || _type == 'Checking';
 
   @override
   void dispose() {
     _nameController.dispose();
     _goalController.dispose();
-    _billingDayController.dispose();
     _creditLimitController.dispose();
     super.dispose();
   }
@@ -62,9 +61,7 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
     if (detail.goalAmountCents != null && detail.goalAmountCents! > 0) {
       _goalController.text = _formatCentsForInput(detail.goalAmountCents!);
     }
-    if (detail.billingDueDay != null) {
-      _billingDayController.text = detail.billingDueDay.toString();
-    }
+    _billingDay = detail.billingDueDay;
     if (detail.creditLimitCents != null && detail.creditLimitCents! > 0) {
       _creditLimitController.text =
           _formatCentsForInput(detail.creditLimitCents!);
@@ -105,7 +102,6 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
 
     try {
       final goalCents = _parseCents(_goalController.text);
-      final billingDay = int.tryParse(_billingDayController.text.trim());
       final creditLimitCents = _parseCents(_creditLimitController.text);
 
       await ref.read(accountsNotifierProvider.notifier).updateAccount(
@@ -116,9 +112,9 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
               type: _type,
               isDefaultAccount: _isDefault,
               goalAmount: goalCents > 0 ? goalCents : null,
-              billingDueDay: _isCredit ? billingDay : null,
+              billingDueDay: _hasCreditFields ? _billingDay : null,
               creditLimit:
-                  _isCredit && creditLimitCents > 0 ? creditLimitCents : null,
+                  _hasCreditFields && creditLimitCents > 0 ? creditLimitCents : null,
             ),
           );
       if (mounted) context.pop();
@@ -256,8 +252,8 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
                       textInputAction: TextInputAction.done,
                       leftIcon: const Icon(LucideIcons.target, size: 16),
                     ),
-                    // ── Credit-only fields ───────────────────────────────────
-                    if (_isCredit) ...[
+                    // ── Credit/Checking fields ───────────────────────────────
+                    if (_hasCreditFields) ...[
                       const SizedBox(height: 14),
                       AppInputField(
                         label: 'Credit limit',
@@ -273,17 +269,9 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
                             const Icon(LucideIcons.creditCard, size: 16),
                       ),
                       const SizedBox(height: 14),
-                      AppInputField(
-                        label: 'Billing due day',
-                        placeholder: '1 – 31',
-                        controller: _billingDayController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
-                        ],
-                        textInputAction: TextInputAction.done,
-                        leftIcon:
-                            const Icon(LucideIcons.calendarDays, size: 16),
+                      _BillingDayPicker(
+                        selected: _billingDay,
+                        onChanged: (d) => setState(() => _billingDay = d),
                       ),
                     ],
                     const SizedBox(height: 20),
@@ -331,6 +319,78 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
           );
         },
       ),
+    );
+  }
+}
+
+// ── Billing Day Picker ────────────────────────────────────────────────────────
+
+class _BillingDayPicker extends StatelessWidget {
+  const _BillingDayPicker({required this.selected, required this.onChanged});
+
+  final int? selected;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Billing due day',
+          style: AppTextStyles.caption(t.txtSecondary)
+              .copyWith(fontSize: 12, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 36,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: 31,
+            separatorBuilder: (_, _) => const SizedBox(width: 6),
+            itemBuilder: (context, index) {
+              final day = index + 1;
+              final isSelected = selected == day;
+              return GestureDetector(
+                onTap: () => onChanged(day),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? t.primary
+                        : t.isDark
+                            ? Colors.white.withValues(alpha: 0.07)
+                            : const Color(0xFFEDE9FE).withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected
+                          ? t.primary
+                          : t.isDark
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                      width: 1,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$day',
+                    style: AppTextStyles.caption(
+                      isSelected ? Colors.white : t.txtSecondary,
+                    ).copyWith(
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

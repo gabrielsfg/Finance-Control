@@ -261,7 +261,10 @@ namespace FinanceControl.Services.Services
             if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, password) == PasswordVerificationResult.Failed)
                 return false;
 
-            // Delete all financial data
+            // Delete all financial data. UserId is the only thing preserved.
+            // Categories, subcategories and accounts are also deleted because
+            // the user may have created custom ones — the seed recreates the
+            // defaults after this block, same as RegisterUserAsync.
             var transactions = _context.Transactions.Where(t => t.UserId == userId);
             _context.Transactions.RemoveRange(transactions);
 
@@ -296,7 +299,7 @@ namespace FinanceControl.Services.Services
 
             await _context.SaveChangesAsync();
 
-            // Re-seed default data (same as RegisterUserAsync)
+            // Re-seed defaults exactly as RegisterUserAsync does.
             var restoredUser = await _context.Users.FindAsync(userId);
             await SeedUserDataAsync(userId, restoredUser?.PreferredLanguage);
 

@@ -11,21 +11,25 @@ class CreateAccountRequestDto {
     this.goalAmount,
     this.billingDueDay,
     this.creditLimit,
+    this.initialBalance,
   });
 
   final String name;
 
-  /// "Checking" | "Savings" | "Credit" | "Cash"
+  /// "Debit" | "Checking" | "Savings" | "Credit" | "Cash"
   final String type;
 
   final bool isDefaultAccount;
   final int? goalAmount;
 
-  /// Only sent when type == "Credit".
+  /// Sent when type == "Credit" or "Checking". In cents.
   final int? billingDueDay;
 
-  /// Only sent when type == "Credit". In cents.
+  /// Sent when type == "Credit" or "Checking". In cents.
   final int? creditLimit;
+
+  /// Current balance in cents; backend creates an Income adjustment transaction.
+  final int? initialBalance;
 
   Map<String, dynamic> toJson() => _$CreateAccountRequestDtoToJson(this);
 }

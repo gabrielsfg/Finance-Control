@@ -7,8 +7,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../accounts/providers/accounts_provider.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../budgets/providers/budget_provider.dart';
+import '../../home/providers/home_provider.dart';
+import '../../transactions/providers/picker_providers.dart';
+import '../../transactions/providers/transaction_provider.dart';
 import '../providers/user_preferences_provider.dart';
 import '../providers/user_provider.dart';
 
@@ -394,6 +399,11 @@ class _AccountSection extends ConsumerWidget {
         isDestructive: true,
         onConfirm: (password) async {
           await ref.read(authRepositoryProvider).resetData(password);
+          ref.invalidate(categoriesProvider);
+          ref.invalidate(accountsNotifierProvider);
+          ref.invalidate(transactionsNotifierProvider);
+          ref.invalidate(homeNotifierProvider);
+          ref.invalidate(budgetNotifierProvider);
         },
       ),
     );

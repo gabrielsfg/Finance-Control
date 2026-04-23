@@ -25,25 +25,31 @@ class CreateAccountPage extends ConsumerStatefulWidget {
 class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
   final _nameController = TextEditingController();
   final _goalController = TextEditingController();
-  final _billingDayController = TextEditingController();
   final _creditLimitController = TextEditingController();
+  final _initialBalanceController = TextEditingController();
+  final _currentInvoiceController = TextEditingController();
 
   String _type = 'Checking';
   String? _selectedBank;
   bool _isDefault = true;
   bool _isLoading = false;
+  int? _billingDay;
 
   String? _nameError;
   String? _submitError;
 
-  bool get _isCredit => _type == 'Credit';
+  bool get _hasCreditFields => _type == 'Credit' || _type == 'Checking';
+  bool get _hasInitialBalance =>
+      _type == 'Debit' || _type == 'Checking' || _type == 'Savings' || _type == 'Cash';
+  bool get _hasCurrentInvoice => _type == 'Credit' || _type == 'Checking';
 
   @override
   void dispose() {
     _nameController.dispose();
     _goalController.dispose();
-    _billingDayController.dispose();
     _creditLimitController.dispose();
+    _initialBalanceController.dispose();
+    _currentInvoiceController.dispose();
     super.dispose();
   }
 
@@ -53,9 +59,8 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
   }
 
   bool _validate() {
-    final nameErr = _nameController.text.trim().isEmpty
-        ? 'Account name is required'
-        : null;
+    final nameErr =
+        _nameController.text.trim().isEmpty ? 'Account name is required' : null;
     setState(() => _nameError = nameErr);
     return nameErr == null;
   }
@@ -70,8 +75,17 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
 
     try {
       final goalCents = _parseCents(_goalController.text);
-      final billingDay = int.tryParse(_billingDayController.text.trim());
       final creditLimitCents = _parseCents(_creditLimitController.text);
+      final initialBalanceCents = _parseCents(_initialBalanceController.text);
+      final currentInvoiceCents = _parseCents(_currentInvoiceController.text);
+
+      // For Credit/Checking: initial balance is positive (credit available),
+      // current invoice is a negative offset (already owed).
+      final int? effectiveInitialBalance = _hasCurrentInvoice
+          ? (currentInvoiceCents > 0 ? -currentInvoiceCents : null)
+          : (_hasInitialBalance && initialBalanceCents > 0
+              ? initialBalanceCents
+              : null);
 
       await ref.read(accountsNotifierProvider.notifier).createAccount(
             CreateAccountRequestDto(
@@ -79,10 +93,10 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
               type: _type,
               isDefaultAccount: _isDefault,
               goalAmount: goalCents > 0 ? goalCents : null,
-              billingDueDay: _isCredit ? billingDay : null,
-              creditLimit: _isCredit && creditLimitCents > 0
-                  ? creditLimitCents
-                  : null,
+              billingDueDay: _hasCreditFields ? _billingDay : null,
+              creditLimit:
+                  _hasCreditFields && creditLimitCents > 0 ? creditLimitCents : null,
+              initialBalance: effectiveInitialBalance,
             ),
           );
       if (mounted) context.pop();
@@ -139,7 +153,10 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                 // ── Account type selector ─────────────────────────────────
                 _AccountTypeSelector(
                   selected: _type,
-                  onChanged: (v) => setState(() => _type = v),
+                  onChanged: (v) => setState(() {
+                    _type = v;
+                    _billingDay = null;
+                  }),
                 ),
                 const SizedBox(height: 20),
                 // ── Name ──────────────────────────────────────────────────
@@ -174,11 +191,11 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                     FilteringTextInputFormatter.digitsOnly,
                     const CentsInputFormatter(),
                   ],
-                  textInputAction: TextInputAction.done,
+                  textInputAction: TextInputAction.next,
                   leftIcon: const Icon(LucideIcons.target, size: 16),
                 ),
-                // ── Credit-only fields ────────────────────────────────────
-                if (_isCredit) ...[
+                // ── Credit/Checking fields ────────────────────────────────
+                if (_hasCreditFields) ...[
                   const SizedBox(height: 14),
                   AppInputField(
                     label: 'Credit limit',
@@ -193,14 +210,41 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                     leftIcon: const Icon(LucideIcons.creditCard, size: 16),
                   ),
                   const SizedBox(height: 14),
+                  _BillingDayPicker(
+                    selected: _billingDay,
+                    onChanged: (d) => setState(() => _billingDay = d),
+                  ),
+                ],
+                // ── Initial balance (Debit / Savings / Cash) ──────────────
+                if (_hasInitialBalance) ...[
+                  const SizedBox(height: 14),
                   AppInputField(
-                    label: 'Billing due day',
-                    placeholder: '1 – 31',
-                    controller: _billingDayController,
+                    label: 'Current balance (optional)',
+                    placeholder: '0,00',
+                    controller: _initialBalanceController,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      const CentsInputFormatter(),
+                    ],
                     textInputAction: TextInputAction.done,
-                    leftIcon: const Icon(LucideIcons.calendarDays, size: 16),
+                    leftIcon: const Icon(LucideIcons.wallet, size: 16),
+                  ),
+                ],
+                // ── Current invoice (Credit / Checking) ───────────────────
+                if (_hasCurrentInvoice) ...[
+                  const SizedBox(height: 14),
+                  AppInputField(
+                    label: 'Current invoice (optional)',
+                    placeholder: '0,00',
+                    controller: _currentInvoiceController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      const CentsInputFormatter(),
+                    ],
+                    textInputAction: TextInputAction.done,
+                    leftIcon: const Icon(LucideIcons.receipt, size: 16),
                   ),
                 ],
                 const SizedBox(height: 20),
@@ -234,6 +278,78 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Billing Day Picker ────────────────────────────────────────────────────────
+
+class _BillingDayPicker extends StatelessWidget {
+  const _BillingDayPicker({required this.selected, required this.onChanged});
+
+  final int? selected;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Billing due day',
+          style: AppTextStyles.caption(t.txtSecondary)
+              .copyWith(fontSize: 12, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 36,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: 31,
+            separatorBuilder: (_, _) => const SizedBox(width: 6),
+            itemBuilder: (context, index) {
+              final day = index + 1;
+              final isSelected = selected == day;
+              return GestureDetector(
+                onTap: () => onChanged(day),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? t.primary
+                        : t.isDark
+                            ? Colors.white.withValues(alpha: 0.07)
+                            : const Color(0xFFEDE9FE).withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected
+                          ? t.primary
+                          : t.isDark
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                      width: 1,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$day',
+                    style: AppTextStyles.caption(
+                      isSelected ? Colors.white : t.txtSecondary,
+                    ).copyWith(
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

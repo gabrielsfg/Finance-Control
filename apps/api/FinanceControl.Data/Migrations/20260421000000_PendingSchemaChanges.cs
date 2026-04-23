@@ -7,11 +7,15 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinanceControl.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class AddWishlist : Migration
+    public partial class PendingSchemaChanges : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // AddUserCountry — uses IF NOT EXISTS to avoid error if column was added manually
+            migrationBuilder.Sql(@"ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""Country"" character varying(2)");
+
+            // AddWishlist
             migrationBuilder.CreateTable(
                 name: "WishlistItems",
                 columns: table => new
@@ -77,6 +81,10 @@ namespace FinanceControl.Data.Migrations
         {
             migrationBuilder.DropTable(name: "WishlistItemPriceHistory");
             migrationBuilder.DropTable(name: "WishlistItems");
+
+            migrationBuilder.DropColumn(
+                name: "Country",
+                table: "Users");
         }
     }
 }

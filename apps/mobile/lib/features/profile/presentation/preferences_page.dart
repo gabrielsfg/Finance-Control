@@ -7,6 +7,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/theme_mode_provider.dart';
+import '../../../core/utils/countries.dart';
+import '../../../core/utils/timezones.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/dtos/currency_response_dto.dart';
 import '../data/dtos/update_user_preferences_request_dto.dart';
@@ -22,18 +24,15 @@ class PreferencesPage extends ConsumerStatefulWidget {
 class _PreferencesPageState extends ConsumerState<PreferencesPage> {
   String? _selectedCurrency;
   String? _selectedLocale;
+  String? _selectedTimezone;
+  String? _selectedCountry;
   bool _countryInitialized = false;
   bool _timezoneInitialized = false;
   bool _isSaving = false;
   String? _submitError;
 
-  final _countryController = TextEditingController();
-  final _timezoneController = TextEditingController();
-
   @override
   void dispose() {
-    _countryController.dispose();
-    _timezoneController.dispose();
     super.dispose();
   }
 
@@ -43,14 +42,7 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
   ];
 
   Future<void> _save() async {
-    final countryValue = _countryController.text.trim().toUpperCase();
-    if (countryValue.isNotEmpty && countryValue.length != 2) {
-      setState(() => _submitError = 'Country must be a 2-letter ISO code (e.g. BR, US).');
-      return;
-    }
-
-    final countryToSend = countryValue.isEmpty ? null : countryValue;
-    final timezoneValue = _timezoneController.text.trim();
+    final countryToSend = _selectedCountry;
 
     setState(() {
       _isSaving = true;
@@ -59,10 +51,10 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
 
     try {
       // Save timezone locally if it changed
-      if (timezoneValue.isNotEmpty) {
+      if (_selectedTimezone != null) {
         final currentTz = ref.read(localSettingsProvider).valueOrNull?.timezone;
-        if (timezoneValue != currentTz) {
-          await ref.read(localSettingsProvider.notifier).setTimezone(timezoneValue);
+        if (_selectedTimezone != currentTz) {
+          await ref.read(localSettingsProvider.notifier).setTimezone(_selectedTimezone!);
         }
       }
 
@@ -98,16 +90,16 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
 
     final localSettings = ref.watch(localSettingsProvider).valueOrNull;
 
-    // Initialise country field from loaded prefs (only once)
+    // Initialise country selection from loaded prefs (only once)
     if (!_countryInitialized && prefsAsync.valueOrNull?.country != null) {
       _countryInitialized = true;
-      _countryController.text = prefsAsync.valueOrNull!.country!;
+      _selectedCountry = prefsAsync.valueOrNull!.country!;
     }
 
-    // Initialise timezone field from local settings (only once)
+    // Initialise timezone selection from local settings (only once)
     if (!_timezoneInitialized && localSettings != null) {
       _timezoneInitialized = true;
-      _timezoneController.text = localSettings.timezone;
+      _selectedTimezone = localSettings.timezone;
     }
 
     return Scaffold(
@@ -177,12 +169,9 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
                 // ── Country ──────────────────────────────────────────────
                 _SectionLabel(title: 'Country'),
                 const SizedBox(height: 10),
-                AppInputField(
-                  placeholder: 'ISO 3166-1 alpha-2 (e.g. BR, US)',
-                  controller: _countryController,
-                  keyboardType: TextInputType.text,
-                  textCapitalization: TextCapitalization.characters,
-                  textInputAction: TextInputAction.done,
+                _CountrySelector(
+                  selected: _selectedCountry,
+                  onChanged: (code) => setState(() => _selectedCountry = code),
                 ),
 
                 const SizedBox(height: 28),
@@ -190,21 +179,9 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
                 // ── Timezone ─────────────────────────────────────────────
                 _SectionLabel(title: 'Timezone'),
                 const SizedBox(height: 10),
-                AppInputField(
-                  placeholder: 'IANA timezone (e.g. America/Sao_Paulo)',
-                  controller: _timezoneController,
-                  keyboardType: TextInputType.text,
-                  textInputAction: TextInputAction.done,
-                ),
-                const SizedBox(height: 6),
-                Padding(
-                  padding: const EdgeInsets.only(left: 2),
-                  child: Text(
-                    'Used for date grouping and day boundaries.',
-                    style: AppTextStyles.caption(
-                      AppThemeTokens.of(context).txtTertiary,
-                    ).copyWith(fontSize: 11),
-                  ),
+                _TimezoneSelector(
+                  selected: _selectedTimezone ?? localSettings?.timezone ?? 'America/Sao_Paulo',
+                  onChanged: (iana) => setState(() => _selectedTimezone = iana),
                 ),
 
                 const SizedBox(height: 28),
@@ -297,9 +274,24 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
+// ── Currency flag map ──────────────────────────────────────────────────────
+
+const _currencyFlags = <String, String>{
+  'AED': '🇦🇪', 'ARS': '🇦🇷', 'AUD': '🇦🇺', 'BOB': '🇧🇴', 'BRL': '🇧🇷',
+  'CAD': '🇨🇦', 'CHF': '🇨🇭', 'CLP': '🇨🇱', 'CNY': '🇨🇳', 'COP': '🇨🇴',
+  'DKK': '🇩🇰', 'EUR': '🇪🇺', 'GBP': '🇬🇧', 'GHS': '🇬🇭', 'HKD': '🇭🇰',
+  'IDR': '🇮🇩', 'ILS': '🇮🇱', 'INR': '🇮🇳', 'JPY': '🇯🇵', 'KES': '🇰🇪',
+  'KRW': '🇰🇷', 'MXN': '🇲🇽', 'MYR': '🇲🇾', 'NGN': '🇳🇬', 'NOK': '🇳🇴',
+  'NZD': '🇳🇿', 'PEN': '🇵🇪', 'PHP': '🇵🇭', 'PYG': '🇵🇾', 'RUB': '🇷🇺',
+  'SAR': '🇸🇦', 'SEK': '🇸🇪', 'SGD': '🇸🇬', 'THB': '🇹🇭', 'TRY': '🇹🇷',
+  'USD': '🇺🇸', 'UYU': '🇺🇾', 'VES': '🇻🇪', 'VND': '🇻🇳', 'ZAR': '🇿🇦',
+};
+
+String _flagFor(String code) => _currencyFlags[code] ?? '💱';
+
 // ── Currency Selector ──────────────────────────────────────────────────────
 
-class _CurrencySelector extends ConsumerStatefulWidget {
+class _CurrencySelector extends StatefulWidget {
   const _CurrencySelector({
     required this.currencies,
     required this.selected,
@@ -311,19 +303,11 @@ class _CurrencySelector extends ConsumerStatefulWidget {
   final ValueChanged<String> onChanged;
 
   @override
-  ConsumerState<_CurrencySelector> createState() => _CurrencySelectorState();
+  State<_CurrencySelector> createState() => _CurrencySelectorState();
 }
 
-class _CurrencySelectorState extends ConsumerState<_CurrencySelector> {
+class _CurrencySelectorState extends State<_CurrencySelector> {
   final _searchController = TextEditingController();
-  List<CurrencyResponseDto> _filtered = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _filtered = widget.currencies;
-    _searchController.addListener(_onSearch);
-  }
 
   @override
   void dispose() {
@@ -331,95 +315,189 @@ class _CurrencySelectorState extends ConsumerState<_CurrencySelector> {
     super.dispose();
   }
 
-  void _onSearch() {
-    final q = _searchController.text.toLowerCase();
-    setState(() {
-      _filtered = q.isEmpty
-          ? widget.currencies
-          : widget.currencies
-              .where((c) => c.code.toLowerCase().contains(q))
-              .toList();
-    });
+  List<CurrencyResponseDto> _filter(String q) {
+    if (q.isEmpty) return widget.currencies;
+    final lower = q.toLowerCase();
+    return widget.currencies
+        .where((c) => c.code.toLowerCase().contains(lower))
+        .toList();
+  }
+
+  void _openPicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setModal) {
+          final t = AppThemeTokens.of(ctx);
+          var filtered = _filter(_searchController.text);
+
+          return Container(
+            height: MediaQuery.of(ctx).size.height * 0.75,
+            decoration: BoxDecoration(
+              color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: t.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child:
+                      Text('Select Currency', style: AppTextStyles.h3(t.txtPrimary)),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Search currency code...',
+                      hintStyle: AppTextStyles.bodySm(t.txtTertiary),
+                      prefixIcon:
+                          Icon(Icons.search, size: 18, color: t.txtTertiary),
+                      filled: true,
+                      fillColor: t.isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : Colors.black.withValues(alpha: 0.04),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onChanged: (q) {
+                      setModal(() => filtered = _filter(q));
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, _) => Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: t.divider.withValues(alpha: 0.3),
+                    ),
+                    itemBuilder: (_, i) {
+                      final currency = filtered[i];
+                      final isSelected = currency.code == widget.selected;
+                      return GestureDetector(
+                        onTap: () {
+                          widget.onChanged(currency.code);
+                          _searchController.clear();
+                          Navigator.of(context).pop();
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 14),
+                          child: Row(
+                            children: [
+                              Text(
+                                _flagFor(currency.code),
+                                style: const TextStyle(fontSize: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      currency.code,
+                                      style: AppTextStyles.body(
+                                        isSelected ? t.primary : t.txtPrimary,
+                                      ).copyWith(
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 1),
+                                    Text(
+                                      '1 USD = ${currency.rate.toStringAsFixed(4)} ${currency.code}',
+                                      style: AppTextStyles.caption(t.txtTertiary)
+                                          .copyWith(fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isSelected)
+                                Icon(Icons.check_rounded,
+                                    size: 18, color: t.primary)
+                              else
+                                const SizedBox(width: 18),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final flag = _flagFor(widget.selected);
 
-    return Column(
-      children: [
-        AppInputField(
-          placeholder: 'Search currency...',
-          controller: _searchController,
-          leftIcon: Icon(LucideIcons.search, size: 16, color: t.txtTertiary),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          constraints: const BoxConstraints(maxHeight: 240),
-          decoration: BoxDecoration(
+    return GestureDetector(
+      onTap: _openPicker,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: t.isDark
+              ? const Color(0xFF1C1830).withValues(alpha: 0.72)
+              : Colors.white.withValues(alpha: 0.9),
+          borderRadius: AppRadius.xlAll,
+          border: Border.all(
             color: t.isDark
-                ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-                : Colors.white.withValues(alpha: 0.9),
-            borderRadius: AppRadius.xlAll,
-            border: Border.all(
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.07)
-                  : const Color(0xFF7C3AED).withValues(alpha: 0.12),
-            ),
-          ),
-          child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: _filtered.length,
-            separatorBuilder: (_, _) => Divider(
-              height: 1,
-              thickness: 1,
-              indent: 16,
-              endIndent: 16,
-              color: t.divider.withValues(alpha: 0.3),
-            ),
-            itemBuilder: (_, i) {
-              final currency = _filtered[i];
-              final isSelected = currency.code == widget.selected;
-              return GestureDetector(
-                onTap: () => widget.onChanged(currency.code),
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 52,
-                        child: Text(
-                          currency.code,
-                          style: AppTextStyles.body(
-                            isSelected ? t.primary : t.txtPrimary,
-                          ).copyWith(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          '1 USD = ${currency.rate.toStringAsFixed(4)} ${currency.code}',
-                          style: AppTextStyles.bodySm(t.txtSecondary),
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(LucideIcons.check, size: 16, color: t.primary)
-                      else
-                        const SizedBox(width: 16),
-                    ],
-                  ),
-                ),
-              );
-            },
+                ? Colors.white.withValues(alpha: 0.07)
+                : const Color(0xFF7C3AED).withValues(alpha: 0.12),
           ),
         ),
-      ],
+        child: Row(
+          children: [
+            Text(flag, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                widget.selected,
+                style: AppTextStyles.body(t.txtPrimary).copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                size: 20, color: t.txtTertiary),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -643,6 +721,440 @@ class _FirstDaySelector extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+// ── Country Selector ───────────────────────────────────────────────────────
+
+class _CountrySelector extends StatefulWidget {
+  const _CountrySelector({required this.selected, required this.onChanged});
+
+  final String? selected;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_CountrySelector> createState() => _CountrySelectorState();
+}
+
+class _CountrySelectorState extends State<_CountrySelector> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<CountryOption> _filter(String q) {
+    if (q.isEmpty) return kCountries;
+    final lower = q.toLowerCase();
+    return kCountries
+        .where((c) =>
+            c.name.toLowerCase().contains(lower) ||
+            c.code.toLowerCase().contains(lower))
+        .toList();
+  }
+
+  void _openPicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setModal) {
+          final t = AppThemeTokens.of(ctx);
+          var filtered = _filter(_searchController.text);
+
+          return Container(
+            height: MediaQuery.of(ctx).size.height * 0.75,
+            decoration: BoxDecoration(
+              color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: t.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text('Select Country',
+                      style: AppTextStyles.h3(t.txtPrimary)),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Search country...',
+                      hintStyle: AppTextStyles.bodySm(t.txtTertiary),
+                      prefixIcon:
+                          Icon(Icons.search, size: 18, color: t.txtTertiary),
+                      filled: true,
+                      fillColor: t.isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : Colors.black.withValues(alpha: 0.04),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onChanged: (q) => setModal(() => filtered = _filter(q)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, _) => Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: t.divider.withValues(alpha: 0.3),
+                    ),
+                    itemBuilder: (_, i) {
+                      final country = filtered[i];
+                      final isSelected = country.code == widget.selected;
+                      return GestureDetector(
+                        onTap: () {
+                          widget.onChanged(country.code);
+                          _searchController.clear();
+                          Navigator.of(context).pop();
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 14),
+                          child: Row(
+                            children: [
+                              Text(country.flag,
+                                  style: const TextStyle(fontSize: 22)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  country.name,
+                                  style: AppTextStyles.body(
+                                    isSelected ? t.primary : t.txtPrimary,
+                                  ).copyWith(
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                country.code,
+                                style: AppTextStyles.caption(t.txtTertiary)
+                                    .copyWith(fontSize: 12),
+                              ),
+                              const SizedBox(width: 8),
+                              if (isSelected)
+                                Icon(Icons.check_rounded,
+                                    size: 18, color: t.primary)
+                              else
+                                const SizedBox(width: 18),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    final country = widget.selected != null
+        ? countryByCode(widget.selected!)
+        : null;
+
+    return GestureDetector(
+      onTap: _openPicker,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: t.isDark
+              ? const Color(0xFF1C1830).withValues(alpha: 0.72)
+              : Colors.white.withValues(alpha: 0.9),
+          borderRadius: AppRadius.xlAll,
+          border: Border.all(
+            color: t.isDark
+                ? Colors.white.withValues(alpha: 0.07)
+                : const Color(0xFF7C3AED).withValues(alpha: 0.12),
+          ),
+        ),
+        child: Row(
+          children: [
+            if (country != null) ...[
+              Text(country.flag, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  country.name,
+                  style: AppTextStyles.body(t.txtPrimary).copyWith(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ] else
+              Expanded(
+                child: Text(
+                  'Select your country',
+                  style: AppTextStyles.body(t.txtTertiary)
+                      .copyWith(fontSize: 14),
+                ),
+              ),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                size: 20, color: t.txtTertiary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Timezone Selector ──────────────────────────────────────────────────────
+
+class _TimezoneSelector extends StatefulWidget {
+  const _TimezoneSelector({required this.selected, required this.onChanged});
+
+  final String selected;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_TimezoneSelector> createState() => _TimezoneSelectorState();
+}
+
+class _TimezoneSelectorState extends State<_TimezoneSelector> {
+  final _searchController = TextEditingController();
+  List<TimezoneOption> _filtered = kTimezonesAlphabetical;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String q) {
+    final lower = q.toLowerCase();
+    setState(() {
+      _filtered = lower.isEmpty
+          ? kTimezonesAlphabetical
+          : kTimezonesAlphabetical
+              .where((tz) =>
+                  tz.label.toLowerCase().contains(lower) ||
+                  tz.iana.toLowerCase().contains(lower) ||
+                  tz.offset.toLowerCase().contains(lower))
+              .toList();
+    });
+  }
+
+  void _openPicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setModal) {
+          final t = AppThemeTokens.of(ctx);
+          return Container(
+            height: MediaQuery.of(ctx).size.height * 0.75,
+            decoration: BoxDecoration(
+              color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: t.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    'Select Timezone',
+                    style: AppTextStyles.h3(t.txtPrimary),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Search by city or offset...',
+                      hintStyle: AppTextStyles.bodySm(t.txtTertiary),
+                      prefixIcon: Icon(Icons.search, size: 18, color: t.txtTertiary),
+                      filled: true,
+                      fillColor: t.isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : Colors.black.withValues(alpha: 0.04),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onChanged: (q) {
+                      _onSearch(q);
+                      setModal(() {});
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: _filtered.length,
+                    separatorBuilder: (_, _) => Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: t.divider.withValues(alpha: 0.3),
+                    ),
+                    itemBuilder: (_, i) {
+                      final tz = _filtered[i];
+                      final isSelected = tz.iana == widget.selected;
+                      return GestureDetector(
+                        onTap: () {
+                          widget.onChanged(tz.iana);
+                          _searchController.clear();
+                          _onSearch('');
+                          Navigator.of(context).pop();
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      tz.label,
+                                      style: AppTextStyles.body(
+                                        isSelected ? t.primary : t.txtPrimary,
+                                      ).copyWith(
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${tz.iana} · ${tz.offset}',
+                                      style: AppTextStyles.caption(t.txtTertiary)
+                                          .copyWith(fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isSelected)
+                                Icon(Icons.check_rounded, size: 18, color: t.primary)
+                              else
+                                const SizedBox(width: 18),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    final current = timezoneByIana(widget.selected);
+    final displayLabel = current?.label ?? widget.selected;
+    final displayOffset = current?.offset ?? '';
+
+    return GestureDetector(
+      onTap: _openPicker,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: t.isDark
+              ? const Color(0xFF1C1830).withValues(alpha: 0.72)
+              : Colors.white.withValues(alpha: 0.9),
+          borderRadius: AppRadius.xlAll,
+          border: Border.all(
+            color: t.isDark
+                ? Colors.white.withValues(alpha: 0.07)
+                : const Color(0xFF7C3AED).withValues(alpha: 0.12),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayLabel,
+                    style: AppTextStyles.body(t.txtPrimary).copyWith(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (displayOffset.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '${widget.selected} · $displayOffset',
+                      style: AppTextStyles.caption(t.txtTertiary)
+                          .copyWith(fontSize: 11),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: t.txtTertiary),
+          ],
+        ),
+      ),
     );
   }
 }
