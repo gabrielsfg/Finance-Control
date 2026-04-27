@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:dio/io.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -40,10 +41,12 @@ class ApiClient {
       };
     }
 
-    _dio.interceptors.addAll([
+    _dio.interceptors.add(
       _AuthInterceptor(_dio, storage, onUnauthorized: onUnauthorized),
-      LogInterceptor(requestBody: true, responseBody: true),
-    ]);
+    );
+    if (!kReleaseMode) {
+      _dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
+    }
   }
 
   late final Dio _dio;
@@ -75,53 +78,58 @@ class _AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    // Only attempt refresh for 401s that are NOT the refresh endpoint itself.
-    if (err.response?.statusCode == 401 &&
-        err.requestOptions.path != ApiEndpoints.refreshToken &&
-        !_isRefreshing) {
-      _isRefreshing = true;
-      try {
-        final refreshToken = await _storage.getRefreshToken();
-        if (refreshToken == null) {
-          await onUnauthorized();
-          handler.next(err);
-          return;
-        }
-
-        // Call the refresh endpoint directly with a plain Dio to avoid
-        // this interceptor re-triggering on a 401 from /refresh.
-        final refreshResponse = await _dio.post(
-          ApiEndpoints.refreshToken,
-          data: {'refreshToken': refreshToken},
-          options: Options(
-            // Skip this interceptor for the refresh call.
-            extra: {'skipAuthInterceptor': true},
-          ),
-        );
-
-        final newAccessToken = refreshResponse.data['accessToken'] as String;
-        final newRefreshToken = refreshResponse.data['refreshToken'] as String;
-
-        await _storage.saveTokens(
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken,
-        );
-
-        // Retry the original request with the new access token.
-        final retryOptions = err.requestOptions;
-        retryOptions.headers['Authorization'] = 'Bearer $newAccessToken';
-        final retryResponse = await _dio.fetch(retryOptions);
-        handler.resolve(retryResponse);
-      } on DioException {
-        // Refresh failed — log the user out.
-        await onUnauthorized();
-        handler.next(err);
-      } finally {
-        _isRefreshing = false;
-      }
+    if (err.response?.statusCode != 401) {
+      handler.next(err);
       return;
     }
 
-    handler.next(err);
+    // 401 on the refresh endpoint itself — tokens are invalid, log out.
+    if (err.requestOptions.path == ApiEndpoints.refreshToken) {
+      await onUnauthorized();
+      handler.next(err);
+      return;
+    }
+
+    // 401 while another refresh is already in progress — log out to avoid
+    // looping (the first refresh attempt already failed or will fail).
+    if (_isRefreshing) {
+      await onUnauthorized();
+      handler.next(err);
+      return;
+    }
+
+    _isRefreshing = true;
+    try {
+      final refreshToken = await _storage.getRefreshToken();
+      if (refreshToken == null) {
+        await onUnauthorized();
+        handler.next(err);
+        return;
+      }
+
+      final refreshResponse = await _dio.post(
+        ApiEndpoints.refreshToken,
+        data: {'refreshToken': refreshToken},
+      );
+
+      final newAccessToken = refreshResponse.data['accessToken'] as String;
+      final newRefreshToken = refreshResponse.data['refreshToken'] as String;
+
+      await _storage.saveTokens(
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      );
+
+      // Retry the original request with the new access token.
+      final retryOptions = err.requestOptions;
+      retryOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+      final retryResponse = await _dio.fetch(retryOptions);
+      handler.resolve(retryResponse);
+    } on DioException {
+      await onUnauthorized();
+      handler.next(err);
+    } finally {
+      _isRefreshing = false;
+    }
   }
 }

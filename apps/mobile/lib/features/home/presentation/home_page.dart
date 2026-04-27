@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/formatters.dart';
+import '../../../core/utils/app_locale.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/home_summary.dart';
 import '../providers/home_provider.dart';
@@ -112,7 +113,8 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final monthLabel = '${monthName(startDate.month)} ${startDate.year}';
+    final fmt = AppLocaleScope.of(context);
+    final monthLabel = fmt.formatMonthYear(startDate);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,7 +123,13 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Hello 👋', style: AppTextStyles.body(t.txtSecondary)),
+              Row(
+                children: [
+                  Text('Hello', style: AppTextStyles.body(t.txtSecondary)),
+                  const SizedBox(width: 6),
+                  Icon(LucideIcons.hand, size: 16, color: t.txtSecondary),
+                ],
+              ),
               const SizedBox(height: 2),
               Text(monthLabel, style: AppTextStyles.h1(t.txtPrimary)),
             ],
@@ -142,6 +150,7 @@ class _BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
 
     return GlassCard(
       child: Column(
@@ -156,7 +165,7 @@ class _BalanceCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             summary != null
-                ? '${summary!.balance < 0 ? '-' : ''}${formatCurrency(summary!.balance)}'
+                ? '${summary!.balance < 0 ? '-' : ''}${fmt.formatCurrency(summary!.balance)}'
                 : '—',
             textAlign: TextAlign.center,
             style: AppTextStyles.moneyLg(t.txtPrimary).copyWith(fontSize: 34),
@@ -168,7 +177,7 @@ class _BalanceCard extends StatelessWidget {
                 child: _MiniCard(
                   label: 'INCOME',
                   value: summary != null
-                      ? formatCurrency(summary!.totalIncome)
+                      ? fmt.formatCurrency(summary!.totalIncome)
                       : '—',
                   isIncome: true,
                 ),
@@ -178,7 +187,7 @@ class _BalanceCard extends StatelessWidget {
                 child: _MiniCard(
                   label: 'EXPENSES',
                   value: summary != null
-                      ? formatCurrency(summary!.totalExpenses)
+                      ? fmt.formatCurrency(summary!.totalExpenses)
                       : '—',
                   isIncome: false,
                 ),
@@ -260,8 +269,9 @@ class _BudgetCard extends StatelessWidget {
     final percentStr = summary != null
         ? '${summary!.budgetSpentPercentage.round()}%'
         : '—';
+    final fmt = AppLocaleScope.of(context);
     final spentStr =
-        summary != null ? formatCurrency(summary!.budgetTotalSpent) : '—';
+        summary != null ? fmt.formatCurrency(summary!.budgetTotalSpent) : '—';
 
     return GlassCard(
       child: Column(
@@ -407,7 +417,7 @@ class _CategoryChip extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            formatCurrency(data.totalSpentCents),
+            AppLocaleScope.of(context).formatCurrency(data.totalSpentCents),
             style: AppTextStyles.body(t.txtPrimary).copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
@@ -473,9 +483,10 @@ class _TransactionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final amountColor = data.isExpense ? t.error : t.success;
     final sign = data.isExpense ? '-' : '+';
-    final amountStr = '$sign${formatCurrency(data.valueCents.abs())}';
+    final amountStr = '$sign${fmt.formatCurrency(data.valueCents.abs())}';
     final subtitle = '${data.categoryName} · ${data.subCategoryName}';
 
     return Column(

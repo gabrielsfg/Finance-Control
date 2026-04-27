@@ -24,13 +24,13 @@ class TransactionDto {
     required this.type,
     required this.transactionDate,
     required this.paymentType,
-    required this.isPaid,
     this.budgetId,
     this.description,
     this.recurringTransactionId,
     this.parentTransactionId,
     this.installmentNumber,
     this.totalInstallments,
+    this.paymentMethod,
   });
 
   final int id;
@@ -51,13 +51,15 @@ class TransactionDto {
   /// "OneTime" | "Installment" | "Recurring"
   final String paymentType;
 
-  final bool isPaid;
   final int? budgetId;
   final String? description;
   final int? recurringTransactionId;
   final int? parentTransactionId;
   final int? installmentNumber;
   final int? totalInstallments;
+
+  /// "Credit" | "Debit" | null (legacy transactions)
+  final String? paymentMethod;
 
   factory TransactionDto.fromJson(Map<String, dynamic> json) =>
       _$TransactionDtoFromJson(json);

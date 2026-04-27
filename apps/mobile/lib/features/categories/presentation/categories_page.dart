@@ -93,6 +93,23 @@ class _Header extends StatelessWidget {
           ),
         ),
         GestureDetector(
+          onTap: () => context.push('/categories/subcategories'),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: t.primary.withValues(alpha: t.isDark ? 0.15 : 0.1),
+              border: Border.all(
+                color: t.primary.withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: Icon(LucideIcons.listTree, size: 16, color: t.primary),
+          ),
+        ),
+        const SizedBox(width: 8),
+        GestureDetector(
           onTap: () => context.push('/categories/edit'),
           child: Container(
             width: 36,
@@ -109,7 +126,6 @@ class _Header extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        // Add button (placeholder)
         GestureDetector(
           onTap: () => context.push('/categories/create'),
           child: Container(
@@ -151,17 +167,50 @@ class _CategoryList extends StatelessWidget {
 
 // ── Category Card ──────────────────────────────────────────────────────────
 
-class _CategoryCard extends StatefulWidget {
+class _CategoryCard extends ConsumerStatefulWidget {
   final Category category;
 
   const _CategoryCard({required this.category});
 
   @override
-  State<_CategoryCard> createState() => _CategoryCardState();
+  ConsumerState<_CategoryCard> createState() => _CategoryCardState();
 }
 
-class _CategoryCardState extends State<_CategoryCard> {
+class _CategoryCardState extends ConsumerState<_CategoryCard> {
   bool _expanded = false;
+
+  void _confirmDelete(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    final subCount = widget.category.subcategories.length;
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+        title: Text('Delete category?', style: AppTextStyles.h3(t.txtPrimary)),
+        content: Text(
+          subCount > 0
+              ? 'Delete "${widget.category.name}" and its $subCount subcategor${subCount == 1 ? 'y' : 'ies'}? Transactions linked to them will keep the reference.'
+              : 'Delete "${widget.category.name}"? This action cannot be undone.',
+          style: AppTextStyles.body(t.txtSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: AppTextStyles.body(t.txtSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ref
+                  .read(categoriesNotifierProvider.notifier)
+                  .deleteCategory(widget.category.id);
+            },
+            child: Text('Delete', style: AppTextStyles.body(t.error)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -186,24 +235,32 @@ class _CategoryCardState extends State<_CategoryCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Header row ──────────────────────────────────────────────
-          GestureDetector(
-            onTap: hasSubs ? () => setState(() => _expanded = !_expanded) : null,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: t.primary.withValues(alpha: 0.12),
-                      borderRadius: AppRadius.lgAll,
-                    ),
-                    child: Icon(LucideIcons.tag, color: t.primary, size: 18),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 8, 14),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: hasSubs ? () => setState(() => _expanded = !_expanded) : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: t.primary.withValues(alpha: 0.12),
+                          borderRadius: AppRadius.lgAll,
+                        ),
+                        child: Icon(LucideIcons.tag, color: t.primary, size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: hasSubs ? () => setState(() => _expanded = !_expanded) : null,
+                    behavior: HitTestBehavior.opaque,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -216,20 +273,33 @@ class _CategoryCardState extends State<_CategoryCard> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          '${widget.category.subcategories.length} subcategor${widget.category.subcategories.length == 1 ? 'ia' : 'ias'}',
+                          '${widget.category.subcategories.length} subcategor${widget.category.subcategories.length == 1 ? 'y' : 'ies'}',
                           style: AppTextStyles.caption(t.txtTertiary),
                         ),
                       ],
                     ),
                   ),
-                  AnimatedRotation(
-                    turns: _expanded ? 0.25 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(LucideIcons.chevronRight,
-                        size: 16, color: t.txtDisabled),
+                ),
+                GestureDetector(
+                  onTap: () => _confirmDelete(context),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(LucideIcons.trash2, size: 16, color: t.error),
                   ),
-                ],
-              ),
+                ),
+                GestureDetector(
+                  onTap: hasSubs ? () => setState(() => _expanded = !_expanded) : null,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: AnimatedRotation(
+                      turns: _expanded ? 0.25 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(LucideIcons.chevronRight,
+                          size: 16, color: hasSubs ? t.txtDisabled : Colors.transparent),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           // ── Subcategory list ─────────────────────────────────────────

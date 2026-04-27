@@ -12,6 +12,7 @@ namespace FinanceControl.Shared.Dtos.Request
         public string Description { get; set; }
         public DateOnly TransactionDate { get; set; }
         public EnumPaymentType PaymentType { get; set; }
+        public EnumPaymentMethod? PaymentMethod { get; set; }
         public int? TotalInstallments { get; set; }
         public EnumRecurrenceType? Recurrence { get; set; }
     }

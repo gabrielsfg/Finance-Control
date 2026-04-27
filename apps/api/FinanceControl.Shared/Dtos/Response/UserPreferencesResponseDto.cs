@@ -4,5 +4,6 @@ namespace FinanceControl.Shared.Dtos.Response
     {
         public string CurrencyCode { get; set; } = string.Empty;
         public string Locale { get; set; } = string.Empty;
+        public string? Country { get; set; }
     }
 }

@@ -79,9 +79,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       );
     } on DioException catch (e) {
       final status = e.response?.statusCode;
-      final message = (status == 401 || status == 400)
-          ? 'E-mail ou senha incorretos.'
-          : 'Erro de servidor. Tente novamente.';
+      String message;
+      if (status == 423) {
+        final seconds = e.response?.data?['retryAfterSeconds'] as int?;
+        if (seconds != null && seconds > 0) {
+          final minutes = (seconds / 60).ceil();
+          message = 'Conta bloqueada. Tente novamente em $minutes min.';
+        } else {
+          message = 'Conta bloqueada temporariamente. Tente mais tarde.';
+        }
+      } else if (status == 429) {
+        message = 'Muitas tentativas. Aguarde alguns minutos.';
+      } else if (status == 401 || status == 400) {
+        message = 'E-mail ou senha incorretos.';
+      } else {
+        message = 'Erro de servidor. Tente novamente.';
+      }
       setState(() => _globalError = message);
     } catch (_) {
       setState(() => _globalError = 'Erro inesperado. Tente novamente.');

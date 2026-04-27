@@ -140,9 +140,9 @@ namespace FinanceControl.Services.Services
                     Description = t.Description,
                     TransactionDate = t.TransactionDate,
                     PaymentType = t.PaymentType,
+                    PaymentMethod = t.PaymentMethod,
                     InstallmentNumber = t.InstallmentNumber,
                     TotalInstallments = t.TotalInstallments,
-                    IsPaid = t.IsPaid
                 })
                 .FirstOrDefaultAsync();
         }
@@ -179,6 +179,7 @@ namespace FinanceControl.Services.Services
             transaction.Value = requestDto.Value;
             transaction.Description = requestDto.Description;
             transaction.TransactionDate = requestDto.TransactionDate;
+            transaction.PaymentMethod = requestDto.PaymentMethod;
 
             await _context.SaveChangesAsync();
 
@@ -379,7 +380,7 @@ namespace FinanceControl.Services.Services
                 Description = dto.Description,
                 TransactionDate = dto.TransactionDate,
                 PaymentType = EnumPaymentType.OneTime,
-                IsPaid = false
+                PaymentMethod = dto.PaymentMethod,
             };
 
             _context.Transactions.Add(transaction);
@@ -405,9 +406,9 @@ namespace FinanceControl.Services.Services
                 Description = dto.Description,
                 TransactionDate = dto.TransactionDate,
                 PaymentType = EnumPaymentType.Installment,
+                PaymentMethod = dto.PaymentMethod,
                 InstallmentNumber = 1,
                 TotalInstallments = dto.TotalInstallments,
-                IsPaid = false
             };
 
             _context.Transactions.Add(parent);
@@ -429,9 +430,9 @@ namespace FinanceControl.Services.Services
                     Description = dto.Description,
                     TransactionDate = dto.TransactionDate.AddMonths(i - 1),
                     PaymentType = EnumPaymentType.Installment,
+                    PaymentMethod = dto.PaymentMethod,
                     InstallmentNumber = i,
                     TotalInstallments = dto.TotalInstallments,
-                    IsPaid = false
                 };
 
                 _context.Transactions.Add(installment);
@@ -477,7 +478,7 @@ namespace FinanceControl.Services.Services
                 Description = dto.Description,
                 TransactionDate = dto.TransactionDate,
                 PaymentType = EnumPaymentType.Recurring,
-                IsPaid = false
+                PaymentMethod = dto.PaymentMethod,
             };
 
             _context.Transactions.Add(transaction);
@@ -503,9 +504,10 @@ namespace FinanceControl.Services.Services
                     Description = t.Description,
                     TransactionDate = t.TransactionDate,
                     PaymentType = t.PaymentType,
+                    PaymentMethod = t.PaymentMethod,
                     InstallmentNumber = t.InstallmentNumber,
                     TotalInstallments = t.TotalInstallments,
-                    IsPaid = t.IsPaid,
+
                     AreaId = _context.BudgetSubcategoryAllocations
                         .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
                         .Select(a => (int?)a.AreaId)
@@ -536,9 +538,10 @@ namespace FinanceControl.Services.Services
                     Description = t.Description,
                     TransactionDate = t.TransactionDate,
                     PaymentType = t.PaymentType,
+                    PaymentMethod = t.PaymentMethod,
                     InstallmentNumber = t.InstallmentNumber,
                     TotalInstallments = t.TotalInstallments,
-                    IsPaid = t.IsPaid,
+
                     AreaId = _context.BudgetSubcategoryAllocations
                         .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
                         .Select(a => (int?)a.AreaId)

@@ -14,7 +14,6 @@ class GetTransactionResponseDto {
     required this.type,
     required this.transactionDate,
     required this.paymentType,
-    required this.isPaid,
     this.budgetId,
     this.description,
     this.recurringTransactionId,
@@ -23,6 +22,7 @@ class GetTransactionResponseDto {
     this.totalInstallments,
     this.areaId,
     this.areaName,
+    this.paymentMethod,
   });
 
   final int id;
@@ -43,7 +43,6 @@ class GetTransactionResponseDto {
   /// "OneTime" | "Installment" | "Recurring"
   final String paymentType;
 
-  final bool isPaid;
   final int? budgetId;
   final String? description;
   final int? recurringTransactionId;
@@ -52,6 +51,9 @@ class GetTransactionResponseDto {
   final int? totalInstallments;
   final int? areaId;
   final String? areaName;
+
+  /// "Credit" | "Debit" | null (legacy transactions)
+  final String? paymentMethod;
 
   factory GetTransactionResponseDto.fromJson(Map<String, dynamic> json) =>
       _$GetTransactionResponseDtoFromJson(json);

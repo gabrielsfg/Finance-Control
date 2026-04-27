@@ -7,10 +7,12 @@ class UserPreferencesResponseDto {
   const UserPreferencesResponseDto({
     required this.currencyCode,
     required this.locale,
+    this.country,
   });
 
   final String currencyCode;
   final String locale;
+  final String? country;
 
   factory UserPreferencesResponseDto.fromJson(Map<String, dynamic> json) =>
       _$UserPreferencesResponseDtoFromJson(json);

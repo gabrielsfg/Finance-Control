@@ -30,6 +30,9 @@ dependencies:
   # Icons
   lucide_icons: ^0.257.0
 
+  # Country flags (SVG — renders identically on iOS and Android)
+  country_flags: ^3.2.0
+
   # Immutable models
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0

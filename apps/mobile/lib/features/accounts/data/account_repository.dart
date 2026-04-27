@@ -46,7 +46,7 @@ class AccountRepository {
     int id,
     UpdateAccountRequestDto requestDto,
   ) async {
-    final response = await _dio.put(
+    final response = await _dio.patch(
       ApiEndpoints.accountById(id),
       data: requestDto.toJson(),
     );

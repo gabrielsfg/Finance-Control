@@ -15,7 +15,7 @@ abstract class AppConfig {
         // Run the API with: dotnet run --launch-profile http
         // Android emulator: 10.0.2.2 maps to host machine localhost.
         // iOS simulator: use 'localhost' instead.
-        return 'http://10.0.2.2:5112';
+        return 'http://localhost:5112';
       case AppEnv.staging:
         return 'https://staging-api.financecontrol.example.com';
       case AppEnv.production:

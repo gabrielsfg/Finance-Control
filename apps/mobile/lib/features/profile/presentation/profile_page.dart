@@ -7,7 +7,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../accounts/providers/accounts_provider.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../budgets/providers/budget_provider.dart';
+import '../../home/providers/home_provider.dart';
+import '../../transactions/providers/picker_providers.dart';
+import '../../transactions/providers/transaction_provider.dart';
 import '../providers/user_preferences_provider.dart';
 import '../providers/user_provider.dart';
 
@@ -323,11 +329,11 @@ class _PreferencesSection extends ConsumerWidget {
 
 // ── Account Section ────────────────────────────────────────────────────────
 
-class _AccountSection extends StatelessWidget {
+class _AccountSection extends ConsumerWidget {
   const _AccountSection();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = AppThemeTokens.of(context);
 
     return Column(
@@ -342,6 +348,13 @@ class _AccountSection extends StatelessWidget {
               label: 'Categorias',
               subtitle: 'Gerencie suas categorias',
               onTap: () => context.push('/categories'),
+            ),
+            _SettingRow(
+              icon: LucideIcons.heart,
+              iconColor: const Color(0xFFEC4899),
+              label: 'Wishlist',
+              subtitle: 'Items you want to buy',
+              onTap: () => context.push('/wishlist'),
             ),
             _SettingRow(
               icon: LucideIcons.user,
@@ -362,7 +375,165 @@ class _AccountSection extends StatelessWidget {
               label: 'Export Data',
               subtitle: 'Download your transactions',
             ),
+            _SettingRow(
+              icon: LucideIcons.rotateCcw,
+              iconColor: const Color(0xFFF59E0B),
+              label: 'Reset Data',
+              subtitle: 'Delete all financial records',
+              onTap: () => _showResetDataDialog(context, ref),
+            ),
+            _SettingRow(
+              icon: LucideIcons.userX,
+              iconColor: t.error,
+              label: 'Delete Account',
+              subtitle: 'Permanently remove your account',
+              onTap: () => _showDeleteAccountDialog(context, ref),
+            ),
           ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showResetDataDialog(BuildContext context, WidgetRef ref) async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _PasswordConfirmDialog(
+        title: 'Reset Data',
+        warning:
+            'This will permanently delete all your transactions, accounts, budgets, and categories. Your account will be kept.',
+        confirmLabel: 'Reset',
+        isDestructive: true,
+        onConfirm: (password) async {
+          await ref.read(authRepositoryProvider).resetData(password);
+          ref.invalidate(categoriesProvider);
+          ref.invalidate(accountsNotifierProvider);
+          ref.invalidate(transactionsNotifierProvider);
+          ref.invalidate(homeNotifierProvider);
+          ref.invalidate(budgetNotifierProvider);
+        },
+      ),
+    );
+  }
+
+  Future<void> _showDeleteAccountDialog(BuildContext context, WidgetRef ref) async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _PasswordConfirmDialog(
+        title: 'Delete Account',
+        warning:
+            'This will permanently delete your account and all associated data. This action cannot be undone.',
+        confirmLabel: 'Delete',
+        isDestructive: true,
+        onConfirm: (password) async {
+          await ref.read(authRepositoryProvider).deleteAccount(password);
+          await ref.read(authNotifierProvider.notifier).logout();
+        },
+      ),
+    );
+  }
+}
+
+// ── Password Confirm Dialog ────────────────────────────────────────────────
+
+class _PasswordConfirmDialog extends StatefulWidget {
+  const _PasswordConfirmDialog({
+    required this.title,
+    required this.warning,
+    required this.confirmLabel,
+    required this.isDestructive,
+    required this.onConfirm,
+  });
+
+  final String title;
+  final String warning;
+  final String confirmLabel;
+  final bool isDestructive;
+  final Future<void> Function(String password) onConfirm;
+
+  @override
+  State<_PasswordConfirmDialog> createState() => _PasswordConfirmDialogState();
+}
+
+class _PasswordConfirmDialogState extends State<_PasswordConfirmDialog> {
+  final _controller = TextEditingController();
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final password = _controller.text.trim();
+    if (password.isEmpty) {
+      setState(() => _error = 'Password is required.');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await widget.onConfirm(password);
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Invalid password.';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    final confirmColor = widget.isDestructive ? t.error : t.primary;
+
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.warning, style: AppTextStyles.bodySm(t.txtSecondary)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controller,
+            obscureText: true,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: 'Password',
+              errorText: _error,
+            ),
+            onSubmitted: (_) => _submit(),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _loading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: _loading ? null : _submit,
+          child: _loading
+              ? SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: confirmColor,
+                  ),
+                )
+              : Text(
+                  widget.confirmLabel,
+                  style: TextStyle(color: confirmColor),
+                ),
         ),
       ],
     );

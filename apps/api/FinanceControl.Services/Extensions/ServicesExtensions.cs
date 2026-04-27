@@ -2,11 +2,6 @@
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Services;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FinanceControl.Services.Extensions
 {
@@ -23,6 +18,12 @@ namespace FinanceControl.Services.Extensions
             services.AddScoped<IAreaCategoryService, AreaCategoryService>();
             services.AddScoped<IBudgetSubCategoryAllocationService, BudgetSubCategoryAllocationService>();
             services.AddScoped<ITransactionService, TransactionService>();
+            services.AddSingleton<IBankService, BankService>();
+            services.AddScoped<IWishlistService, WishlistService>();
+            // ICurrencyService / CurrencyService registered via AddHttpClient in Program.cs
+
+            services.AddSingleton<RecurringTransactionJobService>();
+            services.AddHostedService<RecurringTransactionHostedService>();
 
             return services;
         }
