@@ -72,10 +72,45 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
   String? _recurrenceError;
 
   @override
+  void initState() {
+    super.initState();
+    // Handle the case where accountsProvider is already resolved before the
+    // ref.listen in build() is registered (avoids the race condition).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_accountId != null) return;
+      ref.read(accountsProvider).whenData((accounts) {
+        if (_accountId == null && accounts.isNotEmpty) {
+          _applyDefaultAccount(accounts);
+        }
+      });
+    });
+  }
+
+  void _applyDefaultAccount(List<Account> accounts) {
+    final defaultAcc = accounts.firstWhere(
+      (a) => a.isDefault,
+      orElse: () => accounts.first,
+    );
+    setState(() {
+      _accountId = defaultAcc.id;
+      _accountName = defaultAcc.name;
+      _accountType = defaultAcc.type;
+      _isCredit = defaultAcc.type == 'Credit';
+      if (!_accountSupportsInstallmentOrRecurring()) {
+        _paymentType = _PaymentType.oneTime;
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  bool _accountSupportsInstallmentOrRecurring() {
+    return _accountType == 'Credit' || _accountType == 'Checking';
   }
 
   bool _validate() {
@@ -92,13 +127,22 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
 
     if (_subcategoryId == null) subcategoryError = 'Select a subcategory';
 
-    if (_paymentType == _PaymentType.installment && _installmentCount < 2) {
-      installmentsError = 'Minimum 2 installments';
+    if (_paymentType == _PaymentType.installment) {
+      if (!_accountSupportsInstallmentOrRecurring()) {
+        installmentsError =
+            'Cash, Debit and Savings accounts do not support installments or recurrence';
+      } else if (_installmentCount < 2) {
+        installmentsError = 'Minimum 2 installments';
+      }
     }
 
-    if (_paymentType == _PaymentType.recurring &&
-        (_recurrence == null || _recurrence!.isEmpty)) {
-      recurrenceError = 'Select the recurrence';
+    if (_paymentType == _PaymentType.recurring) {
+      if (!_accountSupportsInstallmentOrRecurring()) {
+        recurrenceError =
+            'Cash, Debit and Savings accounts do not support installments or recurrence';
+      } else if (_recurrence == null || _recurrence!.isEmpty) {
+        recurrenceError = 'Select the recurrence';
+      }
     }
 
     setState(() {
@@ -222,11 +266,18 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
         accounts: accounts,
         selectedId: _accountId,
         onSelected: (id, name, type) {
+          final supportsAdvanced =
+              type == 'Credit' || type == 'Checking';
           setState(() {
             _accountId = id;
             _accountName = name;
             _accountType = type;
             _isCredit = type == 'Credit';
+            if (!supportsAdvanced) {
+              _paymentType = _PaymentType.oneTime;
+              _installmentsError = null;
+              _recurrenceError = null;
+            }
           });
         },
       ),
@@ -263,20 +314,11 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     final accountsAsync = ref.watch(accountsProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
 
-    // Pre-select the default account once accounts load.
+    // Pre-select the default account when it loads after widget mount.
     ref.listen(accountsProvider, (_, next) {
       next.whenData((accounts) {
         if (_accountId == null && accounts.isNotEmpty) {
-          final defaultAcc = accounts.firstWhere(
-            (a) => a.isDefault,
-            orElse: () => accounts.first,
-          );
-          setState(() {
-            _accountId = defaultAcc.id;
-            _accountName = defaultAcc.name;
-            _accountType = defaultAcc.type;
-            _isCredit = defaultAcc.type == 'Credit';
-          });
+          _applyDefaultAccount(accounts);
         }
       });
     });
@@ -411,6 +453,8 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                       children: [
                         _PaymentTypeSection(
                           selected: _paymentType,
+                          showAdvanced:
+                              _accountSupportsInstallmentOrRecurring(),
                           onChanged: isLoading
                               ? null
                               : (v) => setState(() {
@@ -960,11 +1004,13 @@ class _DescriptionField extends StatelessWidget {
 
 class _PaymentTypeSection extends StatelessWidget {
   final _PaymentType selected;
+  final bool showAdvanced;
   final ValueChanged<_PaymentType>? onChanged;
 
   const _PaymentTypeSection({
     required this.selected,
     required this.onChanged,
+    this.showAdvanced = true,
   });
 
   @override
@@ -995,26 +1041,28 @@ class _PaymentTypeSection extends StatelessWidget {
                       : () => onChanged!(_PaymentType.oneTime),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _PaymentChip(
-                  label: 'Installment',
-                  active: selected == _PaymentType.installment,
-                  onTap: onChanged == null
-                      ? null
-                      : () => onChanged!(_PaymentType.installment),
+              if (showAdvanced) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _PaymentChip(
+                    label: 'Installment',
+                    active: selected == _PaymentType.installment,
+                    onTap: onChanged == null
+                        ? null
+                        : () => onChanged!(_PaymentType.installment),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _PaymentChip(
-                  label: 'Recurring',
-                  active: selected == _PaymentType.recurring,
-                  onTap: onChanged == null
-                      ? null
-                      : () => onChanged!(_PaymentType.recurring),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _PaymentChip(
+                    label: 'Recurring',
+                    active: selected == _PaymentType.recurring,
+                    onTap: onChanged == null
+                        ? null
+                        : () => onChanged!(_PaymentType.recurring),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ],

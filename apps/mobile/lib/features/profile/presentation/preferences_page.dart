@@ -1,3 +1,4 @@
+import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -274,20 +275,33 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-// ── Currency flag map ──────────────────────────────────────────────────────
+// ── Currency → country (ISO 3166-1 alpha-2) map ──────────────────────────────
 
-const _currencyFlags = <String, String>{
-  'AED': '🇦🇪', 'ARS': '🇦🇷', 'AUD': '🇦🇺', 'BOB': '🇧🇴', 'BRL': '🇧🇷',
-  'CAD': '🇨🇦', 'CHF': '🇨🇭', 'CLP': '🇨🇱', 'CNY': '🇨🇳', 'COP': '🇨🇴',
-  'DKK': '🇩🇰', 'EUR': '🇪🇺', 'GBP': '🇬🇧', 'GHS': '🇬🇭', 'HKD': '🇭🇰',
-  'IDR': '🇮🇩', 'ILS': '🇮🇱', 'INR': '🇮🇳', 'JPY': '🇯🇵', 'KES': '🇰🇪',
-  'KRW': '🇰🇷', 'MXN': '🇲🇽', 'MYR': '🇲🇾', 'NGN': '🇳🇬', 'NOK': '🇳🇴',
-  'NZD': '🇳🇿', 'PEN': '🇵🇪', 'PHP': '🇵🇭', 'PYG': '🇵🇾', 'RUB': '🇷🇺',
-  'SAR': '🇸🇦', 'SEK': '🇸🇪', 'SGD': '🇸🇬', 'THB': '🇹🇭', 'TRY': '🇹🇷',
-  'USD': '🇺🇸', 'UYU': '🇺🇾', 'VES': '🇻🇪', 'VND': '🇻🇳', 'ZAR': '🇿🇦',
+const _currencyToCountry = <String, String>{
+  'AED': 'AE', 'ARS': 'AR', 'AUD': 'AU', 'BOB': 'BO', 'BRL': 'BR',
+  'CAD': 'CA', 'CHF': 'CH', 'CLP': 'CL', 'CNY': 'CN', 'COP': 'CO',
+  'DKK': 'DK', 'EUR': 'EU', 'GBP': 'GB', 'GHS': 'GH', 'HKD': 'HK',
+  'IDR': 'ID', 'ILS': 'IL', 'INR': 'IN', 'JPY': 'JP', 'KES': 'KE',
+  'KRW': 'KR', 'MXN': 'MX', 'MYR': 'MY', 'NGN': 'NG', 'NOK': 'NO',
+  'NZD': 'NZ', 'PEN': 'PE', 'PHP': 'PH', 'PYG': 'PY', 'RUB': 'RU',
+  'SAR': 'SA', 'SEK': 'SE', 'SGD': 'SG', 'THB': 'TH', 'TRY': 'TR',
+  'USD': 'US', 'UYU': 'UY', 'VES': 'VE', 'VND': 'VN', 'ZAR': 'ZA',
 };
 
-String _flagFor(String code) => _currencyFlags[code] ?? '💱';
+Widget _currencyFlag(String currencyCode, {double size = 22}) {
+  final country = _currencyToCountry[currencyCode];
+  if (country == null) {
+    return Icon(LucideIcons.dollarSign, size: size);
+  }
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(3),
+    child: CountryFlag.fromCountryCode(
+      country,
+      height: size,
+      width: size * 1.4,
+    ),
+  );
+}
 
 // ── Currency Selector ──────────────────────────────────────────────────────
 
@@ -410,10 +424,7 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
                               horizontal: 20, vertical: 14),
                           child: Row(
                             children: [
-                              Text(
-                                _flagFor(currency.code),
-                                style: const TextStyle(fontSize: 22),
-                              ),
+                              _currencyFlag(currency.code, size: 22),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -462,7 +473,6 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final flag = _flagFor(widget.selected);
 
     return GestureDetector(
       onTap: _openPicker,
@@ -482,7 +492,7 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
         ),
         child: Row(
           children: [
-            Text(flag, style: const TextStyle(fontSize: 24)),
+            _currencyFlag(widget.selected, size: 24),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -841,8 +851,14 @@ class _CountrySelectorState extends State<_CountrySelector> {
                               horizontal: 20, vertical: 14),
                           child: Row(
                             children: [
-                              Text(country.flag,
-                                  style: const TextStyle(fontSize: 22)),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(3),
+                                child: CountryFlag.fromCountryCode(
+                                  country.code,
+                                  height: 22,
+                                  width: 30,
+                                ),
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -909,7 +925,14 @@ class _CountrySelectorState extends State<_CountrySelector> {
         child: Row(
           children: [
             if (country != null) ...[
-              Text(country.flag, style: const TextStyle(fontSize: 24)),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: CountryFlag.fromCountryCode(
+                  country.code,
+                  height: 24,
+                  width: 34,
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(

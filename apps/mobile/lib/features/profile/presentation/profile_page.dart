@@ -350,6 +350,13 @@ class _AccountSection extends ConsumerWidget {
               onTap: () => context.push('/categories'),
             ),
             _SettingRow(
+              icon: LucideIcons.heart,
+              iconColor: const Color(0xFFEC4899),
+              label: 'Wishlist',
+              subtitle: 'Items you want to buy',
+              onTap: () => context.push('/wishlist'),
+            ),
+            _SettingRow(
               icon: LucideIcons.user,
               iconColor: t.primary,
               label: 'Edit Profile',

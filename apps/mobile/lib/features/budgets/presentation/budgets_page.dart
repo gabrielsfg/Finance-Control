@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -112,8 +113,9 @@ class _EmptyState extends StatelessWidget {
                           shape: BoxShape.circle,
                           color: t.primary.withValues(alpha: 0.1),
                         ),
-                        child: const Center(
-                          child: Text('📊', style: TextStyle(fontSize: 44)),
+                        child: Center(
+                          child: Icon(LucideIcons.barChart3,
+                              size: 44, color: t.primary),
                         ),
                       ),
                       const SizedBox(height: 24),

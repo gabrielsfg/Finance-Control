@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -122,7 +123,13 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Hello 👋', style: AppTextStyles.body(t.txtSecondary)),
+              Row(
+                children: [
+                  Text('Hello', style: AppTextStyles.body(t.txtSecondary)),
+                  const SizedBox(width: 6),
+                  Icon(LucideIcons.hand, size: 16, color: t.txtSecondary),
+                ],
+              ),
               const SizedBox(height: 2),
               Text(monthLabel, style: AppTextStyles.h1(t.txtPrimary)),
             ],
