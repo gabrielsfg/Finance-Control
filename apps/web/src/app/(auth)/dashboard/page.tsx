@@ -17,7 +17,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-green" />
+        <Loader2 size={24} className="text-green animate-spin" />
       </div>
     );
   }
@@ -25,7 +25,7 @@ export default function DashboardPage() {
   if (isError || !data) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-[14px] text-text-sub">Erro ao carregar dados. Tente novamente.</p>
+        <p className="text-text-sub text-[14px]">Erro ao carregar dados. Tente novamente.</p>
       </div>
     );
   }
@@ -33,47 +33,47 @@ export default function DashboardPage() {
   const { balanceSummary, recentTransactions, budgetSummary, topCategories } = data;
   const savingsRate =
     balanceSummary.totalIncome > 0
-      ? ((balanceSummary.balance / balanceSummary.totalIncome) * 100)
+      ? (balanceSummary.balance / balanceSummary.totalIncome) * 100
       : 0;
 
   return (
     <div className="flex flex-col gap-5">
       {/* Header */}
       <div>
-        <h1 className="font-display text-[22px] font-700 tracking-tight text-text">Dashboard</h1>
-        <p className="mt-0.5 text-[13px] text-text-muted capitalize">{currentMonth}</p>
+        <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Dashboard</h1>
+        <p className="text-text-muted mt-0.5 text-[13px] capitalize">{currentMonth}</p>
       </div>
 
       {/* Net Worth Hero */}
       <div
-        className="flex items-center justify-between rounded-[16px] border border-border px-8 py-7"
+        className="border-border flex items-center justify-between rounded-[16px] border px-8 py-7"
         style={{
           background: "linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%)",
         }}
       >
         <div>
-          <p className="mb-2 text-[12px] uppercase tracking-[0.06em] text-text-muted">
+          <p className="text-text-muted mb-2 text-[12px] tracking-[0.06em] uppercase">
             Saldo do Mês
           </p>
           <p
-            className="font-money text-[40px] font-600 tracking-tight"
+            className="font-money font-600 text-[40px] tracking-tight"
             style={{ color: balanceSummary.balance >= 0 ? "var(--green)" : "var(--red)" }}
           >
             {formatCurrency(balanceSummary.balance / 100)}
           </p>
           <div className="mt-2 flex items-center gap-2">
-            <span className="rounded-full bg-green/12 px-2.5 py-0.5 font-mono text-[12px] text-green">
+            <span className="bg-green/12 text-green rounded-full px-2.5 py-0.5 font-mono text-[12px]">
               {formatPercent(savingsRate)} de poupança
             </span>
           </div>
         </div>
         <div className="hidden text-right sm:block">
-          <p className="text-[12px] text-text-muted">Receitas</p>
-          <p className="font-money text-[16px] font-600 text-green">
+          <p className="text-text-muted text-[12px]">Receitas</p>
+          <p className="font-money font-600 text-green text-[16px]">
             +{formatCurrency(balanceSummary.totalIncome / 100)}
           </p>
-          <p className="mt-2 text-[12px] text-text-muted">Despesas</p>
-          <p className="font-money text-[16px] font-600 text-red">
+          <p className="text-text-muted mt-2 text-[12px]">Despesas</p>
+          <p className="font-money font-600 text-red text-[16px]">
             -{formatCurrency(balanceSummary.totalExpenses / 100)}
           </p>
         </div>

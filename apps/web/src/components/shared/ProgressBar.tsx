@@ -8,13 +8,19 @@ type ProgressBarProps = {
   className?: string;
 };
 
-export const ProgressBar = ({ value, max, color = "#00C98D", height = 6, className }: ProgressBarProps) => {
+export const ProgressBar = ({
+  value,
+  max,
+  color = "#00C98D",
+  height = 6,
+  className,
+}: ProgressBarProps) => {
   const pct = Math.min((value / max) * 100, 100);
   const isOverflow = value > max;
 
   return (
     <div
-      className={cn("w-full overflow-hidden rounded-full bg-surface3", className)}
+      className={cn("bg-surface3 w-full overflow-hidden rounded-full", className)}
       style={{ height }}
     >
       <div

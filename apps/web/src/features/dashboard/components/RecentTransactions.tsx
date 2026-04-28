@@ -20,7 +20,7 @@ export const RecentTransactions = ({ transactions }: { transactions: RecentTrans
   const router = useRouter();
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-5">
+    <div className="border-border bg-surface rounded-xl border p-5">
       <SectionHeader
         title="Transações Recentes"
         action={() => router.push("/transactions")}
@@ -37,7 +37,7 @@ export const RecentTransactions = ({ transactions }: { transactions: RecentTrans
               key={tx.id}
               className={cn(
                 "flex items-center gap-3 py-2.5",
-                i < transactions.length - 1 && "border-b border-border",
+                i < transactions.length - 1 && "border-border border-b",
               )}
             >
               <div
@@ -47,20 +47,20 @@ export const RecentTransactions = ({ transactions }: { transactions: RecentTrans
                 💸
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-500 text-text">{tx.description}</p>
-                <p className="mt-0.5 text-[11px] text-text-muted">{tx.categoryName}</p>
+                <p className="font-500 text-text truncate text-[13px]">{tx.description}</p>
+                <p className="text-text-muted mt-0.5 text-[11px]">{tx.categoryName}</p>
               </div>
               <div className="shrink-0 text-right">
                 <p
                   className={cn(
-                    "font-money text-[13px] font-500",
+                    "font-money font-500 text-[13px]",
                     isIncome ? "text-green" : isTransfer ? "text-text-sub" : "text-red",
                   )}
                 >
                   {isIncome ? "+" : isTransfer ? "" : "-"}
                   {formatCurrency(Math.abs(tx.value / 100))}
                 </p>
-                <p className="mt-0.5 text-[10px] text-text-muted">{tx.subCategoryName}</p>
+                <p className="text-text-muted mt-0.5 text-[10px]">{tx.subCategoryName}</p>
               </div>
             </div>
           );
