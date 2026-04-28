@@ -18,6 +18,10 @@ namespace FinanceControl.Data.Mappings
                 .IsRequired()
                 .HasMaxLength(10)
                 .HasDefaultValue("pt-BR");
+            builder.Property(p => p.AnalyticsConfig)
+                .IsRequired()
+                .HasColumnType("text")
+                .HasDefaultValue("[]");
             builder.HasOne(p => p.User)
                 .WithOne()
                 .HasForeignKey<UserPreferences>(p => p.UserId)

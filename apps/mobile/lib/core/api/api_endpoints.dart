@@ -55,6 +55,30 @@ abstract class ApiEndpoints {
   static String wishlistPurchase(int id) => '/api/wishlist/$id/purchase';
   static String wishlistPriceHistory(int id) => '/api/wishlist/$id/price-history';
 
+  // Analytics
+  static const String analyticsIncomeExpense = '/api/analytics/income-expense';
+  static const String analyticsBalanceEvolution =
+      '/api/analytics/balance-evolution';
+  static const String analyticsExpensesByCategory =
+      '/api/analytics/expenses-by-category';
+  static const String analyticsCategoryEvolution =
+      '/api/analytics/category-evolution';
+  static const String analyticsNetWorthEvolution =
+      '/api/analytics/net-worth-evolution';
+  static const String analyticsFutureCommitments =
+      '/api/analytics/future-commitments';
+  static const String analyticsSpendingHeatmap =
+      '/api/analytics/spending-heatmap';
+  static const String analyticsBudgetPace = '/api/analytics/budget-pace';
+  static const String analyticsProjectionBalance =
+      '/api/analytics/projection/balance';
+  static const String analyticsProjectionCategories =
+      '/api/analytics/projection/categories';
+  static const String analyticsProjectionNetWorth =
+      '/api/analytics/projection/net-worth';
+  static const String analyticsProjectionCommitmentsImpact =
+      '/api/analytics/projection/commitments-impact';
+
   // Budgets
   static const String budgets = '/api/budget';
   static String budgetById(int id) => '/api/budget/$id';

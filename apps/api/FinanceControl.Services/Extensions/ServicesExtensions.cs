@@ -20,6 +20,7 @@ namespace FinanceControl.Services.Extensions
             services.AddScoped<ITransactionService, TransactionService>();
             services.AddSingleton<IBankService, BankService>();
             services.AddScoped<IWishlistService, WishlistService>();
+            services.AddScoped<IAnalyticsService, AnalyticsService>();
             // ICurrencyService / CurrencyService registered via AddHttpClient in Program.cs
 
             services.AddSingleton<RecurringTransactionJobService>();

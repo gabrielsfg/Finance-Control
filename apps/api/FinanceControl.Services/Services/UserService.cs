@@ -116,7 +116,8 @@ namespace FinanceControl.Services.Services
             {
                 CurrencyCode = prefs.CurrencyCode,
                 Locale = prefs.Locale,
-                Country = user?.Country
+                Country = user?.Country,
+                AnalyticsConfig = prefs.AnalyticsConfig
             };
         }
 
@@ -139,13 +140,17 @@ namespace FinanceControl.Services.Services
             if (!string.IsNullOrWhiteSpace(requestDto.Country))
                 user.Country = requestDto.Country.Trim().ToUpper();
 
+            if (requestDto.AnalyticsConfig is not null)
+                prefs.AnalyticsConfig = requestDto.AnalyticsConfig;
+
             await _context.SaveChangesAsync();
 
             return new UserPreferencesResponseDto
             {
                 CurrencyCode = prefs.CurrencyCode,
                 Locale = prefs.Locale,
-                Country = user.Country
+                Country = user.Country,
+                AnalyticsConfig = prefs.AnalyticsConfig
             };
         }
 
