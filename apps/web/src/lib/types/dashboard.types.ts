@@ -2,6 +2,9 @@ export type BalanceSummary = {
   totalIncome: number;
   totalExpenses: number;
   balance: number;
+  incomeChange?: number;
+  expenseChange?: number;
+  balanceChange?: number;
 };
 
 export type RecentTransaction = {
@@ -13,10 +16,20 @@ export type RecentTransaction = {
   categoryName: string;
 };
 
+export type BudgetSubCategorySummary = {
+  subCategoryName: string;
+  categoryName: string;
+  spent: number;
+  allocated: number;
+  spentPercentage: number;
+};
+
 export type BudgetSummary = {
   totalExpected: number;
   totalSpent: number;
   spentPercentage: number;
+  hasAllocations: boolean;
+  topSubCategories: BudgetSubCategorySummary[];
 };
 
 export type TopCategoryItem = {
@@ -27,6 +40,6 @@ export type TopCategoryItem = {
 export type DashboardSummary = {
   balanceSummary: BalanceSummary;
   recentTransactions: RecentTransaction[];
-  budgetSummary: BudgetSummary;
+  budgetSummary: BudgetSummary | null;
   topCategories: TopCategoryItem[];
 };

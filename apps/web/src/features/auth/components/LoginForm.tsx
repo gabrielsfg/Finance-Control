@@ -27,6 +27,7 @@ export const LoginForm = ({ onSwitch }: { onSwitch: () => void }) => {
     try {
       const response = await authApi.login(data);
       login(response.accessToken, response.refreshToken);
+      router.refresh();
       router.push("/dashboard");
     } catch (err: unknown) {
       const status = (err as { response?: { status: number } })?.response?.status;
@@ -45,7 +46,7 @@ export const LoginForm = ({ onSwitch }: { onSwitch: () => void }) => {
 
       {/* Email */}
       <div className="mb-3">
-        <label className="text-text-muted mb-1.5 block text-[12px]">E-mail</label>
+        <label className="text-text-muted mb-1.5 block text-[13px]">E-mail</label>
         <input
           type="email"
           placeholder="gabriel@email.com"
@@ -56,12 +57,12 @@ export const LoginForm = ({ onSwitch }: { onSwitch: () => void }) => {
             errors.email ? "border-red" : "border-border focus:border-green",
           )}
         />
-        {errors.email && <p className="text-red mt-1 text-[12px]">{errors.email.message}</p>}
+        {errors.email && <p className="text-red mt-1 text-[13px]">{errors.email.message}</p>}
       </div>
 
       {/* Password */}
       <div className="mb-1">
-        <label className="text-text-muted mb-1.5 block text-[12px]">Senha</label>
+        <label className="text-text-muted mb-1.5 block text-[13px]">Senha</label>
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
@@ -81,10 +82,10 @@ export const LoginForm = ({ onSwitch }: { onSwitch: () => void }) => {
             {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>
         </div>
-        {errors.password && <p className="text-red mt-1 text-[12px]">{errors.password.message}</p>}
+        {errors.password && <p className="text-red mt-1 text-[13px]">{errors.password.message}</p>}
       </div>
 
-      <a href="#" className="text-text-sub hover:text-green mb-4 block text-right text-[12px]">
+      <a href="#" className="text-text-sub hover:text-green mb-4 block text-right text-[13px]">
         Esqueci minha senha
       </a>
 
@@ -103,7 +104,7 @@ export const LoginForm = ({ onSwitch }: { onSwitch: () => void }) => {
         Entrar na conta
       </button>
 
-      <p className="text-text-muted mt-5 text-center text-[13px]">
+      <p className="text-text-muted mt-5 text-center text-[14px]">
         Não tem uma conta?{" "}
         <button type="button" onClick={onSwitch} className="font-500 text-green hover:underline">
           Criar conta grátis

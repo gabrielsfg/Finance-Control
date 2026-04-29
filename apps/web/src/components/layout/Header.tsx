@@ -15,13 +15,13 @@ export const Header = () => {
         <input
           type="text"
           placeholder="Buscar transações, contas..."
-          className="text-text placeholder:text-text-muted flex-1 bg-transparent font-sans text-[13px] focus:outline-none"
+          className="text-text placeholder:text-text-muted flex-1 bg-transparent font-sans text-[14px] focus:outline-none"
         />
       </div>
 
       <div className="flex items-center gap-2">
         {/* Date badge */}
-        <span className="text-text-muted hidden font-mono text-[12px] sm:block">
+        <span className="text-text-muted hidden font-mono text-[13px] sm:block">
           {new Date().toLocaleDateString("pt-BR", {
             day: "2-digit",
             month: "short",

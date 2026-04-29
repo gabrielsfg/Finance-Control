@@ -6,6 +6,7 @@ type StatCardProps = {
   label: string;
   value: number;
   change?: number;
+  lowerIsBetter?: boolean;
   icon: LucideIcon;
   iconColor: string;
   className?: string;
@@ -15,16 +16,18 @@ export const StatCard = ({
   label,
   value,
   change,
+  lowerIsBetter = false,
   icon: Icon,
   iconColor,
   className,
 }: StatCardProps) => {
-  const isPositive = (change ?? 0) >= 0;
+  const rawPositive = (change ?? 0) >= 0;
+  const isGood = lowerIsBetter ? !rawPositive : rawPositive;
 
   return (
     <div className={cn("border-border bg-surface rounded-xl border p-5", className)}>
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-text-muted text-[12px]">{label}</span>
+        <span className="font-display font-600 text-text text-[15px]">{label}</span>
         <div
           className="flex h-8 w-8 items-center justify-center rounded-[8px]"
           style={{ backgroundColor: `${iconColor}18` }}
@@ -34,8 +37,8 @@ export const StatCard = ({
       </div>
       <p className="font-money font-600 text-text text-[22px]">{formatCurrency(value)}</p>
       {change !== undefined && (
-        <p className={cn("mt-1.5 text-[12px]", isPositive ? "text-green" : "text-red")}>
-          {formatPercent(change)} vs. mês anterior
+        <p className={cn("mt-1.5 text-[13px]", isGood ? "text-green" : "text-red")}>
+          {rawPositive ? "+" : ""}{formatPercent(change)} vs. mês anterior
         </p>
       )}
     </div>

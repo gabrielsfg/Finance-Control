@@ -24,6 +24,7 @@ export const useAuthStore = create<AuthState>()(
       login: (accessToken, refreshToken) => {
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
+        document.cookie = `accessToken=${accessToken}; path=/; SameSite=Lax`;
         set({ accessToken, refreshToken, isAuthenticated: true });
       },
 
@@ -38,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
         }
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        document.cookie = "accessToken=; path=/; max-age=0";
         set({ accessToken: null, refreshToken: null, user: null, isAuthenticated: false });
       },
 

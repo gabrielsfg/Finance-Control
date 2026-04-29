@@ -28,7 +28,7 @@ namespace FinanceControl.Domain.Interfaces.Services
         /// </summary>
         Task<BalanceSummaryDto> GetSummaryBalanceAsync(MainPageSummaryRequestDto requestDto);
         Task<List<RecentTransactionDto>> GetRecentTransactionsAsync(MainPageSummaryRequestDto requestDto);
-        Task<BudgetSummaryDto> GetBudgetSummaryAsync(MainPageSummaryRequestDto requestDto);
+        Task<BudgetSummaryDto?> GetBudgetSummaryAsync(MainPageSummaryRequestDto requestDto);
         Task<List<TopCategoryItemDto>> GetTopCategoriesAsync(MainPageSummaryRequestDto requestDto);
     }
 }

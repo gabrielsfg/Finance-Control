@@ -16,11 +16,17 @@ const CATEGORY_COLORS: Record<string, string> = {
   Transferência: "#8A95A3",
 };
 
-export const RecentTransactions = ({ transactions }: { transactions: RecentTransaction[] }) => {
+export const RecentTransactions = ({
+  transactions,
+  className,
+}: {
+  transactions: RecentTransaction[];
+  className?: string;
+}) => {
   const router = useRouter();
 
   return (
-    <div className="border-border bg-surface rounded-xl border p-5">
+    <div className={cn("border-border bg-surface rounded-xl border p-5", className)}>
       <SectionHeader
         title="Transações Recentes"
         action={() => router.push("/transactions")}
@@ -36,7 +42,7 @@ export const RecentTransactions = ({ transactions }: { transactions: RecentTrans
             <div
               key={tx.id}
               className={cn(
-                "flex items-center gap-3 py-2.5",
+                "flex items-center gap-3 py-3",
                 i < transactions.length - 1 && "border-border border-b",
               )}
             >
@@ -47,20 +53,20 @@ export const RecentTransactions = ({ transactions }: { transactions: RecentTrans
                 💸
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-500 text-text truncate text-[13px]">{tx.description}</p>
-                <p className="text-text-muted mt-0.5 text-[11px]">{tx.categoryName}</p>
+                <p className="font-500 text-text truncate text-[14px]">{tx.description}</p>
+                <p className="text-text-muted mt-0.5 text-[12px]">{tx.categoryName}</p>
               </div>
               <div className="shrink-0 text-right">
                 <p
                   className={cn(
-                    "font-money font-500 text-[13px]",
+                    "font-money font-500 text-[14px]",
                     isIncome ? "text-green" : isTransfer ? "text-text-sub" : "text-red",
                   )}
                 >
                   {isIncome ? "+" : isTransfer ? "" : "-"}
                   {formatCurrency(Math.abs(tx.value / 100))}
                 </p>
-                <p className="text-text-muted mt-0.5 text-[10px]">{tx.subCategoryName}</p>
+                <p className="text-text-muted mt-0.5 text-[11px]">{tx.subCategoryName}</p>
               </div>
             </div>
           );

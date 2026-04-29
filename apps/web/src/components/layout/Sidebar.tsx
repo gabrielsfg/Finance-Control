@@ -69,7 +69,7 @@ export const Sidebar = () => {
               )}
             >
               <Icon size={16} strokeWidth={1.75} className="shrink-0" />
-              {!sidebarCollapsed && <span className="font-500 font-sans text-[14px]">{label}</span>}
+              {!sidebarCollapsed && <span className="font-500 font-sans text-[15px]">{label}</span>}
               {isActive && !sidebarCollapsed && (
                 <span className="bg-green ml-auto h-[5px] w-[5px] rounded-full" />
               )}
@@ -97,8 +97,8 @@ export const Sidebar = () => {
               GS
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-500 text-text truncate text-[13px]">Gabriel Silva</p>
-              <p className="text-text-muted truncate text-[11px]">Premium</p>
+              <p className="font-500 text-text truncate text-[14px]">Gabriel Silva</p>
+              <p className="text-text-muted truncate text-[12px]">Premium</p>
             </div>
           </div>
         </div>

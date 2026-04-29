@@ -39,6 +39,11 @@ dist/
 .nuxt/
 
 # ========================
+# Claude Code
+# ========================
+.claude/settings.local.json
+
+# ========================
 # Geral
 # ========================
 .DS_Store
@@ -49,4 +54,3 @@ Thumbs.db
 Finance-Control-Api/
 Finance-Control-App/
 FinanceControlFilesDocumentation/
-.claude/

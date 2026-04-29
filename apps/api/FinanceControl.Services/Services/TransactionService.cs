@@ -316,9 +316,20 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
         }
 
-        public async Task<BudgetSummaryDto> GetBudgetSummaryAsync(MainPageSummaryRequestDto requestDto)
+        public async Task<BudgetSummaryDto?> GetBudgetSummaryAsync(MainPageSummaryRequestDto requestDto)
         {
             await using var context = _contextFactory.CreateDbContext();
+
+            var hasBudget = await context.Budgets
+                .AnyAsync(b => b.UserId == requestDto.UserId
+                    && (!requestDto.BudgetId.HasValue || b.Id == requestDto.BudgetId));
+
+            if (!hasBudget)
+                return null;
+
+            var hasAllocations = await context.BudgetSubcategoryAllocations
+                .AnyAsync(a => a.Budget.UserId == requestDto.UserId
+                    && (!requestDto.BudgetId.HasValue || a.BudgetId == requestDto.BudgetId));
 
             var totalExpected = await context.BudgetSubcategoryAllocations
                 .Where(a => a.Budget.UserId == requestDto.UserId)
@@ -336,11 +347,42 @@ namespace FinanceControl.Services.Services
                 ? Math.Round((decimal)totalSpent / totalExpected * 100, 2)
                 : 0m;
 
+            var topSubCategories = await context.BudgetSubcategoryAllocations
+                .Where(a => a.Budget.UserId == requestDto.UserId)
+                .WhereIf(requestDto.BudgetId.HasValue, a => a.BudgetId == requestDto.BudgetId)
+                .Select(a => new
+                {
+                    SubCategoryName = a.SubCategory.Name,
+                    CategoryName = a.SubCategory.Category.Name,
+                    Allocated = a.ExpectedValue,
+                    Spent = context.Transactions
+                        .Where(t => t.UserId == requestDto.UserId
+                            && t.SubCategoryId == a.SubCategoryId
+                            && t.Type == EnumTransactionType.Expense
+                            && t.TransactionDate >= requestDto.StartDate
+                            && t.TransactionDate <= requestDto.FinishDate)
+                        .Sum(t => (int?)t.Value) ?? 0
+                })
+                .OrderByDescending(x => x.Spent)
+                .Take(4)
+                .ToListAsync();
+
             return new BudgetSummaryDto
             {
                 TotalExpected = totalExpected,
                 TotalSpent = totalSpent,
-                SpentPercentage = spentPercentage
+                SpentPercentage = spentPercentage,
+                HasAllocations = hasAllocations,
+                TopSubCategories = topSubCategories.Select(x => new BudgetSubCategorySummaryDto
+                {
+                    SubCategoryName = x.SubCategoryName,
+                    CategoryName = x.CategoryName,
+                    Spent = x.Spent,
+                    Allocated = x.Allocated,
+                    SpentPercentage = x.Allocated > 0
+                        ? Math.Round((decimal)x.Spent / x.Allocated * 100, 2)
+                        : 0m
+                }).ToList()
             };
         }
 
