@@ -52,7 +52,8 @@ namespace FinanceControl.Services.Services
                     Id = s.Id,
                     Name = s.Name,
                     CategoryId = s.CategoryId,
-                    CategoryName = s.Category.Name
+                    CategoryName = s.Category.Name,
+                    CategoryColor = s.Category.Color
                 }).ToListAsync();
 
             return subCategories;
@@ -67,7 +68,8 @@ namespace FinanceControl.Services.Services
                     Id = s.Id,
                     Name = s.Name,
                     CategoryId = s.CategoryId,
-                    CategoryName = s.Category.Name
+                    CategoryName = s.Category.Name,
+                    CategoryColor = s.Category.Color
                 })
                 .FirstOrDefaultAsync();
         }

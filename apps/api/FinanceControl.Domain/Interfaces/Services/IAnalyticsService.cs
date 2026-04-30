@@ -5,6 +5,7 @@ namespace FinanceControl.Domain.Interfaces.Services
 {
     public interface IAnalyticsService
     {
+        Task<AnalyticsSummaryDto> GetSummaryAsync(int userId, int lookbackMonths = 7);
         Task<List<IncomeExpenseItemDto>> GetIncomeExpenseAsync(AnalyticsRequestDto requestDto);
         Task<List<BalanceEvolutionItemDto>> GetBalanceEvolutionAsync(AnalyticsRequestDto requestDto);
         Task<List<ExpensesByCategoryDto>> GetExpensesByCategoryAsync(AnalyticsRequestDto requestDto);

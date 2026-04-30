@@ -19,7 +19,7 @@
 ```
 src/
 ├── app/
-│   ├── (auth)/          # rotas autenticadas (protegidas pelo middleware)
+│   ├── (app)/           # rotas autenticadas (protegidas pelo middleware)
 │   │   ├── dashboard/
 │   │   ├── accounts/
 │   │   ├── transactions/
@@ -39,7 +39,8 @@ src/
 ├── features/
 │   └── <feature>/
 │       ├── components/
-│       └── hooks/       # useXxx.ts — React Query
+│       ├── hooks/       # useXxx.ts — React Query
+│       └── <Feature>Page.tsx  # componente raiz da página
 ├── lib/
 │   ├── api/             # axios.ts + endpoints por feature
 │   ├── providers/       # QueryProvider
@@ -48,6 +49,18 @@ src/
 │   └── utils/           # formatCurrency, formatDate, formatNumber, cn()
 └── proxy.ts             # middleware de auth
 ```
+
+### Convenção de páginas
+
+Cada página vive em `features/<feature>/<Feature>Page.tsx` como um componente nomeado exportado. O arquivo `app/(app)/<feature>/page.tsx` é apenas um re-export de uma linha:
+
+```ts
+// app/(app)/dashboard/page.tsx
+import { DashboardPage } from "@/features/dashboard/DashboardPage";
+export default DashboardPage;
+```
+
+Todo o código da página (hooks, estado, JSX) fica exclusivamente em `features/<feature>/<Feature>Page.tsx`. Nunca adicionar lógica nos arquivos `page.tsx` do App Router.
 
 ## Design tokens (globals.css)
 
@@ -76,7 +89,8 @@ Border radius: `--radius-sm` 6px → `--radius-3xl` 16px.
 ## Padrões de código
 
 ### Componentes
-- Todos os arquivos de rota são `"use client"`
+- `app/(app)/<feature>/page.tsx` é sempre um re-export de uma linha — nenhuma lógica aqui
+- Todo o código da página fica em `features/<feature>/<Feature>Page.tsx`
 - Componentes de feature recebem dados via props
 - Shared components são styling-agnostic
 - `cn()` (clsx + tailwind-merge) para classNames dinâmicos
@@ -135,7 +149,7 @@ h-9 rounded-lg border px-3 text-[13px] outline-none focus:border-green/60
 ## Auth flow
 - Tokens em localStorage; interceptor Axios injeta `Authorization: Bearer`
 - 401 → tenta refresh via `POST /user/refresh` → retry → falha: limpa e redireciona `/login`
-- Middleware (`proxy.ts`) protege rotas `(auth)`
+- Middleware (`proxy.ts`) protege rotas `(app)`
 
 ## Roadmap de implementação (ordem)
 

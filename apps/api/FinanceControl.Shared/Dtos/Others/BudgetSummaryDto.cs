@@ -19,6 +19,7 @@ namespace FinanceControl.Shared.Dtos.Others
     {
         public string SubCategoryName { get; set; } = string.Empty;
         public string CategoryName { get; set; } = string.Empty;
+        public string? CategoryColor { get; set; }
         public int Spent { get; set; }
         public int Allocated { get; set; }
         public decimal SpentPercentage { get; set; }

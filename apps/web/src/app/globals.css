@@ -88,7 +88,7 @@
 
   --text: #edf2f7;
   --text-sub: #8a95a3;
-  --text-muted: #4e5968;
+  --text-muted: #6b7a8d;
 
   --green: #00c98d;
   --red: #f25f5c;
@@ -114,13 +114,13 @@
   --text-sub: #566070;
   --text-muted: #90a0b0;
 
-  --green: #00c98d;
-  --red: #f25f5c;
-  --purple: #7c6fe0;
-  --blue: #4a9eff;
-  --orange: #f5a623;
-  --yellow: #f5ce42;
-  --cyan: #00d4a0;
+  --green: #008a55;
+  --red: #cc1a1a;
+  --purple: #5648c8;
+  --blue: #1a6fd4;
+  --orange: #c97500;
+  --yellow: #b89000;
+  --cyan: #009070;
 }
 
 @layer base {

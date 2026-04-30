@@ -19,6 +19,16 @@ namespace FinanceControl.WebApi.Controllers
             _analyticsService = analyticsService;
         }
 
+        [HttpGet("summary")]
+        public async Task<IActionResult> GetSummaryAsync([FromQuery] int lookbackMonths = 7)
+        {
+            if (lookbackMonths < 1 || lookbackMonths > 24)
+                return BadRequest(new { error = "lookbackMonths must be between 1 and 24." });
+
+            var result = await _analyticsService.GetSummaryAsync(GetUserId(), lookbackMonths);
+            return Ok(result);
+        }
+
         [HttpGet("income-expense")]
         public async Task<IActionResult> GetIncomeExpenseAsync(
             [FromQuery] DateOnly startDate,

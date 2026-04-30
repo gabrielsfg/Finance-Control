@@ -1,3 +1,4 @@
+using System.Globalization;
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Shared.Dtos.Request;
@@ -15,6 +16,111 @@ namespace FinanceControl.Services.Services
         public AnalyticsService(IDbContextFactory<ApplicationDbContext> contextFactory)
         {
             _contextFactory = contextFactory;
+        }
+
+        public async Task<AnalyticsSummaryDto> GetSummaryAsync(int userId, int lookbackMonths = 7)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var startDate = new DateOnly(today.Year, today.Month, 1).AddMonths(-lookbackMonths + 1);
+
+            // Monthly income/expense for the lookback window
+            var monthly = await context.Transactions
+                .Where(t => t.UserId == userId)
+                .Where(t => t.TransactionDate >= startDate && t.TransactionDate <= today)
+                .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    TotalIncome  = g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (int?)t.Value) ?? 0,
+                    TotalExpense = g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (int?)t.Value) ?? 0
+                })
+                .OrderBy(x => x.Year).ThenBy(x => x.Month)
+                .ToListAsync();
+
+            if (monthly.Count == 0)
+                return new AnalyticsSummaryDto();
+
+            var avgIncome  = (int)Math.Round(monthly.Average(m => m.TotalIncome));
+            var avgExpense = (int)Math.Round(monthly.Average(m => m.TotalExpense));
+
+            var withBalance = monthly
+                .Select(m => new { m.Year, m.Month, m.TotalIncome, m.TotalExpense, Balance = m.TotalIncome - m.TotalExpense })
+                .ToList();
+
+            var best  = withBalance.MaxBy(m => m.Balance)!;
+            var worst = withBalance.MinBy(m => m.Balance)!;
+
+            static string MonthLabel(int year, int month) =>
+                new DateOnly(year, month, 1).ToString("MMMM yyyy", new CultureInfo("pt-BR"));
+
+            // Category breakdown for the current (most recent) month and previous month
+            var currentMonthStart  = new DateOnly(today.Year, today.Month, 1);
+            var previousMonthStart = currentMonthStart.AddMonths(-1);
+            var previousMonthEnd   = currentMonthStart.AddDays(-1);
+
+            var currentExpenses = await context.Transactions
+                .Where(t => t.UserId == userId)
+                .Where(t => t.Type == EnumTransactionType.Expense)
+                .Where(t => t.TransactionDate >= currentMonthStart && t.TransactionDate <= today)
+                .Select(t => new
+                {
+                    CategoryId   = t.SubCategory.Category.Id,
+                    CategoryName = t.SubCategory.Category.Name,
+                    Color        = t.SubCategory.Category.Color,
+                    t.Value
+                })
+                .ToListAsync();
+
+            var previousExpenses = await context.Transactions
+                .Where(t => t.UserId == userId)
+                .Where(t => t.Type == EnumTransactionType.Expense)
+                .Where(t => t.TransactionDate >= previousMonthStart && t.TransactionDate <= previousMonthEnd)
+                .Select(t => new
+                {
+                    CategoryId = t.SubCategory.Category.Id,
+                    t.Value
+                })
+                .ToListAsync();
+
+            var currentTotal = currentExpenses.Sum(e => e.Value);
+            var prevByCategory = previousExpenses
+                .GroupBy(e => e.CategoryId)
+                .ToDictionary(g => g.Key, g => g.Sum(e => e.Value));
+
+            var categoryBreakdown = currentExpenses
+                .GroupBy(e => new { e.CategoryId, e.CategoryName, e.Color })
+                .Select(g =>
+                {
+                    var spent = g.Sum(e => e.Value);
+                    var percent = currentTotal > 0 ? Math.Round((decimal)spent / currentTotal * 100, 1) : 0m;
+                    decimal? change = null;
+                    if (prevByCategory.TryGetValue(g.Key.CategoryId, out var prevSpent) && prevSpent > 0)
+                        change = Math.Round((decimal)(spent - prevSpent) / prevSpent * 100, 1);
+                    return new CategorySummaryItemDto
+                    {
+                        CategoryId   = g.Key.CategoryId,
+                        CategoryName = g.Key.CategoryName,
+                        Color        = g.Key.Color,
+                        TotalSpent   = spent,
+                        Percent      = percent,
+                        Change       = change
+                    };
+                })
+                .OrderByDescending(c => c.TotalSpent)
+                .ToList();
+
+            return new AnalyticsSummaryDto
+            {
+                AvgMonthlyIncome   = avgIncome,
+                AvgMonthlyExpense  = avgExpense,
+                AvgMonthlyBalance  = avgIncome - avgExpense,
+                BestMonth  = new MonthSummaryDto { Year = best.Year,  Month = best.Month,  Label = MonthLabel(best.Year,  best.Month),  TotalIncome = best.TotalIncome,  TotalExpense = best.TotalExpense,  Balance = best.Balance  },
+                WorstMonth = new MonthSummaryDto { Year = worst.Year, Month = worst.Month, Label = MonthLabel(worst.Year, worst.Month), TotalIncome = worst.TotalIncome, TotalExpense = worst.TotalExpense, Balance = worst.Balance },
+                CategoryBreakdown  = categoryBreakdown
+            };
         }
 
         public async Task<List<IncomeExpenseItemDto>> GetIncomeExpenseAsync(AnalyticsRequestDto requestDto)

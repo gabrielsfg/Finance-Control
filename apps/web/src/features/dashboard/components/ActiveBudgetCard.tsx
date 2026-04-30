@@ -8,17 +8,8 @@ import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercentNeutral } from "@/lib/utils/formatNumber";
 import { cn } from "@/lib/utils";
+import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { BudgetSummary } from "@/lib/types/dashboard.types";
-
-const CATEGORY_COLORS: Record<string, string> = {
-  Alimentação: "#F5A623",
-  Moradia: "#4A9EFF",
-  Transporte: "#00C98D",
-  Lazer: "#7C6FE0",
-  Saúde: "#F25F5C",
-  Educação: "#F5CE42",
-  Investimentos: "#00D4A0",
-};
 
 type Props = {
   budget: BudgetSummary | null;
@@ -99,7 +90,7 @@ export const ActiveBudgetCard = ({ budget }: Props) => {
       {/* Top subcategories */}
       <div className="mt-4 flex flex-col gap-3">
         {budget.topSubCategories.map((sub) => {
-          const color = CATEGORY_COLORS[sub.categoryName] ?? "#8A95A3";
+          const color = getCategoryColor(sub.categoryColor, sub.categoryName);
           const over = sub.spentPercentage > 100;
           return (
             <div key={sub.subCategoryName}>

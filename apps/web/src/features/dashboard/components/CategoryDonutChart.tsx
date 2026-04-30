@@ -5,19 +5,8 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recha
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDateMonth } from "@/lib/utils/formatDate";
+import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { TopCategoryItem } from "@/lib/types/dashboard.types";
-
-const CATEGORY_COLORS: Record<string, string> = {
-  Alimentação: "#F5A623",
-  Moradia: "#4A9EFF",
-  Transporte: "#00C98D",
-  Lazer: "#7C6FE0",
-  Saúde: "#F25F5C",
-  Educação: "#F5CE42",
-  Investimentos: "#00D4A0",
-};
-
-const DEFAULT_COLOR = "#8A95A3";
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
@@ -59,7 +48,7 @@ export const CategoryDonutChart = ({ categories }: Props) => {
   const data = categories.slice(0, 5).map((c) => ({
     name: c.categoryName,
     value: c.totalSpent,
-    color: CATEGORY_COLORS[c.categoryName] ?? DEFAULT_COLOR,
+    color: getCategoryColor(c.color, c.categoryName),
   }));
 
   const onMouseEnter = useCallback((_: any, index: number) => setActiveIndex(index), []);

@@ -354,6 +354,7 @@ namespace FinanceControl.Services.Services
                 {
                     SubCategoryName = a.SubCategory.Name,
                     CategoryName = a.SubCategory.Category.Name,
+                    CategoryColor = a.SubCategory.Category.Color,
                     Allocated = a.ExpectedValue,
                     Spent = context.Transactions
                         .Where(t => t.UserId == requestDto.UserId
@@ -377,6 +378,7 @@ namespace FinanceControl.Services.Services
                 {
                     SubCategoryName = x.SubCategoryName,
                     CategoryName = x.CategoryName,
+                    CategoryColor = x.CategoryColor,
                     Spent = x.Spent,
                     Allocated = x.Allocated,
                     SpentPercentage = x.Allocated > 0
@@ -395,10 +397,11 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.Type == EnumTransactionType.Expense)
                 .WhereIf(requestDto.BudgetId.HasValue, t => t.BudgetId == requestDto.BudgetId)
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
-                .GroupBy(t => t.SubCategory.Category.Name)
+                .GroupBy(t => new { t.SubCategory.Category.Name, t.SubCategory.Category.Color })
                 .Select(g => new TopCategoryItemDto
                 {
-                    CategoryName = g.Key,
+                    CategoryName = g.Key.Name,
+                    Color = g.Key.Color,
                     TotalSpent = g.Sum(t => t.Value)
                 })
                 .OrderByDescending(x => x.TotalSpent)
