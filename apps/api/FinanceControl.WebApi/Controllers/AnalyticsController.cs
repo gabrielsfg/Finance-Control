@@ -230,6 +230,51 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("investment/evolution")]
+        public async Task<IActionResult> GetInvestmentEvolutionAsync(
+            [FromQuery] DateOnly startDate,
+            [FromQuery] DateOnly finishDate)
+        {
+            var result = await _analyticsService.GetInvestmentEvolutionAsync(GetUserId(), startDate, finishDate);
+            return Ok(result);
+        }
+
+        [HttpGet("investment/profitability-totals")]
+        public async Task<IActionResult> GetInvestmentProfitabilityTotalsAsync(
+            [FromQuery] DateOnly startDate,
+            [FromQuery] DateOnly finishDate)
+        {
+            var result = await _analyticsService.GetInvestmentProfitabilityTotalsAsync(GetUserId(), startDate, finishDate);
+            return Ok(result);
+        }
+
+        [HttpGet("investment/annual-returns")]
+        public async Task<IActionResult> GetInvestmentAnnualReturnsAsync(
+            [FromQuery] DateOnly startDate,
+            [FromQuery] DateOnly finishDate)
+        {
+            var result = await _analyticsService.GetInvestmentAnnualReturnsAsync(GetUserId(), startDate, finishDate);
+            return Ok(result);
+        }
+
+        [HttpGet("investment/profitability-vs-cdi")]
+        public async Task<IActionResult> GetInvestmentProfitabilityVsCdiAsync(
+            [FromQuery] DateOnly startDate,
+            [FromQuery] DateOnly finishDate)
+        {
+            var result = await _analyticsService.GetInvestmentProfitabilityVsCdiAsync(GetUserId(), startDate, finishDate);
+            return Ok(result);
+        }
+
+        [HttpGet("investment/launches")]
+        public async Task<IActionResult> GetInvestmentLaunchesAsync(
+            [FromQuery] DateOnly startDate,
+            [FromQuery] DateOnly finishDate)
+        {
+            var result = await _analyticsService.GetInvestmentLaunchesAsync(GetUserId(), startDate, finishDate);
+            return Ok(result);
+        }
+
         private AnalyticsRequestDto BuildFilter(
             DateOnly startDate,
             DateOnly finishDate,

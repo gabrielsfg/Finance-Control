@@ -1333,6 +1333,353 @@ namespace FinanceControl.Services.Services
             return result;
         }
 
+        // ── Investment analytics ──────────────────────────────────────────────────
+
+        public async Task<InvestmentEvolutionResponseDto> GetInvestmentEvolutionAsync(int userId, DateOnly startDate, DateOnly finishDate)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            // All buy transactions in range grouped by month
+            var buysByMonth = await context.InvestmentTransactions
+                .Where(t => t.UserId == userId && t.Date >= startDate && t.Date <= finishDate && t.Operation == EnumInvestmentOperation.Buy)
+                .GroupBy(t => new { t.Date.Year, t.Date.Month })
+                .Select(g => new { g.Key.Year, g.Key.Month, TotalBought = g.Sum(t => (long?)t.TotalValue) ?? 0L })
+                .ToListAsync();
+
+            var dividendsByMonth = await context.InvestmentDividends
+                .Where(d => d.UserId == userId && d.Date >= startDate && d.Date <= finishDate)
+                .GroupBy(d => new { d.Date.Year, d.Date.Month })
+                .Select(g => new { g.Key.Year, g.Key.Month, Total = g.Sum(d => (long?)d.Amount) ?? 0L })
+                .ToListAsync();
+
+            // All buys up to finishDate to compute cumulative invested capital per month
+            var allBuys = await context.InvestmentTransactions
+                .Where(t => t.UserId == userId && t.Date <= finishDate && t.Operation == EnumInvestmentOperation.Buy)
+                .Select(t => new { t.Date.Year, t.Date.Month, t.TotalValue })
+                .ToListAsync();
+
+            var allSells = await context.InvestmentTransactions
+                .Where(t => t.UserId == userId && t.Date <= finishDate && t.Operation == EnumInvestmentOperation.Sell)
+                .Select(t => new { t.Date.Year, t.Date.Month, t.TotalValue })
+                .ToListAsync();
+
+            var allDividends = await context.InvestmentDividends
+                .Where(d => d.UserId == userId && d.Date <= finishDate)
+                .Select(d => new { d.Date.Year, d.Date.Month, d.Amount })
+                .ToListAsync();
+
+            // Current portfolio value per investment (to distribute across months proportionally — simplified: use current prices)
+            var investments = await context.Investments
+                .Where(i => i.UserId == userId)
+                .ToListAsync();
+
+            var totalCurrentValue = investments.Sum(i => (long)Math.Round(i.CurrentQuantity * i.CurrentPrice));
+
+            // Build month-by-month series
+            var months = new List<(int Year, int Month)>();
+            var cursor = new DateOnly(startDate.Year, startDate.Month, 1);
+            while (cursor <= new DateOnly(finishDate.Year, finishDate.Month, 1))
+            {
+                months.Add((cursor.Year, cursor.Month));
+                cursor = cursor.AddMonths(1);
+            }
+
+            var data = new List<InvestmentEvolutionPointDto>();
+            foreach (var (year, month) in months)
+            {
+                var invested = allBuys
+                    .Where(t => t.Year < year || (t.Year == year && t.Month <= month))
+                    .Sum(t => (long)t.TotalValue);
+                var sold = allSells
+                    .Where(t => t.Year < year || (t.Year == year && t.Month <= month))
+                    .Sum(t => (long)t.TotalValue);
+                var netInvested = Math.Max(0, invested - sold);
+
+                var cumDividends = allDividends
+                    .Where(d => d.Year < year || (d.Year == year && d.Month <= month))
+                    .Sum(d => (long)d.Amount);
+
+                // Approximate current value: we don't have historical prices, so use current value scaled by capital
+                // For a simple model: totalValue = netInvested (historical invested capital)
+                // The last month uses the actual current portfolio value
+                var isLastMonth = year == finishDate.Year && month == finishDate.Month;
+                var totalValue = isLastMonth ? totalCurrentValue : netInvested;
+                var returns = totalValue - netInvested;
+
+                data.Add(new InvestmentEvolutionPointDto
+                {
+                    Label         = new DateOnly(year, month, 1).ToString("MMM/yy", new System.Globalization.CultureInfo("pt-BR")),
+                    TotalValue    = totalValue,
+                    TotalInvested = netInvested,
+                    Returns       = returns,
+                    Dividends     = cumDividends,
+                });
+            }
+
+            var lastPoint = data.LastOrDefault();
+            var returnPct = lastPoint is not null && lastPoint.TotalInvested > 0
+                ? Math.Round((decimal)lastPoint.Returns / lastPoint.TotalInvested * 100, 2)
+                : (decimal?)null;
+
+            var cumulativeDividends = allDividends.Sum(d => (long)d.Amount);
+
+            return new InvestmentEvolutionResponseDto
+            {
+                Data                 = data,
+                ReturnPct            = returnPct,
+                CumulativeDividends  = cumulativeDividends,
+            };
+        }
+
+        public async Task<InvestmentLaunchesResponseDto> GetInvestmentLaunchesAsync(int userId, DateOnly startDate, DateOnly finishDate)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var transactions = await context.InvestmentTransactions
+                .Where(t => t.UserId == userId && t.Date >= startDate && t.Date <= finishDate)
+                .Include(t => t.Investment)
+                .OrderByDescending(t => t.Date)
+                .ToListAsync();
+
+            var assetTypeLabels = new Dictionary<EnumAssetType, string>
+            {
+                { EnumAssetType.Acao, "Ação" }, { EnumAssetType.FundoInvestimento, "Fundo de Investimento" },
+                { EnumAssetType.FII, "FII" }, { EnumAssetType.Cripto, "Cripto" }, { EnumAssetType.Stock, "Stock" },
+                { EnumAssetType.Reit, "REIT" }, { EnumAssetType.BDR, "BDR" }, { EnumAssetType.ETF, "ETF" },
+                { EnumAssetType.ETFInternacional, "ETF Internacional" }, { EnumAssetType.TesouroDireto, "Tesouro Direto" },
+                { EnumAssetType.RendaFixa, "Renda Fixa" }, { EnumAssetType.Outro, "Outro" },
+            };
+
+            var launches = transactions.Select(t => new InvestmentLaunchItemDto
+            {
+                Id         = t.Id,
+                Date       = t.Date.ToString("yyyy-MM-dd"),
+                Ticker     = t.Investment.Ticker,
+                Name       = t.Investment.Name,
+                AssetClass = assetTypeLabels.GetValueOrDefault(t.Investment.AssetType, "Outro"),
+                Operation  = t.Operation == EnumInvestmentOperation.Buy ? "buy" : "sell",
+                Quantity   = t.Quantity,
+                UnitPrice  = t.UnitPrice,
+                TotalValue = t.TotalValue,
+                Broker     = t.Investment.Broker,
+            }).ToList();
+
+            // Monthly volume chart
+            var months = new List<(int Year, int Month)>();
+            var cursor = new DateOnly(startDate.Year, startDate.Month, 1);
+            while (cursor <= new DateOnly(finishDate.Year, finishDate.Month, 1))
+            {
+                months.Add((cursor.Year, cursor.Month));
+                cursor = cursor.AddMonths(1);
+            }
+
+            var monthlyPoints = months.Select(m =>
+            {
+                var inMonth = transactions.Where(t => t.Date.Year == m.Year && t.Date.Month == m.Month);
+                return new InvestmentLaunchMonthPointDto
+                {
+                    Label  = new DateOnly(m.Year, m.Month, 1).ToString("MMM/yy", new System.Globalization.CultureInfo("pt-BR")),
+                    Bought = inMonth.Where(t => t.Operation == EnumInvestmentOperation.Buy).Sum(t => t.TotalValue),
+                    Sold   = inMonth.Where(t => t.Operation == EnumInvestmentOperation.Sell).Sum(t => t.TotalValue),
+                };
+            }).ToList();
+
+            var summary = new InvestmentLaunchesSummaryDto
+            {
+                TotalBought = transactions.Where(t => t.Operation == EnumInvestmentOperation.Buy).Sum(t => t.TotalValue),
+                TotalSold   = transactions.Where(t => t.Operation == EnumInvestmentOperation.Sell).Sum(t => t.TotalValue),
+                BuyCount    = transactions.Count(t => t.Operation == EnumInvestmentOperation.Buy),
+                SellCount   = transactions.Count(t => t.Operation == EnumInvestmentOperation.Sell),
+            };
+
+            return new InvestmentLaunchesResponseDto { Launches = launches, MonthlyPoints = monthlyPoints, Summary = summary };
+        }
+
+        public async Task<ProfitabilityTotalsDto> GetInvestmentProfitabilityTotalsAsync(int userId, DateOnly startDate, DateOnly finishDate)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var today      = DateOnly.FromDateTime(DateTime.UtcNow);
+            var lastMonth  = today.AddMonths(-1);
+            var last12     = today.AddMonths(-12);
+
+            async Task<ProfitabilityPeriodDto> CalcPeriod(DateOnly from, DateOnly to)
+            {
+                var invested = await context.InvestmentTransactions
+                    .Where(t => t.UserId == userId && t.Date >= from && t.Date <= to && t.Operation == EnumInvestmentOperation.Buy)
+                    .SumAsync(t => (long?)t.TotalValue) ?? 0L;
+                var sold = await context.InvestmentTransactions
+                    .Where(t => t.UserId == userId && t.Date >= from && t.Date <= to && t.Operation == EnumInvestmentOperation.Sell)
+                    .SumAsync(t => (long?)t.TotalValue) ?? 0L;
+                var dividends = await context.InvestmentDividends
+                    .Where(d => d.UserId == userId && d.Date >= from && d.Date <= to)
+                    .SumAsync(d => (long?)d.Amount) ?? 0L;
+
+                var netFlow = invested - sold;
+                var cdiForPeriod = await FetchCdiAsync(from, to);
+                // Return estimate: dividends + (current value proportional to net flow)
+                var investments = await context.Investments.Where(i => i.UserId == userId).ToListAsync();
+                var currentValue = investments.Sum(i => (long)Math.Round(i.CurrentQuantity * i.CurrentPrice));
+                var totalInvested = investments.Sum(i => (long)Math.Round(i.CurrentQuantity * i.AveragePrice));
+                var totalReturn = currentValue - totalInvested;
+
+                var returnPct = totalInvested > 0
+                    ? Math.Round((decimal)totalReturn / totalInvested * 100, 2)
+                    : 0m;
+
+                return new ProfitabilityPeriodDto
+                {
+                    ReturnPct = returnPct,
+                    VsCdiPct  = Math.Round(returnPct - (decimal)cdiForPeriod, 2),
+                };
+            }
+
+            return new ProfitabilityTotalsDto
+            {
+                AllTime      = await CalcPeriod(new DateOnly(2000, 1, 1), today),
+                Last12Months = await CalcPeriod(last12, today),
+                LastMonth    = await CalcPeriod(new DateOnly(lastMonth.Year, lastMonth.Month, 1), new DateOnly(lastMonth.Year, lastMonth.Month, DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month))),
+            };
+        }
+
+        public async Task<AnnualReturnsResponseDto> GetInvestmentAnnualReturnsAsync(int userId, DateOnly startDate, DateOnly finishDate)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var allBuys = await context.InvestmentTransactions
+                .Where(t => t.UserId == userId && t.Date >= startDate && t.Date <= finishDate && t.Operation == EnumInvestmentOperation.Buy)
+                .Select(t => new { t.Date.Year, t.Date.Month, t.TotalValue })
+                .ToListAsync();
+
+            var allDividends = await context.InvestmentDividends
+                .Where(d => d.UserId == userId && d.Date >= startDate && d.Date <= finishDate)
+                .Select(d => new { d.Date.Year, d.Date.Month, d.Amount })
+                .ToListAsync();
+
+            var years = Enumerable.Range(startDate.Year, finishDate.Year - startDate.Year + 1).ToList();
+            var rows  = new List<AnnualReturnRowDto>();
+
+            foreach (var year in years)
+            {
+                var monthRows = new List<MonthlyReturnItemDto>();
+                int? annualBps = null;
+                long annualInvested = 0;
+                long annualReturns  = 0;
+
+                for (var m = 1; m <= 12; m++)
+                {
+                    var monthStart = new DateOnly(year, m, 1);
+                    var monthEnd   = monthStart.AddMonths(1).AddDays(-1);
+                    if (monthStart > finishDate || monthEnd < startDate) { monthRows.Add(new MonthlyReturnItemDto { Month = m }); continue; }
+
+                    var invested = allBuys.Where(t => t.Year == year && t.Month == m).Sum(t => (long)t.TotalValue);
+                    var dividends = allDividends.Where(d => d.Year == year && d.Month == m).Sum(d => (long)d.Amount);
+                    annualInvested += invested;
+                    annualReturns  += dividends;
+
+                    int? bps = invested > 0 ? (int?)Math.Round((decimal)dividends / invested * 10000) : null;
+                    monthRows.Add(new MonthlyReturnItemDto { Month = m, ReturnBps = bps });
+                }
+
+                if (annualInvested > 0)
+                    annualBps = (int)Math.Round((decimal)annualReturns / annualInvested * 10000);
+
+                rows.Add(new AnnualReturnRowDto { Year = year, Months = monthRows, AnnualReturnBps = annualBps });
+            }
+
+            var monthlyCumulatives = Enumerable.Range(1, 12).Select(m =>
+            {
+                var withData = rows.Where(r => r.Months[m - 1].ReturnBps.HasValue).ToList();
+                return withData.Count > 0 ? (int?)withData.Sum(r => r.Months[m - 1].ReturnBps!.Value) : null;
+            }).ToList();
+
+            var grandTotal = rows.Where(r => r.AnnualReturnBps.HasValue).Sum(r => r.AnnualReturnBps!.Value);
+
+            return new AnnualReturnsResponseDto { Rows = rows, MonthlyCumulatives = monthlyCumulatives, GrandTotal = grandTotal };
+        }
+
+        public async Task<List<ProfitabilityVsCdiPointDto>> GetInvestmentProfitabilityVsCdiAsync(int userId, DateOnly startDate, DateOnly finishDate)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var allBuys = await context.InvestmentTransactions
+                .Where(t => t.UserId == userId && t.Date >= startDate && t.Date <= finishDate && t.Operation == EnumInvestmentOperation.Buy)
+                .Select(t => new { t.Date.Year, t.Date.Month, t.TotalValue })
+                .ToListAsync();
+
+            var allDividends = await context.InvestmentDividends
+                .Where(d => d.UserId == userId && d.Date >= startDate && d.Date <= finishDate)
+                .Select(d => new { d.Date.Year, d.Date.Month, d.Amount })
+                .ToListAsync();
+
+            var cdiRates = await FetchCdiMonthlyAsync(startDate, finishDate);
+
+            var months = new List<(int Year, int Month)>();
+            var cursor = new DateOnly(startDate.Year, startDate.Month, 1);
+            while (cursor <= new DateOnly(finishDate.Year, finishDate.Month, 1))
+            {
+                months.Add((cursor.Year, cursor.Month));
+                cursor = cursor.AddMonths(1);
+            }
+
+            var points = new List<ProfitabilityVsCdiPointDto>();
+            foreach (var (year, month) in months)
+            {
+                var invested  = allBuys.Where(t => t.Year == year && t.Month == month).Sum(t => (decimal)t.TotalValue);
+                var dividends = allDividends.Where(d => d.Year == year && d.Month == month).Sum(d => (decimal)d.Amount);
+                var portPct   = invested > 0 ? Math.Round(dividends / invested * 100, 2) : 0m;
+                var cdiKey    = $"{year:D4}-{month:D2}";
+                var cdiPct    = cdiRates.TryGetValue(cdiKey, out var r) ? Math.Round((decimal)r, 2) : 0m;
+
+                points.Add(new ProfitabilityVsCdiPointDto
+                {
+                    Label        = new DateOnly(year, month, 1).ToString("MMM/yy", new System.Globalization.CultureInfo("pt-BR")),
+                    PortfolioPct = portPct,
+                    CdiPct       = cdiPct,
+                });
+            }
+
+            return points;
+        }
+
+        private async Task<double> FetchCdiAsync(DateOnly from, DateOnly to)
+        {
+            var rates = await FetchCdiMonthlyAsync(from, to);
+            return rates.Values.Sum();
+        }
+
+        private async Task<Dictionary<string, double>> FetchCdiMonthlyAsync(DateOnly from, DateOnly to)
+        {
+            var result   = new Dictionary<string, double>();
+            var startStr = from.ToString("dd/MM/yyyy");
+            var endStr   = to.ToString("dd/MM/yyyy");
+            // BACEN SGS series 4391 = CDI monthly rate
+            var url = $"https://api.bcb.gov.br/dados/serie/bcdata.sgs.4391/dados?formato=json&dataInicial={startStr}&dataFinal={endStr}";
+
+            try
+            {
+                using var client = _httpClientFactory.CreateClient();
+                client.Timeout   = TimeSpan.FromSeconds(5);
+                var json         = await client.GetStringAsync(url);
+                var entries      = System.Text.Json.JsonDocument.Parse(json).RootElement;
+
+                foreach (var entry in entries.EnumerateArray())
+                {
+                    var dateStr = entry.GetProperty("data").GetString() ?? "";
+                    var valStr  = entry.GetProperty("valor").GetString() ?? "0";
+                    if (dateStr.Length == 10 && double.TryParse(valStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
+                    {
+                        var parts = dateStr.Split('/');
+                        var key   = $"{parts[2]}-{parts[1]}";
+                        result[key] = val;
+                    }
+                }
+            }
+            catch { }
+
+            return result;
+        }
+
         private static DayHeatmapState ComputeDayState(int expense, int net, int maxExpense, int maxNet)
         {
             if (net > 0)

@@ -16,6 +16,10 @@ import type {
   FinancialMilestonesResponse,
   PortfolioCompositionProjectionResponse,
   RealNetWorthResponse,
+  BalanceEvolutionPoint,
+  FutureCommitmentsItem,
+  BalanceProjectionResponse,
+  CommitmentsImpactResponse,
 } from "@/lib/types/analytics.types";
 
 export const analyticsApi = {
@@ -127,6 +131,34 @@ export const analyticsApi = {
   getInvestmentLaunches: async (startDate: string, finishDate: string): Promise<InvestmentLaunchesResponse> => {
     const response = await api.get<InvestmentLaunchesResponse>("/analytics/investment/launches", {
       params: { startDate, finishDate },
+    });
+    return response.data;
+  },
+
+  getBalanceEvolution: async (startDate: string, finishDate: string): Promise<BalanceEvolutionPoint[]> => {
+    const response = await api.get<BalanceEvolutionPoint[]>("/analytics/balance-evolution", {
+      params: { startDate, finishDate },
+    });
+    return response.data;
+  },
+
+  getFutureCommitments: async (months = 6): Promise<FutureCommitmentsItem[]> => {
+    const response = await api.get<FutureCommitmentsItem[]>("/analytics/future-commitments", {
+      params: { months },
+    });
+    return response.data;
+  },
+
+  getBalanceProjection: async (lookbackDays = 30): Promise<BalanceProjectionResponse> => {
+    const response = await api.get<BalanceProjectionResponse>("/analytics/projection/balance", {
+      params: { lookbackDays },
+    });
+    return response.data;
+  },
+
+  getCommitmentsImpact: async (months = 6): Promise<CommitmentsImpactResponse> => {
+    const response = await api.get<CommitmentsImpactResponse>("/analytics/projection/commitments-impact", {
+      params: { months },
     });
     return response.data;
   },

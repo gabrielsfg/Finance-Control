@@ -24,5 +24,12 @@ namespace FinanceControl.Domain.Interfaces.Services
         Task<FinancialMilestonesDto> GetFinancialMilestonesAsync(int userId);
         Task<PortfolioCompositionProjectionDto> GetPortfolioCompositionProjectionAsync(int userId, int projectionMonths = 12);
         Task<RealNetWorthDto> GetRealNetWorthAsync(int userId);
+
+        // Investment analytics
+        Task<InvestmentEvolutionResponseDto> GetInvestmentEvolutionAsync(int userId, DateOnly startDate, DateOnly finishDate);
+        Task<ProfitabilityTotalsDto> GetInvestmentProfitabilityTotalsAsync(int userId, DateOnly startDate, DateOnly finishDate);
+        Task<AnnualReturnsResponseDto> GetInvestmentAnnualReturnsAsync(int userId, DateOnly startDate, DateOnly finishDate);
+        Task<List<ProfitabilityVsCdiPointDto>> GetInvestmentProfitabilityVsCdiAsync(int userId, DateOnly startDate, DateOnly finishDate);
+        Task<InvestmentLaunchesResponseDto> GetInvestmentLaunchesAsync(int userId, DateOnly startDate, DateOnly finishDate);
     }
 }

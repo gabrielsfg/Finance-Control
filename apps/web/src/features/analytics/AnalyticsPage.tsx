@@ -18,6 +18,10 @@ import { ProjectedSpendingHeatmap } from "@/features/analytics/projections/compo
 import { FinancialTimelineChart } from "@/features/analytics/projections/components/FinancialTimelineChart";
 import { PortfolioCompositionChart } from "@/features/analytics/projections/components/PortfolioCompositionChart";
 import { RealNetWorthChart } from "@/features/analytics/projections/components/RealNetWorthChart";
+import { BalanceEvolutionChart } from "@/features/analytics/expenses/components/BalanceEvolutionChart";
+import { BalanceProjectionChart } from "@/features/analytics/projections/components/BalanceProjectionChart";
+import { FutureCommitmentsChart } from "@/features/analytics/projections/components/FutureCommitmentsChart";
+import { CommitmentsImpactChart } from "@/features/analytics/projections/components/CommitmentsImpactChart";
 import { AnalyticsFilters } from "@/features/analytics/components/AnalyticsFilters";
 import {
   useAnalyticsSummary,
@@ -31,6 +35,10 @@ import {
   useFinancialMilestones,
   usePortfolioCompositionProjection,
   useRealNetWorth,
+  useBalanceEvolution,
+  useFutureCommitments,
+  useBalanceProjection,
+  useCommitmentsImpact,
 } from "@/features/analytics/hooks/useAnalytics";
 import { cn } from "@/lib/utils";
 import type { AnalyticsFilter } from "./types/filters.types";
@@ -66,7 +74,8 @@ export function AnalyticsPage() {
   const summary           = useAnalyticsSummary(start, finish);
   const monthly           = useAnalyticsMonthly(start, finish);
   const heatmap           = useAnalyticsHeatmap(calendarMonthStart, finish);
-  const catEvol           = useAnalyticsCategoryEvolution(start, finish, []);
+  const categoryIds = summary.data?.categoryBreakdown.items.map((c) => c.categoryId) ?? [];
+  const catEvol           = useAnalyticsCategoryEvolution(start, finish, categoryIds);
   const netWorth          = useAnalyticsNetWorth(start, finish);
   const netWorthProjection      = useNetWorthProjection(24);
   const categoryProjection      = useCategoryProjection(3);
@@ -74,6 +83,10 @@ export function AnalyticsPage() {
   const milestones              = useFinancialMilestones();
   const portfolioComposition    = usePortfolioCompositionProjection(12);
   const realNetWorth            = useRealNetWorth();
+  const balanceEvolution        = useBalanceEvolution(start, finish);
+  const futureCommitments       = useFutureCommitments(6);
+  const balanceProjection       = useBalanceProjection(30);
+  const commitmentsImpact       = useCommitmentsImpact(6);
 
   const isLoading = summary.isLoading || monthly.isLoading;
   const isError   = summary.isError   || monthly.isError;
@@ -154,7 +167,12 @@ export function AnalyticsPage() {
 
       {/* Tab: Patrimônio */}
       {activeTab === "patrimonio" && (
-        <AnalyticsNetWorthChart data={netWorth.data ?? []} />
+        <div className="flex flex-col gap-4">
+          <AnalyticsNetWorthChart data={netWorth.data ?? []} />
+          {balanceEvolution.data && balanceEvolution.data.length > 0 && (
+            <BalanceEvolutionChart data={balanceEvolution.data} />
+          )}
+        </div>
       )}
 
       {/* Tab: Investimentos */}
@@ -206,6 +224,15 @@ export function AnalyticsPage() {
           )}
           {milestones.data && (
             <FinancialTimelineChart data={milestones.data} />
+          )}
+          {balanceProjection.data && (
+            <BalanceProjectionChart data={balanceProjection.data} />
+          )}
+          {futureCommitments.data && futureCommitments.data.length > 0 && (
+            <FutureCommitmentsChart data={futureCommitments.data} />
+          )}
+          {commitmentsImpact.data && commitmentsImpact.data.months.length > 0 && (
+            <CommitmentsImpactChart data={commitmentsImpact.data} />
           )}
         </div>
       )}

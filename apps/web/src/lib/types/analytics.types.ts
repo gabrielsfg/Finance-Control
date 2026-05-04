@@ -216,6 +216,56 @@ export type RealNetWorthResponse = {
   totalInflationPct: number;
 };
 
+// ── /api/analytics/balance-evolution ─────────────────────────────────────────
+export type BalanceEvolutionPoint = {
+  date: string;
+  balance: number;
+};
+
+// ── /api/analytics/future-commitments ────────────────────────────────────────
+export type CommitmentDetail = {
+  description: string;
+  value: number;
+};
+
+export type FutureCommitmentsItem = {
+  month: number;
+  year: number;
+  totalCommitted: number;
+  installments: CommitmentDetail[];
+};
+
+// ── /api/analytics/projection/balance ────────────────────────────────────────
+export type BalanceProjectionPoint = {
+  date: string;
+  balance: number;
+};
+
+export type BalanceProjectionResponse = {
+  currentBalance: number;
+  projectedBalance: number;
+  dailyAvgIncome: number;
+  dailyAvgExpense: number;
+  actual: BalanceProjectionPoint[];
+  projected: BalanceProjectionPoint[];
+};
+
+// ── /api/analytics/projection/commitments-impact ─────────────────────────────
+export type CommitmentsImpactMonth = {
+  month: number;
+  year: number;
+  projectedIncome: number;
+  totalCommitments: number;
+  projectedBalance: number;
+  isNegative: boolean;
+  commitments: CommitmentDetail[];
+};
+
+export type CommitmentsImpactResponse = {
+  currentBalance: number;
+  months: CommitmentsImpactMonth[];
+};
+
 // ── Investment launches (buy/sell history) ────────────────────────────────────
 export type InvestmentOperationType = "buy" | "sell";
 
