@@ -14,7 +14,12 @@ export type CategoryBreakdown = {
   color: string | null;
   totalSpent: number;
   percent: number;
-  change: number | null; // null = sem mês anterior para comparar
+  change: number | null; // null = sem período anterior para comparar
+};
+
+export type CategoryBreakdownResult = {
+  maxSpent: number;
+  items: CategoryBreakdown[];
 };
 
 export type AnalyticsSummaryResponse = {
@@ -23,7 +28,7 @@ export type AnalyticsSummaryResponse = {
   avgMonthlyBalance: number;
   bestMonth: MonthSummary;
   worstMonth: MonthSummary;
-  categoryBreakdown: CategoryBreakdown[];
+  categoryBreakdown: CategoryBreakdownResult;
 };
 
 // ── /api/analytics/income-expense ────────────────────────────────────────────
@@ -37,10 +42,17 @@ export type MonthlyData = {
 };
 
 // ── /api/analytics/spending-heatmap ──────────────────────────────────────────
+export type DayHeatmapState =
+  | "Empty"
+  | "Expense1" | "Expense2" | "Expense3" | "Expense4"
+  | "Income1"  | "Income2"  | "Income3"  | "Income4";
+
 export type DaySpend = {
   date: string;
-  total: number;   // expense (centavos)
-  income?: number; // income (centavos), optional for backwards compat
+  total: number;  // expense (centavos)
+  income: number; // income (centavos)
+  net: number;    // income - expense (centavos)
+  state: DayHeatmapState;
 };
 
 // ── /api/analytics/category-evolution ────────────────────────────────────────
@@ -64,6 +76,12 @@ export type InvestmentEvolutionPoint = {
   totalInvested: number;
   returns: number;
   dividends: number;
+};
+
+export type InvestmentEvolutionResponse = {
+  data: InvestmentEvolutionPoint[];
+  returnPct: number | null;
+  cumulativeDividends: number;
 };
 
 // ── /api/analytics/projection/net-worth ──────────────────────────────────────
@@ -93,10 +111,109 @@ export type AnnualReturnRow = {
   annualReturnBps: number | null;
 };
 
+export type AnnualReturnsResponse = {
+  rows: AnnualReturnRow[];
+  monthlyCumulatives: (number | null)[]; // 12 entries
+  grandTotal: number;
+};
+
 export type ProfitabilityVsCdiPoint = {
   label: string;
   portfolioPct: number; // e.g. 0.71
   cdiPct: number;
+};
+
+// ── /api/analytics/projection/net-worth ──────────────────────────────────────
+export type NetWorthProjectionPoint = {
+  month: number;
+  year: number;
+  netWorth: number;
+};
+
+export type NetWorthProjectionResponse = {
+  currentNetWorth: number;
+  monthlyAvgGrowth: number;
+  monthsUntilZero: number | null;
+  monthsUntilTarget: number | null;
+  targetAmount: number | null;
+  historical: NetWorthProjectionPoint[];
+  projected: NetWorthProjectionPoint[];
+};
+
+// ── /api/analytics/projection/categories ─────────────────────────────────────
+export type CategoryProjection = {
+  categoryId: number;
+  categoryName: string;
+  spentSoFar: number;
+  projectedTotal: number;
+  historicalMonthlyAvg: number;
+  monthElapsedPercent: number;
+  spentPercent: number;
+};
+
+// ── /api/analytics/projection/passive-income ─────────────────────────────────
+export type PassiveIncomeMonth = {
+  year: number;
+  month: number;
+  passiveIncome: number;
+  livingCost: number;
+};
+
+export type PassiveIncomeProjectionResponse = {
+  currentMonthlyPassiveIncome: number;
+  projectedAnnualPassiveIncome: number;
+  monthlyLivingCost: number;
+  coveragePercent: number;
+  monthsUntilFinancialFreedom: number | null;
+  history: PassiveIncomeMonth[];
+  projected: PassiveIncomeMonth[];
+};
+
+// ── /api/analytics/milestones ─────────────────────────────────────────────────
+export type FinancialMilestone = {
+  label: string;
+  date: string; // ISO date
+  netWorthAtDate: number;
+  type: "journey_start" | "investment_start" | "net_worth_milestone" | "peak" | "savings_streak";
+};
+
+export type NetWorthTimelinePoint = {
+  year: number;
+  month: number;
+  netWorth: number;
+};
+
+export type FinancialMilestonesResponse = {
+  milestones: FinancialMilestone[];
+  timeline: NetWorthTimelinePoint[];
+};
+
+// ── /api/analytics/projection/portfolio-composition ──────────────────────────
+export type AssetClassValue = { assetClass: string; value: number; };
+export type PortfolioCompositionMonth = {
+  year: number;
+  month: number;
+  isProjected: boolean;
+  breakdown: AssetClassValue[];
+};
+export type PortfolioCompositionProjectionResponse = {
+  data: PortfolioCompositionMonth[];
+  assetClasses: string[];
+};
+
+// ── /api/analytics/real-net-worth ────────────────────────────────────────────
+export type RealNetWorthPoint = {
+  year: number;
+  month: number;
+  nominalNetWorth: number;
+  realNetWorth: number;
+  accumulatedInflationPct: number;
+};
+export type RealNetWorthResponse = {
+  points: RealNetWorthPoint[];
+  totalNominalGrowthPct: number;
+  totalRealGrowthPct: number;
+  totalInflationPct: number;
 };
 
 // ── Investment launches (buy/sell history) ────────────────────────────────────
@@ -119,4 +236,17 @@ export type InvestmentLaunchMonthPoint = {
   label: string; // e.g. "Jan/26"
   bought: number; // cents
   sold: number;   // cents
+};
+
+export type InvestmentLaunchesSummary = {
+  totalBought: number;
+  totalSold: number;
+  buyCount: number;
+  sellCount: number;
+};
+
+export type InvestmentLaunchesResponse = {
+  launches: InvestmentLaunch[]; // pre-sorted by date descending
+  monthlyPoints: InvestmentLaunchMonthPoint[];
+  summary: InvestmentLaunchesSummary;
 };

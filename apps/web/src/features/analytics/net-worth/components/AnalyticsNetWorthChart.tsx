@@ -78,7 +78,7 @@ export const AnalyticsNetWorthChart = ({ data }: Props) => {
               tickFormatter={(v) => formatCurrencyCompact(v / 100)}
               width={70}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1 }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />
             <Area type="monotone" dataKey="assets"      name="Ativos"              stroke="var(--blue)"  strokeWidth={2} fill="url(#gradAssets)" />
             <Area type="monotone" dataKey="netWorth"    name="Patrimônio líquido"  stroke="var(--green)" strokeWidth={2} fill="url(#gradNetWorth)" />
             <Area type="monotone" dataKey="liabilities" name="Passivos"            stroke="var(--red)"   strokeWidth={2} fill="url(#gradLiabilities)" strokeDasharray="4 3" />

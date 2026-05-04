@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
-import { Loader2 } from "lucide-react";
+import { Loader2, SlidersHorizontal } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useUpdateAccount } from "@/features/accounts/hooks/useAccounts";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { AccountItem, AccountType } from "@/lib/types/accounts.types";
 
 const CREDIT_TYPES: AccountType[] = ["Credit", "Checking"];
@@ -34,6 +35,7 @@ const schema = z
     isDefaultAccount: z.boolean(),
     billingDueDay: z.string().optional(),
     creditLimit: z.string().optional(),
+    newBalance: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     const isCreditType = CREDIT_TYPES.includes(data.type as AccountType);
@@ -67,8 +69,14 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   Cash: "Dinheiro",
 };
 
+const inputClass = (hasError?: boolean) =>
+  cn(
+    "border-border bg-surface2 text-text placeholder:text-text-muted h-9 rounded-lg border px-3 text-[14px] outline-none focus:border-green/60",
+    hasError && "border-red/60",
+  );
+
 export const EditAccountModal = ({ account, onClose }: Props) => {
-  const { mutateAsync, isPending } = useUpdateAccount();
+  const { mutateAsync: updateAccount, isPending } = useUpdateAccount();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -91,6 +99,7 @@ export const EditAccountModal = ({ account, onClose }: Props) => {
         goalAmount: "",
         billingDueDay: "",
         creditLimit: "",
+        newBalance: "",
       });
       setServerError(null);
     }
@@ -98,6 +107,7 @@ export const EditAccountModal = ({ account, onClose }: Props) => {
 
   const accountType = watch("type") as AccountType;
   const showCreditFields = CREDIT_TYPES.includes(accountType);
+  const newBalanceValue = watch("newBalance");
 
   const handleClose = () => {
     setServerError(null);
@@ -108,29 +118,29 @@ export const EditAccountModal = ({ account, onClose }: Props) => {
     if (!account) return;
     setServerError(null);
     try {
-      await mutateAsync({
+      await updateAccount({
         id: account.id,
         data: {
           id: account.id,
           name: values.name,
           type: values.type as AccountType,
           isDefaultAccount: values.isDefaultAccount,
-          goalAmount: values.goalAmount
-            ? Math.round(parseFloat(values.goalAmount) * 100)
-            : null,
-          billingDueDay: showCreditFields && values.billingDueDay
-            ? Number(values.billingDueDay)
-            : null,
-          creditLimit: showCreditFields && values.creditLimit
-            ? Math.round(parseFloat(values.creditLimit) * 100)
+          goalAmount: values.goalAmount ? Math.round(parseFloat(values.goalAmount) * 100) : null,
+          billingDueDay: showCreditFields && values.billingDueDay ? Number(values.billingDueDay) : null,
+          creditLimit: showCreditFields && values.creditLimit ? Math.round(parseFloat(values.creditLimit) * 100) : null,
+          newBalance: values.newBalance && values.newBalance.trim() !== ""
+            ? Math.round(parseFloat(values.newBalance) * 100)
             : null,
         },
       });
+
       handleClose();
     } catch {
       setServerError("Erro ao atualizar conta. Tente novamente.");
     }
   };
+
+  const currentBalanceFormatted = account ? formatCurrency(account.currentAmount / 100) : "";
 
   return (
     <Dialog open={!!account} onOpenChange={(o) => !o && handleClose()}>
@@ -147,10 +157,7 @@ export const EditAccountModal = ({ account, onClose }: Props) => {
             <label className="text-text-sub text-[13px]">Nome</label>
             <input
               {...register("name")}
-              className={cn(
-                "border-border bg-surface2 text-text placeholder:text-text-muted h-9 rounded-lg border px-3 text-[14px] outline-none focus:border-green/60",
-                errors.name && "border-red/60",
-              )}
+              className={inputClass(!!errors.name)}
             />
             {errors.name && <p className="text-red text-[12px]">{errors.name.message}</p>}
           </div>
@@ -161,6 +168,9 @@ export const EditAccountModal = ({ account, onClose }: Props) => {
             <Select
               value={accountType}
               onValueChange={(v) => setValue("type", v as AccountType, { shouldValidate: true })}
+              items={Object.fromEntries(
+                (Object.keys(ACCOUNT_TYPE_LABELS) as AccountType[]).map((t) => [t, ACCOUNT_TYPE_LABELS[t]])
+              )}
             >
               <SelectTrigger className="border-border bg-surface2 text-text h-9 w-full rounded-lg text-[14px]">
                 <SelectValue />
@@ -186,10 +196,7 @@ export const EditAccountModal = ({ account, onClose }: Props) => {
                   step="0.01"
                   min="0"
                   placeholder="5000,00"
-                  className={cn(
-                    "border-border bg-surface2 text-text placeholder:text-text-muted h-9 rounded-lg border px-3 text-[14px] outline-none focus:border-green/60",
-                    errors.creditLimit && "border-red/60",
-                  )}
+                  className={inputClass(!!errors.creditLimit)}
                 />
                 {errors.creditLimit && (
                   <p className="text-red text-[12px]">{errors.creditLimit.message}</p>
@@ -203,10 +210,7 @@ export const EditAccountModal = ({ account, onClose }: Props) => {
                   min="1"
                   max="31"
                   placeholder="15"
-                  className={cn(
-                    "border-border bg-surface2 text-text placeholder:text-text-muted h-9 rounded-lg border px-3 text-[14px] outline-none focus:border-green/60",
-                    errors.billingDueDay && "border-red/60",
-                  )}
+                  className={inputClass(!!errors.billingDueDay)}
                 />
                 {errors.billingDueDay && (
                   <p className="text-red text-[12px]">{errors.billingDueDay.message}</p>
@@ -223,7 +227,7 @@ export const EditAccountModal = ({ account, onClose }: Props) => {
               type="number"
               step="0.01"
               placeholder="0,00"
-              className="border-border bg-surface2 text-text placeholder:text-text-muted h-9 rounded-lg border px-3 text-[14px] outline-none focus:border-green/60"
+              className={inputClass()}
             />
           </div>
 
@@ -236,6 +240,40 @@ export const EditAccountModal = ({ account, onClose }: Props) => {
             />
             <span className="text-text-sub text-[14px]">Definir como conta padrão</span>
           </label>
+
+          {/* Balance adjustment */}
+          <div className="border-border rounded-xl border p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <SlidersHorizontal size={14} className="text-text-muted" />
+              <span className="text-text text-[13px] font-medium">Ajustar saldo</span>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-text-sub text-[13px]">
+                Novo saldo (R$)
+                {account && (
+                  <span className="text-text-muted ml-1.5">
+                    — atual: {currentBalanceFormatted}
+                  </span>
+                )}
+              </label>
+              <input
+                {...register("newBalance")}
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                className={inputClass()}
+              />
+              {newBalanceValue && newBalanceValue.trim() !== "" && account && (
+                <p className="text-text-muted text-[12px]">
+                  {(() => {
+                    const diff = Math.round(parseFloat(newBalanceValue) * 100) - account.currentAmount;
+                    if (diff === 0) return "Sem diferença";
+                    return `Uma transação de ${formatCurrency(Math.abs(diff) / 100)} será criada automaticamente (${diff > 0 ? "receita" : "despesa"})`;
+                  })()}
+                </p>
+              )}
+            </div>
+          </div>
 
           {serverError && <p className="text-red text-[13px]">{serverError}</p>}
 

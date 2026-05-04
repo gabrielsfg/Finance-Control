@@ -5,7 +5,7 @@ namespace FinanceControl.Domain.Interfaces.Services
 {
     public interface IAnalyticsService
     {
-        Task<AnalyticsSummaryDto> GetSummaryAsync(int userId, int lookbackMonths = 7);
+        Task<AnalyticsSummaryDto> GetSummaryAsync(AnalyticsRequestDto requestDto);
         Task<List<IncomeExpenseItemDto>> GetIncomeExpenseAsync(AnalyticsRequestDto requestDto);
         Task<List<BalanceEvolutionItemDto>> GetBalanceEvolutionAsync(AnalyticsRequestDto requestDto);
         Task<List<ExpensesByCategoryDto>> GetExpensesByCategoryAsync(AnalyticsRequestDto requestDto);
@@ -20,5 +20,9 @@ namespace FinanceControl.Domain.Interfaces.Services
         Task<List<CategoryProjectionDto>> GetCategoryProjectionAsync(int userId, int? accountId, int lookbackMonths = 3);
         Task<NetWorthProjectionDto> GetNetWorthProjectionAsync(int userId, int projectionMonths = 12, int? targetAmount = null);
         Task<CommitmentsImpactDto> GetCommitmentsImpactAsync(int userId, int months = 6);
+        Task<PassiveIncomeProjectionDto> GetPassiveIncomeProjectionAsync(int userId, int projectionMonths = 24);
+        Task<FinancialMilestonesDto> GetFinancialMilestonesAsync(int userId);
+        Task<PortfolioCompositionProjectionDto> GetPortfolioCompositionProjectionAsync(int userId, int projectionMonths = 12);
+        Task<RealNetWorthDto> GetRealNetWorthAsync(int userId);
     }
 }

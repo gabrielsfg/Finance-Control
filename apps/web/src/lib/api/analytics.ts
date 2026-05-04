@@ -5,12 +5,18 @@ import type {
   DaySpend,
   CategoryMonthlyData,
   NetWorthPoint,
+  NetWorthProjectionResponse,
+  CategoryProjection,
+  PassiveIncomeProjectionResponse,
+  FinancialMilestonesResponse,
+  PortfolioCompositionProjectionResponse,
+  RealNetWorthResponse,
 } from "@/lib/types/analytics.types";
 
 export const analyticsApi = {
-  getSummary: async (lookbackMonths = 7): Promise<AnalyticsSummaryResponse> => {
+  getSummary: async (startDate: string, finishDate: string): Promise<AnalyticsSummaryResponse> => {
     const response = await api.get<AnalyticsSummaryResponse>("/analytics/summary", {
-      params: { lookbackMonths },
+      params: { startDate, finishDate },
     });
     return response.data;
   },
@@ -44,6 +50,44 @@ export const analyticsApi = {
     const response = await api.get<NetWorthPoint[]>("/analytics/net-worth-evolution", {
       params: { startDate, finishDate },
     });
+    return response.data;
+  },
+
+  getNetWorthProjection: async (projectionMonths = 24): Promise<NetWorthProjectionResponse> => {
+    const response = await api.get<NetWorthProjectionResponse>("/analytics/projection/net-worth", {
+      params: { projectionMonths },
+    });
+    return response.data;
+  },
+
+  getCategoryProjection: async (lookbackMonths = 3): Promise<CategoryProjection[]> => {
+    const response = await api.get<CategoryProjection[]>("/analytics/projection/categories", {
+      params: { lookbackMonths },
+    });
+    return response.data;
+  },
+
+  getPassiveIncomeProjection: async (projectionMonths = 24): Promise<PassiveIncomeProjectionResponse> => {
+    const response = await api.get<PassiveIncomeProjectionResponse>("/analytics/projection/passive-income", {
+      params: { projectionMonths },
+    });
+    return response.data;
+  },
+
+  getFinancialMilestones: async (): Promise<FinancialMilestonesResponse> => {
+    const response = await api.get<FinancialMilestonesResponse>("/analytics/milestones");
+    return response.data;
+  },
+
+  getPortfolioCompositionProjection: async (projectionMonths: number): Promise<PortfolioCompositionProjectionResponse> => {
+    const response = await api.get<PortfolioCompositionProjectionResponse>("/analytics/projection/portfolio-composition", {
+      params: { projectionMonths },
+    });
+    return response.data;
+  },
+
+  getRealNetWorth: async (): Promise<RealNetWorthResponse> => {
+    const response = await api.get<RealNetWorthResponse>("/analytics/real-net-worth");
     return response.data;
   },
 };

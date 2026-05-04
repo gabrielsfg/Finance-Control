@@ -12,5 +12,6 @@ namespace FinanceControl.Domain.Interfaces.Service
         Task<GetBudgetWithAreasResponseDto> GetBudgetWithAllocationsAsync(int id, int userId);
         Task<Result<GetBudgetWithAreasResponseDto>> UpdateBudgetAsync(UpdateBudgetRequestDto requestDto, int userId);
         Task<Result<IEnumerable<GetAllBudgetResponseDto>>> DeleteBudgetAsync(int id, int userId);
+        Task<Result<IEnumerable<GetAllBudgetResponseDto>>> ActivateBudgetAsync(int id, int userId);
     }
 }

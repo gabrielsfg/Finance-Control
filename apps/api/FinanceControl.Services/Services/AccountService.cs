@@ -166,6 +166,41 @@ namespace FinanceControl.Services.Services
 
             await _context.SaveChangesAsync();
 
+            if (requestDto.NewBalance.HasValue)
+            {
+                var currentBalance = await _context.Transactions
+                    .Where(t => t.AccountId == account.Id && t.UserId == userId)
+                    .SumAsync(t => t.Type == EnumTransactionType.Income ? t.Value : -t.Value);
+
+                var diff = requestDto.NewBalance.Value - currentBalance;
+                if (diff != 0)
+                {
+                    var subCategoryId = await _context.SubCategories
+                        .Where(s => s.UserId == userId &&
+                                    (diff > 0
+                                        ? (s.Name == "Other income" || s.Name == "Outras receitas")
+                                        : (s.Name == "Other expense" || s.Name == "Outras despesas")))
+                        .Select(s => (int?)s.Id)
+                        .FirstOrDefaultAsync();
+
+                    if (subCategoryId.HasValue)
+                    {
+                        _context.Transactions.Add(new Transaction
+                        {
+                            UserId = userId,
+                            AccountId = account.Id,
+                            SubCategoryId = subCategoryId.Value,
+                            Value = Math.Abs(diff),
+                            Type = diff > 0 ? EnumTransactionType.Income : EnumTransactionType.Expense,
+                            PaymentType = EnumPaymentType.OneTime,
+                            TransactionDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                            Description = "Balance adjustment",
+                        });
+                        await _context.SaveChangesAsync();
+                    }
+                }
+            }
+
             var accounts = await GetAllAccountAsync(userId);
             return Result<IEnumerable<GetAccountItemResponseDto>>.Success(accounts);
         }

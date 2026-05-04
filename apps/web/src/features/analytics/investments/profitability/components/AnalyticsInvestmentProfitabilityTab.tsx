@@ -73,13 +73,16 @@ const VsCdiTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export function AnalyticsInvestmentProfitabilityTab() {
-  const totals = useInvestmentProfitabilityTotals();
-  const annualReturns = useInvestmentAnnualReturns();
-  const vsCdi = useInvestmentProfitabilityVsCdi();
+export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: { startDate: string; finishDate: string }) {
+  const totals = useInvestmentProfitabilityTotals(startDate, finishDate);
+  const annualReturns = useInvestmentAnnualReturns(startDate, finishDate);
+  const vsCdi = useInvestmentProfitabilityVsCdi(startDate, finishDate);
 
   const t = totals.data;
-  const rows = annualReturns.data ?? [];
+  const annualData = annualReturns.data;
+  const rows = annualData?.rows ?? [];
+  const monthlyCumulatives = annualData?.monthlyCumulatives ?? [];
+  const grandTotal = annualData?.grandTotal ?? 0;
   const chartData = vsCdi.data ?? [];
 
   return (
@@ -128,7 +131,7 @@ export function AnalyticsInvestmentProfitabilityTab() {
                 tickFormatter={(v) => v.toFixed(2) + "%"}
                 width={58}
               />
-              <Tooltip content={<VsCdiTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1 }} />
+              <Tooltip content={<VsCdiTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />
               <Line
                 type="monotone"
                 dataKey="portfolioPct"
@@ -221,45 +224,29 @@ export function AnalyticsInvestmentProfitabilityTab() {
                   </td>
                 </tr>
               ))}
-              {/* Linha de totais acumulados */}
-              {rows.length > 0 && (() => {
-                const totaisMes = MONTH_LABELS.map((_, idx) => {
-                  const vals = rows
-                    .flatMap((r) => r.months.filter((m) => m.month === idx + 1 && m.returnBps !== null))
-                    .map((m) => m.returnBps as number);
-                  if (vals.length === 0) return null;
-                  return vals.reduce((a, b) => a + b, 0);
-                });
-                const totalGeral = rows
-                  .filter((r) => r.annualReturnBps !== null)
-                  .reduce((a, r) => a + (r.annualReturnBps ?? 0), 0);
-                return (
-                  <tr className="border-border border-t-2">
-                    <td className="text-text py-2.5 pr-3 font-600">Total</td>
-                    {totaisMes.map((val, idx) => (
-                      <td
-                        key={idx}
-                        className={cn(
-                          "font-money px-1.5 py-2.5 text-right font-600 tabular-nums",
-                          val === null
-                            ? "text-text-muted"
-                            : val >= 0
-                              ? "text-green"
-                              : "text-red",
-                        )}
-                      >
-                        {formatBps(val)}
-                      </td>
-                    ))}
-                    <td className={cn(
-                      "font-money pl-3 py-2.5 text-right font-600 tabular-nums",
-                      totalGeral >= 0 ? "text-green" : "text-red",
-                    )}>
-                      {formatBps(totalGeral)}
+              {/* Linha de totais acumulados — pré-calculada pelo backend */}
+              {rows.length > 0 && (
+                <tr className="border-border border-t-2">
+                  <td className="text-text py-2.5 pr-3 font-600">Total</td>
+                  {monthlyCumulatives.map((val, idx) => (
+                    <td
+                      key={idx}
+                      className={cn(
+                        "font-money px-1.5 py-2.5 text-right font-600 tabular-nums",
+                        val === null ? "text-text-muted" : val >= 0 ? "text-green" : "text-red",
+                      )}
+                    >
+                      {formatBps(val)}
                     </td>
-                  </tr>
-                );
-              })()}
+                  ))}
+                  <td className={cn(
+                    "font-money pl-3 py-2.5 text-right font-600 tabular-nums",
+                    grandTotal >= 0 ? "text-green" : "text-red",
+                  )}>
+                    {formatBps(grandTotal)}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

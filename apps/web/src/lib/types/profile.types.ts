@@ -10,20 +10,3 @@ export type UserProfile = {
   language: string;
   notificationsEnabled: boolean;
 };
-
-export type PriceHistoryEntry = {
-  date: string;
-  price: number;
-};
-
-export type WishlistItem = {
-  id: number;
-  name: string;
-  targetPrice: number;
-  currentPrice: number | null;
-  url: string | null;
-  priority: "Low" | "Medium" | "High";
-  createdAt: string;
-  notes: string | null;
-  priceHistory: PriceHistoryEntry[];
-};

@@ -3,11 +3,17 @@ import type {
   TransactionItem,
   CreateTransactionRequest,
   UpdateTransactionRequest,
+  GetTransactionsFilterParams,
 } from "@/lib/types/transactions.types";
 
 export const transactionsApi = {
   getAll: async (): Promise<TransactionItem[]> => {
     const res = await api.get<TransactionItem[]>("/transaction");
+    return res.data;
+  },
+
+  getFiltered: async (params: GetTransactionsFilterParams): Promise<TransactionItem[]> => {
+    const res = await api.get<TransactionItem[]>("/transaction/filtered", { params });
     return res.data;
   },
 

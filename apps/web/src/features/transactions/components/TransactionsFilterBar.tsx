@@ -1,54 +1,20 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TransactionType } from "@/lib/types/transactions.types";
-
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
 
 type TypeFilter = "All" | TransactionType;
 
 type Props = {
-  filterMonth: number;
-  filterYear: number;
   typeFilter: TypeFilter;
   search: string;
-  onNavigateMonth: (dir: -1 | 1) => void;
   onTypeFilterChange: (type: TypeFilter) => void;
   onSearchChange: (value: string) => void;
 };
 
-export const TransactionsFilterBar = ({
-  filterMonth,
-  filterYear,
-  typeFilter,
-  search,
-  onNavigateMonth,
-  onTypeFilterChange,
-  onSearchChange,
-}: Props) => (
+export const TransactionsFilterBar = ({ typeFilter, search, onTypeFilterChange, onSearchChange }: Props) => (
   <div className="border-border bg-surface flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
-    <div className="flex items-center gap-1">
-      <button
-        onClick={() => onNavigateMonth(-1)}
-        className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
-      >
-        <ChevronLeft size={15} />
-      </button>
-      <span className="text-text font-500 min-w-[130px] text-center text-[14px]">
-        {MONTHS[filterMonth]} {filterYear}
-      </span>
-      <button
-        onClick={() => onNavigateMonth(1)}
-        className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
-      >
-        <ChevronRight size={15} />
-      </button>
-    </div>
-
     <div className="bg-surface2 flex rounded-lg p-0.5">
       {(["All", "Income", "Expense"] as TypeFilter[]).map((t) => (
         <button

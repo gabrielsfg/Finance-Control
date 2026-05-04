@@ -79,6 +79,32 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<GetTransactionResponseDto>> GetAllTransactionsFilteredAsync(GetTransactionsFilterRequestDto requestDto, int userId)
+        {
+            var query = GetTransactionQuery(userId)
+                .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate);
+
+            if (requestDto.BudgetIds is { Count: > 0 })
+                query = query.Where(t => t.BudgetId != null && requestDto.BudgetIds.Contains(t.BudgetId.Value));
+
+            if (requestDto.AccountIds is { Count: > 0 })
+                query = query.Where(t => requestDto.AccountIds.Contains(t.AccountId));
+
+            if (requestDto.SubCategoryIds is { Count: > 0 })
+                query = query.Where(t => requestDto.SubCategoryIds.Contains(t.SubCategoryId));
+
+            if (requestDto.CategoryIds is { Count: > 0 })
+            {
+                var subCategoryIds = await _context.SubCategories
+                    .Where(sc => requestDto.CategoryIds.Contains(sc.CategoryId) && sc.UserId == userId)
+                    .Select(sc => sc.Id)
+                    .ToListAsync();
+                query = query.Where(t => subCategoryIds.Contains(t.SubCategoryId));
+            }
+
+            return await query.ToListAsync();
+        }
+
         public async Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsByBudgetAsync(int budgetId, int userId)
         {
             var budgetExists = await _context.Budgets

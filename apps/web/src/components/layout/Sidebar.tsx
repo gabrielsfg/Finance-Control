@@ -10,7 +10,7 @@ import {
   Calculator,
   Clock,
   BarChart3,
-  ShoppingBag,
+  Target,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -27,7 +27,7 @@ const navItems = [
   { href: "/simulations", label: "Simulações", icon: Calculator },
   { href: "/budgets", label: "Orçamentos", icon: Clock },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/wishlist", label: "Wishlist", icon: ShoppingBag },
+  { href: "/goals", label: "Metas", icon: Target },
   { href: "/profile", label: "Perfil", icon: Settings },
 ];
 

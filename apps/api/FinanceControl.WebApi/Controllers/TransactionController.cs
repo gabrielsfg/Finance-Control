@@ -57,6 +57,25 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("filtered")]
+        public async Task<IActionResult> GetAllTransactionsFilteredAsync([FromQuery] DateOnly startDate, [FromQuery] DateOnly finishDate, [FromQuery] List<int>? budgetIds, [FromQuery] List<int>? accountIds, [FromQuery] List<int>? categoryIds, [FromQuery] List<int>? subCategoryIds)
+        {
+            var userId = GetUserId();
+
+            var requestDto = new GetTransactionsFilterRequestDto
+            {
+                StartDate = startDate,
+                FinishDate = finishDate,
+                BudgetIds = budgetIds,
+                AccountIds = accountIds,
+                CategoryIds = categoryIds,
+                SubCategoryIds = subCategoryIds,
+            };
+
+            var result = await _transactionService.GetAllTransactionsFilteredAsync(requestDto, userId);
+            return Ok(result);
+        }
+
         [HttpGet("by-budget/{budgetId:int}")]
         public async Task<IActionResult> GetAllTransactionsByBudgetAsync([FromRoute] int budgetId)
         {

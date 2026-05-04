@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
-import type { InvestmentEvolutionPoint } from "@/lib/types/analytics.types";
+import type { InvestmentEvolutionResponse } from "@/lib/types/analytics.types";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -28,18 +28,12 @@ const SERIES = [
   { key: "dividends",     name: "Dividendos",         color: "var(--purple)" },
 ] as const;
 
-type Props = { data: InvestmentEvolutionPoint[] };
+type Props = { data: InvestmentEvolutionResponse };
 
-export const AnalyticsInvestmentEvolutionChart = ({ data }: Props) => {
+export const AnalyticsInvestmentEvolutionChart = ({ data: response }: Props) => {
+  const { data, returnPct, cumulativeDividends } = response;
   const latest = data[data.length - 1];
-
-  const returnPct =
-    latest && latest.totalInvested > 0
-      ? (latest.returns / latest.totalInvested) * 100
-      : null;
-
-  const totalDividends =
-    data.length > 0 ? data.reduce((s, d) => s + (d.dividends ?? 0), 0) : null;
+  const totalDividends = cumulativeDividends > 0 ? cumulativeDividends : null;
 
   return (
     <div className="border-border bg-surface rounded-xl border p-5">
@@ -90,7 +84,7 @@ export const AnalyticsInvestmentEvolutionChart = ({ data }: Props) => {
               tickFormatter={(v) => formatCurrencyCompact(v / 100)}
               width={70}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1 }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />
             {SERIES.map(({ key, name, color }) => (
               <Line
                 key={key}

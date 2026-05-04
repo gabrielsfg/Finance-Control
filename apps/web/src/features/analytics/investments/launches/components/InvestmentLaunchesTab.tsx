@@ -14,10 +14,7 @@ import {
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
-import {
-  useInvestmentLaunches,
-  useInvestmentLaunchMonthPoints,
-} from "@/features/analytics/hooks/useAnalytics";
+import { useInvestmentLaunches } from "@/features/analytics/hooks/useAnalytics";
 import type { InvestmentLaunch } from "@/lib/types/analytics.types";
 
 type FilterOp = "all" | "buy" | "sell";
@@ -96,20 +93,21 @@ function LaunchRow({ launch }: { launch: InvestmentLaunch }) {
   );
 }
 
-export function InvestmentLaunchesTab() {
-  const launches = useInvestmentLaunches();
-  const monthPoints = useInvestmentLaunchMonthPoints();
+export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: string; finishDate: string }) {
+  const { data: response } = useInvestmentLaunches(startDate, finishDate);
   const [filterOp, setFilterOp] = useState<FilterOp>("all");
 
-  const allLaunches = launches.data ?? [];
+  const allLaunches  = response?.launches ?? [];
+  const monthPoints  = response?.monthlyPoints ?? [];
+  const summary      = response?.summary;
+
+  // launches arrive pre-filtered by date descending from the backend
   const filtered = filterOp === "all"
     ? allLaunches
     : allLaunches.filter((l) => l.operation === filterOp);
 
-  const sorted = [...filtered].sort((a, b) => b.date.localeCompare(a.date));
-
-  const totalBought = allLaunches.filter((l) => l.operation === "buy").reduce((s, l) => s + l.totalValue, 0);
-  const totalSold   = allLaunches.filter((l) => l.operation === "sell").reduce((s, l) => s + l.totalValue, 0);
+  const totalBought = summary?.totalBought ?? 0;
+  const totalSold   = summary?.totalSold   ?? 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -122,7 +120,7 @@ export function InvestmentLaunchesTab() {
           <p className="font-display font-700 text-text text-[16px]">Total comprado</p>
           <p className="font-money font-700 text-green mt-1 text-[20px]">{formatCurrency(totalBought / 100)}</p>
           <p className="text-text-muted mt-0.5 text-[12px]">
-            {allLaunches.filter((l) => l.operation === "buy").length} operações
+            {summary?.buyCount ?? 0} operações
           </p>
         </div>
         <div className="border-border bg-surface rounded-xl border p-5">
@@ -132,7 +130,7 @@ export function InvestmentLaunchesTab() {
           <p className="font-display font-700 text-text text-[16px]">Total vendido</p>
           <p className="font-money font-700 text-red mt-1 text-[20px]">{formatCurrency(totalSold / 100)}</p>
           <p className="text-text-muted mt-0.5 text-[12px]">
-            {allLaunches.filter((l) => l.operation === "sell").length} operações
+            {summary?.sellCount ?? 0} operações
           </p>
         </div>
       </div>
@@ -145,7 +143,7 @@ export function InvestmentLaunchesTab() {
         />
         <div style={{ height: 240 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={monthPoints.data ?? []} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="30%">
+            <BarChart data={monthPoints} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="30%">
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="label"
@@ -183,7 +181,7 @@ export function InvestmentLaunchesTab() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="font-display font-700 text-text text-[18px] tracking-tight">Histórico de operações</h2>
-            <p className="text-text-muted mt-0.5 text-[13px]">{sorted.length} lançamento{sorted.length !== 1 ? "s" : ""}</p>
+            <p className="text-text-muted mt-0.5 text-[13px]">{filtered.length} lançamento{filtered.length !== 1 ? "s" : ""}</p>
           </div>
           <div className="border-border flex gap-0.5 rounded-lg border bg-surface p-0.5">
             {(["all", "buy", "sell"] as FilterOp[]).map((op) => (
@@ -203,13 +201,13 @@ export function InvestmentLaunchesTab() {
           </div>
         </div>
 
-        {sorted.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="flex h-20 items-center justify-center">
             <p className="text-text-muted text-[13px]">Nenhum lançamento encontrado.</p>
           </div>
         ) : (
           <div>
-            {sorted.map((launch) => (
+            {filtered.map((launch) => (
               <LaunchRow key={launch.id} launch={launch} />
             ))}
           </div>

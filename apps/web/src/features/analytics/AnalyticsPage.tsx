@@ -11,17 +11,30 @@ import { AnalyticsNetWorthChart } from "@/features/analytics/net-worth/component
 import { InvestmentOverviewTab } from "@/features/analytics/investments/overview/components/InvestmentOverviewTab";
 import { AnalyticsInvestmentProfitabilityTab } from "@/features/analytics/investments/profitability/components/AnalyticsInvestmentProfitabilityTab";
 import { InvestmentLaunchesTab } from "@/features/analytics/investments/launches/components/InvestmentLaunchesTab";
-import { AnalyticsProjectionsChart } from "@/features/analytics/projections/components/AnalyticsProjectionsChart";
+import { ProjectedNetWorthChart } from "@/features/analytics/projections/components/ProjectedNetWorthChart";
+import { PassiveIncomeChart } from "@/features/analytics/projections/components/PassiveIncomeChart";
+import { SavingsRateChart } from "@/features/analytics/projections/components/SavingsRateChart";
+import { ProjectedSpendingHeatmap } from "@/features/analytics/projections/components/ProjectedSpendingHeatmap";
+import { FinancialTimelineChart } from "@/features/analytics/projections/components/FinancialTimelineChart";
+import { PortfolioCompositionChart } from "@/features/analytics/projections/components/PortfolioCompositionChart";
+import { RealNetWorthChart } from "@/features/analytics/projections/components/RealNetWorthChart";
+import { AnalyticsFilters } from "@/features/analytics/components/AnalyticsFilters";
 import {
   useAnalyticsSummary,
   useAnalyticsMonthly,
   useAnalyticsHeatmap,
   useAnalyticsCategoryEvolution,
   useAnalyticsNetWorth,
-  useAnalyticsProjections,
+  useNetWorthProjection,
+  useCategoryProjection,
+  usePassiveIncomeProjection,
+  useFinancialMilestones,
+  usePortfolioCompositionProjection,
+  useRealNetWorth,
 } from "@/features/analytics/hooks/useAnalytics";
-import { formatDateMonth } from "@/lib/utils/formatDate";
 import { cn } from "@/lib/utils";
+import type { AnalyticsFilter } from "./types/filters.types";
+import { defaultFilter, buildDateRange } from "./utils/filterDates";
 
 type Tab = "gastos" | "patrimonio" | "investimentos" | "projecoes";
 type InvestmentSubTab = "geral" | "rentabilidade" | "lancamentos";
@@ -39,26 +52,28 @@ const INVESTMENT_SUBTABS: { id: InvestmentSubTab; label: string }[] = [
   { id: "lancamentos",   label: "Lançamentos" },
 ];
 
-function getDateRange() {
-  const today = new Date();
-  const finish = today.toISOString().slice(0, 10);
-  const start = new Date(today.getFullYear(), today.getMonth() - 6, 1).toISOString().slice(0, 10);
-  return { start, finish };
-}
-
 export function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("gastos");
   const [investmentSubTab, setInvestmentSubTab] = useState<InvestmentSubTab>("geral");
+  const [filter, setFilter] = useState<AnalyticsFilter>(defaultFilter());
 
-  const { start, finish } = getDateRange();
-  const currentMonth = formatDateMonth(new Date());
+  const { start, finish } = buildDateRange(filter);
 
-  const summary     = useAnalyticsSummary();
-  const monthly     = useAnalyticsMonthly(start, finish);
-  const heatmap     = useAnalyticsHeatmap(finish.slice(0, 7) + "-01", finish);
-  const catEvol     = useAnalyticsCategoryEvolution(start, finish, []);
-  const netWorth    = useAnalyticsNetWorth(start, finish);
-  const projections = useAnalyticsProjections();
+  // For the heatmap calendar: when range spans multiple months, show the last
+  // month of the selection. When it's a single month, show that month.
+  const calendarMonthStart = finish.slice(0, 7) + "-01";
+
+  const summary           = useAnalyticsSummary(start, finish);
+  const monthly           = useAnalyticsMonthly(start, finish);
+  const heatmap           = useAnalyticsHeatmap(calendarMonthStart, finish);
+  const catEvol           = useAnalyticsCategoryEvolution(start, finish, []);
+  const netWorth          = useAnalyticsNetWorth(start, finish);
+  const netWorthProjection      = useNetWorthProjection(24);
+  const categoryProjection      = useCategoryProjection(3);
+  const passiveIncome           = usePassiveIncomeProjection(24);
+  const milestones              = useFinancialMilestones();
+  const portfolioComposition    = usePortfolioCompositionProjection(12);
+  const realNetWorth            = useRealNetWorth();
 
   const isLoading = summary.isLoading || monthly.isLoading;
   const isError   = summary.isError   || monthly.isError;
@@ -81,12 +96,23 @@ export function AnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
+      {/* Header: title + filters */}
+      <div className="flex items-start justify-between gap-4">
         <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Analytics</h1>
-        <p className="text-text-muted mt-0.5 text-[13px] capitalize">{currentMonth}</p>
+        <AnalyticsFilters
+          filter={filter}
+          onChange={setFilter}
+          mode={
+            activeTab === "gastos" || activeTab === "patrimonio"
+              ? "expenses"
+              : activeTab === "investimentos"
+                ? "investments"
+                : "none"
+          }
+        />
       </div>
 
-      {/* Tab bar — before everything else */}
+      {/* Tab bar */}
       <div className="border-border flex gap-1 rounded-xl border bg-surface p-1">
         {TABS.map((tab) => (
           <button
@@ -116,10 +142,13 @@ export function AnalyticsPage() {
 
           <AnalyticsCategoryEvolutionChart
             data={catEvol.data ?? []}
-            categories={summary.data.categoryBreakdown}
+            categories={summary.data.categoryBreakdown.items}
           />
 
-          <AnalyticsSpendCalendar data={heatmap.data ?? []} month={currentMonth} />
+          <AnalyticsSpendCalendar
+            data={heatmap.data ?? []}
+            month={calendarMonthStart.slice(0, 7)}
+          />
         </>
       )}
 
@@ -131,7 +160,6 @@ export function AnalyticsPage() {
       {/* Tab: Investimentos */}
       {activeTab === "investimentos" && (
         <div className="flex flex-col gap-5">
-          {/* Sub-abas */}
           <div className="border-border flex gap-1 rounded-xl border bg-surface p-1">
             {INVESTMENT_SUBTABS.map((sub) => (
               <button
@@ -149,15 +177,37 @@ export function AnalyticsPage() {
             ))}
           </div>
 
-          {investmentSubTab === "geral" && <InvestmentOverviewTab />}
-          {investmentSubTab === "rentabilidade" && <AnalyticsInvestmentProfitabilityTab />}
-          {investmentSubTab === "lancamentos" && <InvestmentLaunchesTab />}
+          {investmentSubTab === "geral" && <InvestmentOverviewTab startDate={start} finishDate={finish} />}
+          {investmentSubTab === "rentabilidade" && <AnalyticsInvestmentProfitabilityTab startDate={start} finishDate={finish} />}
+          {investmentSubTab === "lancamentos" && <InvestmentLaunchesTab startDate={start} finishDate={finish} />}
         </div>
       )}
 
       {/* Tab: Projeções */}
       {activeTab === "projecoes" && (
-        <AnalyticsProjectionsChart data={projections.data ?? []} />
+        <div className="flex flex-col gap-5">
+          {netWorthProjection.data && (
+            <ProjectedNetWorthChart data={netWorthProjection.data} />
+          )}
+          {portfolioComposition.data && (
+            <PortfolioCompositionChart data={portfolioComposition.data} />
+          )}
+          {realNetWorth.data && (
+            <RealNetWorthChart data={realNetWorth.data} />
+          )}
+          {passiveIncome.data && (
+            <PassiveIncomeChart data={passiveIncome.data} />
+          )}
+          {monthly.data && monthly.data.length > 0 && (
+            <SavingsRateChart data={monthly.data} />
+          )}
+          {categoryProjection.data && categoryProjection.data.length > 0 && (
+            <ProjectedSpendingHeatmap data={categoryProjection.data} />
+          )}
+          {milestones.data && (
+            <FinancialTimelineChart data={milestones.data} />
+          )}
+        </div>
       )}
     </div>
   );

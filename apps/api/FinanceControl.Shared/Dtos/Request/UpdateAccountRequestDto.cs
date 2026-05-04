@@ -11,5 +11,6 @@ namespace FinanceControl.Shared.Dtos.Request
         public bool IsDefaultAccount { get; set; }
         public int? BillingDueDay { get; set; }
         public int? CreditLimit { get; set; }
+        public int? NewBalance { get; set; }
     }
 }

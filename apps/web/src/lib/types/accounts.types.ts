@@ -37,6 +37,7 @@ export type UpdateAccountRequest = {
   isDefaultAccount: boolean;
   billingDueDay?: number | null;
   creditLimit?: number | null;
+  newBalance?: number | null;
 };
 
 export type DeleteAccountRequest = {

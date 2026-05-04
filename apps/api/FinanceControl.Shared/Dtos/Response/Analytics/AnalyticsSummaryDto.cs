@@ -7,7 +7,7 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
         public int AvgMonthlyBalance { get; set; }
         public MonthSummaryDto BestMonth { get; set; } = new();
         public MonthSummaryDto WorstMonth { get; set; } = new();
-        public List<CategorySummaryItemDto> CategoryBreakdown { get; set; } = [];
+        public CategoryBreakdownDto CategoryBreakdown { get; set; } = new();
     }
 
     public class MonthSummaryDto
@@ -27,7 +27,14 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
         public string? Color { get; set; }
         public int TotalSpent { get; set; }
         public decimal Percent { get; set; }
-        /// <summary>% change vs. previous month. Null if no previous month data.</summary>
+        /// <summary>% change vs. previous period. Null if no previous period data.</summary>
         public decimal? Change { get; set; }
+    }
+
+    public class CategoryBreakdownDto
+    {
+        /// <summary>Pre-computed max across all categories, used for relative progress bars.</summary>
+        public int MaxSpent { get; set; }
+        public List<CategorySummaryItemDto> Items { get; set; } = [];
     }
 }

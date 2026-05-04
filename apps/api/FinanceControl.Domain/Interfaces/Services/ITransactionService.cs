@@ -14,6 +14,7 @@ namespace FinanceControl.Domain.Interfaces.Services
     {
         Task<Result<CreateTransactionResponseDto>> CreateTransactionAsync(CreateTransactionRequestDto requestDto, int userId);
         Task<IEnumerable<GetTransactionResponseDto>> GetAllTransactionsAsync(int userId);
+        Task<IEnumerable<GetTransactionResponseDto>> GetAllTransactionsFilteredAsync(GetTransactionsFilterRequestDto requestDto, int userId);
         Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsByBudgetAsync(int budgetId, int userId);
         Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsByAccountAsync(int accountId, int userId);
         Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsBySubCategoryAsync(int subCategoryId, int userId);

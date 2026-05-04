@@ -12,23 +12,25 @@ namespace FinanceControl.Services.Services
     public class AnalyticsService : IAnalyticsService
     {
         private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public AnalyticsService(IDbContextFactory<ApplicationDbContext> contextFactory)
+        public AnalyticsService(IDbContextFactory<ApplicationDbContext> contextFactory, IHttpClientFactory httpClientFactory)
         {
             _contextFactory = contextFactory;
+            _httpClientFactory = httpClientFactory;
         }
 
-        public async Task<AnalyticsSummaryDto> GetSummaryAsync(int userId, int lookbackMonths = 7)
+        public async Task<AnalyticsSummaryDto> GetSummaryAsync(AnalyticsRequestDto requestDto)
         {
             await using var context = _contextFactory.CreateDbContext();
 
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var startDate = new DateOnly(today.Year, today.Month, 1).AddMonths(-lookbackMonths + 1);
-
-            // Monthly income/expense for the lookback window
+            // Monthly income/expense for the requested period
             var monthly = await context.Transactions
-                .Where(t => t.UserId == userId)
-                .Where(t => t.TransactionDate >= startDate && t.TransactionDate <= today)
+                .Where(t => t.UserId == requestDto.UserId)
+                .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
+                .WhereIf(requestDto.AccountIds.Count > 0,    t => requestDto.AccountIds.Contains(t.AccountId))
+                .WhereIf(requestDto.CategoryIds.Count > 0,   t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.PaymentType.HasValue,    t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
                 .Select(g => new
                 {
@@ -43,10 +45,18 @@ namespace FinanceControl.Services.Services
             if (monthly.Count == 0)
                 return new AnalyticsSummaryDto();
 
-            var avgIncome  = (int)Math.Round(monthly.Average(m => m.TotalIncome));
-            var avgExpense = (int)Math.Round(monthly.Average(m => m.TotalExpense));
+            // When a TransactionType filter is active, only count the relevant side
+            var filteredMonthly = requestDto.TransactionType switch
+            {
+                EnumTransactionType.Income  => monthly.Select(m => new { m.Year, m.Month, TotalIncome = m.TotalIncome, TotalExpense = 0 }).ToList(),
+                EnumTransactionType.Expense => monthly.Select(m => new { m.Year, m.Month, TotalIncome = 0, TotalExpense = m.TotalExpense }).ToList(),
+                _                           => monthly.Select(m => new { m.Year, m.Month, m.TotalIncome, m.TotalExpense }).ToList()
+            };
 
-            var withBalance = monthly
+            var avgIncome  = (int)Math.Round(filteredMonthly.Average(m => m.TotalIncome));
+            var avgExpense = (int)Math.Round(filteredMonthly.Average(m => m.TotalExpense));
+
+            var withBalance = filteredMonthly
                 .Select(m => new { m.Year, m.Month, m.TotalIncome, m.TotalExpense, Balance = m.TotalIncome - m.TotalExpense })
                 .ToList();
 
@@ -56,15 +66,19 @@ namespace FinanceControl.Services.Services
             static string MonthLabel(int year, int month) =>
                 new DateOnly(year, month, 1).ToString("MMMM yyyy", new CultureInfo("pt-BR"));
 
-            // Category breakdown for the current (most recent) month and previous month
-            var currentMonthStart  = new DateOnly(today.Year, today.Month, 1);
-            var previousMonthStart = currentMonthStart.AddMonths(-1);
-            var previousMonthEnd   = currentMonthStart.AddDays(-1);
+            // Category breakdown: last month of the selected range vs. the month before it
+            var lastMonthEnd   = requestDto.FinishDate;
+            var lastMonthStart = new DateOnly(lastMonthEnd.Year, lastMonthEnd.Month, 1);
+            var prevMonthStart = lastMonthStart.AddMonths(-1);
+            var prevMonthEnd   = lastMonthStart.AddDays(-1);
 
             var currentExpenses = await context.Transactions
-                .Where(t => t.UserId == userId)
+                .Where(t => t.UserId == requestDto.UserId)
                 .Where(t => t.Type == EnumTransactionType.Expense)
-                .Where(t => t.TransactionDate >= currentMonthStart && t.TransactionDate <= today)
+                .Where(t => t.TransactionDate >= lastMonthStart && t.TransactionDate <= lastMonthEnd)
+                .WhereIf(requestDto.AccountIds.Count > 0, t => requestDto.AccountIds.Contains(t.AccountId))
+                .WhereIf(requestDto.CategoryIds.Count > 0, t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.PaymentType.HasValue, t => t.PaymentType == requestDto.PaymentType)
                 .Select(t => new
                 {
                     CategoryId   = t.SubCategory.Category.Id,
@@ -75,9 +89,12 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
 
             var previousExpenses = await context.Transactions
-                .Where(t => t.UserId == userId)
+                .Where(t => t.UserId == requestDto.UserId)
                 .Where(t => t.Type == EnumTransactionType.Expense)
-                .Where(t => t.TransactionDate >= previousMonthStart && t.TransactionDate <= previousMonthEnd)
+                .Where(t => t.TransactionDate >= prevMonthStart && t.TransactionDate <= prevMonthEnd)
+                .WhereIf(requestDto.AccountIds.Count > 0, t => requestDto.AccountIds.Contains(t.AccountId))
+                .WhereIf(requestDto.CategoryIds.Count > 0, t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.PaymentType.HasValue, t => t.PaymentType == requestDto.PaymentType)
                 .Select(t => new
                 {
                     CategoryId = t.SubCategory.Category.Id,
@@ -90,7 +107,7 @@ namespace FinanceControl.Services.Services
                 .GroupBy(e => e.CategoryId)
                 .ToDictionary(g => g.Key, g => g.Sum(e => e.Value));
 
-            var categoryBreakdown = currentExpenses
+            var categoryItems = currentExpenses
                 .GroupBy(e => new { e.CategoryId, e.CategoryName, e.Color })
                 .Select(g =>
                 {
@@ -112,6 +129,12 @@ namespace FinanceControl.Services.Services
                 .OrderByDescending(c => c.TotalSpent)
                 .ToList();
 
+            var categoryBreakdown = new CategoryBreakdownDto
+            {
+                MaxSpent = categoryItems.Count > 0 ? categoryItems.Max(c => c.TotalSpent) : 0,
+                Items    = categoryItems
+            };
+
             return new AnalyticsSummaryDto
             {
                 AvgMonthlyIncome   = avgIncome,
@@ -130,13 +153,16 @@ namespace FinanceControl.Services.Services
             return await context.Transactions
                 .Where(t => t.UserId == requestDto.UserId)
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
-                .WhereIf(requestDto.AccountId.HasValue, t => t.AccountId == requestDto.AccountId)
+                .WhereIf(requestDto.AccountIds.Count > 0,    t => requestDto.AccountIds.Contains(t.AccountId))
+                .WhereIf(requestDto.CategoryIds.Count > 0,   t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.TransactionType.HasValue, t => t.Type == requestDto.TransactionType)
+                .WhereIf(requestDto.PaymentType.HasValue,    t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
                 .Select(g => new IncomeExpenseItemDto
                 {
                     Year = g.Key.Year,
                     Month = g.Key.Month,
-                    TotalIncome = g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (int?)t.Value) ?? 0,
+                    TotalIncome  = g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (int?)t.Value) ?? 0,
                     TotalExpense = g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (int?)t.Value) ?? 0
                 })
                 .OrderBy(x => x.Year).ThenBy(x => x.Month)
@@ -151,11 +177,14 @@ namespace FinanceControl.Services.Services
             var openingBalance = await context.Transactions
                 .Where(t => t.UserId == requestDto.UserId)
                 .Where(t => t.TransactionDate < requestDto.StartDate)
-                .WhereIf(requestDto.AccountId.HasValue, t => t.AccountId == requestDto.AccountId)
+                .WhereIf(requestDto.AccountIds.Count > 0,    t => requestDto.AccountIds.Contains(t.AccountId))
+                .WhereIf(requestDto.CategoryIds.Count > 0,   t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.TransactionType.HasValue, t => t.Type == requestDto.TransactionType)
+                .WhereIf(requestDto.PaymentType.HasValue,    t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(_ => 1)
                 .Select(g => new
                 {
-                    Income = g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (int?)t.Value) ?? 0,
+                    Income  = g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (int?)t.Value) ?? 0,
                     Expense = g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (int?)t.Value) ?? 0
                 })
                 .FirstOrDefaultAsync();
@@ -166,7 +195,10 @@ namespace FinanceControl.Services.Services
             var dailyMovements = await context.Transactions
                 .Where(t => t.UserId == requestDto.UserId)
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
-                .WhereIf(requestDto.AccountId.HasValue, t => t.AccountId == requestDto.AccountId)
+                .WhereIf(requestDto.AccountIds.Count > 0,    t => requestDto.AccountIds.Contains(t.AccountId))
+                .WhereIf(requestDto.CategoryIds.Count > 0,   t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.TransactionType.HasValue, t => t.Type == requestDto.TransactionType)
+                .WhereIf(requestDto.PaymentType.HasValue,    t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(t => t.TransactionDate)
                 .Select(g => new
                 {
@@ -193,9 +225,11 @@ namespace FinanceControl.Services.Services
 
             var rows = await context.Transactions
                 .Where(t => t.UserId == requestDto.UserId)
-                .Where(t => t.Type == EnumTransactionType.Expense)
+                .Where(t => t.Type == (requestDto.TransactionType ?? EnumTransactionType.Expense))
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
-                .WhereIf(requestDto.AccountId.HasValue, t => t.AccountId == requestDto.AccountId)
+                .WhereIf(requestDto.AccountIds.Count > 0,  t => requestDto.AccountIds.Contains(t.AccountId))
+                .WhereIf(requestDto.CategoryIds.Count > 0, t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.PaymentType.HasValue, t => t.PaymentType == requestDto.PaymentType)
                 .Select(t => new
                 {
                     CategoryId = t.SubCategory.Category.Id,
@@ -234,10 +268,11 @@ namespace FinanceControl.Services.Services
 
             return await context.Transactions
                 .Where(t => t.UserId == requestDto.UserId)
-                .Where(t => t.Type == EnumTransactionType.Expense)
+                .Where(t => t.Type == (requestDto.TransactionType ?? EnumTransactionType.Expense))
                 .Where(t => t.SubCategory.CategoryId == categoryId)
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
-                .WhereIf(requestDto.AccountId.HasValue, t => t.AccountId == requestDto.AccountId)
+                .WhereIf(requestDto.AccountIds.Count > 0,  t => requestDto.AccountIds.Contains(t.AccountId))
+                .WhereIf(requestDto.PaymentType.HasValue, t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
                 .Select(g => new CategoryEvolutionItemDto
                 {
@@ -736,19 +771,581 @@ namespace FinanceControl.Services.Services
         {
             await using var context = _contextFactory.CreateDbContext();
 
-            return await context.Transactions
+            // Fetch both expense and income per day regardless of TransactionType filter,
+            // so the calendar can always show the net position correctly.
+            var raw = await context.Transactions
                 .Where(t => t.UserId == requestDto.UserId)
-                .Where(t => t.Type == EnumTransactionType.Expense)
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
-                .WhereIf(requestDto.AccountId.HasValue, t => t.AccountId == requestDto.AccountId)
+                .WhereIf(requestDto.AccountIds.Count > 0,  t => requestDto.AccountIds.Contains(t.AccountId))
+                .WhereIf(requestDto.CategoryIds.Count > 0, t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.PaymentType.HasValue, t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(t => t.TransactionDate)
-                .Select(g => new SpendingHeatmapItemDto
+                .Select(g => new
                 {
-                    Date = g.Key,
-                    Total = g.Sum(t => t.Value)
+                    Date    = g.Key,
+                    Expense = g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (int?)t.Value) ?? 0,
+                    Income  = g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (int?)t.Value) ?? 0,
                 })
                 .OrderBy(x => x.Date)
                 .ToListAsync();
+
+            if (raw.Count == 0)
+                return [];
+
+            var maxExpense = raw.Max(d => d.Expense);
+            var maxNet     = raw.Max(d => Math.Max(d.Income - d.Expense, 0));
+
+            return raw.Select(d =>
+            {
+                var net   = d.Income - d.Expense;
+                var state = ComputeDayState(d.Expense, net, maxExpense, maxNet);
+                return new SpendingHeatmapItemDto
+                {
+                    Date   = d.Date,
+                    Total  = d.Expense,
+                    Income = d.Income,
+                    Net    = net,
+                    State  = state
+                };
+            }).ToList();
+        }
+
+        public async Task<PassiveIncomeProjectionDto> GetPassiveIncomeProjectionAsync(int userId, int projectionMonths = 24)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var historyStart = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
+
+            // Monthly dividends for the last 12 months (via Investment.UserId)
+            var rawDividends = await context.InvestmentDividends
+                .Where(d => d.Investment.UserId == userId)
+                .Where(d => d.Date >= historyStart && d.Date <= today)
+                .Select(d => new { d.Date.Year, d.Date.Month, Amount = (int)d.Amount })
+                .ToListAsync();
+
+            // Monthly expenses for the last 12 months
+            var rawExpenses = await context.Transactions
+                .Where(t => t.UserId == userId)
+                .Where(t => t.Type == EnumTransactionType.Expense)
+                .Where(t => t.TransactionDate >= historyStart && t.TransactionDate <= today)
+                .Select(t => new { t.TransactionDate.Year, t.TransactionDate.Month, t.Value })
+                .ToListAsync();
+
+            // Build monthly buckets for the 12-month history
+            var months12 = new List<(int Year, int Month)>();
+            var cursor12 = historyStart;
+            while (cursor12 <= new DateOnly(today.Year, today.Month, 1))
+            {
+                months12.Add((cursor12.Year, cursor12.Month));
+                cursor12 = cursor12.AddMonths(1);
+            }
+
+            var history = months12.Select(m => new PassiveIncomeMonthDto
+            {
+                Year         = m.Year,
+                Month        = m.Month,
+                PassiveIncome = rawDividends.Where(d => d.Year == m.Year && d.Month == m.Month).Sum(d => d.Amount),
+                LivingCost   = rawExpenses.Where(e => e.Year == m.Year && e.Month == m.Month).Sum(e => e.Value)
+            }).ToList();
+
+            // Averages over the last 3 completed months (excluding current month if incomplete)
+            var completedMonths = history
+                .Where(h => !(h.Year == today.Year && h.Month == today.Month))
+                .TakeLast(3)
+                .ToList();
+
+            var currentMonthlyPassiveIncome = completedMonths.Count > 0
+                ? (int)Math.Round((double)completedMonths.Sum(m => m.PassiveIncome) / completedMonths.Count)
+                : 0;
+
+            var monthlyLivingCost = completedMonths.Count > 0
+                ? (int)Math.Round((double)completedMonths.Sum(m => m.LivingCost) / completedMonths.Count)
+                : 0;
+
+            // Linear regression on dividends to estimate monthly growth rate
+            decimal monthlyGrowthRate = 0.02m; // fallback: 2% p.m.
+            if (history.Count >= 4)
+            {
+                var incomePoints = history.Select((h, i) => (X: (double)i, Y: (double)h.PassiveIncome)).ToList();
+                var n = incomePoints.Count;
+                var sumX  = incomePoints.Sum(p => p.X);
+                var sumY  = incomePoints.Sum(p => p.Y);
+                var sumXY = incomePoints.Sum(p => p.X * p.Y);
+                var sumX2 = incomePoints.Sum(p => p.X * p.X);
+                var denom = n * sumX2 - sumX * sumX;
+                if (denom != 0 && sumY > 0)
+                {
+                    var slope = (n * sumXY - sumX * sumY) / denom;
+                    // slope is absolute growth per month; convert to rate relative to avg
+                    var avgIncome = sumY / n;
+                    if (avgIncome > 0)
+                        monthlyGrowthRate = (decimal)(slope / avgIncome);
+                }
+            }
+
+            // Clamp growth rate to a reasonable range
+            monthlyGrowthRate = Math.Max(-0.10m, Math.Min(0.20m, monthlyGrowthRate));
+
+            // Build projection
+            var projected = new List<PassiveIncomeMonthDto>();
+            var projPassive  = (double)currentMonthlyPassiveIncome;
+            var projLiving   = (double)monthlyLivingCost;
+            var projCursor   = new DateOnly(today.Year, today.Month, 1).AddMonths(1);
+            int? monthsUntilFF = null;
+
+            for (var i = 1; i <= projectionMonths; i++)
+            {
+                projPassive *= (1 + (double)monthlyGrowthRate);
+                projected.Add(new PassiveIncomeMonthDto
+                {
+                    Year         = projCursor.Year,
+                    Month        = projCursor.Month,
+                    PassiveIncome = (int)Math.Round(projPassive),
+                    LivingCost   = (int)Math.Round(projLiving)
+                });
+
+                if (monthsUntilFF is null && projPassive >= projLiving && projLiving > 0)
+                    monthsUntilFF = i;
+
+                projCursor = projCursor.AddMonths(1);
+            }
+
+            var coveragePercent = monthlyLivingCost > 0
+                ? Math.Round((decimal)currentMonthlyPassiveIncome / monthlyLivingCost * 100, 1)
+                : 0m;
+
+            return new PassiveIncomeProjectionDto
+            {
+                CurrentMonthlyPassiveIncome  = currentMonthlyPassiveIncome,
+                ProjectedAnnualPassiveIncome = currentMonthlyPassiveIncome * 12,
+                MonthlyLivingCost            = monthlyLivingCost,
+                CoveragePercent              = coveragePercent,
+                MonthsUntilFinancialFreedom  = monthsUntilFF,
+                History                      = history,
+                Projected                    = projected
+            };
+        }
+
+        public async Task<FinancialMilestonesDto> GetFinancialMilestonesAsync(int userId)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+            // All transactions up to today to build timeline
+            var allTransactions = await context.Transactions
+                .Where(t => t.UserId == userId && t.TransactionDate <= today)
+                .Select(t => new
+                {
+                    t.TransactionDate,
+                    Net = t.Type == EnumTransactionType.Income ? t.Value : -t.Value
+                })
+                .OrderBy(t => t.TransactionDate)
+                .ToListAsync();
+
+            if (allTransactions.Count == 0)
+                return new FinancialMilestonesDto();
+
+            var firstDate   = allTransactions.First().TransactionDate;
+            var historyStart = new DateOnly(firstDate.Year, firstDate.Month, 1);
+
+            // Build monthly net-worth timeline from the very first transaction
+            var timelineMos = new List<(int Year, int Month)>();
+            var tc = historyStart;
+            while (tc <= new DateOnly(today.Year, today.Month, 1))
+            {
+                timelineMos.Add((tc.Year, tc.Month));
+                tc = tc.AddMonths(1);
+            }
+
+            var timeline = new List<NetWorthTimelinePointDto>();
+            foreach (var (year, month) in timelineMos)
+            {
+                var nw = allTransactions
+                    .Where(t => t.TransactionDate.Year < year || (t.TransactionDate.Year == year && t.TransactionDate.Month <= month))
+                    .Sum(t => t.Net);
+                timeline.Add(new NetWorthTimelinePointDto { Year = year, Month = month, NetWorth = nw });
+            }
+
+            var milestones = new List<FinancialMilestoneDto>();
+
+            // Milestone: first income transaction
+            var firstIncome = allTransactions.FirstOrDefault(t => t.Net > 0);
+            if (firstIncome is not null)
+            {
+                milestones.Add(new FinancialMilestoneDto
+                {
+                    Label          = "Início da jornada",
+                    Date           = firstIncome.TransactionDate,
+                    NetWorthAtDate = timeline.FirstOrDefault(t => t.Year == firstIncome.TransactionDate.Year && t.Month == firstIncome.TransactionDate.Month)?.NetWorth ?? 0,
+                    Type           = "journey_start"
+                });
+            }
+
+            // Milestone: first investment transaction
+            var firstInvestment = await context.InvestmentTransactions
+                .Where(it => it.Investment.UserId == userId)
+                .OrderBy(it => it.Date)
+                .Select(it => new { it.Date })
+                .FirstOrDefaultAsync();
+
+            if (firstInvestment is not null)
+            {
+                milestones.Add(new FinancialMilestoneDto
+                {
+                    Label          = "Primeiro investimento",
+                    Date           = firstInvestment.Date,
+                    NetWorthAtDate = timeline.FirstOrDefault(t => t.Year == firstInvestment.Date.Year && t.Month == firstInvestment.Date.Month)?.NetWorth ?? 0,
+                    Type           = "investment_start"
+                });
+            }
+
+            // Net-worth crossing milestones (values in cents)
+            var thresholds = new[] { 100000, 500000, 1000000, 2500000, 5000000, 10000000, 25000000, 50000000, 100000000 };
+            foreach (var threshold in thresholds)
+            {
+                for (var i = 1; i < timeline.Count; i++)
+                {
+                    if (timeline[i - 1].NetWorth < threshold && timeline[i].NetWorth >= threshold)
+                    {
+                        var crossed = timeline[i];
+                        var label = threshold >= 100000000 ? $"Patrimônio R$ {threshold / 100000000}M"
+                                  : threshold >= 1000000   ? $"Patrimônio R$ {threshold / 100000}k"
+                                  : $"Patrimônio R$ {threshold / 100}";
+                        milestones.Add(new FinancialMilestoneDto
+                        {
+                            Label          = label,
+                            Date           = new DateOnly(crossed.Year, crossed.Month, 1),
+                            NetWorthAtDate = crossed.NetWorth,
+                            Type           = "net_worth_milestone"
+                        });
+                        break;
+                    }
+                }
+            }
+
+            // Milestone: peak net worth
+            if (timeline.Count > 0)
+            {
+                var peak = timeline.MaxBy(t => t.NetWorth)!;
+                var peakDate = new DateOnly(peak.Year, peak.Month, 1);
+                // Only add if it's not the current month (trivial)
+                if (!(peak.Year == today.Year && peak.Month == today.Month) || timeline.Count == 1)
+                {
+                    milestones.Add(new FinancialMilestoneDto
+                    {
+                        Label          = "Pico de patrimônio",
+                        Date           = peakDate,
+                        NetWorthAtDate = peak.NetWorth,
+                        Type           = "peak"
+                    });
+                }
+            }
+
+            // Milestone: longest savings streak (consecutive positive-balance months)
+            var maxStreak = 0;
+            var currentStreak = 0;
+            var streakEndIdx = -1;
+            for (var i = 0; i < timeline.Count; i++)
+            {
+                var monthNet = i == 0 ? timeline[i].NetWorth : timeline[i].NetWorth - timeline[i - 1].NetWorth;
+                if (monthNet > 0)
+                {
+                    currentStreak++;
+                    if (currentStreak > maxStreak)
+                    {
+                        maxStreak    = currentStreak;
+                        streakEndIdx = i;
+                    }
+                }
+                else
+                {
+                    currentStreak = 0;
+                }
+            }
+
+            if (maxStreak >= 3 && streakEndIdx >= 0)
+            {
+                var streakPoint = timeline[streakEndIdx];
+                milestones.Add(new FinancialMilestoneDto
+                {
+                    Label          = $"{maxStreak} meses consecutivos poupando",
+                    Date           = new DateOnly(streakPoint.Year, streakPoint.Month, 1),
+                    NetWorthAtDate = streakPoint.NetWorth,
+                    Type           = "savings_streak"
+                });
+            }
+
+            return new FinancialMilestonesDto
+            {
+                Milestones = milestones.OrderBy(m => m.Date).ToList(),
+                Timeline   = timeline
+            };
+        }
+
+        public async Task<PortfolioCompositionProjectionDto> GetPortfolioCompositionProjectionAsync(int userId, int projectionMonths = 12)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var historyStart = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
+
+            // Fetch all investment transactions for this user, including Asset type for classification
+            var rawTx = await context.InvestmentTransactions
+                .Where(it => it.Investment.UserId == userId)
+                .Select(it => new
+                {
+                    it.Date,
+                    AssetType = it.Investment.AssetType,
+                    SignedValue = it.Operation == EnumInvestmentOperation.Buy ? it.TotalValue : -it.TotalValue
+                })
+                .ToListAsync();
+
+            static string ClassifyAsset(EnumAssetType t) => t switch
+            {
+                EnumAssetType.TesouroDireto or EnumAssetType.RendaFixa => "Renda Fixa",
+                EnumAssetType.Acao or EnumAssetType.ETF               => "Renda Variável",
+                EnumAssetType.FII                                       => "FII",
+                EnumAssetType.Stock or EnumAssetType.Reit
+                    or EnumAssetType.BDR or EnumAssetType.ETFInternacional
+                    or EnumAssetType.FundoInvestimento                 => "Internacional",
+                EnumAssetType.Cripto                                    => "Cripto",
+                _                                                       => "Outros"
+            };
+
+            // Build months list covering the history window
+            var months = new List<(int Year, int Month)>();
+            var cursor = historyStart;
+            while (cursor <= new DateOnly(today.Year, today.Month, 1))
+            {
+                months.Add((cursor.Year, cursor.Month));
+                cursor = cursor.AddMonths(1);
+            }
+
+            // For each month, compute cumulative value per asset class
+            var historical = new List<PortfolioCompositionMonthDto>();
+            var allClasses = new HashSet<string>();
+
+            foreach (var (year, month) in months)
+            {
+                var byClass = rawTx
+                    .Where(t => t.Date.Year < year || (t.Date.Year == year && t.Date.Month <= month))
+                    .GroupBy(t => ClassifyAsset(t.AssetType))
+                    .Select(g => new AssetClassValueDto
+                    {
+                        AssetClass = g.Key,
+                        Value      = (int)Math.Max(0, g.Sum(t => t.SignedValue))
+                    })
+                    .ToList();
+
+                foreach (var b in byClass) allClasses.Add(b.AssetClass);
+
+                historical.Add(new PortfolioCompositionMonthDto
+                {
+                    Year        = year,
+                    Month       = month,
+                    IsProjected = false,
+                    Breakdown   = byClass
+                });
+            }
+
+            // Compute average monthly growth rate per class from the last 6 available months
+            var lastMonths = historical.TakeLast(Math.Min(6, historical.Count)).ToList();
+            var growthRates = new Dictionary<string, double>();
+            foreach (var cls in allClasses)
+            {
+                var values = lastMonths.Select(m => (double)(m.Breakdown.FirstOrDefault(b => b.AssetClass == cls)?.Value ?? 0)).ToList();
+                if (values.Count >= 2 && values[0] > 0)
+                {
+                    var rates = new List<double>();
+                    for (var i = 1; i < values.Count; i++)
+                        if (values[i - 1] > 0)
+                            rates.Add((values[i] - values[i - 1]) / values[i - 1]);
+                    growthRates[cls] = rates.Count > 0 ? rates.Average() : 0.01;
+                }
+                else
+                {
+                    growthRates[cls] = 0.01;
+                }
+                // Clamp to [0%, 10%] per month
+                growthRates[cls] = Math.Max(0.0, Math.Min(0.10, growthRates[cls]));
+            }
+
+            // Build projection
+            var lastHistorical = historical.Last();
+            var projectedPoints = new List<PortfolioCompositionMonthDto>();
+            var currentValues   = allClasses.ToDictionary(c => c, c => (double)(lastHistorical.Breakdown.FirstOrDefault(b => b.AssetClass == c)?.Value ?? 0));
+            var projCursor      = new DateOnly(today.Year, today.Month, 1).AddMonths(1);
+
+            for (var i = 0; i < projectionMonths; i++)
+            {
+                var breakdown = new List<AssetClassValueDto>();
+                foreach (var cls in allClasses)
+                {
+                    currentValues[cls] *= 1 + growthRates[cls];
+                    breakdown.Add(new AssetClassValueDto { AssetClass = cls, Value = (int)Math.Round(currentValues[cls]) });
+                }
+                projectedPoints.Add(new PortfolioCompositionMonthDto
+                {
+                    Year        = projCursor.Year,
+                    Month       = projCursor.Month,
+                    IsProjected = true,
+                    Breakdown   = breakdown
+                });
+                projCursor = projCursor.AddMonths(1);
+            }
+
+            // Ordered asset class list — fixed priority for known classes, unknown at end
+            var classOrder = new[] { "Renda Fixa", "Renda Variável", "FII", "Internacional", "Cripto", "Outros" };
+            var orderedClasses = classOrder.Where(c => allClasses.Contains(c))
+                .Concat(allClasses.Except(classOrder))
+                .ToList();
+
+            return new PortfolioCompositionProjectionDto
+            {
+                Data         = [..historical, ..projectedPoints],
+                AssetClasses = orderedClasses
+            };
+        }
+
+        public async Task<RealNetWorthDto> GetRealNetWorthAsync(int userId)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var today         = DateOnly.FromDateTime(DateTime.UtcNow);
+            var historyStart  = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
+
+            var allTransactions = await context.Transactions
+                .Where(t => t.UserId == userId && t.TransactionDate <= today)
+                .Select(t => new
+                {
+                    t.TransactionDate.Year,
+                    t.TransactionDate.Month,
+                    Net = t.Type == EnumTransactionType.Income ? t.Value : -t.Value
+                })
+                .ToListAsync();
+
+            // Build monthly nominal net worth for the 12-month window
+            var months = new List<(int Year, int Month)>();
+            var cursor = historyStart;
+            while (cursor <= new DateOnly(today.Year, today.Month, 1))
+            {
+                months.Add((cursor.Year, cursor.Month));
+                cursor = cursor.AddMonths(1);
+            }
+
+            var nominalByMonth = new List<(int Year, int Month, int NominalNetWorth)>();
+            foreach (var (year, month) in months)
+            {
+                var nw = allTransactions
+                    .Where(t => t.Year < year || (t.Year == year && t.Month <= month))
+                    .Sum(t => t.Net);
+                nominalByMonth.Add((year, month, nw));
+            }
+
+            // Fetch IPCA from BACEN SGS (series 433) for the history window
+            var ipcaMonthly = await FetchIpcaAsync(historyStart, new DateOnly(today.Year, today.Month, 1));
+
+            // Build deflated series: each point is relative to the first month
+            var points    = new List<RealNetWorthPointDto>();
+            var accInflation = 0.0; // accumulated as (1 + r1)(1 + r2)... - 1
+
+            for (var i = 0; i < nominalByMonth.Count; i++)
+            {
+                var (year, month, nominal) = nominalByMonth[i];
+
+                if (i > 0)
+                {
+                    var key = $"{year:D4}-{month:D2}";
+                    var monthlyRate = ipcaMonthly.TryGetValue(key, out var r) ? r / 100.0 : 0.005;
+                    accInflation = (1 + accInflation) * (1 + monthlyRate) - 1;
+                }
+
+                var deflator  = 1.0 + accInflation;
+                var realValue = deflator > 0 ? (int)Math.Round(nominal / deflator) : nominal;
+
+                points.Add(new RealNetWorthPointDto
+                {
+                    Year                   = year,
+                    Month                  = month,
+                    NominalNetWorth        = nominal,
+                    RealNetWorth           = realValue,
+                    AccumulatedInflationPct = Math.Round((decimal)(accInflation * 100), 2)
+                });
+            }
+
+            var firstNominal = points.FirstOrDefault()?.NominalNetWorth ?? 0;
+            var lastNominal  = points.LastOrDefault()?.NominalNetWorth  ?? 0;
+            var firstReal    = points.FirstOrDefault()?.RealNetWorth    ?? 0;
+            var lastReal     = points.LastOrDefault()?.RealNetWorth     ?? 0;
+            var totalInflation = points.LastOrDefault()?.AccumulatedInflationPct ?? 0m;
+
+            var totalNominalGrowth = firstNominal != 0
+                ? Math.Round((decimal)(lastNominal - firstNominal) / Math.Abs(firstNominal) * 100, 2)
+                : 0m;
+            var totalRealGrowth = firstReal != 0
+                ? Math.Round((decimal)(lastReal - firstReal) / Math.Abs(firstReal) * 100, 2)
+                : 0m;
+
+            return new RealNetWorthDto
+            {
+                Points                = points,
+                TotalNominalGrowthPct = totalNominalGrowth,
+                TotalRealGrowthPct    = totalRealGrowth,
+                TotalInflationPct     = totalInflation
+            };
+        }
+
+        private async Task<Dictionary<string, double>> FetchIpcaAsync(DateOnly from, DateOnly to)
+        {
+            var result    = new Dictionary<string, double>();
+            var startStr  = from.ToString("dd/MM/yyyy");
+            var endStr    = to.ToString("dd/MM/yyyy");
+            var url       = $"https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados?formato=json&dataInicial={startStr}&dataFinal={endStr}";
+
+            try
+            {
+                using var client   = _httpClientFactory.CreateClient();
+                client.Timeout     = TimeSpan.FromSeconds(5);
+                var json           = await client.GetStringAsync(url);
+                var entries        = System.Text.Json.JsonDocument.Parse(json).RootElement;
+
+                foreach (var entry in entries.EnumerateArray())
+                {
+                    var dateStr = entry.GetProperty("data").GetString() ?? "";
+                    var valStr  = entry.GetProperty("valor").GetString() ?? "0";
+
+                    // BACEN date format: DD/MM/YYYY → normalise to YYYY-MM
+                    if (dateStr.Length == 10 && double.TryParse(valStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
+                    {
+                        var parts = dateStr.Split('/');
+                        var key   = $"{parts[2]}-{parts[1]}";
+                        result[key] = val;
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback: leave dictionary empty; callers use 0.5% per month
+            }
+
+            return result;
+        }
+
+        private static DayHeatmapState ComputeDayState(int expense, int net, int maxExpense, int maxNet)
+        {
+            if (net > 0)
+            {
+                var pct = maxNet > 0 ? (double)net / maxNet : 0;
+                return pct switch { < 0.2 => DayHeatmapState.Income1, < 0.45 => DayHeatmapState.Income2, < 0.7 => DayHeatmapState.Income3, _ => DayHeatmapState.Income4 };
+            }
+            if (expense > 0)
+            {
+                var pct = maxExpense > 0 ? (double)expense / maxExpense : 0;
+                return pct switch { < 0.2 => DayHeatmapState.Expense1, < 0.45 => DayHeatmapState.Expense2, < 0.7 => DayHeatmapState.Expense3, _ => DayHeatmapState.Expense4 };
+            }
+            return DayHeatmapState.Empty;
         }
     }
 }

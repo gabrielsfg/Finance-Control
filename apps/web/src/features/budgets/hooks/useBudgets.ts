@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
-import type { Budget } from "@/lib/types/budgets.types";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { budgetsApi } from "@/lib/api/budgets";
+import type { Budget, CreateBudgetRequest, UpdateBudgetRequest } from "@/lib/types/budgets.types";
 
 const MOCK_BUDGETS: Budget[] = [
   {
     id: 1,
     name: "Orçamento Mensal — Abril",
     recurrence: "Monthly",
+    isActive: true,
     startDate: "2026-04-01",
     endDate: "2026-04-30",
     totalAllocated: 680000,
@@ -28,6 +30,7 @@ const MOCK_BUDGETS: Budget[] = [
     id: 2,
     name: "Viagem Europa — Julho",
     recurrence: "Monthly",
+    isActive: false,
     startDate: "2026-07-01",
     endDate: "2026-07-31",
     totalAllocated: 1200000,
@@ -46,5 +49,29 @@ const USE_MOCK = true;
 export const useBudgets = () =>
   useQuery<Budget[]>({
     queryKey: ["budgets"],
-    queryFn: () => USE_MOCK ? Promise.resolve(MOCK_BUDGETS) : Promise.resolve([]),
+    queryFn: () => USE_MOCK ? Promise.resolve(MOCK_BUDGETS) : budgetsApi.getAll(),
   });
+
+export const useCreateBudget = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateBudgetRequest) => budgetsApi.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["budgets"] }),
+  });
+};
+
+export const useUpdateBudget = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateBudgetRequest }) => budgetsApi.update(id, data),
+    onSuccess: (updated) => queryClient.setQueryData(["budgets"], updated),
+  });
+};
+
+export const useActivateBudget = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => budgetsApi.activate(id),
+    onSuccess: (updated) => queryClient.setQueryData(["budgets"], updated),
+  });
+};

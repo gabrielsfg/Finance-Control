@@ -61,3 +61,12 @@ export type UpdateTransactionRequest = {
   transactionDate: string;
   paymentMethod: PaymentMethod | null;
 };
+
+export type GetTransactionsFilterParams = {
+  startDate: string;
+  finishDate: string;
+  budgetIds?: number[];
+  accountIds?: number[];
+  categoryIds?: number[];
+  subCategoryIds?: number[];
+};

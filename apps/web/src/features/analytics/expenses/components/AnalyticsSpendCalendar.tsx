@@ -1,65 +1,41 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
-import type { DaySpend } from "@/lib/types/analytics.types";
+import type { DaySpend, DayHeatmapState } from "@/lib/types/analytics.types";
 
 const WEEK_DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 type Props = { data: DaySpend[]; month: string };
 
-type DayState = "empty" | "expense1" | "expense2" | "expense3" | "expense4" | "income1" | "income2" | "income3" | "income4";
-
-const BG: Record<DayState, string> = {
-  empty:    "border border-border",
-  expense1: "bg-red/15",
-  expense2: "bg-red/35",
-  expense3: "bg-red/60",
-  expense4: "bg-red",
-  income1:  "bg-green/15",
-  income2:  "bg-green/35",
-  income3:  "bg-green/60",
-  income4:  "bg-green",
+const BG: Record<DayHeatmapState, string> = {
+  Empty:    "border border-border",
+  Expense1: "bg-red/15",
+  Expense2: "bg-red/35",
+  Expense3: "bg-red/60",
+  Expense4: "bg-red",
+  Income1:  "bg-green/15",
+  Income2:  "bg-green/35",
+  Income3:  "bg-green/60",
+  Income4:  "bg-green",
 };
 
-const TEXT: Record<DayState, string> = {
-  empty:    "text-text-muted",
-  expense1: "text-text-sub",
-  expense2: "text-text-sub",
-  expense3: "text-white",
-  expense4: "text-white",
-  income1:  "text-text-sub",
-  income2:  "text-text-sub",
-  income3:  "text-white",
-  income4:  "text-white",
+const TEXT: Record<DayHeatmapState, string> = {
+  Empty:    "text-text-muted",
+  Expense1: "text-text-sub",
+  Expense2: "text-text-sub",
+  Expense3: "text-white",
+  Expense4: "text-white",
+  Income1:  "text-text-sub",
+  Income2:  "text-text-sub",
+  Income3:  "text-white",
+  Income4:  "text-white",
 };
-
-function getDayState(expense: number, income: number, maxExpense: number, maxIncome: number): DayState {
-  const net = income - expense;
-
-  if (net > 0) {
-    // Positive day — green palette
-    const pct = net / Math.max(maxIncome, 1);
-    if (pct < 0.2) return "income1";
-    if (pct < 0.45) return "income2";
-    if (pct < 0.7) return "income3";
-    return "income4";
-  }
-
-  if (expense > 0) {
-    // Expense day — red palette
-    const pct = expense / Math.max(maxExpense, 1);
-    if (pct < 0.2) return "expense1";
-    if (pct < 0.45) return "expense2";
-    if (pct < 0.7) return "expense3";
-    return "expense4";
-  }
-
-  return "empty";
-}
 
 export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
+  const router = useRouter();
   const firstDate = data[0]?.date ? new Date(data[0].date + "T12:00:00") : new Date();
   const offset = firstDate.getDay();
   const year = firstDate.getFullYear();
@@ -67,9 +43,6 @@ export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
   const daysInMonth = new Date(year, monthNum + 1, 0).getDate();
 
   const byDate = new Map(data.map((d) => [d.date, d]));
-
-  const maxExpense = Math.max(...data.map((d) => d.total), 1);
-  const maxNet     = Math.max(...data.map((d) => Math.max((d.income ?? 0) - d.total, 0)), 1);
 
   return (
     <div className="border-border bg-surface rounded-xl border p-5">
@@ -95,9 +68,8 @@ export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
           const dateStr = `${year}-${String(monthNum + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
           const d = byDate.get(dateStr);
           const expense = d?.total ?? 0;
-          const income  = d?.income ?? 0;
-          const net     = income - expense;
-          const state   = getDayState(expense, income, maxExpense, maxNet);
+          const net     = d?.net ?? 0;
+          const state   = d?.state ?? "Empty";
 
           const tooltipLabel =
             net > 0
@@ -107,11 +79,13 @@ export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
               : `${dayNum}: sem movimentação`;
 
           return (
-            <div
+            <button
               key={dateStr}
+              type="button"
               title={tooltipLabel}
+              onClick={() => router.push(`/transactions?date=${dateStr}`)}
               className={cn(
-                "relative flex flex-col items-center justify-center rounded-lg py-2 transition-transform hover:scale-105 cursor-default",
+                "relative flex flex-col items-center justify-center rounded-lg py-2 transition-transform hover:scale-105 hover:ring-2 hover:ring-white/20 cursor-pointer",
                 BG[state],
               )}
               style={{ minHeight: 52 }}
@@ -119,14 +93,14 @@ export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
               <span className={cn("text-[13px] font-medium leading-none", TEXT[state])}>
                 {dayNum}
               </span>
-              {(expense > 0 || income > 0) && (
+              {(expense > 0 || net > 0) && (
                 <span className={cn("mt-1 text-[10px] leading-none font-mono", TEXT[state])}>
                   {net > 0
-                    ? formatCurrency(net / 100).replace("R$ ", "").replace("R$ ", "")
-                    : formatCurrency(expense / 100).replace("R$ ", "").replace("R$ ", "")}
+                    ? formatCurrency(net / 100).replace("R$ ", "")
+                    : formatCurrency(expense / 100).replace("R$ ", "")}
                 </span>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
@@ -135,20 +109,20 @@ export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
         <div className="flex items-center gap-2">
           <span className="text-text-muted text-[11px]">Gasto baixo</span>
-          {(["expense1", "expense2", "expense3", "expense4"] as DayState[]).map((s) => (
+          {(["Expense1", "Expense2", "Expense3", "Expense4"] as DayHeatmapState[]).map((s) => (
             <div key={s} className={cn("h-4 w-4 rounded-[4px]", BG[s])} />
           ))}
           <span className="text-text-muted text-[11px]">Alto</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-text-muted text-[11px]">Saldo positivo leve</span>
-          {(["income1", "income2", "income3", "income4"] as DayState[]).map((s) => (
+          {(["Income1", "Income2", "Income3", "Income4"] as DayHeatmapState[]).map((s) => (
             <div key={s} className={cn("h-4 w-4 rounded-[4px]", BG[s])} />
           ))}
           <span className="text-text-muted text-[11px]">Alto</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className={cn("h-4 w-4 rounded-[4px]", BG["empty"])} />
+          <div className={cn("h-4 w-4 rounded-[4px]", BG["Empty"])} />
           <span className="text-text-muted text-[11px]">Sem movimentação</span>
         </div>
       </div>

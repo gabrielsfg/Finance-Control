@@ -3,9 +3,9 @@
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercent } from "@/lib/utils/formatNumber";
 import { cn } from "@/lib/utils";
-import type { InvestmentSummary } from "@/lib/types/investments.types";
+import type { InvestmentPortfolio } from "@/lib/types/investments.types";
 
-type Props = { summary: InvestmentSummary };
+type Props = { summary: InvestmentPortfolio };
 
 export const InvestmentsSummaryHero = ({ summary }: Props) => {
   const isPositive = summary.totalReturn >= 0;

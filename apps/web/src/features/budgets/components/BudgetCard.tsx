@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Zap } from "lucide-react";
 import { ProgressBar } from "@/components/shared/ProgressBar";
-import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercentNeutral } from "@/lib/utils/formatNumber";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import { cn } from "@/lib/utils";
+import { useActivateBudget } from "@/features/budgets/hooks/useBudgets";
 import type { Budget, BudgetAllocation } from "@/lib/types/budgets.types";
 
 const RECURRENCE_LABELS: Record<string, string> = {
@@ -15,6 +15,8 @@ const RECURRENCE_LABELS: Record<string, string> = {
   Weekly: "Semanal",
   Biweekly: "Quinzenal",
   Quarterly: "Trimestral",
+  Semiannually: "Semestral",
+  Annually: "Anual",
 };
 
 type AreaGroup = {
@@ -46,9 +48,7 @@ function groupByArea(allocations: BudgetAllocation[]): AreaGroup[] {
   return Array.from(map.values());
 }
 
-type AreaRowProps = { group: AreaGroup };
-
-const AreaRow = ({ group }: AreaRowProps) => {
+const AreaRow = ({ group }: { group: AreaGroup }) => {
   const [open, setOpen] = useState(false);
   const pct = group.totalAllocated > 0 ? (group.totalSpent / group.totalAllocated) * 100 : 0;
   const isOver = group.totalSpent > group.totalAllocated;
@@ -56,7 +56,6 @@ const AreaRow = ({ group }: AreaRowProps) => {
 
   return (
     <div className="border-border rounded-xl border">
-      {/* Area header — clickable */}
       <button
         onClick={() => setOpen((v) => !v)}
         className="hover:bg-surface2/60 flex w-full items-center gap-3 rounded-xl p-4 transition-colors"
@@ -88,7 +87,6 @@ const AreaRow = ({ group }: AreaRowProps) => {
         {open ? <ChevronUp size={14} className="text-text-muted shrink-0" /> : <ChevronDown size={14} className="text-text-muted shrink-0" />}
       </button>
 
-      {/* Subcategories */}
       {open && (
         <div className="border-border border-t px-4 pb-4 pt-3 flex flex-col gap-3">
           {group.allocations.map((alloc) => {
@@ -120,22 +118,57 @@ const AreaRow = ({ group }: AreaRowProps) => {
   );
 };
 
-type Props = { budget: Budget };
+type Props = {
+  budget: Budget;
+  onEdit: (budget: Budget) => void;
+};
 
-export const BudgetCard = ({ budget }: Props) => {
+export const BudgetCard = ({ budget, onEdit }: Props) => {
   const [expanded, setExpanded] = useState(false);
+  const activate = useActivateBudget();
   const isOver = budget.spentPercentage > 100;
   const remaining = budget.totalAllocated - budget.totalSpent;
   const areaGroups = groupByArea(budget.allocations);
 
   return (
-    <div className="border-border bg-surface rounded-xl border p-5">
-      <SectionHeader
-        title={budget.name}
-        subtitle={RECURRENCE_LABELS[budget.recurrence]}
-        action={() => setExpanded((v) => !v)}
-        actionLabel={expanded ? "Recolher" : "Ver áreas"}
-      />
+    <div className={cn(
+      "border-border bg-surface rounded-xl border p-5",
+      budget.isActive && "ring-1 ring-green/30",
+    )}>
+      {/* Header: title + subtitle + active badge + action buttons */}
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-display font-600 text-text truncate text-[15px]">{budget.name}</p>
+            {budget.isActive && (
+              <span className="bg-green/15 text-green shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                Ativo
+              </span>
+            )}
+          </div>
+          <p className="text-text-muted mt-0.5 text-[12px]">
+            {RECURRENCE_LABELS[budget.recurrence] ?? budget.recurrence}
+          </p>
+        </div>
+
+        {/* Ver áreas + Editar — always together */}
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="text-text-muted hover:text-text-sub flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] transition-colors hover:bg-surface2"
+          >
+            {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            {expanded ? "Recolher" : "Ver áreas"}
+          </button>
+          <button
+            onClick={() => onEdit(budget)}
+            className="text-text-muted hover:text-text-sub flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] transition-colors hover:bg-surface2"
+          >
+            <Pencil size={12} />
+            Editar
+          </button>
+        </div>
+      </div>
 
       {/* Totals */}
       <div className="mb-3 flex items-end justify-between">
@@ -168,13 +201,30 @@ export const BudgetCard = ({ budget }: Props) => {
         </div>
       )}
 
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="text-text-muted hover:text-text-sub mt-4 flex w-full items-center justify-center gap-1 text-[12px] transition-colors"
-      >
-        {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-        {expanded ? "Recolher" : `${areaGroups.length} áreas · ${budget.allocations.length} subcategorias`}
-      </button>
+      {/* Footer: summary + activate button */}
+      {!budget.isActive && (
+        <div className="mt-4 flex items-center justify-between">
+          <span className="text-text-muted text-[12px]">
+            {areaGroups.length} áreas · {budget.allocations.length} subcategorias
+          </span>
+          <button
+            onClick={() => activate.mutate(budget.id)}
+            disabled={activate.isPending}
+            className="text-text-muted hover:text-green flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] transition-colors hover:bg-green/10 disabled:opacity-50"
+          >
+            <Zap size={12} />
+            {activate.isPending ? "Ativando..." : "Tornar ativo"}
+          </button>
+        </div>
+      )}
+
+      {budget.isActive && (
+        <div className="mt-4">
+          <span className="text-text-muted text-[12px]">
+            {areaGroups.length} áreas · {budget.allocations.length} subcategorias
+          </span>
+        </div>
+      )}
     </div>
   );
 };

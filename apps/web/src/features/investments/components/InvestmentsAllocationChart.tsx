@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import type { InvestmentSummary } from "@/lib/types/investments.types";
+import type { InvestmentPortfolio } from "@/lib/types/investments.types";
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
@@ -22,7 +22,7 @@ const renderActiveShape = (props: any) => {
   return <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 8} startAngle={startAngle} endAngle={endAngle} fill={fill} />;
 };
 
-type Props = { summary: InvestmentSummary };
+type Props = { summary: InvestmentPortfolio };
 
 export const InvestmentsAllocationChart = ({ summary }: Props) => {
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
@@ -30,10 +30,10 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
   const onMouseLeave = useCallback(() => setActiveIndex(undefined), []);
 
   return (
-    <div className="border-border bg-surface flex h-full flex-col rounded-xl border p-5">
+    <div className="border-border bg-surface sticky top-5 flex flex-col rounded-xl border p-5">
       <SectionHeader title="Alocação por Classe" subtitle="Distribuição atual da carteira" />
 
-      <div className="w-full flex-1" style={{ minHeight: 160 }}>
+      <div className="w-full" style={{ height: 180 }}>
         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <PieChart>
             <Pie
@@ -52,7 +52,7 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
               onMouseLeave={onMouseLeave}
             >
               {summary.allocations.map((entry) => (
-                <Cell key={entry.assetClass} fill={entry.color} />
+                <Cell key={entry.assetType} fill={entry.color} />
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
@@ -62,7 +62,7 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
 
       <div className="mt-3 flex flex-col gap-2">
         {summary.allocations.map((alloc) => (
-          <div key={alloc.assetClass} className="flex items-center justify-between">
+          <div key={alloc.assetType} className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: alloc.color }} />
               <span className="text-text-sub text-[13px]">{alloc.assetClass}</span>

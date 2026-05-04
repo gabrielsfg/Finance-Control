@@ -67,7 +67,7 @@ export const AnalyticsProjectionsChart = ({ data }: Props) => {
               tickFormatter={(v) => formatCurrencyCompact(v / 100)}
               width={70}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1 }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />
             {SCENARIOS.map(({ key, label, color }) => (
               <Line
                 key={key}

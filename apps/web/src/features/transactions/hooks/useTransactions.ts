@@ -4,6 +4,7 @@ import type {
   TransactionItem,
   CreateTransactionRequest,
   UpdateTransactionRequest,
+  GetTransactionsFilterParams,
 } from "@/lib/types/transactions.types";
 
 const MOCK_TRANSACTIONS: TransactionItem[] = [
@@ -125,10 +126,32 @@ const USE_MOCK = true;
 
 const KEY = ["transactions"] as const;
 
+// Always fetches all transactions (used internally for mock filtering and mutations)
 export const useTransactions = () =>
   useQuery<TransactionItem[]>({
     queryKey: KEY,
     queryFn: () => (USE_MOCK ? Promise.resolve(MOCK_TRANSACTIONS) : transactionsApi.getAll()),
+    staleTime: 60_000,
+  });
+
+export const useTransactionsFiltered = (params: GetTransactionsFilterParams) =>
+  useQuery<TransactionItem[]>({
+    queryKey: ["transactions", "filtered", params],
+    queryFn: () => {
+      if (USE_MOCK) {
+        // Client-side mock filtering
+        return Promise.resolve(
+          MOCK_TRANSACTIONS.filter((t) => {
+            if (t.transactionDate < params.startDate || t.transactionDate > params.finishDate) return false;
+            if (params.budgetIds?.length && (t.budgetId === null || !params.budgetIds.includes(t.budgetId))) return false;
+            if (params.accountIds?.length && !params.accountIds.includes(t.accountId)) return false;
+            if (params.subCategoryIds?.length && !params.subCategoryIds.includes(t.subCategoryId)) return false;
+            return true;
+          }),
+        );
+      }
+      return transactionsApi.getFiltered(params);
+    },
     staleTime: 60_000,
   });
 

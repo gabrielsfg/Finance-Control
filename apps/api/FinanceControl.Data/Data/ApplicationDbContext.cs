@@ -22,8 +22,11 @@ namespace FinanceControl.Data.Data
         public DbSet<RecurringTransaction> RecurringTransactions { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<UserPreferences> UserPreferences { get; set; }
-        public DbSet<WishlistItem> WishlistItems { get; set; }
-        public DbSet<WishlistItemPriceHistory> WishlistItemPriceHistory { get; set; }
+        public DbSet<Goal> Goals { get; set; }
+        public DbSet<GoalCheckpoint> GoalCheckpoints { get; set; }
+        public DbSet<Investment> Investments { get; set; }
+        public DbSet<InvestmentTransaction> InvestmentTransactions { get; set; }
+        public DbSet<InvestmentDividend> InvestmentDividends { get; set; }
 
         public override int SaveChanges()
         {

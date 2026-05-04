@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Loader2, X, CalendarDays } from "lucide-react";
 import { TransactionsHeader } from "@/features/transactions/components/TransactionsHeader";
 import { TransactionsFilterBar } from "@/features/transactions/components/TransactionsFilterBar";
 import { TransactionsSummary } from "@/features/transactions/components/TransactionsSummary";
@@ -10,7 +11,9 @@ import { TransactionsPagination } from "@/features/transactions/components/Trans
 import { CreateTransactionModal } from "@/features/transactions/components/CreateTransactionModal";
 import { EditTransactionModal } from "@/features/transactions/components/EditTransactionModal";
 import { DeleteTransactionModal } from "@/features/transactions/components/DeleteTransactionModal";
-import { useTransactions } from "@/features/transactions/hooks/useTransactions";
+import { useTransactionsFiltered } from "@/features/transactions/hooks/useTransactions";
+import { defaultTxFilter, buildTxDateRange } from "@/features/transactions/utils/filterDates";
+import type { TransactionsFilter } from "@/features/transactions/types/filters.types";
 import type { TransactionItem, TransactionType } from "@/lib/types/transactions.types";
 
 type TypeFilter = "All" | TransactionType;
@@ -20,14 +23,26 @@ function parseDateLocal(dateStr: string) {
   return new Date(y, m - 1, d);
 }
 
+function formatDayLabel(dateStr: string) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function initFilterFromParam(dateParam: string | null): TransactionsFilter {
+  const base = defaultTxFilter();
+  if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return base;
+  // Use custom-range covering only that day
+  return { ...base, preset: "custom-range", startDate: dateParam, finishDate: dateParam };
+}
+
 const PAGE_SIZE = 12;
 
 export function TransactionsPage() {
-  const { data: allTransactions, isLoading, isError } = useTransactions();
+  const searchParams = useSearchParams();
+  const dateParam = searchParams.get("date");
 
-  const now = new Date();
-  const [filterMonth, setFilterMonth] = useState(now.getMonth());
-  const [filterYear, setFilterYear] = useState(now.getFullYear());
+  const [filter, setFilter] = useState<TransactionsFilter>(() => initFilterFromParam(dateParam));
+  const [filterDay, setFilterDay] = useState<string | null>(dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : null);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("All");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -36,26 +51,26 @@ export function TransactionsPage() {
   const [editTarget, setEditTarget] = useState<TransactionItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TransactionItem | null>(null);
 
-  const navigateMonth = (dir: -1 | 1) => {
-    setPage(1);
-    setFilterMonth((m) => {
-      const next = m + dir;
-      if (next < 0) { setFilterYear((y) => y - 1); return 11; }
-      if (next > 11) { setFilterYear((y) => y + 1); return 0; }
-      return next;
-    });
-  };
+  const { start, finish } = buildTxDateRange(filter);
+
+  const { data: allTransactions, isLoading, isError } = useTransactionsFiltered({
+    startDate: start,
+    finishDate: finish,
+    budgetIds: filter.budgetIds.length > 0 ? filter.budgetIds : undefined,
+    accountIds: filter.accountIds.length > 0 ? filter.accountIds : undefined,
+    categoryIds: filter.categoryIds.length > 0 ? filter.categoryIds : undefined,
+    subCategoryIds: filter.subCategoryIds.length > 0 ? filter.subCategoryIds : undefined,
+  });
 
   const filtered = useMemo(() => {
     if (!allTransactions) return [];
     return allTransactions.filter((t) => {
-      const d = parseDateLocal(t.transactionDate);
-      if (d.getMonth() !== filterMonth || d.getFullYear() !== filterYear) return false;
+      if (filterDay && t.transactionDate !== filterDay) return false;
       if (typeFilter !== "All" && t.type !== typeFilter) return false;
       if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [allTransactions, filterMonth, filterYear, typeFilter, search]);
+  }, [allTransactions, filterDay, typeFilter, search]);
 
   const totalIncome = filtered.filter((t) => t.type === "Income").reduce((s, t) => s + t.value, 0);
   const totalExpense = filtered.filter((t) => t.type === "Expense").reduce((s, t) => s + t.value, 0);
@@ -68,6 +83,12 @@ export function TransactionsPage() {
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  function handleFilterChange(f: TransactionsFilter) {
+    setFilter(f);
+    setFilterDay(null);
+    setPage(1);
+  }
 
   if (isLoading) {
     return (
@@ -90,20 +111,33 @@ export function TransactionsPage() {
       <div className="flex flex-col gap-5">
         <TransactionsHeader
           filteredCount={filtered.length}
-          filterMonth={filterMonth}
-          filterYear={filterYear}
+          filter={filter}
+          onFilterChange={handleFilterChange}
           onCreateClick={() => setCreateOpen(true)}
         />
 
         <TransactionsFilterBar
-          filterMonth={filterMonth}
-          filterYear={filterYear}
           typeFilter={typeFilter}
           search={search}
-          onNavigateMonth={navigateMonth}
           onTypeFilterChange={(t) => { setTypeFilter(t); setPage(1); }}
           onSearchChange={(v) => { setSearch(v); setPage(1); }}
         />
+
+        {filterDay && (
+          <div className="flex items-center gap-2">
+            <div className="border-border bg-surface2 flex items-center gap-2 rounded-lg border px-3 py-1.5">
+              <CalendarDays size={13} className="text-green shrink-0" />
+              <span className="text-text-sub text-[12px]">{formatDayLabel(filterDay)}</span>
+              <button
+                type="button"
+                onClick={() => { setFilterDay(null); setPage(1); }}
+                className="text-text-muted hover:text-text ml-1 transition-colors"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          </div>
+        )}
 
         <TransactionsSummary
           totalIncome={totalIncome}

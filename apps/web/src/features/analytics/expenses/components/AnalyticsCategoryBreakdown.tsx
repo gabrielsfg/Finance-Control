@@ -5,18 +5,18 @@ import { ProgressBar } from "@/components/shared/ProgressBar";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercent } from "@/lib/utils/formatNumber";
 import { cn } from "@/lib/utils";
-import type { CategoryBreakdown } from "@/lib/types/analytics.types";
+import type { CategoryBreakdownResult } from "@/lib/types/analytics.types";
 
-type Props = { data: CategoryBreakdown[] };
+type Props = { data: CategoryBreakdownResult };
 
 export const AnalyticsCategoryBreakdown = ({ data }: Props) => {
-  const maxSpent = Math.max(...data.map((d) => d.totalSpent));
+  const { maxSpent, items } = data;
 
   return (
     <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
       <SectionHeader title="Gastos por Categoria" subtitle="Mês atual" />
       <div className="flex flex-col gap-4">
-        {data.map((cat) => (
+        {items.map((cat) => (
           <div key={cat.categoryName}>
             <div className="mb-1.5 flex items-center justify-between">
               <div className="flex items-center gap-2">

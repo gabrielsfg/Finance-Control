@@ -1,5 +1,6 @@
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Shared.Dtos.Request;
+using FinanceControl.Shared.Enums;
 using FinanceControl.WebApi.Controllers.Base;
 using FinanceControl.WebApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -20,12 +21,16 @@ namespace FinanceControl.WebApi.Controllers
         }
 
         [HttpGet("summary")]
-        public async Task<IActionResult> GetSummaryAsync([FromQuery] int lookbackMonths = 7)
+        public async Task<IActionResult> GetSummaryAsync(
+            [FromQuery] DateOnly startDate,
+            [FromQuery] DateOnly finishDate,
+            [FromQuery] List<int>? accountIds,
+            [FromQuery] List<int>? categoryIds,
+            [FromQuery] EnumTransactionType? transactionType,
+            [FromQuery] EnumPaymentType? paymentType)
         {
-            if (lookbackMonths < 1 || lookbackMonths > 24)
-                return BadRequest(new { error = "lookbackMonths must be between 1 and 24." });
-
-            var result = await _analyticsService.GetSummaryAsync(GetUserId(), lookbackMonths);
+            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, transactionType, paymentType);
+            var result = await _analyticsService.GetSummaryAsync(filter);
             return Ok(result);
         }
 
@@ -33,15 +38,12 @@ namespace FinanceControl.WebApi.Controllers
         public async Task<IActionResult> GetIncomeExpenseAsync(
             [FromQuery] DateOnly startDate,
             [FromQuery] DateOnly finishDate,
-            [FromQuery] int? accountId)
+            [FromQuery] List<int>? accountIds,
+            [FromQuery] List<int>? categoryIds,
+            [FromQuery] EnumTransactionType? transactionType,
+            [FromQuery] EnumPaymentType? paymentType)
         {
-            if (accountId.HasValue)
-            {
-                var validation = this.ValidatePositiveId(accountId.Value, "accountId");
-                if (validation is not null) return validation;
-            }
-
-            var filter = BuildFilter(startDate, finishDate, accountId);
+            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, transactionType, paymentType);
             var result = await _analyticsService.GetIncomeExpenseAsync(filter);
             return Ok(result);
         }
@@ -50,15 +52,12 @@ namespace FinanceControl.WebApi.Controllers
         public async Task<IActionResult> GetBalanceEvolutionAsync(
             [FromQuery] DateOnly startDate,
             [FromQuery] DateOnly finishDate,
-            [FromQuery] int? accountId)
+            [FromQuery] List<int>? accountIds,
+            [FromQuery] List<int>? categoryIds,
+            [FromQuery] EnumTransactionType? transactionType,
+            [FromQuery] EnumPaymentType? paymentType)
         {
-            if (accountId.HasValue)
-            {
-                var validation = this.ValidatePositiveId(accountId.Value, "accountId");
-                if (validation is not null) return validation;
-            }
-
-            var filter = BuildFilter(startDate, finishDate, accountId);
+            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, transactionType, paymentType);
             var result = await _analyticsService.GetBalanceEvolutionAsync(filter);
             return Ok(result);
         }
@@ -67,15 +66,10 @@ namespace FinanceControl.WebApi.Controllers
         public async Task<IActionResult> GetExpensesByCategoryAsync(
             [FromQuery] DateOnly startDate,
             [FromQuery] DateOnly finishDate,
-            [FromQuery] int? accountId)
+            [FromQuery] List<int>? accountIds,
+            [FromQuery] EnumPaymentType? paymentType)
         {
-            if (accountId.HasValue)
-            {
-                var validation = this.ValidatePositiveId(accountId.Value, "accountId");
-                if (validation is not null) return validation;
-            }
-
-            var filter = BuildFilter(startDate, finishDate, accountId);
+            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds: null, transactionType: null, paymentType);
             var result = await _analyticsService.GetExpensesByCategoryAsync(filter);
             return Ok(result);
         }
@@ -85,18 +79,13 @@ namespace FinanceControl.WebApi.Controllers
             [FromQuery] DateOnly startDate,
             [FromQuery] DateOnly finishDate,
             [FromQuery] int categoryId,
-            [FromQuery] int? accountId)
+            [FromQuery] List<int>? accountIds,
+            [FromQuery] EnumPaymentType? paymentType)
         {
             var categoryValidation = this.ValidatePositiveId(categoryId, "categoryId");
             if (categoryValidation is not null) return categoryValidation;
 
-            if (accountId.HasValue)
-            {
-                var validation = this.ValidatePositiveId(accountId.Value, "accountId");
-                if (validation is not null) return validation;
-            }
-
-            var filter = BuildFilter(startDate, finishDate, accountId);
+            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds: null, transactionType: null, paymentType);
             var result = await _analyticsService.GetCategoryEvolutionAsync(filter, categoryId);
             return Ok(result);
         }
@@ -106,7 +95,7 @@ namespace FinanceControl.WebApi.Controllers
             [FromQuery] DateOnly startDate,
             [FromQuery] DateOnly finishDate)
         {
-            var filter = BuildFilter(startDate, finishDate, accountId: null);
+            var filter = BuildFilter(startDate, finishDate, accountIds: null, categoryIds: null, transactionType: null, paymentType: null);
             var result = await _analyticsService.GetNetWorthEvolutionAsync(filter);
             return Ok(result);
         }
@@ -136,15 +125,12 @@ namespace FinanceControl.WebApi.Controllers
         public async Task<IActionResult> GetSpendingHeatmapAsync(
             [FromQuery] DateOnly startDate,
             [FromQuery] DateOnly finishDate,
-            [FromQuery] int? accountId)
+            [FromQuery] List<int>? accountIds,
+            [FromQuery] List<int>? categoryIds,
+            [FromQuery] EnumTransactionType? transactionType,
+            [FromQuery] EnumPaymentType? paymentType)
         {
-            if (accountId.HasValue)
-            {
-                var validation = this.ValidatePositiveId(accountId.Value, "accountId");
-                if (validation is not null) return validation;
-            }
-
-            var filter = BuildFilter(startDate, finishDate, accountId);
+            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, transactionType, paymentType);
             var result = await _analyticsService.GetSpendingHeatmapAsync(filter);
             return Ok(result);
         }
@@ -210,13 +196,56 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
-        private AnalyticsRequestDto BuildFilter(DateOnly startDate, DateOnly finishDate, int? accountId) =>
+        [HttpGet("projection/passive-income")]
+        public async Task<IActionResult> GetPassiveIncomeProjectionAsync([FromQuery] int projectionMonths = 24)
+        {
+            if (projectionMonths < 6 || projectionMonths > 120)
+                return BadRequest(new { error = "projectionMonths must be between 6 and 120." });
+
+            var result = await _analyticsService.GetPassiveIncomeProjectionAsync(GetUserId(), projectionMonths);
+            return Ok(result);
+        }
+
+        [HttpGet("milestones")]
+        public async Task<IActionResult> GetFinancialMilestonesAsync()
+        {
+            var result = await _analyticsService.GetFinancialMilestonesAsync(GetUserId());
+            return Ok(result);
+        }
+
+        [HttpGet("projection/portfolio-composition")]
+        public async Task<IActionResult> GetPortfolioCompositionProjectionAsync([FromQuery] int projectionMonths = 12)
+        {
+            if (projectionMonths < 1 || projectionMonths > 60)
+                return BadRequest(new { error = "projectionMonths must be between 1 and 60." });
+
+            var result = await _analyticsService.GetPortfolioCompositionProjectionAsync(GetUserId(), projectionMonths);
+            return Ok(result);
+        }
+
+        [HttpGet("real-net-worth")]
+        public async Task<IActionResult> GetRealNetWorthAsync()
+        {
+            var result = await _analyticsService.GetRealNetWorthAsync(GetUserId());
+            return Ok(result);
+        }
+
+        private AnalyticsRequestDto BuildFilter(
+            DateOnly startDate,
+            DateOnly finishDate,
+            List<int>? accountIds,
+            List<int>? categoryIds,
+            EnumTransactionType? transactionType,
+            EnumPaymentType? paymentType) =>
             new()
             {
-                StartDate = startDate,
-                FinishDate = finishDate,
-                AccountId = accountId,
-                UserId = GetUserId()
+                StartDate       = startDate,
+                FinishDate      = finishDate,
+                AccountIds      = accountIds ?? [],
+                CategoryIds     = categoryIds ?? [],
+                TransactionType = transactionType,
+                PaymentType     = paymentType,
+                UserId          = GetUserId()
             };
     }
 }
