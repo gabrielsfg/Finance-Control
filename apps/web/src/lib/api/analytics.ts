@@ -5,6 +5,11 @@ import type {
   DaySpend,
   CategoryMonthlyData,
   NetWorthPoint,
+  InvestmentEvolutionResponse,
+  ProfitabilityTotals,
+  AnnualReturnsResponse,
+  ProfitabilityVsCdiPoint,
+  InvestmentLaunchesResponse,
   NetWorthProjectionResponse,
   CategoryProjection,
   PassiveIncomeProjectionResponse,
@@ -88,6 +93,41 @@ export const analyticsApi = {
 
   getRealNetWorth: async (): Promise<RealNetWorthResponse> => {
     const response = await api.get<RealNetWorthResponse>("/analytics/real-net-worth");
+    return response.data;
+  },
+
+  getInvestmentEvolution: async (startDate: string, finishDate: string): Promise<InvestmentEvolutionResponse> => {
+    const response = await api.get<InvestmentEvolutionResponse>("/analytics/investment/evolution", {
+      params: { startDate, finishDate },
+    });
+    return response.data;
+  },
+
+  getInvestmentProfitabilityTotals: async (startDate: string, finishDate: string): Promise<ProfitabilityTotals> => {
+    const response = await api.get<ProfitabilityTotals>("/analytics/investment/profitability-totals", {
+      params: { startDate, finishDate },
+    });
+    return response.data;
+  },
+
+  getInvestmentAnnualReturns: async (startDate: string, finishDate: string): Promise<AnnualReturnsResponse> => {
+    const response = await api.get<AnnualReturnsResponse>("/analytics/investment/annual-returns", {
+      params: { startDate, finishDate },
+    });
+    return response.data;
+  },
+
+  getInvestmentProfitabilityVsCdi: async (startDate: string, finishDate: string): Promise<ProfitabilityVsCdiPoint[]> => {
+    const response = await api.get<ProfitabilityVsCdiPoint[]>("/analytics/investment/profitability-vs-cdi", {
+      params: { startDate, finishDate },
+    });
+    return response.data;
+  },
+
+  getInvestmentLaunches: async (startDate: string, finishDate: string): Promise<InvestmentLaunchesResponse> => {
+    const response = await api.get<InvestmentLaunchesResponse>("/analytics/investment/launches", {
+      params: { startDate, finishDate },
+    });
     return response.data;
   },
 };
