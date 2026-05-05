@@ -50,7 +50,7 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px] lg:min-h-[360px]">
         <MonthlyEvolutionChart />
-        {topCategories.length > 0 && <CategoryDonutChart categories={topCategories} />}
+        <CategoryDonutChart categories={topCategories} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">

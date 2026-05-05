@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { FutureCommitmentsItem } from "@/lib/types/analytics.types";
 
@@ -23,7 +24,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 type Props = { data: FutureCommitmentsItem[] };
 
 export function FutureCommitmentsChart({ data }: Props) {
-  if (data.length === 0) return null;
+  if (data.length === 0) {
+    return (
+      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
+        <SectionHeader
+          title="Compromissos Futuros"
+          subtitle="Parcelas e compromissos agendados nos próximos meses"
+        />
+        <ChartEmptyState message="Sem compromissos futuros agendados" />
+      </div>
+    );
+  }
 
   const chartData = data.map((item) => ({
     label: `${MONTH_LABELS[item.month - 1]}/${String(item.year).slice(2)}`,

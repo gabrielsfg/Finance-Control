@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { BalanceProjectionResponse } from "@/lib/types/analytics.types";
 
@@ -41,6 +42,15 @@ export function BalanceProjectionChart({ data }: Props) {
   }));
 
   const chartData = [...actualPoints, ...projectedPoints];
+
+  if (chartData.length === 0) {
+    return (
+      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
+        <SectionHeader title="Projeção de Saldo" subtitle="Tendência baseada nos últimos 30 dias" />
+        <ChartEmptyState message="Sem transações suficientes para gerar projeção" />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border bg-surface flex flex-col rounded-xl border p-5">

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { TrendingUp, Wallet, BarChart2, ArrowUpRight } from "lucide-react";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { PieChart, Pie, Cell, Sector, Tooltip, ResponsiveContainer } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
@@ -92,11 +93,12 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
       )}
 
       {/* Allocation breakdown */}
-      {data && (
-        <div className="border-border bg-surface rounded-xl border p-5">
-          <SectionHeader title="Alocação por classe" subtitle="Distribuição do patrimônio entre classes de ativos" />
+      <div className="border-border bg-surface rounded-xl border p-5">
+        <SectionHeader title="Alocação por classe" subtitle="Distribuição do patrimônio entre classes de ativos" />
+        {!data || data.allocations.length === 0 ? (
+          <ChartEmptyState message="Nenhuma posição em carteira" />
+        ) : (
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
-            {/* Donut chart */}
             <div className="mx-auto w-full max-w-[220px] shrink-0 lg:mx-0" style={{ height: 220 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -123,8 +125,6 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
                 </PieChart>
               </ResponsiveContainer>
             </div>
-
-            {/* Bars + legend */}
             <div className="flex flex-1 flex-col gap-3">
               {ASSET_CLASS_ORDER
                 .map((cls) => data.allocations.find((a) => a.assetClass === cls))
@@ -151,11 +151,11 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
                 ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Evolution chart */}
-      {evolution.data && <AnalyticsInvestmentEvolutionChart data={evolution.data} />}
+      <AnalyticsInvestmentEvolutionChart data={evolution.data ?? { data: [], returnPct: null, cumulativeDividends: 0 }} />
     </div>
   );
 }

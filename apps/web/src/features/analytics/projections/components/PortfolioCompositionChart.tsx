@@ -11,6 +11,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { PortfolioCompositionProjectionResponse } from "@/lib/types/analytics.types";
 
@@ -87,6 +88,18 @@ export function PortfolioCompositionChart({ data }: Props) {
   const totalCurrentValue = lastHistorical
     ? lastHistorical.breakdown.reduce((s, b) => s + b.value, 0)
     : 0;
+
+  if (data.data.length === 0) {
+    return (
+      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
+        <SectionHeader
+          title="Composição Futura da Carteira"
+          subtitle="Distribuição histórica por classe de ativo e projeção para os próximos meses"
+        />
+        <ChartEmptyState message="Sem dados de carteira para o período" />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border bg-surface flex flex-col rounded-xl border p-5">

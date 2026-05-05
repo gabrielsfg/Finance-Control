@@ -12,6 +12,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { NetWorthProjectionResponse } from "@/lib/types/analytics.types";
 
@@ -80,6 +81,18 @@ export function ProjectedNetWorthChart({ data }: Props) {
 
   const projected24 = data.projected[data.projected.length - 1]?.netWorth ?? currentNetWorth;
   const isNegative = monthlyAvgGrowth < 0;
+
+  if (chartData.length === 0) {
+    return (
+      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
+        <SectionHeader
+          title="Projeção de Patrimônio"
+          subtitle="Histórico real e projeção baseada no crescimento médio mensal"
+        />
+        <ChartEmptyState message="Sem histórico para calcular projeção" />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border bg-surface flex flex-col rounded-xl border p-5">

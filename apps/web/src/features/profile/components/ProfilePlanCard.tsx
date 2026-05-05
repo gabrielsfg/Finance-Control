@@ -2,7 +2,6 @@
 
 import { Zap, Check } from "lucide-react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
-import type { UserProfile } from "@/lib/types/profile.types";
 
 const FREE_FEATURES = [
   "Até 3 contas bancárias",
@@ -20,17 +19,14 @@ const PREMIUM_FEATURES = [
   "Exportação de dados",
 ];
 
-type Props = { profile: UserProfile };
-
-export const ProfilePlanCard = ({ profile }: Props) => {
-  const isPremium = profile.plan === "Premium";
+export const ProfilePlanCard = () => {
+  const isPremium = false;
 
   return (
     <div className="border-border bg-surface rounded-xl border p-5">
       <SectionHeader title="Plano" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {/* Free */}
         <div className={`rounded-xl border p-4 ${!isPremium ? "border-green/40 bg-green/5" : "border-border bg-surface2"}`}>
           <div className="mb-3 flex items-center justify-between">
             <p className="font-display font-700 text-text text-[16px]">Free</p>
@@ -47,7 +43,6 @@ export const ProfilePlanCard = ({ profile }: Props) => {
           </ul>
         </div>
 
-        {/* Premium */}
         <div className={`rounded-xl border p-4 ${isPremium ? "border-purple/40 bg-purple/5" : "border-border bg-surface2"}`}>
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-1.5">

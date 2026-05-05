@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { InvestmentPortfolio } from "@/lib/types/investments.types";
 
@@ -28,6 +29,15 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const onMouseEnter = useCallback((_: any, i: number) => setActiveIndex(i), []);
   const onMouseLeave = useCallback(() => setActiveIndex(undefined), []);
+
+  if (summary.allocations.length === 0) {
+    return (
+      <div className="border-border bg-surface sticky top-5 flex flex-col rounded-xl border p-5">
+        <SectionHeader title="Alocação por Classe" subtitle="Distribuição atual da carteira" />
+        <ChartEmptyState message="Nenhuma posição em carteira" />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border bg-surface sticky top-5 flex flex-col rounded-xl border p-5">

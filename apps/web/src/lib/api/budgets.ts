@@ -13,7 +13,7 @@ export const budgetsApi = {
   },
 
   update: async (id: number, data: UpdateBudgetRequest): Promise<Budget[]> => {
-    const res = await api.put<Budget[]>(`/budget/${id}`, data);
+    const res = await api.patch<Budget[]>(`/budget/${id}`, data);
     return res.data;
   },
 

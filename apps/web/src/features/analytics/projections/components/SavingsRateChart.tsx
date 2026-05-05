@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import type { MonthlyData } from "@/lib/types/analytics.types";
 
 const RECOMMENDED_RATE = 20;
@@ -57,6 +58,18 @@ export function SavingsRateChart({ data }: Props) {
 
   const TrendIcon = trend > 1 ? TrendingUp : trend < -1 ? TrendingDown : Minus;
   const trendColor = trend > 1 ? "var(--green)" : trend < -1 ? "var(--red)" : "var(--text-muted)";
+
+  if (chartData.length === 0) {
+    return (
+      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
+        <SectionHeader
+          title="Evolução da Taxa de Poupança"
+          subtitle="Percentual da renda que está sendo poupado a cada mês"
+        />
+        <ChartEmptyState message="Sem receitas registradas no período" />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border bg-surface flex flex-col rounded-xl border p-5">

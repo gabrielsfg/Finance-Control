@@ -11,11 +11,11 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
 } from "recharts";
 import { api } from "@/lib/api/axios";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 
 type IncomeExpenseItem = {
   month: number;
@@ -26,20 +26,7 @@ type IncomeExpenseItem = {
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-const MOCK_EVOLUTION: IncomeExpenseItem[] = [
-  { month: 10, year: 2025, totalIncome: 820000, totalExpense: 510000 },
-  { month: 11, year: 2025, totalIncome: 870000, totalExpense: 490000 },
-  { month: 12, year: 2025, totalIncome: 950000, totalExpense: 620000 },
-  { month: 1,  year: 2026, totalIncome: 880000, totalExpense: 530000 },
-  { month: 2,  year: 2026, totalIncome: 900000, totalExpense: 470000 },
-  { month: 3,  year: 2026, totalIncome: 920000, totalExpense: 505000 },
-  { month: 4,  year: 2026, totalIncome: 980000, totalExpense: 482050 },
-];
-
-const USE_MOCK = true;
-
 const fetchMonthlyEvolution = async (): Promise<IncomeExpenseItem[]> => {
-  if (USE_MOCK) return Promise.resolve(MOCK_EVOLUTION);
   const now = new Date();
   const startDate = format(startOfMonth(subMonths(now, 6)), "yyyy-MM-dd");
   const finishDate = format(endOfMonth(now), "yyyy-MM-dd");
@@ -86,6 +73,8 @@ export const MonthlyEvolutionChart = () => {
         <div className="flex flex-1 items-center justify-center">
           <Loader2 size={18} className="text-green animate-spin" />
         </div>
+      ) : chartData.length === 0 ? (
+        <ChartEmptyState message="Nenhuma movimentação no período" />
       ) : (
         <>
           <div className="w-full flex-1" style={{ minHeight: 200 }}>

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
+import { PieChart as PieChartIcon } from "lucide-react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDateMonth } from "@/lib/utils/formatDate";
@@ -53,6 +54,18 @@ export const CategoryDonutChart = ({ categories }: Props) => {
 
   const onMouseEnter = useCallback((_: any, index: number) => setActiveIndex(index), []);
   const onMouseLeave = useCallback(() => setActiveIndex(undefined), []);
+
+  if (data.length === 0) {
+    return (
+      <div className="border-border bg-surface flex h-full flex-col rounded-xl border p-5">
+        <SectionHeader title="Gastos por Categoria" subtitle={formatDateMonth(new Date())} />
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8">
+          <PieChartIcon size={32} className="text-text-muted opacity-40" />
+          <p className="text-text-muted text-[13px]">Nenhum gasto registrado este mês</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-border bg-surface flex h-full flex-col rounded-xl border p-5">

@@ -169,9 +169,7 @@ export function AnalyticsPage() {
       {activeTab === "patrimonio" && (
         <div className="flex flex-col gap-4">
           <AnalyticsNetWorthChart data={netWorth.data ?? []} />
-          {balanceEvolution.data && balanceEvolution.data.length > 0 && (
-            <BalanceEvolutionChart data={balanceEvolution.data} />
-          )}
+          <BalanceEvolutionChart data={balanceEvolution.data ?? []} />
         </div>
       )}
 
@@ -204,36 +202,18 @@ export function AnalyticsPage() {
       {/* Tab: Projeções */}
       {activeTab === "projecoes" && (
         <div className="flex flex-col gap-5">
-          {netWorthProjection.data && (
-            <ProjectedNetWorthChart data={netWorthProjection.data} />
-          )}
-          {portfolioComposition.data && (
-            <PortfolioCompositionChart data={portfolioComposition.data} />
-          )}
-          {realNetWorth.data && (
-            <RealNetWorthChart data={realNetWorth.data} />
-          )}
-          {passiveIncome.data && (
-            <PassiveIncomeChart data={passiveIncome.data} />
-          )}
-          {monthly.data && monthly.data.length > 0 && (
-            <SavingsRateChart data={monthly.data} />
-          )}
+          <ProjectedNetWorthChart data={netWorthProjection.data ?? { historical: [], projected: [], currentNetWorth: 0, monthlyAvgGrowth: 0, monthsUntilZero: null, monthsUntilTarget: null, targetAmount: null }} />
+          <PortfolioCompositionChart data={portfolioComposition.data ?? { data: [], assetClasses: [] }} />
+          <RealNetWorthChart data={realNetWorth.data ?? { points: [], totalNominalGrowthPct: 0, totalRealGrowthPct: 0, totalInflationPct: 0 }} />
+          <PassiveIncomeChart data={passiveIncome.data ?? { history: [], projected: [], currentMonthlyPassiveIncome: 0, projectedAnnualPassiveIncome: 0, monthlyLivingCost: 0, coveragePercent: 0, monthsUntilFinancialFreedom: null }} />
+          <SavingsRateChart data={monthly.data ?? []} />
           {categoryProjection.data && categoryProjection.data.length > 0 && (
             <ProjectedSpendingHeatmap data={categoryProjection.data} />
           )}
-          {milestones.data && (
-            <FinancialTimelineChart data={milestones.data} />
-          )}
-          {balanceProjection.data && (
-            <BalanceProjectionChart data={balanceProjection.data} />
-          )}
-          {futureCommitments.data && futureCommitments.data.length > 0 && (
-            <FutureCommitmentsChart data={futureCommitments.data} />
-          )}
-          {commitmentsImpact.data && commitmentsImpact.data.months.length > 0 && (
-            <CommitmentsImpactChart data={commitmentsImpact.data} />
-          )}
+          <FinancialTimelineChart data={milestones.data ?? { timeline: [], milestones: [] }} />
+          <BalanceProjectionChart data={balanceProjection.data ?? { actual: [], projected: [], projectedBalance: 0, currentBalance: 0, dailyAvgIncome: 0, dailyAvgExpense: 0 }} />
+          <FutureCommitmentsChart data={futureCommitments.data ?? []} />
+          <CommitmentsImpactChart data={commitmentsImpact.data ?? { months: [] }} />
         </div>
       )}
     </div>

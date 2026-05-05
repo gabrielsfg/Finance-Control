@@ -1,21 +1,38 @@
-import { useQuery } from "@tanstack/react-query";
-import type { UserProfile } from "@/lib/types/profile.types";
-
-const MOCK_PROFILE: UserProfile = {
-  id: "usr_001",
-  name: "Gabriel Silva",
-  email: "gabriel@email.com",
-  plan: "Free",
-  createdAt: "2024-01-15",
-  currency: "BRL",
-  language: "pt-BR",
-  notificationsEnabled: true,
-};
-
-const USE_MOCK = true;
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { profileApi } from "@/lib/api/profile";
+import type { UpdateProfileRequest, UpdatePreferencesRequest, ResetDataRequest } from "@/lib/types/profile.types";
 
 export const useProfile = () =>
-  useQuery<UserProfile>({
+  useQuery({
     queryKey: ["profile"],
-    queryFn: () => USE_MOCK ? Promise.resolve(MOCK_PROFILE) : Promise.resolve(MOCK_PROFILE),
+    queryFn: profileApi.get,
+    staleTime: 60_000,
+  });
+
+export const useUpdateProfile = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: UpdateProfileRequest) => profileApi.update(data),
+    onSuccess: (updated) => queryClient.setQueryData(["profile"], updated),
+  });
+};
+
+export const usePreferences = () =>
+  useQuery({
+    queryKey: ["preferences"],
+    queryFn: profileApi.getPreferences,
+    staleTime: 60_000,
+  });
+
+export const useUpdatePreferences = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: UpdatePreferencesRequest) => profileApi.updatePreferences(data),
+    onSuccess: (updated) => queryClient.setQueryData(["preferences"], updated),
+  });
+};
+
+export const useResetData = () =>
+  useMutation({
+    mutationFn: (data: ResetDataRequest) => profileApi.resetData(data),
   });

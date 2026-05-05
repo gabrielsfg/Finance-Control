@@ -12,6 +12,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import { useInvestmentLaunches } from "@/features/analytics/hooks/useAnalytics";
@@ -141,39 +142,45 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
           title="Volume por mês"
           subtitle="Valor total de compras e vendas nos últimos 7 meses"
         />
-        <div style={{ height: 240 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={monthPoints} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="30%">
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "JetBrains Mono" }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => formatCurrencyCompact(v / 100)}
-                width={64}
-              />
-              <Tooltip content={<BarTooltip />} cursor={{ fill: "var(--surface2)" }} />
-              <Bar dataKey="bought" name="Comprado" fill="var(--green)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="sold"   name="Vendido"  fill="var(--red)"   radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="mt-3 flex gap-4">
-          <div className="flex items-center gap-1.5">
-            <div className="bg-green h-2.5 w-2.5 rounded-[2px]" />
-            <span className="text-text-muted text-[13px]">Comprado</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="bg-red h-2.5 w-2.5 rounded-[2px]" />
-            <span className="text-text-muted text-[13px]">Vendido</span>
-          </div>
-        </div>
+        {monthPoints.length === 0 ? (
+          <ChartEmptyState message="Sem operações no período" />
+        ) : (
+          <>
+            <div style={{ height: 240 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthPoints} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "JetBrains Mono" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => formatCurrencyCompact(v / 100)}
+                    width={64}
+                  />
+                  <Tooltip content={<BarTooltip />} cursor={{ fill: "var(--surface2)" }} />
+                  <Bar dataKey="bought" name="Comprado" fill="var(--green)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="sold"   name="Vendido"  fill="var(--red)"   radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-3 flex gap-4">
+              <div className="flex items-center gap-1.5">
+                <div className="bg-green h-2.5 w-2.5 rounded-[2px]" />
+                <span className="text-text-muted text-[13px]">Comprado</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="bg-red h-2.5 w-2.5 rounded-[2px]" />
+                <span className="text-text-muted text-[13px]">Vendido</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Launches table */}

@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { ProjectionPoint } from "@/lib/types/analytics.types";
 
@@ -31,6 +32,15 @@ type Props = { data: ProjectionPoint[] };
 
 export const AnalyticsProjectionsChart = ({ data }: Props) => {
   const last = data[data.length - 1];
+
+  if (data.length === 0) {
+    return (
+      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
+        <SectionHeader title="Projeções Patrimoniais" subtitle="Cenários para os próximos 3 anos (baseado na poupança mensal média)" />
+        <ChartEmptyState message="Sem dados suficientes para calcular projeções" />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border bg-surface flex flex-col rounded-xl border p-5">

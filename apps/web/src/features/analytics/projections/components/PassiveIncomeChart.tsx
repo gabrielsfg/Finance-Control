@@ -12,6 +12,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { useGoals } from "@/features/goals/hooks/useGoals";
 import type { PassiveIncomeProjectionResponse } from "@/lib/types/analytics.types";
@@ -103,7 +104,7 @@ export function PassiveIncomeChart({ data }: Props) {
     livingCost:       p.livingCost,
   }));
 
-  const chartData = [
+  const chartData = data.history.length === 0 ? [] : [
     ...histPoints,
     {
       label:            toLabel(joinH.year, joinH.month),
@@ -113,6 +114,18 @@ export function PassiveIncomeChart({ data }: Props) {
     },
     ...projPoints,
   ];
+
+  if (chartData.length === 0) {
+    return (
+      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
+        <SectionHeader
+          title="Renda Passiva vs. Custo de Vida"
+          subtitle="Evolução dos dividendos e projeção até a independência financeira"
+        />
+        <ChartEmptyState message="Sem dividendos registrados para exibir" />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border bg-surface flex flex-col rounded-xl border p-5">

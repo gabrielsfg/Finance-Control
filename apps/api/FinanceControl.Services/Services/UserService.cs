@@ -290,8 +290,24 @@ namespace FinanceControl.Services.Services
             var areas = _context.Areas.Where(a => a.UserId == userId);
             _context.Areas.RemoveRange(areas);
 
+            var investmentDividends = _context.InvestmentDividends.Where(d => d.UserId == userId);
+            _context.InvestmentDividends.RemoveRange(investmentDividends);
+
+            var investmentTransactions = _context.InvestmentTransactions.Where(t => t.UserId == userId);
+            _context.InvestmentTransactions.RemoveRange(investmentTransactions);
+
+            var investments = _context.Investments.Where(i => i.UserId == userId);
+            _context.Investments.RemoveRange(investments);
+
             var accounts = _context.Accounts.Where(a => a.UserId == userId);
             _context.Accounts.RemoveRange(accounts);
+
+            var goalCheckpoints = _context.GoalCheckpoints
+                .Where(gc => _context.Goals.Any(g => g.Id == gc.GoalId && g.UserId == userId));
+            _context.GoalCheckpoints.RemoveRange(goalCheckpoints);
+
+            var goals = _context.Goals.Where(g => g.UserId == userId);
+            _context.Goals.RemoveRange(goals);
 
             var subCategories = _context.SubCategories.Where(s => s.UserId == userId);
             _context.SubCategories.RemoveRange(subCategories);

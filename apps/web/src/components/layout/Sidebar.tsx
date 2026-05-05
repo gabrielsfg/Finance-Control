@@ -11,6 +11,7 @@ import {
   Clock,
   BarChart3,
   Target,
+  Tag,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/budgets", label: "Orçamentos", icon: Clock },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/goals", label: "Metas", icon: Target },
+  { href: "/categories", label: "Categorias", icon: Tag },
   { href: "/profile", label: "Perfil", icon: Settings },
 ];
 

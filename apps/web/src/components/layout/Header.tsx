@@ -1,8 +1,9 @@
 "use client";
 
-import { Bell, Plus, Search, Sun, Moon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Bell, Plus, Sun, Moon } from "lucide-react";
+import Link from "next/link";
 import { useUIStore } from "@/lib/stores/uiStore";
+import { GlobalSearch } from "./GlobalSearch";
 
 export const Header = () => {
   const { theme, toggleTheme } = useUIStore();
@@ -10,14 +11,7 @@ export const Header = () => {
   return (
     <header className="border-border bg-surface flex h-14 shrink-0 items-center gap-3 border-b px-6">
       {/* Search */}
-      <div className="border-border bg-surface2 text-text-muted focus-within:border-green flex flex-1 items-center gap-2 rounded-[8px] border px-3 py-2 transition-colors">
-        <Search size={14} strokeWidth={1.75} />
-        <input
-          type="text"
-          placeholder="Buscar transações, contas..."
-          className="text-text placeholder:text-text-muted flex-1 bg-transparent font-sans text-[14px] focus:outline-none"
-        />
-      </div>
+      <GlobalSearch />
 
       <div className="flex items-center gap-2">
         {/* Date badge */}
@@ -49,10 +43,13 @@ export const Header = () => {
         </button>
 
         {/* CTA */}
-        <Button size="sm" className="bg-green font-600 hover:bg-green/90 gap-1.5 text-black">
+        <Link
+          href="/transactions?new=1"
+          className="bg-green hover:bg-green/90 font-600 inline-flex h-7 items-center gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium text-black transition-colors"
+        >
           <Plus size={14} strokeWidth={2} />
           <span className="hidden sm:inline">Nova</span>
-        </Button>
+        </Link>
       </div>
     </header>
   );

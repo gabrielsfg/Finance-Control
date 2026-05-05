@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { NetWorthPoint } from "@/lib/types/analytics.types";
 
@@ -26,6 +27,15 @@ type Props = { data: NetWorthPoint[] };
 export const AnalyticsNetWorthChart = ({ data }: Props) => {
   const latest = data[data.length - 1];
 
+  if (data.length === 0) {
+    return (
+      <div className="border-border bg-surface rounded-xl border p-5">
+        <SectionHeader title="Evolução Patrimonial" subtitle="Patrimônio líquido, ativos e passivos (últimos 7 meses)" />
+        <ChartEmptyState message="Sem dados patrimoniais para o período" />
+      </div>
+    );
+  }
+
   return (
     <div className="border-border bg-surface rounded-xl border p-5">
       <SectionHeader title="Evolução Patrimonial" subtitle="Patrimônio líquido, ativos e passivos (últimos 7 meses)" />
@@ -34,15 +44,15 @@ export const AnalyticsNetWorthChart = ({ data }: Props) => {
         <div className="bg-surface2 mb-5 grid grid-cols-3 gap-3 rounded-xl p-4">
           <div>
             <p className="text-text-muted text-[12px]">Patrimônio líquido</p>
-            <p className="font-money font-600 text-green text-[18px]">{formatCurrency(latest.netWorth / 100)}</p>
+            <p className="font-money font-600 text-green text-[18px]">{formatCurrency((latest.netWorth ?? 0) / 100)}</p>
           </div>
           <div>
             <p className="text-text-muted text-[12px]">Total de ativos</p>
-            <p className="font-money font-600 text-text text-[18px]">{formatCurrency(latest.assets / 100)}</p>
+            <p className="font-money font-600 text-text text-[18px]">{formatCurrency((latest.assets ?? 0) / 100)}</p>
           </div>
           <div>
             <p className="text-text-muted text-[12px]">Total de passivos</p>
-            <p className="font-money font-600 text-red text-[18px]">{formatCurrency(latest.liabilities / 100)}</p>
+            <p className="font-money font-600 text-red text-[18px]">{formatCurrency((latest.liabilities ?? 0) / 100)}</p>
           </div>
         </div>
       )}

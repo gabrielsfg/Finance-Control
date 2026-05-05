@@ -10,6 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { RealNetWorthResponse } from "@/lib/types/analytics.types";
 
@@ -80,6 +81,18 @@ export function RealNetWorthChart({ data }: Props) {
   }));
 
   const realIsNegative = totalRealGrowthPct < 0;
+
+  if (chartData.length === 0) {
+    return (
+      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
+        <SectionHeader
+          title="Patrimônio Real vs Inflação"
+          subtitle="Evolução do patrimônio nominal e deflacionado pelo IPCA"
+        />
+        <ChartEmptyState message="Sem dados patrimoniais para o período" />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border bg-surface flex flex-col rounded-xl border p-5">

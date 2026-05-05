@@ -11,6 +11,7 @@ import {
   Legend,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import {
   useInvestmentProfitabilityTotals,
   useInvestmentAnnualReturns,
@@ -114,56 +115,62 @@ export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: {
           title="Carteira vs CDI"
           subtitle="Rentabilidade mensal da carteira comparada ao CDI"
         />
-        <div style={{ height: 260 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "JetBrains Mono" }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => v.toFixed(2) + "%"}
-                width={58}
-              />
-              <Tooltip content={<VsCdiTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />
-              <Line
-                type="monotone"
-                dataKey="portfolioPct"
-                name="Carteira"
-                stroke="var(--green)"
-                strokeWidth={2}
-                dot={{ r: 3, fill: "var(--green)" }}
-                activeDot={{ r: 5 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="cdiPct"
-                name="CDI"
-                stroke="var(--blue)"
-                strokeWidth={2}
-                strokeDasharray="5 3"
-                dot={{ r: 3, fill: "var(--blue)" }}
-                activeDot={{ r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="mt-3 flex gap-4">
-          <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-[2px] bg-green" />
-            <span className="text-text-muted text-[13px]">Carteira</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-[2px] bg-blue" />
-            <span className="text-text-muted text-[13px]">CDI</span>
-          </div>
-        </div>
+        {chartData.length === 0 ? (
+          <ChartEmptyState message="Sem dados de rentabilidade no período" />
+        ) : (
+          <>
+            <div style={{ height: 260 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "JetBrains Mono" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => v.toFixed(2) + "%"}
+                    width={58}
+                  />
+                  <Tooltip content={<VsCdiTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />
+                  <Line
+                    type="monotone"
+                    dataKey="portfolioPct"
+                    name="Carteira"
+                    stroke="var(--green)"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "var(--green)" }}
+                    activeDot={{ r: 5 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="cdiPct"
+                    name="CDI"
+                    stroke="var(--blue)"
+                    strokeWidth={2}
+                    strokeDasharray="5 3"
+                    dot={{ r: 3, fill: "var(--blue)" }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-3 flex gap-4">
+              <div className="flex items-center gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-[2px] bg-green" />
+                <span className="text-text-muted text-[13px]">Carteira</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-[2px] bg-blue" />
+                <span className="text-text-muted text-[13px]">CDI</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Tabela de rentabilidade anual */}

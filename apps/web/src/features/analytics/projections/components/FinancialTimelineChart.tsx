@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Flag, TrendingUp, Coins, Star, Flame, Trophy } from "lucide-react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { FinancialMilestonesResponse, FinancialMilestone } from "@/lib/types/analytics.types";
 
@@ -82,6 +83,18 @@ export function FinancialTimelineChart({ data }: Props) {
     const y = netWorthByLabel.get(label) ?? m.netWorthAtDate;
     return { ...m, chartLabel: label, chartY: y };
   });
+
+  if (chartData.length === 0) {
+    return (
+      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
+        <SectionHeader
+          title="Linha da Vida Financeira"
+          subtitle="Evolução completa do patrimônio com marcos da sua jornada"
+        />
+        <ChartEmptyState message="Sem histórico patrimonial para exibir" />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border bg-surface flex flex-col rounded-xl border p-5">

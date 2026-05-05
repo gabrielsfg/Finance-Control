@@ -22,6 +22,7 @@ namespace FinanceControl.Services.Extensions
             services.AddScoped<IGoalService, GoalService>();
             services.AddScoped<IAnalyticsService, AnalyticsService>();
             services.AddScoped<IInvestmentService, InvestmentService>();
+            services.AddScoped<ISimulationService, SimulationService>();
             services.AddHttpClient();
             // ICurrencyService / CurrencyService registered via AddHttpClient in Program.cs
 

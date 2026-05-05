@@ -1,12 +1,28 @@
-export type UserPlan = "Free" | "Premium";
-
 export type UserProfile = {
-  id: string;
+  id: number;
   name: string;
   email: string;
-  plan: UserPlan;
-  createdAt: string;
-  currency: string;
-  language: string;
-  notificationsEnabled: boolean;
+};
+
+export type UpdateProfileRequest = {
+  name?: string;
+  email?: string;
+};
+
+export type UserPreferences = {
+  currencyCode: string;
+  locale: string;
+  country: string | null;
+  analyticsConfig: string;
+};
+
+export type UpdatePreferencesRequest = {
+  currencyCode?: string;
+  locale?: string;
+  country?: string;
+  analyticsConfig?: string;
+};
+
+export type ResetDataRequest = {
+  password: string;
 };

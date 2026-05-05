@@ -47,7 +47,7 @@ export function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(() => searchParams.get("new") === "1");
   const [editTarget, setEditTarget] = useState<TransactionItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TransactionItem | null>(null);
 

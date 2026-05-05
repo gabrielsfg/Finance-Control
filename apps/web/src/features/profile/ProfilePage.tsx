@@ -3,6 +3,8 @@
 import { Loader2 } from "lucide-react";
 import { ProfileInfoCard } from "@/features/profile/components/ProfileInfoCard";
 import { ProfilePlanCard } from "@/features/profile/components/ProfilePlanCard";
+import { ProfilePreferencesCard } from "@/features/profile/components/ProfilePreferencesCard";
+import { ProfileDangerZoneCard } from "@/features/profile/components/ProfileDangerZoneCard";
 import { useProfile } from "@/features/profile/hooks/useProfile";
 
 export function ProfilePage() {
@@ -33,7 +35,12 @@ export function ProfilePage() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <ProfileInfoCard profile={profile} />
-        <ProfilePlanCard profile={profile} />
+        <ProfilePlanCard />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <ProfilePreferencesCard />
+        <ProfileDangerZoneCard />
       </div>
     </div>
   );

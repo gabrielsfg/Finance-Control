@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { CommitmentsImpactResponse } from "@/lib/types/analytics.types";
 
@@ -26,7 +27,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 type Props = { data: CommitmentsImpactResponse };
 
 export function CommitmentsImpactChart({ data }: Props) {
-  if (data.months.length === 0) return null;
+  if (data.months.length === 0) {
+    return (
+      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
+        <SectionHeader
+          title="Impacto dos Compromissos"
+          subtitle="Receita projetada vs. comprometimentos nos próximos meses"
+        />
+        <ChartEmptyState message="Sem transações recorrentes cadastradas" />
+      </div>
+    );
+  }
 
   const chartData = data.months.map((m) => ({
     label: `${MONTH_LABELS[m.month - 1]}/${String(m.year).slice(2)}`,

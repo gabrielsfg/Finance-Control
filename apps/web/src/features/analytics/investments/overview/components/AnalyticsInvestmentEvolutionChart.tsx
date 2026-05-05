@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { InvestmentEvolutionResponse } from "@/lib/types/analytics.types";
 
@@ -34,6 +35,15 @@ export const AnalyticsInvestmentEvolutionChart = ({ data: response }: Props) => 
   const { data, returnPct, cumulativeDividends } = response;
   const latest = data[data.length - 1];
   const totalDividends = cumulativeDividends > 0 ? cumulativeDividends : null;
+
+  if (data.length === 0) {
+    return (
+      <div className="border-border bg-surface rounded-xl border p-5">
+        <SectionHeader title="Evolução dos Investimentos" subtitle="Capital investido, valor atual, rendimento e dividendos (últimos 7 meses)" />
+        <ChartEmptyState message="Sem movimentações de investimento no período" />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border bg-surface rounded-xl border p-5">
