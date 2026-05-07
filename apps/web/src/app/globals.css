@@ -27,6 +27,7 @@
   --color-accent-foreground: var(--text);
   --color-destructive: var(--red);
   --color-border: var(--border-color);
+  --color-border-light: var(--border-light);
   --color-input: var(--surface2);
   --color-ring: var(--green);
 

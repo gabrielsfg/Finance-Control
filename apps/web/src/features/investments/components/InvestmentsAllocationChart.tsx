@@ -39,11 +39,13 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
     );
   }
 
+  const totalLabel = formatCurrency(summary.currentValue / 100);
+
   return (
     <div className="border-border bg-surface sticky top-5 flex flex-col rounded-xl border p-5">
       <SectionHeader title="Alocação por Classe" subtitle="Distribuição atual da carteira" />
 
-      <div className="w-full" style={{ height: 180 }}>
+      <div className="relative w-full" style={{ height: 200 }}>
         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <PieChart>
             <Pie
@@ -52,8 +54,8 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
               nameKey="assetClass"
               cx="50%"
               cy="50%"
-              innerRadius={45}
-              outerRadius={70}
+              innerRadius={55}
+              outerRadius={80}
               paddingAngle={2}
               strokeWidth={0}
               activeIndex={activeIndex}
@@ -68,6 +70,11 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
             <Tooltip content={<CustomTooltip />} />
           </PieChart>
         </ResponsiveContainer>
+        {/* Center label */}
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="font-money font-600 text-text text-[13px] leading-none">{totalLabel}</span>
+          <span className="text-text-muted mt-0.5 text-[10px]">total</span>
+        </div>
       </div>
 
       <div className="mt-3 flex flex-col gap-2">

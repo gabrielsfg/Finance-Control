@@ -10,6 +10,9 @@ import {
   Trash2,
   Tag,
   FolderOpen,
+  ArrowDown,
+  ArrowUp,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getCategoryColor } from "@/lib/config/categoryColors";
@@ -76,10 +79,29 @@ export function CategoriesPage() {
               {total} subcategori{total !== 1 ? "as" : "a"}
             </p>
           </div>
-          <Button size="sm" onClick={() => setShowCreateCategory(true)}>
-            <Plus size={14} />
+          <Button size="xl" onClick={() => setShowCreateCategory(true)}>
+            <Plus />
             Nova categoria
           </Button>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Categorias", value: userCategories.length, icon: Layers, color: "text-purple", bg: "bg-purple/10" },
+            { label: "Subcategorias", value: total, icon: Tag, color: "text-blue", bg: "bg-blue/10" },
+            { label: "Sem subcategorias", value: userCategories.filter((c) => c.subCategories.length === 0).length, icon: FolderOpen, color: "text-text-muted", bg: "bg-surface2" },
+          ].map(({ label, value, icon: Icon, color, bg }) => (
+            <div key={label} className="border-border bg-surface flex items-center gap-3 rounded-xl border p-4">
+              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${bg}`}>
+                <Icon size={16} className={color} strokeWidth={1.75} />
+              </div>
+              <div>
+                <p className="text-text-muted text-[11px]">{label}</p>
+                <p className="font-mono font-600 text-text text-[20px] leading-tight">{value}</p>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* List */}
@@ -120,18 +142,29 @@ export function CategoriesPage() {
                     </button>
 
                     <div
-                      className="h-3 w-3 shrink-0 rounded-full"
-                      style={{ backgroundColor: color }}
-                    />
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px]"
+                      style={{ backgroundColor: color + "25" }}
+                    >
+                      <div
+                        className="h-3 w-3 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                    </div>
 
                     <span
-                      className="font-500 text-text text-[15px] flex-1 cursor-pointer select-none"
+                      className="font-500 text-text text-[14px] flex-1 cursor-pointer select-none"
                       onClick={() => toggleExpand(category.id)}
                     >
                       {category.name}
                     </span>
 
-                    <span className="text-text-muted text-[12px] mr-2">
+                    <span
+                      className="font-mono text-text-muted mr-1 text-[11px]"
+                    >
+                      {color}
+                    </span>
+
+                    <span className="text-text-muted text-[12px] mr-1">
                       {category.subCategories.length} sub
                     </span>
 

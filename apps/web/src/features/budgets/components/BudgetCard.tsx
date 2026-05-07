@@ -121,9 +121,29 @@ const AreaRow = ({ group }: { group: AreaGroup }) => {
 type Props = {
   budget: Budget;
   onEdit: (budget: Budget) => void;
+  inactive?: boolean;
 };
 
-export const BudgetCard = ({ budget, onEdit }: Props) => {
+function StatusBadge({ pct, isActive }: { pct: number; isActive: boolean }) {
+  if (!isActive) return null;
+  if (pct > 100) return (
+    <span className="bg-red/12 text-red shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+      Estourado
+    </span>
+  );
+  if (pct > 80) return (
+    <span className="bg-orange/12 text-orange shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+      Atenção
+    </span>
+  );
+  return (
+    <span className="bg-green/15 text-green shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+      Normal
+    </span>
+  );
+}
+
+export const BudgetCard = ({ budget, onEdit, inactive = false }: Props) => {
   const [expanded, setExpanded] = useState(false);
   const activate = useActivateBudget();
   const isOver = budget.spentPercentage > 100;
@@ -134,6 +154,7 @@ export const BudgetCard = ({ budget, onEdit }: Props) => {
     <div className={cn(
       "border-border bg-surface rounded-xl border p-5",
       budget.isActive && "ring-1 ring-green/30",
+      inactive && "opacity-60",
     )}>
       {/* Header: title + subtitle + active badge + action buttons */}
       <div className="mb-4 flex items-start justify-between gap-3">
@@ -145,6 +166,7 @@ export const BudgetCard = ({ budget, onEdit }: Props) => {
                 Ativo
               </span>
             )}
+            <StatusBadge pct={budget.spentPercentage} isActive={budget.isActive} />
           </div>
           <p className="text-text-muted mt-0.5 text-[12px]">
             {RECURRENCE_LABELS[budget.recurrence] ?? budget.recurrence}

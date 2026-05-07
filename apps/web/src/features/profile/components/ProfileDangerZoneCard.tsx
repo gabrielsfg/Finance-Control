@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { TriangleAlert, Eye, EyeOff } from "lucide-react";
-import { SectionHeader } from "@/components/shared/SectionHeader";
 import { useResetData } from "@/features/profile/hooks/useProfile";
 import { useAuthStore } from "@/lib/stores/authStore";
 
 const inputCls =
-  "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-red/60 transition-colors";
+  "border-red/30 bg-red/5 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-red/60 transition-colors";
 
 export const ProfileDangerZoneCard = () => {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -24,17 +23,12 @@ export const ProfileDangerZoneCard = () => {
       return;
     }
     setError(null);
-
     resetData(
       { password },
       {
-        onSuccess: () => {
-          logout();
-        },
-        onError: () => {
-          setError("Senha incorreta. Tente novamente.");
-        },
-      }
+        onSuccess: () => logout(),
+        onError: () => setError("Senha incorreta. Tente novamente."),
+      },
     );
   };
 
@@ -46,31 +40,30 @@ export const ProfileDangerZoneCard = () => {
   };
 
   return (
-    <div className="border-red/30 bg-surface rounded-xl border p-5">
-      <SectionHeader title="Zona de Perigo" />
+    <div className="rounded-2xl border border-red/40 bg-red/5 p-5">
+      <p className="text-[11px] font-semibold tracking-widest text-red uppercase mb-3">
+        Zona de Perigo
+      </p>
 
-      <div className="flex flex-col gap-4">
-        <div className="bg-red/5 border-red/20 rounded-lg border p-4">
-          <div className="mb-2 flex items-center gap-2">
-            <TriangleAlert size={14} className="text-red shrink-0" />
+      <div className="flex flex-col gap-3">
+        <div className="rounded-lg border border-red/20 bg-red/5 p-3">
+          <div className="mb-1.5 flex items-center gap-2">
+            <TriangleAlert size={13} className="text-red shrink-0" />
             <p className="text-text text-[13px] font-medium">Resetar dados da conta</p>
           </div>
           <p className="text-text-muted text-[12px] leading-relaxed">
             Remove permanentemente todas as transações, contas, orçamentos, investimentos, metas e
-            categorias personalizadas. Sua conta de acesso é preservada e os dados padrão são
-            restaurados. Esta ação não pode ser desfeita.
+            categorias. Sua conta é preservada. Esta ação não pode ser desfeita.
           </p>
         </div>
 
         {!showConfirm ? (
-          <div className="flex justify-end">
-            <button
-              onClick={() => setShowConfirm(true)}
-              className="border-red/40 text-red hover:bg-red/10 rounded-lg border px-4 py-2 text-[13px] font-medium transition-colors"
-            >
-              Resetar dados
-            </button>
-          </div>
+          <button
+            onClick={() => setShowConfirm(true)}
+            className="border-red/40 text-red hover:bg-red/10 w-full rounded-lg border py-2 text-[13px] font-medium transition-colors"
+          >
+            Resetar dados
+          </button>
         ) : (
           <div className="flex flex-col gap-3">
             <div>
@@ -101,18 +94,18 @@ export const ProfileDangerZoneCard = () => {
               {error && <p className="text-red mt-1.5 text-[12px]">{error}</p>}
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex gap-2">
               <button
                 onClick={handleCancel}
                 disabled={isPending}
-                className="border-border text-text-sub hover:text-text rounded-lg border px-4 py-2 text-[13px] font-medium transition-colors"
+                className="border-border text-text-sub hover:text-text flex-1 rounded-lg border py-2 text-[13px] font-medium transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleReset}
                 disabled={isPending || !password.trim()}
-                className="bg-red hover:bg-red/90 disabled:opacity-50 rounded-lg px-4 py-2 text-[13px] font-medium text-white transition-colors"
+                className="bg-red hover:bg-red/90 disabled:opacity-50 flex-1 rounded-lg py-2 text-[13px] font-medium text-white transition-colors"
               >
                 {isPending ? "Resetando..." : "Confirmar reset"}
               </button>

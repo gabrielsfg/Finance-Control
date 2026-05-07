@@ -2,15 +2,17 @@
 
 import { ArrowUp, ArrowDown, Target } from "lucide-react";
 import { StatCard } from "@/components/shared/StatCard";
+import { SavingsRateCard } from "@/features/dashboard/components/SavingsRateCard";
 import type { BalanceSummary } from "@/lib/types/dashboard.types";
 
 type Props = {
   balanceSummary: BalanceSummary;
   currentMonth: string;
+  savingsRate: number;
 };
 
-export const DashboardStatsRow = ({ balanceSummary, currentMonth }: Props) => (
-  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+export const DashboardStatsRow = ({ balanceSummary, currentMonth, savingsRate }: Props) => (
+  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
     <StatCard
       label={`Receitas — ${currentMonth}`}
       value={balanceSummary.totalIncome / 100}
@@ -35,5 +37,6 @@ export const DashboardStatsRow = ({ balanceSummary, currentMonth }: Props) => (
       icon={Target}
       iconColor="#7C6FE0"
     />
+    <SavingsRateCard savingsRate={savingsRate} />
   </div>
 );

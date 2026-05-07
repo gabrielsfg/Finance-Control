@@ -22,8 +22,8 @@ export const TransactionsHeader = ({ filteredCount, filter, onFilterChange, onCr
     </div>
     <div className="flex items-center gap-2">
       <TransactionsFilters filter={filter} onChange={onFilterChange} />
-      <Button size="sm" onClick={onCreateClick}>
-        <Plus size={14} />
+      <Button size="xl" onClick={onCreateClick}>
+        <Plus />
         Nova transação
       </Button>
     </div>

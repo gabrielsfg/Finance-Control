@@ -23,6 +23,7 @@ import { BalanceProjectionChart } from "@/features/analytics/projections/compone
 import { FutureCommitmentsChart } from "@/features/analytics/projections/components/FutureCommitmentsChart";
 import { CommitmentsImpactChart } from "@/features/analytics/projections/components/CommitmentsImpactChart";
 import { AnalyticsFilters } from "@/features/analytics/components/AnalyticsFilters";
+import { TabChips } from "@/components/shared/TabChips";
 import {
   useAnalyticsSummary,
   useAnalyticsMonthly,
@@ -40,7 +41,6 @@ import {
   useBalanceProjection,
   useCommitmentsImpact,
 } from "@/features/analytics/hooks/useAnalytics";
-import { cn } from "@/lib/utils";
 import type { AnalyticsFilter } from "./types/filters.types";
 import { defaultFilter, buildDateRange } from "./utils/filterDates";
 
@@ -126,22 +126,7 @@ export function AnalyticsPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="border-border flex gap-1 rounded-xl border bg-surface p-1">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              "flex-1 rounded-[9px] py-1.5 text-[13px] font-medium transition-all",
-              activeTab === tab.id
-                ? "bg-surface2 text-text shadow-sm"
-                : "text-text-muted hover:text-text-sub",
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <TabChips items={TABS} value={activeTab} onChange={setActiveTab} />
 
       {/* Tab: Gastos */}
       {activeTab === "gastos" && (
@@ -168,6 +153,38 @@ export function AnalyticsPage() {
       {/* Tab: Patrimônio */}
       {activeTab === "patrimonio" && (
         <div className="flex flex-col gap-4">
+          {/* 3 KPI cards ABOVE the chart */}
+          {(() => {
+            const pts = netWorth.data ?? [];
+            const last = pts[pts.length - 1];
+            const prev = pts[pts.length - 2];
+            const monthGrowth = last && prev && prev.netWorth
+              ? ((last.netWorth - prev.netWorth) / Math.abs(prev.netWorth)) * 100
+              : null;
+            const first = pts[0];
+            const yearGrowth = last && first && first.netWorth
+              ? ((last.netWorth - first.netWorth) / Math.abs(first.netWorth)) * 100
+              : null;
+            const mo = monthly.data ?? [];
+            const totalInc = mo.reduce((s, m) => s + (m.totalIncome ?? 0), 0);
+            const totalExp = mo.reduce((s, m) => s + (m.totalExpenses ?? 0), 0);
+            const sr = totalInc > 0 ? ((totalInc - totalExp) / totalInc) * 100 : null;
+
+            return (
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Crescimento no mês",   value: monthGrowth !== null ? `${monthGrowth >= 0 ? "+" : ""}${monthGrowth.toFixed(1)}%` : "—", color: monthGrowth !== null && monthGrowth >= 0 ? "text-green" : "text-red" },
+                  { label: "Crescimento em 2026",   value: yearGrowth  !== null ? `${yearGrowth  >= 0 ? "+" : ""}${yearGrowth.toFixed(1)}%`  : "—", color: yearGrowth  !== null && yearGrowth  >= 0 ? "text-green" : "text-red" },
+                  { label: "Taxa de Poupança",       value: sr          !== null ? `${sr.toFixed(1)}%` : "—", color: "text-blue" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="border-border bg-surface rounded-xl border p-4">
+                    <p className="text-text-muted text-[12px]">{label}</p>
+                    <p className={`font-money font-600 mt-1 text-[22px] ${color}`}>{value}</p>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
           <AnalyticsNetWorthChart data={netWorth.data ?? []} />
           <BalanceEvolutionChart data={balanceEvolution.data ?? []} />
         </div>
@@ -176,22 +193,12 @@ export function AnalyticsPage() {
       {/* Tab: Investimentos */}
       {activeTab === "investimentos" && (
         <div className="flex flex-col gap-5">
-          <div className="border-border flex gap-1 rounded-xl border bg-surface p-1">
-            {INVESTMENT_SUBTABS.map((sub) => (
-              <button
-                key={sub.id}
-                onClick={() => setInvestmentSubTab(sub.id)}
-                className={cn(
-                  "flex-1 rounded-[9px] py-1.5 text-[13px] font-medium transition-all",
-                  investmentSubTab === sub.id
-                    ? "bg-surface2 text-text shadow-sm"
-                    : "text-text-muted hover:text-text-sub",
-                )}
-              >
-                {sub.label}
-              </button>
-            ))}
-          </div>
+          <TabChips
+            items={INVESTMENT_SUBTABS}
+            value={investmentSubTab}
+            onChange={setInvestmentSubTab}
+            size="sm"
+          />
 
           {investmentSubTab === "geral" && <InvestmentOverviewTab startDate={start} finishDate={finish} />}
           {investmentSubTab === "rentabilidade" && <AnalyticsInvestmentProfitabilityTab startDate={start} finishDate={finish} />}
@@ -202,16 +209,52 @@ export function AnalyticsPage() {
       {/* Tab: Projeções */}
       {activeTab === "projecoes" && (
         <div className="flex flex-col gap-5">
-          <ProjectedNetWorthChart data={netWorthProjection.data ?? { historical: [], projected: [], currentNetWorth: 0, monthlyAvgGrowth: 0, monthsUntilZero: null, monthsUntilTarget: null, targetAmount: null }} />
-          <PortfolioCompositionChart data={portfolioComposition.data ?? { data: [], assetClasses: [] }} />
-          <RealNetWorthChart data={realNetWorth.data ?? { points: [], totalNominalGrowthPct: 0, totalRealGrowthPct: 0, totalInflationPct: 0 }} />
-          <PassiveIncomeChart data={passiveIncome.data ?? { history: [], projected: [], currentMonthlyPassiveIncome: 0, projectedAnnualPassiveIncome: 0, monthlyLivingCost: 0, coveragePercent: 0, monthsUntilFinancialFreedom: null }} />
-          <SavingsRateChart data={monthly.data ?? []} />
+          {/* 4 KPI cards */}
+          {(() => {
+            const bp = balanceProjection.data;
+            const fw = futureCommitments.data ?? [];
+            const nw = netWorthProjection.data;
+            const mo = monthly.data ?? [];
+            const totalInc = mo.reduce((s, m) => s + (m.totalIncome ?? 0), 0);
+            const totalExp = mo.reduce((s, m) => s + (m.totalExpense ?? 0), 0);
+            const annualSavingsGoal = totalInc > 0 ? (totalInc - totalExp) : 0;
+            const nextCommitments  = fw.slice(0, 3).reduce((s, c: any) => s + (c.totalAmount ?? 0), 0);
+            const projectedIn12m   = nw?.projected?.slice(-1)[0]?.netWorth ?? 0;
+
+            return (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  { label: "Saldo proj. fim do mês", value: bp ? `${(bp.projectedBalance / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: "text-green" },
+                  { label: "Próx. compromissos",     value: nextCommitments > 0 ? `${(nextCommitments / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: "text-orange" },
+                  { label: "Patrimônio em 12m",      value: projectedIn12m > 0 ? `${(projectedIn12m / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: "text-blue" },
+                  { label: "Meta de poupança anual", value: annualSavingsGoal > 0 ? `${(annualSavingsGoal / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: "text-purple" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="border-border bg-surface rounded-xl border p-4">
+                    <p className="text-text-muted text-[11px] uppercase tracking-[0.05em]">{label}</p>
+                    <p className={`font-money font-600 mt-2 text-[18px] leading-none ${color}`}>{value}</p>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Milestones full-width */}
+          <FinancialTimelineChart data={milestones.data ?? { timeline: [], milestones: [] }} />
+
+          {/* Grid 2 colunas com os gráficos */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <ProjectedNetWorthChart data={netWorthProjection.data ?? { historical: [], projected: [], currentNetWorth: 0, monthlyAvgGrowth: 0, monthsUntilZero: null, monthsUntilTarget: null, targetAmount: null }} />
+            <RealNetWorthChart data={realNetWorth.data ?? { points: [], totalNominalGrowthPct: 0, totalRealGrowthPct: 0, totalInflationPct: 0 }} />
+            <PassiveIncomeChart data={passiveIncome.data ?? { history: [], projected: [], currentMonthlyPassiveIncome: 0, projectedAnnualPassiveIncome: 0, monthlyLivingCost: 0, coveragePercent: 0, monthsUntilFinancialFreedom: null }} />
+            <SavingsRateChart data={monthly.data ?? []} />
+            <BalanceProjectionChart data={balanceProjection.data ?? { actual: [], projected: [], projectedBalance: 0, currentBalance: 0, dailyAvgIncome: 0, dailyAvgExpense: 0 }} />
+            <PortfolioCompositionChart data={portfolioComposition.data ?? { data: [], assetClasses: [] }} />
+          </div>
+
+          {/* Full-width charts */}
           {categoryProjection.data && categoryProjection.data.length > 0 && (
             <ProjectedSpendingHeatmap data={categoryProjection.data} />
           )}
-          <FinancialTimelineChart data={milestones.data ?? { timeline: [], milestones: [] }} />
-          <BalanceProjectionChart data={balanceProjection.data ?? { actual: [], projected: [], projectedBalance: 0, currentBalance: 0, dailyAvgIncome: 0, dailyAvgExpense: 0 }} />
           <FutureCommitmentsChart data={futureCommitments.data ?? []} />
           <CommitmentsImpactChart data={commitmentsImpact.data ?? { months: [] }} />
         </div>

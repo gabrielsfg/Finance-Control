@@ -14,6 +14,8 @@ export type RecentTransaction = {
   type: "Income" | "Expense" | "Transfer";
   subCategoryName: string;
   categoryName: string;
+  isRecurring?: boolean;
+  isAutomatic?: boolean;
 };
 
 export type BudgetSubCategorySummary = {

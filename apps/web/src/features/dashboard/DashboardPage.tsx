@@ -8,6 +8,7 @@ import { MonthlyEvolutionChart } from "@/features/dashboard/components/MonthlyEv
 import { CategoryDonutChart } from "@/features/dashboard/components/CategoryDonutChart";
 import { AiInsightCard } from "@/features/dashboard/components/AiInsightCard";
 import { ActiveBudgetCard } from "@/features/dashboard/components/ActiveBudgetCard";
+import { UpcomingBillsCard } from "@/features/dashboard/components/UpcomingBillsCard";
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
 import { formatDateMonth } from "@/lib/utils/formatDate";
 
@@ -46,7 +47,7 @@ export function DashboardPage() {
 
       <NetWorthHero balanceSummary={balanceSummary} savingsRate={savingsRate} />
 
-      <DashboardStatsRow balanceSummary={balanceSummary} currentMonth={currentMonth} />
+      <DashboardStatsRow balanceSummary={balanceSummary} currentMonth={currentMonth} savingsRate={savingsRate} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px] lg:min-h-[360px]">
         <MonthlyEvolutionChart />
@@ -60,6 +61,8 @@ export function DashboardPage() {
           <ActiveBudgetCard budget={budgetSummary ?? null} />
         </div>
       </div>
+
+      <UpcomingBillsCard />
     </div>
   );
 }

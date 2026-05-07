@@ -57,7 +57,19 @@ export const RecentTransactions = ({
                   💸
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-500 text-text truncate text-[14px]">{tx.description}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-500 text-text truncate text-[14px]">{tx.description}</p>
+                    {tx.isRecurring && (
+                      <span className="text-purple border-purple/30 bg-purple/10 shrink-0 rounded-full border px-1.5 py-px text-[10px] font-medium">
+                        Recorrente
+                      </span>
+                    )}
+                    {tx.isAutomatic && (
+                      <span className="text-blue border-blue/30 bg-blue/10 shrink-0 rounded-full border px-1.5 py-px text-[10px] font-medium">
+                        Auto
+                      </span>
+                    )}
+                  </div>
                   <p className="text-text-muted mt-0.5 text-[12px]">{tx.categoryName}</p>
                 </div>
                 <div className="shrink-0 text-right">

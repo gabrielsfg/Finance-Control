@@ -9,6 +9,7 @@ type UIState = {
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
 };
 
 export const useUIStore = create<UIState>()(
@@ -22,6 +23,7 @@ export const useUIStore = create<UIState>()(
         set((s) => ({
           theme: s.theme === "dark" ? "light" : "dark",
         })),
+      setTheme: (theme) => set({ theme }),
     }),
     { name: "controle-ui" },
   ),

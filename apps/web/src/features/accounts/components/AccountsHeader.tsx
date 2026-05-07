@@ -16,8 +16,8 @@ export const AccountsHeader = ({ accountCount, onCreateClick }: Props) => (
         {accountCount > 0 ? `${accountCount} conta${accountCount !== 1 ? "s" : ""}` : "Nenhuma conta"}
       </p>
     </div>
-    <Button size="sm" onClick={onCreateClick}>
-      <Plus size={14} />
+    <Button size="xl" onClick={onCreateClick}>
+      <Plus />
       Nova conta
     </Button>
   </div>

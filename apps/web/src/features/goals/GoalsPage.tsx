@@ -3,16 +3,15 @@
 import { useState } from "react";
 import {
   Loader2, Plus, Target, ShoppingBag, TrendingUp, ExternalLink,
-  CheckCircle2, Trash2, ChevronDown, ChevronUp,
+  CheckCircle2, Trash2, ChevronDown, ChevronUp, Wallet,
 } from "lucide-react";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine } from "recharts";
 import { ProgressBar } from "@/components/shared/ProgressBar";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
-import { useGoals, useCreateGoal, useDeleteGoal, useAchieveGoal, useRecordCheckpoint } from "@/features/goals/hooks/useGoals";
+import { useGoals, useCreateGoal, useDeleteGoal, useAchieveGoal } from "@/features/goals/hooks/useGoals";
 import type { Goal, GoalType, GoalPriority, CreateGoalRequest } from "@/lib/types/goal.types";
 
-// ── Constants ────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const PRIORITY_CONFIG: Record<GoalPriority, { label: string; className: string }> = {
   High:   { label: "Alta",   className: "bg-red/12 text-red" },
@@ -22,17 +21,40 @@ const PRIORITY_CONFIG: Record<GoalPriority, { label: string; className: string }
 
 const PRIORITY_ORDER: Record<GoalPriority, number> = { High: 0, Medium: 1, Low: 2 };
 
-// ── Tooltip ──────────────────────────────────────────────────────────────────
+// ── Projection Callout ────────────────────────────────────────────────────────
 
-const ChartTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="border-border bg-surface rounded-lg border px-3 py-1.5 shadow-md">
-      <p className="text-text-muted mb-0.5 text-[11px]">{label}</p>
-      <p className="font-money text-text text-[12px]">{formatCurrency(payload[0].value / 100)}</p>
+function ProjectionCallout({ goal }: { goal: Goal }) {
+  if (goal.status !== "Active") return null;
+
+  const saved     = goal.latestCheckpointAmount ?? 0;
+  const remaining = Math.max(goal.targetAmount - saved, 0);
+
+  if (remaining === 0) return (
+    <div className="mt-2 rounded-lg bg-green/10 px-3 py-2 text-[12px] text-green font-medium">
+      Meta atingida! Pronto para marcar como conquistada.
     </div>
   );
-};
+
+  if (!goal.targetDate) return null;
+
+  const monthsLeft = Math.max(
+    Math.round((new Date(goal.targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30)),
+    0,
+  );
+
+  if (monthsLeft === 0) return (
+    <div className="mt-2 rounded-lg bg-orange/10 px-3 py-2 text-[12px] text-orange">
+      Prazo atingido — faltam ainda {formatCurrency(remaining / 100)}
+    </div>
+  );
+
+  const needed = remaining / monthsLeft;
+  return (
+    <div className="mt-2 rounded-lg bg-surface2 px-3 py-2 text-[12px] text-text-muted">
+      No ritmo necessário: <span className="text-text font-medium">{formatCurrency(needed / 100)}/mês</span> por {monthsLeft} meses para concluir no prazo.
+    </div>
+  );
+}
 
 // ── Item Goal Card ────────────────────────────────────────────────────────────
 
@@ -46,8 +68,6 @@ const ItemGoalCard = ({ goal, onDelete, onAchieve }: { goal: Goal; onDelete: () 
   const progressPct = hasCurrentAmount
     ? Math.min((goal.targetAmount / goal.latestCheckpointAmount!) * 100, 100)
     : 0;
-
-  // "N months saving Y/month to reach target" — based on monthly savings = targetAmount / 12 (rough)
   const remaining = hasCurrentAmount ? Math.max(goal.latestCheckpointAmount! - goal.targetAmount, 0) : null;
 
   return (
@@ -108,6 +128,8 @@ const ItemGoalCard = ({ goal, onDelete, onAchieve }: { goal: Goal; onDelete: () 
               <ProgressBar value={goal.targetAmount} max={goal.latestCheckpointAmount!} height={4} color={targetReached ? "#00C98D" : "#4A9EFF"} />
             </div>
           )}
+
+          <ProjectionCallout goal={goal} />
         </div>
       </button>
 
@@ -154,15 +176,14 @@ const InvestmentGoalCard = ({ goal, onDelete, onAchieve }: { goal: Goal; onDelet
   const remaining = Math.max(goal.targetAmount - currentAmount, 0);
   const targetReached = currentAmount >= goal.targetAmount;
 
-  // Estimate months to reach target based on a simple average monthly savings hint
-  // We don't have income data here, so we skip the calculation — just show progress
   let etaLabel: string | null = null;
   if (goal.targetDate) {
     const months = Math.round(
       (new Date(goal.targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30),
     );
-    if (months > 0) etaLabel = `${months} mes${months === 1 ? "" : "es"} restante${months === 1 ? "" : "s"}`;
-    else etaLabel = "Prazo atingido";
+    etaLabel = months > 0
+      ? `${months} mes${months === 1 ? "" : "es"} restante${months === 1 ? "" : "s"}`
+      : "Prazo atingido";
   }
 
   return (
@@ -224,6 +245,8 @@ const InvestmentGoalCard = ({ goal, onDelete, onAchieve }: { goal: Goal; onDelet
             </div>
             <ProgressBar value={currentAmount} max={goal.targetAmount} height={6} color={targetReached ? "#00C98D" : "#7C6FE0"} />
           </div>
+
+          <ProjectionCallout goal={goal} />
         </div>
       </button>
 
@@ -260,13 +283,13 @@ const InvestmentGoalCard = ({ goal, onDelete, onAchieve }: { goal: Goal; onDelet
 
 const AddGoalModal = ({ defaultType, onClose }: { defaultType: GoalType; onClose: () => void }) => {
   const createGoal = useCreateGoal();
-  const [type, setType] = useState<GoalType>(defaultType);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [type, setType]                 = useState<GoalType>(defaultType);
+  const [name, setName]                 = useState("");
+  const [description, setDescription]   = useState("");
   const [targetAmount, setTargetAmount] = useState("");
-  const [priority, setPriority] = useState<GoalPriority>("Medium");
-  const [url, setUrl] = useState("");
-  const [targetDate, setTargetDate] = useState("");
+  const [priority, setPriority]         = useState<GoalPriority>("Medium");
+  const [url, setUrl]                   = useState("");
+  const [targetDate, setTargetDate]     = useState("");
 
   const handleSubmit = async () => {
     if (!name || !targetAmount) return;
@@ -316,42 +339,27 @@ const AddGoalModal = ({ defaultType, onClose }: { defaultType: GoalType; onClose
 
           <div>
             <label className={labelClass}>Nome *</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+            <input value={name} onChange={(e) => setName(e.target.value)}
               placeholder={type === "Item" ? "Ex: iPhone 16 Pro" : "Ex: Reserva de emergência"}
-              className={inputClass}
-            />
+              className={inputClass} />
           </div>
 
           <div>
             <label className={labelClass}>Descrição (opcional)</label>
-            <input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Observações..."
-              className={inputClass}
-            />
+            <input value={description} onChange={(e) => setDescription(e.target.value)}
+              placeholder="Observações..." className={inputClass} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>{type === "Item" ? "Preço-meta (R$) *" : "Patrimônio-alvo (R$) *"}</label>
-              <input
-                type="number"
-                value={targetAmount}
-                onChange={(e) => setTargetAmount(e.target.value)}
-                placeholder="0,00"
-                className={inputClass}
-              />
+              <input type="number" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)}
+                placeholder="0,00" className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>Prioridade</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as GoalPriority)}
-                className={inputClass}
-              >
+              <select value={priority} onChange={(e) => setPriority(e.target.value as GoalPriority)}
+                className={inputClass}>
                 <option value="High">Alta</option>
                 <option value="Medium">Média</option>
                 <option value="Low">Baixa</option>
@@ -362,40 +370,28 @@ const AddGoalModal = ({ defaultType, onClose }: { defaultType: GoalType; onClose
           {type === "Item" && (
             <div>
               <label className={labelClass}>Link (opcional)</label>
-              <input
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://..."
-                className={inputClass}
-              />
+              <input value={url} onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://..." className={inputClass} />
             </div>
           )}
 
           {type === "Investment" && (
             <div>
               <label className={labelClass}>Prazo (opcional)</label>
-              <input
-                type="date"
-                value={targetDate}
-                onChange={(e) => setTargetDate(e.target.value)}
-                className={inputClass}
-              />
+              <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)}
+                className={inputClass} />
             </div>
           )}
         </div>
 
         <div className="mt-6 flex gap-3">
-          <button
-            onClick={onClose}
-            className="border-border text-text-sub hover:bg-surface2 flex-1 rounded-lg border py-2 text-[13px] transition-colors"
-          >
+          <button onClick={onClose}
+            className="border-border text-text-sub hover:bg-surface2 flex-1 rounded-lg border py-2 text-[13px] transition-colors">
             Cancelar
           </button>
-          <button
-            onClick={handleSubmit}
+          <button onClick={handleSubmit}
             disabled={createGoal.isPending || !name || !targetAmount}
-            className="bg-green text-black flex-1 rounded-lg py-2 text-[13px] font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
+            className="bg-green text-black flex-1 rounded-lg py-2 text-[13px] font-medium transition-opacity hover:opacity-90 disabled:opacity-50">
             {createGoal.isPending ? "Criando..." : "Criar Meta"}
           </button>
         </div>
@@ -404,43 +400,25 @@ const AddGoalModal = ({ defaultType, onClose }: { defaultType: GoalType; onClose
   );
 };
 
-// ── Stats ─────────────────────────────────────────────────────────────────────
-
-const GoalStats = ({ goals }: { goals: Goal[] }) => {
-  const active = goals.filter((g) => g.status === "Active").length;
-  const achieved = goals.filter((g) => g.status === "Achieved").length;
-  const totalTarget = goals
-    .filter((g) => g.status === "Active")
-    .reduce((s, g) => s + g.targetAmount, 0);
-
-  return (
-    <div className="grid grid-cols-3 gap-4">
-      {[
-        { label: "Metas ativas", value: String(active) },
-        { label: "Conquistadas", value: String(achieved) },
-        { label: "Total a atingir", value: formatCurrency(totalTarget / 100) },
-      ].map(({ label, value }) => (
-        <div key={label} className="border-border bg-surface rounded-xl border p-4">
-          <p className="text-text-muted text-[12px]">{label}</p>
-          <p className="font-money text-text mt-1 text-[18px] font-semibold">{value}</p>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// ── Tab ───────────────────────────────────────────────────────────────────────
-
-type Tab = "Item" | "Investment";
-
 // ── Page ──────────────────────────────────────────────────────────────────────
+
+type FilterTab = "all" | "Item" | "Investment";
+
+const FILTER_TABS: { id: FilterTab; label: string }[] = [
+  { id: "all",        label: "Todas" },
+  { id: "Item",       label: "Itens & Sonhos" },
+  { id: "Investment", label: "Investimento" },
+];
 
 export function GoalsPage() {
   const { data, isLoading, isError } = useGoals();
-  const deleteGoal = useDeleteGoal();
+  const deleteGoal  = useDeleteGoal();
   const achieveGoal = useAchieveGoal();
-  const [activeTab, setActiveTab] = useState<Tab>("Item");
-  const [showAdd, setShowAdd] = useState(false);
+  const [filterTab, setFilterTab]   = useState<FilterTab>("all");
+  const [showAdd, setShowAdd]       = useState(false);
+  const [addType, setAddType]       = useState<GoalType>("Item");
+
+  const openAdd = (type: GoalType) => { setAddType(type); setShowAdd(true); };
 
   if (isLoading) {
     return (
@@ -458,17 +436,24 @@ export function GoalsPage() {
     );
   }
 
-  const tabGoals = data.filter((g) => g.type === activeTab);
-  const sorted = [...tabGoals].sort(
+  const active   = data.filter((g) => g.status === "Active");
+  const achieved = data.filter((g) => g.status === "Achieved");
+  const totalTarget  = active.reduce((s, g) => s + g.targetAmount, 0);
+  const totalSaved   = active.reduce((s, g) => s + (g.latestCheckpointAmount ?? 0), 0);
+
+  const kpis = [
+    { label: "Total Guardado",     value: formatCurrency(totalSaved / 100),   color: "text-green" },
+    { label: "Total das Metas",    value: formatCurrency(totalTarget / 100),  color: "text-text" },
+    { label: "Progresso Geral",    value: totalTarget > 0 ? `${Math.min((totalSaved / totalTarget) * 100, 100).toFixed(1)}%` : "—", color: "text-blue" },
+    { label: "Concluídas",         value: String(achieved.length),            color: "text-purple" },
+  ];
+
+  const filtered = filterTab === "all" ? data : data.filter((g) => g.type === filterTab);
+  const sorted = [...filtered].sort(
     (a, b) =>
       (a.status === "Active" ? 0 : 1) - (b.status === "Active" ? 0 : 1) ||
       PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority],
   );
-
-  const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: "Item",       label: "Itens",        icon: <ShoppingBag size={14} /> },
-    { key: "Investment", label: "Investimento",  icon: <TrendingUp size={14} /> },
-  ];
 
   return (
     <>
@@ -478,66 +463,70 @@ export function GoalsPage() {
           <div>
             <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Metas</h1>
             <p className="text-text-muted mt-0.5 text-[13px]">
-              {data.filter((g) => g.status === "Active").length} meta{data.filter((g) => g.status === "Active").length !== 1 ? "s" : ""} ativa{data.filter((g) => g.status === "Active").length !== 1 ? "s" : ""}
+              {active.length} meta{active.length !== 1 ? "s" : ""} ativa{active.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="bg-green text-black flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium transition-opacity hover:opacity-90 shrink-0"
-          >
-            <Plus size={15} />
-            Nova meta
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => openAdd("Item")}
+              className="border-border bg-surface text-text-sub hover:text-text flex items-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-[13px] font-medium transition-colors hover:bg-surface2"
+            >
+              <ShoppingBag size={14} />
+              Meta de Item
+            </button>
+            <button
+              onClick={() => openAdd("Investment")}
+              className="bg-green hover:bg-green/90 flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium text-black transition-colors"
+            >
+              <TrendingUp size={14} />
+              Meta de Investimento
+            </button>
+          </div>
         </div>
 
-        <GoalStats goals={data} />
+        {/* 4 KPI cards */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {kpis.map(({ label, value, color }) => (
+            <div key={label} className="border-border bg-surface rounded-xl border p-4">
+              <p className="text-text-muted text-[12px]">{label}</p>
+              <p className={cn("font-money font-600 mt-1 text-[20px]", color)}>{value}</p>
+            </div>
+          ))}
+        </div>
 
-        {/* Tabs */}
-        <div className="border-border flex border-b">
-          {TABS.map((tab) => {
-            const count = data.filter((g) => g.type === tab.key && g.status === "Active").length;
+        {/* Filter chips */}
+        <div className="flex flex-wrap gap-2" role="tablist">
+          {FILTER_TABS.map(({ id, label }) => {
+            const active = filterTab === id;
             return (
               <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
+                key={id}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setFilterTab(id)}
                 className={cn(
-                  "flex items-center gap-2 border-b-2 px-4 pb-2.5 pt-1 text-[13px] font-medium transition-colors",
-                  activeTab === tab.key
-                    ? "border-green text-green"
-                    : "border-transparent text-text-muted hover:text-text",
+                  "h-8 rounded-full border px-3.5 text-[13px] font-medium transition-all outline-none",
+                  active
+                    ? "border-green/45 bg-green/15 text-green"
+                    : "border-border bg-surface text-text-sub hover:border-border-light hover:text-text",
                 )}
               >
-                {tab.icon}
-                {tab.label}
-                {count > 0 && (
-                  <span className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                    activeTab === tab.key ? "bg-green/15 text-green" : "bg-surface2 text-text-muted",
-                  )}>
-                    {count}
-                  </span>
-                )}
+                {label}
               </button>
             );
           })}
         </div>
 
-        {/* Goal list */}
+        {/* Goal grid */}
         {sorted.length === 0 ? (
           <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border py-16 text-center">
             <div className="bg-surface2 mb-3 flex h-12 w-12 items-center justify-center rounded-[14px]">
               <Target size={22} className="text-text-muted" strokeWidth={1.5} />
             </div>
-            <p className="text-text text-[15px] font-medium">
-              {activeTab === "Item" ? "Nenhuma meta de compra" : "Nenhuma meta de investimento"}
-            </p>
-            <p className="text-text-muted mt-1 text-[13px]">
-              {activeTab === "Item"
-                ? "Adicione itens que deseja comprar e acompanhe o preço."
-                : "Defina um alvo de patrimônio e acompanhe seu progresso."}
-            </p>
+            <p className="text-text text-[15px] font-medium">Nenhuma meta encontrada</p>
+            <p className="text-text-muted mt-1 text-[13px]">Crie uma meta para começar a acompanhar seu progresso.</p>
             <button
-              onClick={() => setShowAdd(true)}
+              onClick={() => openAdd("Item")}
               className="bg-green text-black mt-5 flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium transition-opacity hover:opacity-90"
             >
               <Plus size={14} />
@@ -545,7 +534,7 @@ export function GoalsPage() {
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {sorted.map((goal) =>
               goal.type === "Item" ? (
                 <ItemGoalCard
@@ -563,11 +552,21 @@ export function GoalsPage() {
                 />
               ),
             )}
+            {/* Placeholder add card */}
+            <button
+              onClick={() => openAdd("Item")}
+              className="border-border text-text-muted hover:border-green/40 hover:text-green flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed transition-colors"
+            >
+              <div className="border-border flex h-9 w-9 items-center justify-center rounded-full border border-dashed">
+                <Plus size={16} strokeWidth={1.5} />
+              </div>
+              <span className="text-[13px] font-medium">Nova Meta</span>
+            </button>
           </div>
         )}
       </div>
 
-      {showAdd && <AddGoalModal defaultType={activeTab} onClose={() => setShowAdd(false)} />}
+      {showAdd && <AddGoalModal defaultType={addType} onClose={() => setShowAdd(false)} />}
     </>
   );
 }

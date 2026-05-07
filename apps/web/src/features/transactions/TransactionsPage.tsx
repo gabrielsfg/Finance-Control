@@ -6,8 +6,9 @@ import { Loader2, X, CalendarDays } from "lucide-react";
 import { TransactionsHeader } from "@/features/transactions/components/TransactionsHeader";
 import { TransactionsFilterBar } from "@/features/transactions/components/TransactionsFilterBar";
 import { TransactionsSummary } from "@/features/transactions/components/TransactionsSummary";
-import { TransactionsTable } from "@/features/transactions/components/TransactionsTable";
+import { TransactionsList } from "@/features/transactions/components/TransactionsList";
 import { TransactionsPagination } from "@/features/transactions/components/TransactionsPagination";
+import { RecurringBanner } from "@/features/transactions/components/RecurringBanner";
 import { CreateTransactionModal } from "@/features/transactions/components/CreateTransactionModal";
 import { EditTransactionModal } from "@/features/transactions/components/EditTransactionModal";
 import { DeleteTransactionModal } from "@/features/transactions/components/DeleteTransactionModal";
@@ -16,7 +17,7 @@ import { defaultTxFilter, buildTxDateRange } from "@/features/transactions/utils
 import type { TransactionsFilter } from "@/features/transactions/types/filters.types";
 import type { TransactionItem, TransactionType } from "@/lib/types/transactions.types";
 
-type TypeFilter = "All" | TransactionType;
+type TypeFilter = "All" | TransactionType | "Transfer";
 
 function parseDateLocal(dateStr: string) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -66,7 +67,8 @@ export function TransactionsPage() {
     if (!allTransactions) return [];
     return allTransactions.filter((t) => {
       if (filterDay && t.transactionDate !== filterDay) return false;
-      if (typeFilter !== "All" && t.type !== typeFilter) return false;
+      if (typeFilter === "Transfer" && t.recurringTransactionId === null && t.parentTransactionId === null) return false;
+    if (typeFilter !== "All" && typeFilter !== "Transfer" && t.type !== typeFilter) return false;
       if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
@@ -116,6 +118,8 @@ export function TransactionsPage() {
           onCreateClick={() => setCreateOpen(true)}
         />
 
+        {allTransactions && <RecurringBanner transactions={allTransactions} />}
+
         <TransactionsFilterBar
           typeFilter={typeFilter}
           search={search}
@@ -145,7 +149,7 @@ export function TransactionsPage() {
           balance={balance}
         />
 
-        <TransactionsTable
+        <TransactionsList
           transactions={paginated}
           search={search}
           onEdit={setEditTarget}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, RefreshCw, AlertCircle } from "lucide-react";
 import { AccountsHeader } from "@/features/accounts/components/AccountsHeader";
 import { AccountsNetWorthHero } from "@/features/accounts/components/AccountsNetWorthHero";
 import { AccountsEmptyState } from "@/features/accounts/components/AccountsEmptyState";
@@ -19,6 +19,8 @@ export function AccountsPage() {
   const [deleteTarget, setDeleteTarget] = useState<AccountItem | null>(null);
 
   const totalBalance = accounts?.reduce((sum, a) => sum + a.currentAmount, 0) ?? 0;
+  const totalAssets = accounts?.filter((a) => a.currentAmount > 0).reduce((sum, a) => sum + a.currentAmount, 0) ?? 0;
+  const totalLiabilities = accounts?.filter((a) => a.currentAmount < 0).reduce((sum, a) => sum + Math.abs(a.currentAmount), 0) ?? 0;
   const hasAccounts = !!accounts?.length;
 
   if (isLoading) {
@@ -48,12 +50,14 @@ export function AccountsPage() {
         {hasAccounts && (
           <AccountsNetWorthHero
             totalBalance={totalBalance}
+            totalAssets={totalAssets}
+            totalLiabilities={totalLiabilities}
             accountCount={accounts!.length}
           />
         )}
 
         {hasAccounts ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {accounts!.map((account) => (
               <AccountCard
                 key={account.id}
@@ -62,10 +66,58 @@ export function AccountsPage() {
                 onDelete={setDeleteTarget}
               />
             ))}
+            {/* Placeholder card */}
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="border-border text-text-muted hover:border-green/40 hover:text-green flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed transition-colors"
+            >
+              <div className="border-border flex h-10 w-10 items-center justify-center rounded-full border border-dashed">
+                <Plus size={18} strokeWidth={1.5} />
+              </div>
+              <span className="text-[13px] font-medium">Adicionar conta</span>
+            </button>
           </div>
         ) : (
           <AccountsEmptyState onCreateClick={() => setCreateOpen(true)} />
         )}
+
+        {/* Open Finance section — static placeholder (V2 feature) */}
+        <div className="border-border bg-surface rounded-xl border p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="font-display font-600 text-text text-[15px]">Open Finance</p>
+              <p className="text-text-muted mt-0.5 text-[12px]">Conecte seus bancos para importar transações automaticamente</p>
+            </div>
+            <span className="bg-orange/10 text-orange border-orange/30 rounded-full border px-2.5 py-1 text-[11px] font-medium">
+              Em breve
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { name: "Nubank",  color: "#820AD1", initial: "N", txCount: 0 },
+              { name: "Itaú",    color: "#F77F00", initial: "I", txCount: 0 },
+              { name: "XP",      color: "#FF6B00", initial: "X", txCount: 0 },
+              { name: "B3",      color: "#E50000", initial: "B", txCount: 0 },
+            ].map((bank) => (
+              <div key={bank.name} className="border-border bg-surface2 flex items-center gap-3 rounded-xl border p-3 opacity-60">
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] text-[13px] font-bold text-white"
+                  style={{ backgroundColor: bank.color }}
+                >
+                  {bank.initial}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-text text-[13px] font-medium">{bank.name}</p>
+                  <div className="mt-0.5 flex items-center gap-1">
+                    <AlertCircle size={10} className="text-text-muted" />
+                    <span className="text-text-muted text-[11px]">Não conectado</span>
+                  </div>
+                </div>
+                <RefreshCw size={13} className="text-text-muted ml-auto shrink-0 opacity-40" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <CreateAccountModal open={createOpen} onClose={() => setCreateOpen(false)} />
