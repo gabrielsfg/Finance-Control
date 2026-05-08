@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 const publicRoutes = ["/", "/login"];
 
-export const proxy = (request: NextRequest) => {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPublicRoute = publicRoutes.some((route) => pathname === route);
   const accessToken = request.cookies.get("accessToken")?.value;
@@ -17,7 +17,7 @@ export const proxy = (request: NextRequest) => {
   }
 
   return NextResponse.next();
-};
+}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],

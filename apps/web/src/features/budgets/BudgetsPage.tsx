@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Loader2, Target, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Plus, Target, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BudgetCard } from "@/features/budgets/components/BudgetCard";
 import { BudgetsSummaryBar } from "@/features/budgets/components/BudgetsSummaryBar";
 import { CreateBudgetModal } from "@/features/budgets/components/CreateBudgetModal";
 import { EditBudgetModal } from "@/features/budgets/components/EditBudgetModal";
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
+import { usePageNova } from "@/lib/hooks/usePageHeader";
 import type { Budget } from "@/lib/types/budgets.types";
 
 const MONTH_NAMES = [
@@ -19,6 +20,8 @@ export function BudgetsPage() {
   const { data: budgets, isLoading, isError } = useBudgets();
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<Budget | null>(null);
+
+  usePageNova("Novo orçamento", () => setShowCreate(true));
 
   const now = new Date();
   const [monthOffset, setMonthOffset] = useState(0);
@@ -58,28 +61,22 @@ export function BudgetsPage() {
               {hasBudgets ? `${budgets!.length} orçamento${budgets!.length !== 1 ? "s" : ""}` : "Nenhum orçamento"}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Month navigation */}
-            <div className="border-border bg-surface flex items-center gap-1 rounded-xl border px-2 py-1.5">
-              <button
-                onClick={() => setMonthOffset((o) => o - 1)}
-                className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2"
-              >
-                <ChevronLeft size={15} />
-              </button>
-              <span className="text-text min-w-[130px] text-center text-[13px] font-medium">{monthLabel}</span>
-              <button
-                onClick={() => setMonthOffset((o) => o + 1)}
-                disabled={monthOffset >= 0}
-                className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2 disabled:opacity-30"
-              >
-                <ChevronRight size={15} />
-              </button>
-            </div>
-            <Button size="xl" onClick={() => setShowCreate(true)}>
-              <Plus />
-              Novo orçamento
-            </Button>
+          {/* Month navigation */}
+          <div className="border-border bg-surface flex items-center gap-1 rounded-xl border px-2 py-1.5">
+            <button
+              onClick={() => setMonthOffset((o) => o - 1)}
+              className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <span className="text-text min-w-[130px] text-center text-[13px] font-medium">{monthLabel}</span>
+            <button
+              onClick={() => setMonthOffset((o) => o + 1)}
+              disabled={monthOffset >= 0}
+              className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2 disabled:opacity-30"
+            >
+              <ChevronRight size={15} />
+            </button>
           </div>
         </div>
 

@@ -3,12 +3,13 @@
 import { useState } from "react";
 import {
   Loader2, Plus, Target, ShoppingBag, TrendingUp, ExternalLink,
-  CheckCircle2, Trash2, ChevronDown, ChevronUp, Wallet,
+  CheckCircle2, Trash2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { ProgressBar } from "@/components/shared/ProgressBar";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import { useGoals, useCreateGoal, useDeleteGoal, useAchieveGoal } from "@/features/goals/hooks/useGoals";
+import { usePageNova, usePageSearch } from "@/lib/hooks/usePageHeader";
 import type { Goal, GoalType, GoalPriority, CreateGoalRequest } from "@/lib/types/goal.types";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -420,6 +421,9 @@ export function GoalsPage() {
 
   const openAdd = (type: GoalType) => { setAddType(type); setShowAdd(true); };
 
+  usePageNova("Nova meta", () => openAdd("Item"));
+  usePageSearch();
+
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -459,29 +463,11 @@ export function GoalsPage() {
     <>
       <div className="flex flex-col gap-5">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Metas</h1>
-            <p className="text-text-muted mt-0.5 text-[13px]">
-              {active.length} meta{active.length !== 1 ? "s" : ""} ativa{active.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => openAdd("Item")}
-              className="border-border bg-surface text-text-sub hover:text-text flex items-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-[13px] font-medium transition-colors hover:bg-surface2"
-            >
-              <ShoppingBag size={14} />
-              Meta de Item
-            </button>
-            <button
-              onClick={() => openAdd("Investment")}
-              className="bg-green hover:bg-green/90 flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium text-black transition-colors"
-            >
-              <TrendingUp size={14} />
-              Meta de Investimento
-            </button>
-          </div>
+        <div>
+          <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Metas</h1>
+          <p className="text-text-muted mt-0.5 text-[13px]">
+            {active.length} meta{active.length !== 1 ? "s" : ""} ativa{active.length !== 1 ? "s" : ""}
+          </p>
         </div>
 
         {/* 4 KPI cards */}

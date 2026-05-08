@@ -12,9 +12,8 @@ import {
   BarChart3,
   Target,
   Tag,
+  RefreshCw,
   Settings,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/lib/stores/uiStore";
@@ -26,6 +25,7 @@ const navItems = [
   { href: "/accounts", label: "Contas", icon: Wallet },
   { href: "/investments", label: "Investimentos", icon: TrendingUp },
   { href: "/simulations", label: "Simulações", icon: Calculator },
+  { href: "/recurring", label: "Recorrências", icon: RefreshCw },
   { href: "/budgets", label: "Orçamentos", icon: Clock },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/goals", label: "Metas", icon: Target },
@@ -35,7 +35,7 @@ const navItems = [
 
 export const Sidebar = () => {
   const pathname = usePathname();
-  const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const { sidebarCollapsed } = useUIStore();
 
   return (
     <aside
@@ -108,14 +108,6 @@ export const Sidebar = () => {
         </div>
       )}
 
-      {/* Collapse toggle */}
-      <button
-        onClick={toggleSidebar}
-        className="border-border bg-surface text-text-sub hover:bg-surface2 hover:text-text absolute top-[72px] -right-3 flex h-6 w-6 items-center justify-center rounded-full border transition-colors"
-        aria-label={sidebarCollapsed ? "Expandir sidebar" : "Colapsar sidebar"}
-      >
-        {sidebarCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
-      </button>
     </aside>
   );
 };

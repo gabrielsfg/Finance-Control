@@ -15,5 +15,10 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
         public int Income { get; set; }  // income in cents
         public int Net { get; set; }     // income - expense
         public DayHeatmapState State { get; set; }
+        /// <summary>
+        /// Difference vs same day previous month (this.Total - prevMonth.Total).
+        /// Positive = spent more than last month, negative = less, null = no data for that day last month.
+        /// </summary>
+        public int? VsLastMonth { get; set; }
     }
 }

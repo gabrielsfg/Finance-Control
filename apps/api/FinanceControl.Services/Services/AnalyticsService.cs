@@ -771,8 +771,7 @@ namespace FinanceControl.Services.Services
         {
             await using var context = _contextFactory.CreateDbContext();
 
-            // Fetch both expense and income per day regardless of TransactionType filter,
-            // so the calendar can always show the net position correctly.
+            // Fetch both expense and income per day regardless of TransactionType filter.
             var raw = await context.Transactions
                 .Where(t => t.UserId == requestDto.UserId)
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
@@ -792,20 +791,37 @@ namespace FinanceControl.Services.Services
             if (raw.Count == 0)
                 return [];
 
+            // Fetch same days from the previous month for comparison
+            var prevStart  = requestDto.StartDate.AddMonths(-1);
+            var prevFinish = requestDto.FinishDate.AddMonths(-1);
+            var prevRaw = await context.Transactions
+                .Where(t => t.UserId == requestDto.UserId)
+                .Where(t => t.TransactionDate >= prevStart && t.TransactionDate <= prevFinish)
+                .Where(t => t.Type == EnumTransactionType.Expense)
+                .WhereIf(requestDto.AccountIds.Count > 0, t => requestDto.AccountIds.Contains(t.AccountId))
+                .GroupBy(t => t.TransactionDate)
+                .Select(g => new { Date = g.Key, Expense = g.Sum(t => (int?)t.Value) ?? 0 })
+                .ToListAsync();
+
+            // Build a lookup: day-of-month → prev expense
+            var prevByDay = prevRaw.ToDictionary(d => d.Date.Day, d => d.Expense);
+
             var maxExpense = raw.Max(d => d.Expense);
             var maxNet     = raw.Max(d => Math.Max(d.Income - d.Expense, 0));
 
             return raw.Select(d =>
             {
-                var net   = d.Income - d.Expense;
-                var state = ComputeDayState(d.Expense, net, maxExpense, maxNet);
+                var net       = d.Income - d.Expense;
+                var state     = ComputeDayState(d.Expense, net, maxExpense, maxNet);
+                int? vsLast   = prevByDay.TryGetValue(d.Date.Day, out var prev) ? (d.Expense - prev) : null;
                 return new SpendingHeatmapItemDto
                 {
-                    Date   = d.Date,
-                    Total  = d.Expense,
-                    Income = d.Income,
-                    Net    = net,
-                    State  = state
+                    Date        = d.Date,
+                    Total       = d.Expense,
+                    Income      = d.Income,
+                    Net         = net,
+                    State       = state,
+                    VsLastMonth = vsLast,
                 };
             }).ToList();
         }
@@ -1640,6 +1656,86 @@ namespace FinanceControl.Services.Services
             }
 
             return points;
+        }
+
+        public async Task<ProfitabilityVsBenchmarksResponseDto> GetInvestmentProfitabilityVsBenchmarksAsync(int userId, DateOnly startDate, DateOnly finishDate)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var allBuys = await context.InvestmentTransactions
+                .Where(t => t.UserId == userId && t.Date >= startDate && t.Date <= finishDate && t.Operation == EnumInvestmentOperation.Buy)
+                .Select(t => new { t.Date.Year, t.Date.Month, t.TotalValue })
+                .ToListAsync();
+
+            var allDividends = await context.InvestmentDividends
+                .Where(d => d.UserId == userId && d.Date >= startDate && d.Date <= finishDate)
+                .Select(d => new { d.Date.Year, d.Date.Month, d.Amount })
+                .ToListAsync();
+
+            var cdiRates  = await FetchCdiMonthlyAsync(startDate, finishDate);
+            var ipcaRates = await FetchIpcaAsync(startDate, finishDate);
+
+            // IBOV: historical long-run monthly average (~13% annual → ~1.024%/mo)
+            const double ibovMonthlyAvg = 1.024;
+
+            // IPCA+5% annual = IPCA monthly + (5%/12) per month
+            const double extraMonthly = 5.0 / 12.0;
+
+            var months = new List<(int Year, int Month)>();
+            var cursor = new DateOnly(startDate.Year, startDate.Month, 1);
+            while (cursor <= new DateOnly(finishDate.Year, finishDate.Month, 1))
+            {
+                months.Add((cursor.Year, cursor.Month));
+                cursor = cursor.AddMonths(1);
+            }
+
+            var points = new List<ProfitabilityVsCdiPointDto>();
+            double cumulPortfolio  = 1.0, cumulCdi  = 1.0, cumulIbov  = 1.0, cumulIpca5 = 1.0;
+
+            foreach (var (year, month) in months)
+            {
+                var invested  = allBuys.Where(t => t.Year == year && t.Month == month).Sum(t => (decimal)t.TotalValue);
+                var dividends = allDividends.Where(d => d.Year == year && d.Month == month).Sum(d => (decimal)d.Amount);
+                var portPct   = invested > 0 ? Math.Round(dividends / invested * 100, 2) : 0m;
+
+                var key      = $"{year:D4}-{month:D2}";
+                var cdiPct   = cdiRates.TryGetValue(key, out var cdiR) ? Math.Round((decimal)cdiR, 2) : 0m;
+                var ipcaMo   = ipcaRates.TryGetValue(key, out var ipcaR) ? ipcaR : 0.4;
+                var ipca5Pct = Math.Round((decimal)(ipcaMo + extraMonthly), 2);
+                var ibovPct  = Math.Round((decimal)ibovMonthlyAvg, 2);
+
+                cumulPortfolio *= 1.0 + (double)portPct / 100.0;
+                cumulCdi       *= 1.0 + (double)cdiPct  / 100.0;
+                cumulIbov      *= 1.0 + ibovMonthlyAvg  / 100.0;
+                cumulIpca5     *= 1.0 + (double)ipca5Pct / 100.0;
+
+                points.Add(new ProfitabilityVsCdiPointDto
+                {
+                    Label         = new DateOnly(year, month, 1).ToString("MMM/yy", new System.Globalization.CultureInfo("pt-BR")),
+                    PortfolioPct  = portPct,
+                    CdiPct        = cdiPct,
+                    IbovPct       = ibovPct,
+                    IpcaPlus5Pct  = ipca5Pct,
+                });
+            }
+
+            var cdiAllTime   = Math.Round((decimal)(cumulCdi   - 1.0) * 100, 2);
+            var ibovAllTime  = Math.Round((decimal)(cumulIbov  - 1.0) * 100, 2);
+            var ipca5AllTime = Math.Round((decimal)(cumulIpca5 - 1.0) * 100, 2);
+            var portAllTime  = Math.Round((decimal)(cumulPortfolio - 1.0) * 100, 2);
+
+            var totals = new ProfitabilityBenchmarkTotalsDto
+            {
+                PortfolioAllTimePct  = portAllTime,
+                CdiAllTimePct        = cdiAllTime,
+                IbovAllTimePct       = ibovAllTime,
+                IpcaPlus5AllTimePct  = ipca5AllTime,
+                VsCdiPct             = portAllTime - cdiAllTime,
+                VsIbovPct            = portAllTime - ibovAllTime,
+                VsIpcaPlus5Pct       = portAllTime - ipca5AllTime,
+            };
+
+            return new ProfitabilityVsBenchmarksResponseDto { Points = points, Totals = totals };
         }
 
         private async Task<double> FetchCdiAsync(DateOnly from, DateOnly to)

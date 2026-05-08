@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { Pencil, Trash2, Star, CreditCard, Landmark, PiggyBank, Wallet, Banknote, TrendingUp, TrendingDown } from "lucide-react";
-import { Chart, registerables } from "chart.js";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { AccountItem, AccountType } from "@/lib/types/accounts.types";
-
-Chart.register(...registerables);
 
 const ACCOUNT_TYPE_CONFIG: Record<
   AccountType,
@@ -21,6 +17,24 @@ const ACCOUNT_TYPE_CONFIG: Record<
 };
 
 const DEFAULT_SPARKLINE = [100, 105, 98, 110, 108, 115, 112, 120];
+
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  if (data.length < 2) return null;
+  const w = 100;
+  const h = 28;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const step = w / (data.length - 1);
+  const pts = data.map((v, i) => `${i * step},${h - ((v - min) / range) * h}`).join(" ");
+  const fill = `${pts} ${(data.length - 1) * step},${h} 0,${h}`;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-full w-full">
+      <polygon points={fill} fill={`${color}18`} />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 type AccountCardProps = {
   account: AccountItem;
@@ -42,7 +56,6 @@ export const AccountCard = ({
   const config = ACCOUNT_TYPE_CONFIG[account.type];
   const { Icon, color, label } = config;
   const isNegative = account.currentAmount < 0;
-  const sparkRef = useRef<HTMLCanvasElement>(null);
 
   const trend = trendPercent ?? (() => {
     const first = sparklineData[0];
@@ -50,34 +63,7 @@ export const AccountCard = ({
     return first !== 0 ? ((last - first) / Math.abs(first)) * 100 : 0;
   })();
   const trendUp = trend >= 0;
-
-  useEffect(() => {
-    if (!sparkRef.current) return;
-    const existing = Chart.getChart(sparkRef.current);
-    if (existing) existing.destroy();
-
-    new Chart(sparkRef.current.getContext("2d")!, {
-      type: "line",
-      data: {
-        labels: sparklineData.map((_, i) => `D${i + 1}`),
-        datasets: [{
-          data: sparklineData,
-          borderColor: isNegative ? "#F25F5C" : color,
-          backgroundColor: isNegative ? "#F25F5C18" : `${color}18`,
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1.5,
-          pointRadius: 0,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: { x: { display: false }, y: { display: false } },
-      },
-    });
-  }, [sparklineData, color, isNegative]);
+  const sparkColor = isNegative ? "#F25F5C" : color;
 
   return (
     <div className="border-border bg-surface group relative flex flex-col gap-3 rounded-xl border p-5 transition-shadow hover:shadow-sm">
@@ -101,10 +87,10 @@ export const AccountCard = ({
             <p className="text-text-muted text-[12px]">{label}</p>
             <span
               className={cn(
-                "rounded-full px-1.5 py-px text-[10px] font-medium",
+                "rounded-full px-1.5 py-px text-[10px] font-medium border",
                 isConnected
-                  ? "bg-green/10 text-green border-green/25 border"
-                  : "bg-surface3 text-text-muted border-border border",
+                  ? "bg-green/10 text-green border-green/25"
+                  : "bg-surface2 text-text-muted border-border",
               )}
             >
               {isConnected ? "Conectado" : "Manual"}
@@ -136,7 +122,7 @@ export const AccountCard = ({
 
       {/* Sparkline */}
       <div className="h-8">
-        <canvas ref={sparkRef} />
+        <Sparkline data={sparklineData} color={sparkColor} />
       </div>
 
       {/* Actions */}

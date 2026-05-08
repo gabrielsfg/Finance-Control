@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { budgetsApi } from "@/lib/api/budgets";
+import { MOCK_BUDGETS } from "@/lib/mocks";
 import type { Budget, CreateBudgetRequest, UpdateBudgetRequest } from "@/lib/types/budgets.types";
 
 export const useBudgets = () =>
   useQuery<Budget[]>({
     queryKey: ["budgets"],
-    queryFn: budgetsApi.getAll,
-    staleTime: 60_000,
+    queryFn: () => Promise.resolve(MOCK_BUDGETS),
+    staleTime: Infinity,
   });
 
 export const useCreateBudget = () => {

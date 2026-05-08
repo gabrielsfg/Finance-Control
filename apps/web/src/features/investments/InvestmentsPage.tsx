@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Plus, TrendingUp, Download, Gift } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2, TrendingUp, Download, Gift } from "lucide-react";
 import { InvestmentsKpiCards } from "@/features/investments/components/InvestmentsKpiCards";
 import { InvestmentsAllocationChart } from "@/features/investments/components/InvestmentsAllocationChart";
 import { InvestmentsTable } from "@/features/investments/components/InvestmentsTable";
@@ -10,6 +9,7 @@ import { RegisterTransactionModal } from "@/features/investments/components/Regi
 import { RegisterDividendModal } from "@/features/investments/components/RegisterDividendModal";
 import { InvestmentDetailModal } from "@/features/investments/components/InvestmentDetailModal";
 import { useInvestments } from "@/features/investments/hooks/useInvestments";
+import { usePageNova, usePageSearch, usePageFilter } from "@/lib/hooks/usePageHeader";
 import type { Investment } from "@/lib/types/investments.types";
 
 export function InvestmentsPage() {
@@ -18,6 +18,27 @@ export function InvestmentsPage() {
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const [dividendTarget, setDividendTarget]         = useState<Investment | null>(null);
   const [showDividendModal, setShowDividendModal]   = useState(false);
+
+  usePageNova("Nova operação", () => setShowRegisterTx(true));
+  usePageSearch();
+  usePageFilter(
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => {/* export CSV */}}
+        className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-[8px] transition-colors"
+        aria-label="Exportar"
+      >
+        <Download size={15} strokeWidth={1.75} />
+      </button>
+      <button
+        onClick={() => setShowDividendModal(true)}
+        className="border-border bg-surface2 text-text-sub hover:text-text flex h-7 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium transition-colors"
+      >
+        <Gift size={12} strokeWidth={1.75} />
+        Dividendo
+      </button>
+    </div>
+  );
 
   const accountOptions = [
     { id: 1, name: "Conta Corrente Nubank" },
@@ -45,31 +66,9 @@ export function InvestmentsPage() {
   return (
     <div className="flex flex-col gap-5">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Investimentos</h1>
-          <p className="text-text-muted mt-0.5 text-[13px]">{data.investments.length} ativos na carteira</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {/* export CSV */}}
-            className="border-border bg-surface text-text-sub hover:text-text flex items-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-[13px] font-medium transition-colors hover:bg-surface2"
-          >
-            <Download size={14} />
-            Exportar
-          </button>
-          <button
-            onClick={() => setShowDividendModal(true)}
-            className="border-border bg-surface text-text-sub hover:text-text flex items-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-[13px] font-medium transition-colors hover:bg-surface2"
-          >
-            <Gift size={14} />
-            + Dividendo
-          </button>
-          <Button size="xl" onClick={() => setShowRegisterTx(true)}>
-            <Plus />
-            Nova operação
-          </Button>
-        </div>
+      <div>
+        <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Investimentos</h1>
+        <p className="text-text-muted mt-0.5 text-[13px]">{data.investments.length} ativos na carteira</p>
       </div>
 
       {hasInvestments ? (

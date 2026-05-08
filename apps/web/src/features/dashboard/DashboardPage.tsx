@@ -1,7 +1,6 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { NetWorthHero } from "@/features/dashboard/components/NetWorthHero";
 import { DashboardStatsRow } from "@/features/dashboard/components/DashboardStatsRow";
 import { RecentTransactions } from "@/features/dashboard/components/RecentTransactions";
 import { MonthlyEvolutionChart } from "@/features/dashboard/components/MonthlyEvolutionChart";
@@ -33,10 +32,6 @@ export function DashboardPage() {
   }
 
   const { balanceSummary, recentTransactions, budgetSummary, topCategories } = data;
-  const savingsRate =
-    balanceSummary.totalIncome > 0
-      ? (balanceSummary.balance / balanceSummary.totalIncome) * 100
-      : 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -45,9 +40,7 @@ export function DashboardPage() {
         <p className="text-text-muted mt-0.5 text-[13px] capitalize">{currentMonth}</p>
       </div>
 
-      <NetWorthHero balanceSummary={balanceSummary} savingsRate={savingsRate} />
-
-      <DashboardStatsRow balanceSummary={balanceSummary} currentMonth={currentMonth} savingsRate={savingsRate} />
+      <DashboardStatsRow balanceSummary={balanceSummary} currentMonth={currentMonth} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px] lg:min-h-[360px]">
         <MonthlyEvolutionChart />

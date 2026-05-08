@@ -16,7 +16,6 @@ import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import { useInvestmentLaunches } from "@/features/analytics/hooks/useAnalytics";
-import type { InvestmentLaunch } from "@/lib/types/analytics.types";
 
 type FilterOp = "all" | "buy" | "sell";
 
@@ -47,52 +46,6 @@ const BarTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-function LaunchRow({ launch }: { launch: InvestmentLaunch }) {
-  const isBuy = launch.operation === "buy";
-  return (
-    <div className="border-border flex items-center gap-3 border-b py-3 last:border-0">
-      <div
-        className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px]",
-          isBuy ? "bg-green/10" : "bg-red/10",
-        )}
-      >
-        {isBuy
-          ? <ArrowDownLeft size={15} className="text-green" strokeWidth={2} />
-          : <ArrowUpRight  size={15} className="text-red"   strokeWidth={2} />}
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-1.5">
-          <span className="font-display font-700 text-text text-[14px]">{launch.ticker}</span>
-          <span className="text-text-muted truncate text-[12px]">{launch.name}</span>
-        </div>
-        <div className="mt-0.5 flex items-center gap-2">
-          <span
-            className="rounded px-1.5 py-0.5 text-[11px] font-medium"
-            style={{
-              color: ASSET_CLASS_COLORS[launch.assetClass] ?? "var(--text-sub)",
-              backgroundColor: `${ASSET_CLASS_COLORS[launch.assetClass] ?? "var(--text-sub)"}18`,
-            }}
-          >
-            {launch.assetClass}
-          </span>
-          <span className="text-text-muted text-[12px]">{formatDate(launch.date)}</span>
-          {launch.broker && <span className="text-text-muted text-[12px]">· {launch.broker}</span>}
-        </div>
-      </div>
-
-      <div className="text-right">
-        <p className={cn("font-money font-600 text-[14px]", isBuy ? "text-green" : "text-red")}>
-          {isBuy ? "+" : "-"}{formatCurrency(launch.totalValue / 100)}
-        </p>
-        <p className="text-text-muted mt-0.5 text-[12px]">
-          {launch.quantity % 1 === 0 ? launch.quantity : launch.quantity.toFixed(4)} × {formatCurrency(launch.unitPrice / 100)}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: string; finishDate: string }) {
   const { data: response } = useInvestmentLaunches(startDate, finishDate);
@@ -185,7 +138,7 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
 
       {/* Launches table */}
       <div className="border-border bg-surface rounded-xl border p-5">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h2 className="font-display font-700 text-text text-[18px] tracking-tight">Histórico de operações</h2>
             <p className="text-text-muted mt-0.5 text-[13px]">{filtered.length} lançamento{filtered.length !== 1 ? "s" : ""}</p>
@@ -213,10 +166,67 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
             <p className="text-text-muted text-[13px]">Nenhum lançamento encontrado.</p>
           </div>
         ) : (
-          <div>
-            {filtered.map((launch) => (
-              <LaunchRow key={launch.id} launch={launch} />
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px] text-[13px]">
+              <thead>
+                <tr className="border-border border-b">
+                  <th className="text-text-muted pb-2.5 pr-3 text-left font-medium">Data</th>
+                  <th className="text-text-muted pb-2.5 pr-3 text-left font-medium">Op.</th>
+                  <th className="text-text-muted pb-2.5 pr-3 text-left font-medium">Ticker</th>
+                  <th className="text-text-muted pb-2.5 px-3 text-right font-medium">Qtd</th>
+                  <th className="text-text-muted pb-2.5 px-3 text-right font-medium">Preço</th>
+                  <th className="text-text-muted pb-2.5 px-3 text-right font-medium">Total</th>
+                  <th className="text-text-muted pb-2.5 pl-3 text-left font-medium">Corretora</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((launch) => {
+                  const isBuy = launch.operation === "buy";
+                  return (
+                    <tr key={launch.id} className="border-border border-b last:border-0 hover:bg-surface2/40 transition-colors">
+                      <td className="text-text-muted py-3 pr-3">{formatDate(launch.date)}</td>
+                      <td className="py-3 pr-3">
+                        <div className={cn(
+                          "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium",
+                          isBuy ? "bg-green/10 text-green" : "bg-red/10 text-red",
+                        )}>
+                          {isBuy
+                            ? <ArrowDownLeft size={11} strokeWidth={2.5} />
+                            : <ArrowUpRight  size={11} strokeWidth={2.5} />}
+                          {isBuy ? "Compra" : "Venda"}
+                        </div>
+                      </td>
+                      <td className="py-3 pr-3">
+                        <div>
+                          <span className="font-display font-700 text-text">{launch.ticker}</span>
+                          <span
+                            className="ml-2 rounded px-1.5 py-0.5 text-[11px] font-medium"
+                            style={{
+                              color: ASSET_CLASS_COLORS[launch.assetClass] ?? "var(--text-sub)",
+                              backgroundColor: `${ASSET_CLASS_COLORS[launch.assetClass] ?? "var(--text-sub)"}18`,
+                            }}
+                          >
+                            {launch.assetClass}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="font-money text-text py-3 px-3 text-right tabular-nums">
+                        {launch.quantity % 1 === 0 ? launch.quantity : launch.quantity.toFixed(4)}
+                      </td>
+                      <td className="font-money text-text-sub py-3 px-3 text-right tabular-nums">
+                        {formatCurrency(launch.unitPrice / 100)}
+                      </td>
+                      <td className={cn("font-money font-600 py-3 px-3 text-right tabular-nums", isBuy ? "text-green" : "text-red")}>
+                        {isBuy ? "+" : "-"}{formatCurrency(launch.totalValue / 100)}
+                      </td>
+                      <td className="text-text-muted py-3 pl-3">
+                        {launch.broker ?? "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

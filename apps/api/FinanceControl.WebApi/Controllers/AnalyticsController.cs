@@ -266,6 +266,15 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("investment/profitability-vs-benchmarks")]
+        public async Task<IActionResult> GetInvestmentProfitabilityVsBenchmarksAsync(
+            [FromQuery] DateOnly startDate,
+            [FromQuery] DateOnly finishDate)
+        {
+            var result = await _analyticsService.GetInvestmentProfitabilityVsBenchmarksAsync(GetUserId(), startDate, finishDate);
+            return Ok(result);
+        }
+
         [HttpGet("investment/launches")]
         public async Task<IActionResult> GetInvestmentLaunchesAsync(
             [FromQuery] DateOnly startDate,

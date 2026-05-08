@@ -2,12 +2,10 @@
 
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { formatPercent } from "@/lib/utils/formatNumber";
 import type { BalanceSummary } from "@/lib/types/dashboard.types";
 
 type Props = {
   balanceSummary: BalanceSummary;
-  savingsRate: number;
 };
 
 const FX_PAIRS = [
@@ -15,8 +13,8 @@ const FX_PAIRS = [
   { pair: "EUR/BRL", rate: 6.41, change: -0.12 },
 ];
 
-export const NetWorthHero = ({ balanceSummary, savingsRate }: Props) => {
-  const netWorth = (balanceSummary.totalIncome - balanceSummary.totalExpenses) / 100;
+export const NetWorthHero = ({ balanceSummary }: Props) => {
+  const netWorth = balanceSummary.netWorth / 100;
 
   return (
     <div
@@ -35,12 +33,25 @@ export const NetWorthHero = ({ balanceSummary, savingsRate }: Props) => {
         >
           {formatCurrency(netWorth)}
         </p>
-        <div className="mt-2 flex items-center gap-2">
-          <span className="bg-green/12 text-green rounded-full px-2.5 py-0.5 font-mono text-[13px]">
-            {formatPercent(savingsRate)}
-          </span>
-          <span className="text-text-muted font-mono text-[13px]">vs. mês anterior</span>
-        </div>
+        {balanceSummary.netWorthChange !== undefined && (
+          <div className="mt-2 flex items-center gap-2">
+            <span
+              className={`rounded-full px-2.5 py-0.5 font-mono text-[13px] ${
+                balanceSummary.netWorthChange >= 0
+                  ? "bg-green/12 text-green"
+                  : "bg-red/12 text-red"
+              }`}
+            >
+              {balanceSummary.netWorthChange >= 0 ? "+" : ""}
+              {balanceSummary.netWorthChange.toFixed(2)}%
+            </span>
+            {balanceSummary.previousNetWorth !== undefined && (
+              <span className="text-text-muted font-mono text-[13px]">
+                vs. {formatCurrency(balanceSummary.previousNetWorth / 100)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="hidden items-center gap-6 sm:flex">

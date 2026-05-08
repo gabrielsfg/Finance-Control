@@ -10,8 +10,6 @@ import {
   Trash2,
   Tag,
   FolderOpen,
-  ArrowDown,
-  ArrowUp,
   Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +23,7 @@ import { CreateCategoryModal } from "@/features/categories/components/CreateCate
 import { EditCategoryModal } from "@/features/categories/components/EditCategoryModal";
 import { CreateSubCategoryModal } from "@/features/categories/components/CreateSubCategoryModal";
 import { EditSubCategoryModal } from "@/features/categories/components/EditSubCategoryModal";
+import { usePageNova, usePageSearch } from "@/lib/hooks/usePageHeader";
 import type { Category, SubCategory } from "@/lib/types/categories.types";
 
 export function CategoriesPage() {
@@ -35,6 +34,9 @@ export function CategoriesPage() {
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [showCreateCategory, setShowCreateCategory] = useState(false);
+
+  usePageNova("Nova categoria", () => setShowCreateCategory(true));
+  usePageSearch();
   const [editCategory, setEditCategory] = useState<Category | null>(null);
   const [showCreateSub, setShowCreateSub] = useState<number | null>(null);
   const [editSub, setEditSub] = useState<SubCategory | null>(null);
@@ -69,20 +71,12 @@ export function CategoriesPage() {
     <>
       <div className="flex flex-col gap-5">
         {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="font-display font-700 text-text text-[22px] tracking-tight">
-              Categorias
-            </h1>
-            <p className="text-text-muted mt-0.5 text-[13px]">
-              {userCategories.length} categori{userCategories.length !== 1 ? "as" : "a"},{" "}
-              {total} subcategori{total !== 1 ? "as" : "a"}
-            </p>
-          </div>
-          <Button size="xl" onClick={() => setShowCreateCategory(true)}>
-            <Plus />
-            Nova categoria
-          </Button>
+        <div>
+          <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Categorias</h1>
+          <p className="text-text-muted mt-0.5 text-[13px]">
+            {userCategories.length} categori{userCategories.length !== 1 ? "as" : "a"},{" "}
+            {total} subcategori{total !== 1 ? "as" : "a"}
+          </p>
         </div>
 
         {/* Stats */}

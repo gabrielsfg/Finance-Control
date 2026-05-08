@@ -78,6 +78,8 @@ export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
               ? `${dayNum}: -${formatCurrency(expense / 100)} (gasto)`
               : `${dayNum}: sem movimentação`;
 
+          const vsLast = d?.vsLastMonth ?? null;
+
           return (
             <button
               key={dateStr}
@@ -99,6 +101,16 @@ export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
                     ? formatCurrency(net / 100).replace("R$ ", "")
                     : formatCurrency(expense / 100).replace("R$ ", "")}
                 </span>
+              )}
+              {/* vs last month indicator dot */}
+              {vsLast !== null && expense > 0 && (
+                <div
+                  className={cn(
+                    "absolute top-1 right-1 h-1.5 w-1.5 rounded-full",
+                    vsLast > 0 ? "bg-red/70" : "bg-green/70",
+                  )}
+                  title={vsLast > 0 ? `+${formatCurrency(vsLast / 100)} vs mês anterior` : `${formatCurrency(vsLast / 100)} vs mês anterior`}
+                />
               )}
             </button>
           );
@@ -124,6 +136,12 @@ export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
         <div className="flex items-center gap-2">
           <div className={cn("h-4 w-4 rounded-[4px]", BG["Empty"])} />
           <span className="text-text-muted text-[11px]">Sem movimentação</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-red/70" />
+          <span className="text-text-muted text-[11px]">Mais que mês anterior</span>
+          <div className="h-2 w-2 rounded-full bg-green/70 ml-1" />
+          <span className="text-text-muted text-[11px]">Menos que mês anterior</span>
         </div>
       </div>
     </div>

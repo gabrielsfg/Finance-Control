@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { profileApi } from "@/lib/api/profile";
+import { MOCK_PROFILE } from "@/lib/mocks";
 import type { UpdateProfileRequest, UpdatePreferencesRequest, ResetDataRequest } from "@/lib/types/profile.types";
 
 export const useProfile = () =>
   useQuery({
     queryKey: ["profile"],
-    queryFn: profileApi.get,
-    staleTime: 60_000,
+    queryFn: () => Promise.resolve(MOCK_PROFILE),
+    staleTime: Infinity,
   });
 
 export const useUpdateProfile = () => {

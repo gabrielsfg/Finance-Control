@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Loader2, Plus, RefreshCw, AlertCircle } from "lucide-react";
-import { AccountsHeader } from "@/features/accounts/components/AccountsHeader";
 import { AccountsNetWorthHero } from "@/features/accounts/components/AccountsNetWorthHero";
 import { AccountsEmptyState } from "@/features/accounts/components/AccountsEmptyState";
 import { AccountCard } from "@/features/accounts/components/AccountCard";
@@ -10,6 +9,7 @@ import { CreateAccountModal } from "@/features/accounts/components/CreateAccount
 import { EditAccountModal } from "@/features/accounts/components/EditAccountModal";
 import { DeleteAccountModal } from "@/features/accounts/components/DeleteAccountModal";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { usePageNova } from "@/lib/hooks/usePageHeader";
 import type { AccountItem } from "@/lib/types/accounts.types";
 
 export function AccountsPage() {
@@ -17,6 +17,8 @@ export function AccountsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<AccountItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AccountItem | null>(null);
+
+  usePageNova("Nova conta", () => setCreateOpen(true));
 
   const totalBalance = accounts?.reduce((sum, a) => sum + a.currentAmount, 0) ?? 0;
   const totalAssets = accounts?.filter((a) => a.currentAmount > 0).reduce((sum, a) => sum + a.currentAmount, 0) ?? 0;
@@ -42,10 +44,12 @@ export function AccountsPage() {
   return (
     <>
       <div className="flex flex-col gap-5">
-        <AccountsHeader
-          accountCount={accounts?.length ?? 0}
-          onCreateClick={() => setCreateOpen(true)}
-        />
+        <div>
+          <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Contas</h1>
+          <p className="text-text-muted mt-0.5 text-[13px]">
+            {(accounts?.length ?? 0) > 0 ? `${accounts!.length} conta${accounts!.length !== 1 ? "s" : ""}` : "Nenhuma conta"}
+          </p>
+        </div>
 
         {hasAccounts && (
           <AccountsNetWorthHero

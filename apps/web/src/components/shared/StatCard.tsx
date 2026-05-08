@@ -6,6 +6,7 @@ type StatCardProps = {
   label: string;
   value: number;
   change?: number;
+  previousValue?: number;
   lowerIsBetter?: boolean;
   showNegative?: boolean;
   icon: LucideIcon;
@@ -17,6 +18,7 @@ export const StatCard = ({
   label,
   value,
   change,
+  previousValue,
   lowerIsBetter = false,
   showNegative = false,
   icon: Icon,
@@ -29,7 +31,7 @@ export const StatCard = ({
   return (
     <div className={cn("border-border bg-surface rounded-xl border p-5", className)}>
       <div className="mb-3 flex items-center justify-between">
-        <span className="font-display font-700 text-text text-[18px]">{label}</span>
+        <span className="text-text-muted text-[12px] uppercase tracking-[0.04em]">{label}</span>
         <div
           className="flex h-8 w-8 items-center justify-center rounded-[8px]"
           style={{ backgroundColor: `${iconColor}18` }}
@@ -41,11 +43,15 @@ export const StatCard = ({
         {showNegative ? "-" : ""}{formatCurrency(value)}
       </p>
       {change !== undefined && (
-        <p className="mt-1.5 flex items-baseline gap-1.5">
-          <span className={cn("font-mono text-[13px]", isGood ? "text-green" : "text-red")}>
+        <p className="mt-1.5 flex items-baseline gap-1 flex-wrap">
+          <span className={cn("font-mono text-[12px] font-medium", isGood ? "text-green" : "text-red")}>
             {formatPercent(change)}
           </span>
-          <span className="text-text-muted text-[13px]">vs. mês anterior</span>
+          <span className="text-text-muted text-[12px]">
+            {previousValue !== undefined
+              ? `vs. ${formatCurrency(previousValue)} mês anterior`
+              : "vs. mês anterior"}
+          </span>
         </p>
       )}
     </div>

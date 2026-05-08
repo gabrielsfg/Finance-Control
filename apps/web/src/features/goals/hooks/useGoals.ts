@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { goalsApi } from "@/lib/api/goals";
+import { MOCK_GOALS } from "@/lib/mocks";
 import type { CreateGoalRequest, UpdateGoalRequest, GoalType, GoalStatus } from "@/lib/types/goal.types";
 
 export const useGoals = (params?: { type?: GoalType; status?: GoalStatus }) =>
   useQuery({
     queryKey: ["goals", params],
-    queryFn: () => goalsApi.getAll(params),
-    staleTime: 60_000,
+    queryFn: () => Promise.resolve(MOCK_GOALS),
+    staleTime: Infinity,
   });
 
 export const useGoalDetail = (id: number) =>

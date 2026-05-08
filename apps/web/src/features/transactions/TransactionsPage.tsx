@@ -2,41 +2,37 @@
 
 import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2, X, CalendarDays } from "lucide-react";
-import { TransactionsHeader } from "@/features/transactions/components/TransactionsHeader";
-import { TransactionsFilterBar } from "@/features/transactions/components/TransactionsFilterBar";
+import { Loader2, X } from "lucide-react";
+import { TransactionsFilters } from "@/features/transactions/components/TransactionsFilters";
 import { TransactionsSummary } from "@/features/transactions/components/TransactionsSummary";
 import { TransactionsList } from "@/features/transactions/components/TransactionsList";
 import { TransactionsPagination } from "@/features/transactions/components/TransactionsPagination";
-import { RecurringBanner } from "@/features/transactions/components/RecurringBanner";
-import { CreateTransactionModal } from "@/features/transactions/components/CreateTransactionModal";
-import { EditTransactionModal } from "@/features/transactions/components/EditTransactionModal";
+import { TransactionDrawer, type DrawerMode } from "@/features/transactions/components/TransactionDrawer";
 import { DeleteTransactionModal } from "@/features/transactions/components/DeleteTransactionModal";
 import { useTransactionsFiltered } from "@/features/transactions/hooks/useTransactions";
-import { defaultTxFilter, buildTxDateRange } from "@/features/transactions/utils/filterDates";
+import { defaultTxFilter, buildTxDateRange, activeTxDateLabel } from "@/features/transactions/utils/filterDates";
+import { usePageNova, usePageFilter, usePageSearch } from "@/lib/hooks/usePageHeader";
+import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
+import { useBudgets } from "@/features/budgets/hooks/useBudgets";
+import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { TransactionsFilter } from "@/features/transactions/types/filters.types";
-import type { TransactionItem, TransactionType } from "@/lib/types/transactions.types";
-
-type TypeFilter = "All" | TransactionType | "Transfer";
-
-function parseDateLocal(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
-
-function formatDayLabel(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
-}
+import type { TransactionItem } from "@/lib/types/transactions.types";
 
 function initFilterFromParam(dateParam: string | null): TransactionsFilter {
   const base = defaultTxFilter();
   if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return base;
-  // Use custom-range covering only that day
   return { ...base, preset: "custom-range", startDate: dateParam, finishDate: dateParam };
 }
 
 const PAGE_SIZE = 12;
+
+const TYPE_FILTER_LABELS: Record<TransactionsFilter["typeFilter"], string> = {
+  All: "Todos",
+  Income: "Receitas",
+  Expense: "Despesas",
+  Transfer: "Transferências",
+};
 
 export function TransactionsPage() {
   const searchParams = useSearchParams();
@@ -44,13 +40,57 @@ export function TransactionsPage() {
 
   const [filter, setFilter] = useState<TransactionsFilter>(() => initFilterFromParam(dateParam));
   const [filterDay, setFilterDay] = useState<string | null>(dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : null);
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("All");
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const [createOpen, setCreateOpen] = useState(() => searchParams.get("new") === "1");
-  const [editTarget, setEditTarget] = useState<TransactionItem | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(() => searchParams.get("new") === "1");
+  const [drawerMode, setDrawerMode] = useState<DrawerMode>(() =>
+    searchParams.get("new") === "1" ? "create" : "create",
+  );
+  const [drawerTransaction, setDrawerTransaction] = useState<TransactionItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TransactionItem | null>(null);
+
+  // For chip lookups
+  const { data: accountsRaw = [] } = useAccounts();
+  const { data: subcatsRaw  = [] } = useSubCategories();
+  const { data: budgetsRaw  = [] } = useBudgets();
+
+  const metaCategories = useMemo(() =>
+    Array.from(
+      new Map(subcatsRaw.map(s => [s.categoryId, {
+        id: s.categoryId,
+        name: s.categoryName,
+        color: getCategoryColor(s.categoryColor, s.categoryName),
+      }])).values()
+    ), [subcatsRaw]);
+
+  const metaSubcategories = useMemo(() =>
+    subcatsRaw.map(s => ({
+      id: s.id,
+      name: s.name,
+      color: getCategoryColor(s.categoryColor, s.categoryName),
+    })), [subcatsRaw]);
+
+  const metaAccounts = useMemo(() =>
+    accountsRaw.map(a => ({ id: a.id, name: a.name })), [accountsRaw]);
+
+  const metaBudgets = useMemo(() =>
+    budgetsRaw.map(b => ({ id: b.id, name: b.name })), [budgetsRaw]);
+
+  function handleFilterChange(f: TransactionsFilter) {
+    setFilter(f);
+    setFilterDay(null);
+    setPage(1);
+  }
+
+  usePageNova("Nova transação", () => {
+    setDrawerMode("create");
+    setDrawerTransaction(null);
+    setDrawerOpen(true);
+  });
+  usePageSearch();
+  usePageFilter(
+    <TransactionsFilters filter={filter} onChange={handleFilterChange} />
+  );
 
   const { start, finish } = buildTxDateRange(filter);
 
@@ -67,12 +107,11 @@ export function TransactionsPage() {
     if (!allTransactions) return [];
     return allTransactions.filter((t) => {
       if (filterDay && t.transactionDate !== filterDay) return false;
-      if (typeFilter === "Transfer" && t.recurringTransactionId === null && t.parentTransactionId === null) return false;
-    if (typeFilter !== "All" && typeFilter !== "Transfer" && t.type !== typeFilter) return false;
-      if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filter.typeFilter === "Transfer" && t.recurringTransactionId === null && t.parentTransactionId === null) return false;
+      if (filter.typeFilter !== "All" && filter.typeFilter !== "Transfer" && t.type !== filter.typeFilter) return false;
       return true;
     });
-  }, [allTransactions, filterDay, typeFilter, search]);
+  }, [allTransactions, filterDay, filter.typeFilter]);
 
   const totalIncome = filtered.filter((t) => t.type === "Income").reduce((s, t) => s + t.value, 0);
   const totalExpense = filtered.filter((t) => t.type === "Expense").reduce((s, t) => s + t.value, 0);
@@ -86,11 +125,90 @@ export function TransactionsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  function handleFilterChange(f: TransactionsFilter) {
-    setFilter(f);
-    setFilterDay(null);
-    setPage(1);
-  }
+  // ── Active filter chips ────────────────────────────────────────────────────
+  type Chip = { id: string; label: string; color?: string; onRemove: () => void };
+
+  const activeChips = useMemo<Chip[]>(() => {
+    const chips: Chip[] = [];
+
+    if (filter.preset !== "current-month") {
+      chips.push({
+        id: "preset",
+        label: activeTxDateLabel(filter),
+        onRemove: () => { setFilter(f => ({ ...f, preset: "current-month" })); setPage(1); },
+      });
+    }
+
+    if (filter.typeFilter !== "All") {
+      chips.push({
+        id: "typeFilter",
+        label: TYPE_FILTER_LABELS[filter.typeFilter],
+        onRemove: () => { setFilter(f => ({ ...f, typeFilter: "All" })); setPage(1); },
+      });
+    }
+
+    for (const id of filter.categoryIds) {
+      const cat = metaCategories.find(c => c.id === id);
+      if (cat) chips.push({
+        id: `cat-${id}`,
+        label: cat.name,
+        color: cat.color,
+        onRemove: () => {
+          setFilter(f => ({ ...f, categoryIds: f.categoryIds.filter(x => x !== id) }));
+          setPage(1);
+        },
+      });
+    }
+
+    for (const id of filter.subCategoryIds) {
+      const sub = metaSubcategories.find(s => s.id === id);
+      if (sub) chips.push({
+        id: `sub-${id}`,
+        label: sub.name,
+        color: sub.color,
+        onRemove: () => {
+          setFilter(f => ({ ...f, subCategoryIds: f.subCategoryIds.filter(x => x !== id) }));
+          setPage(1);
+        },
+      });
+    }
+
+    for (const id of filter.accountIds) {
+      const acc = metaAccounts.find(a => a.id === id);
+      if (acc) chips.push({
+        id: `acc-${id}`,
+        label: acc.name,
+        onRemove: () => {
+          setFilter(f => ({ ...f, accountIds: f.accountIds.filter(x => x !== id) }));
+          setPage(1);
+        },
+      });
+    }
+
+    for (const id of filter.budgetIds) {
+      const bud = metaBudgets.find(b => b.id === id);
+      if (bud) chips.push({
+        id: `bud-${id}`,
+        label: bud.name,
+        onRemove: () => {
+          setFilter(f => ({ ...f, budgetIds: f.budgetIds.filter(x => x !== id) }));
+          setPage(1);
+        },
+      });
+    }
+
+    if (filterDay) {
+      const [y, m, d] = filterDay.split("-").map(Number);
+      const label = new Date(y, m - 1, d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+      chips.push({
+        id: "filterDay",
+        label,
+        onRemove: () => { setFilterDay(null); setPage(1); },
+      });
+    }
+
+    return chips;
+  }, [filter, filterDay, metaCategories, metaSubcategories, metaAccounts, metaBudgets]);
 
   if (isLoading) {
     return (
@@ -111,37 +229,39 @@ export function TransactionsPage() {
   return (
     <>
       <div className="flex flex-col gap-5">
-        <TransactionsHeader
-          filteredCount={filtered.length}
-          filter={filter}
-          onFilterChange={handleFilterChange}
-          onCreateClick={() => setCreateOpen(true)}
-        />
+        {/* Page title */}
+        <div>
+          <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Transações</h1>
+          <p className="text-text-muted mt-0.5 text-[13px]">
+            {filtered.length} transaç{filtered.length !== 1 ? "ões" : "ão"}
+          </p>
 
-        {allTransactions && <RecurringBanner transactions={allTransactions} />}
-
-        <TransactionsFilterBar
-          typeFilter={typeFilter}
-          search={search}
-          onTypeFilterChange={(t) => { setTypeFilter(t); setPage(1); }}
-          onSearchChange={(v) => { setSearch(v); setPage(1); }}
-        />
-
-        {filterDay && (
-          <div className="flex items-center gap-2">
-            <div className="border-border bg-surface2 flex items-center gap-2 rounded-lg border px-3 py-1.5">
-              <CalendarDays size={13} className="text-green shrink-0" />
-              <span className="text-text-sub text-[12px]">{formatDayLabel(filterDay)}</span>
-              <button
-                type="button"
-                onClick={() => { setFilterDay(null); setPage(1); }}
-                className="text-text-muted hover:text-text ml-1 transition-colors"
-              >
-                <X size={12} />
-              </button>
+          {/* Active filter chips */}
+          {activeChips.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {activeChips.map(chip => (
+                <div
+                  key={chip.id}
+                  className="border-border bg-surface2 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px]"
+                >
+                  {chip.color && (
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: chip.color }}
+                    />
+                  )}
+                  <span className="text-text-sub">{chip.label}</span>
+                  <button
+                    onClick={chip.onRemove}
+                    className="text-text-muted hover:text-red ml-0.5 transition-colors"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <TransactionsSummary
           totalIncome={totalIncome}
@@ -151,8 +271,17 @@ export function TransactionsPage() {
 
         <TransactionsList
           transactions={paginated}
-          search={search}
-          onEdit={setEditTarget}
+          subcategoryMeta={metaSubcategories}
+          onView={(t) => {
+            setDrawerTransaction(t);
+            setDrawerMode("detail");
+            setDrawerOpen(true);
+          }}
+          onEdit={(t) => {
+            setDrawerTransaction(t);
+            setDrawerMode("edit");
+            setDrawerOpen(true);
+          }}
           onDelete={setDeleteTarget}
         />
 
@@ -163,8 +292,16 @@ export function TransactionsPage() {
         />
       </div>
 
-      <CreateTransactionModal open={createOpen} onClose={() => setCreateOpen(false)} />
-      <EditTransactionModal transaction={editTarget} onClose={() => setEditTarget(null)} />
+      <TransactionDrawer
+        open={drawerOpen}
+        mode={drawerMode}
+        transaction={drawerTransaction}
+        onClose={() => setDrawerOpen(false)}
+        onDeleteRequest={(t) => {
+          setDrawerOpen(false);
+          setDeleteTarget(t);
+        }}
+      />
       <DeleteTransactionModal transaction={deleteTarget} onClose={() => setDeleteTarget(null)} />
     </>
   );

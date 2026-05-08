@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
 import { PieChart as PieChartIcon } from "lucide-react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
@@ -55,10 +56,22 @@ export const CategoryDonutChart = ({ categories }: Props) => {
   const onMouseEnter = useCallback((_: any, index: number) => setActiveIndex(index), []);
   const onMouseLeave = useCallback(() => setActiveIndex(undefined), []);
 
+  const header = (
+    <div className="mb-4 flex items-start justify-between">
+      <div>
+        <h2 className="font-display font-700 text-text text-[18px] tracking-tight">Gastos por Categoria</h2>
+        <p className="text-text-muted mt-0.5 text-[13px]">{formatDateMonth(new Date())}</p>
+      </div>
+      <Link href="/categories" className="font-500 text-text-sub hover:text-green text-[12px] transition-colors">
+        Ver categorias →
+      </Link>
+    </div>
+  );
+
   if (data.length === 0) {
     return (
       <div className="border-border bg-surface flex h-full flex-col rounded-xl border p-5">
-        <SectionHeader title="Gastos por Categoria" subtitle={formatDateMonth(new Date())} />
+        {header}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8">
           <PieChartIcon size={32} className="text-text-muted opacity-40" />
           <p className="text-text-muted text-[13px]">Nenhum gasto registrado este mês</p>
@@ -69,7 +82,7 @@ export const CategoryDonutChart = ({ categories }: Props) => {
 
   return (
     <div className="border-border bg-surface flex h-full flex-col rounded-xl border p-5">
-      <SectionHeader title="Gastos por Categoria" subtitle={formatDateMonth(new Date())} />
+      {header}
 
       <div className="w-full flex-1" style={{ minHeight: 160 }}>
         <ResponsiveContainer width="100%" height="100%" minWidth={0}>

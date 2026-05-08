@@ -2,9 +2,15 @@ export type BalanceSummary = {
   totalIncome: number;
   totalExpenses: number;
   balance: number;
+  netWorth: number;
   incomeChange?: number;
   expenseChange?: number;
   balanceChange?: number;
+  netWorthChange?: number;
+  previousIncome?: number;
+  previousExpenses?: number;
+  previousBalance?: number;
+  previousNetWorth?: number;
 };
 
 export type RecentTransaction = {

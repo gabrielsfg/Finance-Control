@@ -49,6 +49,7 @@ export function defaultTxFilter(): TransactionsFilter {
     accountIds: [],
     categoryIds: [],
     subCategoryIds: [],
+    typeFilter: "All",
   };
 }
 

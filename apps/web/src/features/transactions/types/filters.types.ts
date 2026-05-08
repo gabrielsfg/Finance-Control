@@ -16,4 +16,5 @@ export type TransactionsFilter = {
   accountIds: number[];
   categoryIds: number[];
   subCategoryIds: number[];
+  typeFilter: "All" | "Income" | "Expense" | "Transfer";
 };

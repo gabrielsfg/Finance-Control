@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import {
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
+  ResponsiveContainer, AreaChart, Area, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
@@ -16,6 +16,13 @@ const inputCls = "border-border bg-surface2 text-text placeholder:text-text-mute
 const selectCls = `${inputCls} cursor-pointer`;
 
 type ViewMode = "gross" | "net";
+type BenchmarkId = "cdi" | "ipca5" | "ibov";
+
+const BENCHMARK_RATES: Record<BenchmarkId, { label: string; rate: number; color: string; note: string }> = {
+  cdi:   { label: "CDI",       rate: 10.65, color: "var(--blue)",   note: "~10,65% a.a. — CDI médio recente" },
+  ipca5: { label: "IPCA+5%",   rate: 10.2,  color: "var(--purple)", note: "~10,2% a.a. — IPCA(~5,2%) + 5%" },
+  ibov:  { label: "IBOV",      rate: 13.0,  color: "var(--orange)", note: "~13% a.a. — média histórica longo prazo" },
+};
 
 const TAX_NOTES: Record<AssetCategory, string> = {
   renda_fixa_bancaria: "IR regressivo: 22,5% (até 6m) → 15% (acima de 2 anos) + IOF nos primeiros 30 dias",
@@ -65,6 +72,7 @@ export const CompoundInterestSimulator = () => {
   const [granularity, setGranularity]       = useState<ChartGranularity>("annual");
   const [showBreakdown, setShowBreakdown]   = useState(false);
   const [breakdownPage, setBreakdownPage]   = useState(0);
+  const [activeBenchmarks, setActiveBenchmarks] = useState<Set<BenchmarkId>>(new Set(["cdi"]));
 
   const totalMonths = customMonths ? (parseInt(customMonths) || 0) : presetMonths;
 
@@ -78,6 +86,41 @@ export const CompoundInterestSimulator = () => {
     const chart  = granularity === "annual" ? aggregateAnnual(all) : all;
     return { allPoints: all, chartPoints: chart, last: all[all.length - 1] ?? null };
   }, [initialAmount, monthlyContrib, annualRate, totalMonths, assetCategory, granularity]);
+
+  // Benchmark series for chart overlay (same initial/monthly, fixed rates, renda_fixa_bancaria tax)
+  const benchmarkPoints = useMemo(() => {
+    if (!totalMonths || chartPoints.length === 0) return {} as Record<BenchmarkId, Map<string, number>>;
+    const initial = parseFloat(initialAmount.replace(",", ".")) * 100 || 0;
+    const monthly = parseFloat(monthlyContrib.replace(",", ".")) * 100 || 0;
+    const result = {} as Record<BenchmarkId, Map<string, number>>;
+    for (const [id, bm] of Object.entries(BENCHMARK_RATES) as [BenchmarkId, typeof BENCHMARK_RATES[BenchmarkId]][]) {
+      const pts = simulateMonthly(initial, monthly, bm.rate, totalMonths, "renda_fixa_bancaria");
+      const agg = granularity === "annual" ? aggregateAnnual(pts) : pts;
+      result[id] = new Map(agg.map((p) => [p.shortLabel ?? p.label, p.grossValue]));
+    }
+    return result;
+  }, [initialAmount, monthlyContrib, totalMonths, granularity, chartPoints.length]);
+
+  // Merge benchmark values into chart points
+  const mergedChartPoints = useMemo(() => {
+    return chartPoints.map((p) => {
+      const key = p.shortLabel ?? p.label;
+      return {
+        ...p,
+        bm_cdi:   benchmarkPoints.cdi?.get(key)   ?? null,
+        bm_ipca5: benchmarkPoints.ipca5?.get(key) ?? null,
+        bm_ibov:  benchmarkPoints.ibov?.get(key)  ?? null,
+      };
+    });
+  }, [chartPoints, benchmarkPoints]);
+
+  const toggleBenchmark = (id: BenchmarkId) => {
+    setActiveBenchmarks((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   // Breakdown table pagination (annual rows)
   const annualRows = useMemo(() => aggregateAnnual(allPoints), [allPoints]);
@@ -254,8 +297,29 @@ export const CompoundInterestSimulator = () => {
       )}
 
       {/* Chart controls */}
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-text-muted text-[12px]">Evolução patrimonial</p>
+      <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
+          <p className="text-text-muted text-[12px]">Evolução patrimonial</p>
+          {/* Benchmark selector chips */}
+          <div className="flex flex-wrap gap-1">
+            {(Object.entries(BENCHMARK_RATES) as [BenchmarkId, typeof BENCHMARK_RATES[BenchmarkId]][]).map(([id, bm]) => (
+              <button
+                key={id}
+                onClick={() => toggleBenchmark(id)}
+                title={bm.note}
+                className={cn(
+                  "rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors",
+                  activeBenchmarks.has(id)
+                    ? "border-transparent text-white"
+                    : "border-border text-text-muted hover:text-text",
+                )}
+                style={activeBenchmarks.has(id) ? { backgroundColor: bm.color } : {}}
+              >
+                {bm.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex gap-1.5">
           {(Object.entries(GRANULARITY_LABELS) as [ChartGranularity, string][]).map(([g, lbl]) => (
             <button
@@ -274,7 +338,7 @@ export const CompoundInterestSimulator = () => {
 
       <div style={{ minHeight: 240 }}>
         <ResponsiveContainer width="100%" height={240}>
-          <AreaChart data={chartPoints} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+          <AreaChart data={mergedChartPoints} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="cis_gradTotal" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--green)"  stopOpacity={0.2} />
@@ -296,6 +360,9 @@ export const CompoundInterestSimulator = () => {
             <Area type="monotone" dataKey="grossValue" name="Patrimônio bruto" stroke="var(--green)" strokeWidth={2} fill="url(#cis_gradTotal)" />
             <Area type="monotone" dataKey="netValue"   name="Patrimônio líquido" stroke="var(--cyan)" strokeWidth={1.5} strokeDasharray="4 2" fill="url(#cis_gradNet)" />
             <Area type="monotone" dataKey="invested"   name="Investido" stroke="var(--blue)" strokeWidth={2} fill="url(#cis_gradInv)" />
+            {activeBenchmarks.has("cdi")   && <Line type="monotone" dataKey="bm_cdi"   name="CDI"     stroke="var(--blue)"   strokeWidth={1.5} strokeDasharray="6 3" dot={false} />}
+            {activeBenchmarks.has("ipca5") && <Line type="monotone" dataKey="bm_ipca5" name="IPCA+5%" stroke="var(--purple)" strokeWidth={1.5} strokeDasharray="6 3" dot={false} />}
+            {activeBenchmarks.has("ibov")  && <Line type="monotone" dataKey="bm_ibov"  name="IBOV"    stroke="var(--orange)" strokeWidth={1.5} strokeDasharray="6 3" dot={false} />}
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -311,7 +378,13 @@ export const CompoundInterestSimulator = () => {
             <span className="text-text-muted text-[13px]">{label}</span>
           </div>
         ))}
+        {activeBenchmarks.has("cdi")   && <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-[2px] bg-blue"   /><span className="text-text-muted text-[13px]">CDI ({BENCHMARK_RATES.cdi.rate}% a.a.)</span></div>}
+        {activeBenchmarks.has("ipca5") && <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-[2px] bg-purple" /><span className="text-text-muted text-[13px]">IPCA+5% ({BENCHMARK_RATES.ipca5.rate}% a.a.)</span></div>}
+        {activeBenchmarks.has("ibov")  && <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-[2px] bg-orange" /><span className="text-text-muted text-[13px]">IBOV* ({BENCHMARK_RATES.ibov.rate}% a.a.)</span></div>}
       </div>
+      {activeBenchmarks.has("ibov") && (
+        <p className="text-text-muted text-[11px] mt-1">* IBOV usa média histórica de longo prazo. Resultados passados não garantem retornos futuros.</p>
+      )}
 
       {/* Annual breakdown table */}
       {annualRows.length > 0 && (

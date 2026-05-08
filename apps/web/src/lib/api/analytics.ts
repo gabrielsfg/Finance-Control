@@ -9,6 +9,7 @@ import type {
   ProfitabilityTotals,
   AnnualReturnsResponse,
   ProfitabilityVsCdiPoint,
+  ProfitabilityVsBenchmarksResponse,
   InvestmentLaunchesResponse,
   NetWorthProjectionResponse,
   CategoryProjection,
@@ -123,6 +124,13 @@ export const analyticsApi = {
 
   getInvestmentProfitabilityVsCdi: async (startDate: string, finishDate: string): Promise<ProfitabilityVsCdiPoint[]> => {
     const response = await api.get<ProfitabilityVsCdiPoint[]>("/analytics/investment/profitability-vs-cdi", {
+      params: { startDate, finishDate },
+    });
+    return response.data;
+  },
+
+  getInvestmentProfitabilityVsBenchmarks: async (startDate: string, finishDate: string): Promise<ProfitabilityVsBenchmarksResponse> => {
+    const response = await api.get<ProfitabilityVsBenchmarksResponse>("/analytics/investment/profitability-vs-benchmarks", {
       params: { startDate, finishDate },
     });
     return response.data;

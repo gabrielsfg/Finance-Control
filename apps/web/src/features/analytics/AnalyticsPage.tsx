@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { usePageFilter } from "@/lib/hooks/usePageHeader";
 import { AnalyticsSummaryCards } from "@/features/analytics/expenses/components/AnalyticsSummaryCards";
 import { AnalyticsTrendChart } from "@/features/analytics/expenses/components/AnalyticsTrendChart";
 import { AnalyticsCategoryBreakdown } from "@/features/analytics/expenses/components/AnalyticsCategoryBreakdown";
@@ -65,6 +66,20 @@ export function AnalyticsPage() {
   const [investmentSubTab, setInvestmentSubTab] = useState<InvestmentSubTab>("geral");
   const [filter, setFilter] = useState<AnalyticsFilter>(defaultFilter());
 
+  usePageFilter(
+    <AnalyticsFilters
+      filter={filter}
+      onChange={setFilter}
+      mode={
+        activeTab === "gastos" || activeTab === "patrimonio"
+          ? "expenses"
+          : activeTab === "investimentos"
+            ? "investments"
+            : "none"
+      }
+    />,
+  );
+
   const { start, finish } = buildDateRange(filter);
 
   // For the heatmap calendar: when range spans multiple months, show the last
@@ -109,21 +124,7 @@ export function AnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Header: title + filters */}
-      <div className="flex items-start justify-between gap-4">
-        <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Analytics</h1>
-        <AnalyticsFilters
-          filter={filter}
-          onChange={setFilter}
-          mode={
-            activeTab === "gastos" || activeTab === "patrimonio"
-              ? "expenses"
-              : activeTab === "investimentos"
-                ? "investments"
-                : "none"
-          }
-        />
-      </div>
+      <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Analytics</h1>
 
       {/* Tab bar */}
       <TabChips items={TABS} value={activeTab} onChange={setActiveTab} />
@@ -167,7 +168,7 @@ export function AnalyticsPage() {
               : null;
             const mo = monthly.data ?? [];
             const totalInc = mo.reduce((s, m) => s + (m.totalIncome ?? 0), 0);
-            const totalExp = mo.reduce((s, m) => s + (m.totalExpenses ?? 0), 0);
+            const totalExp = mo.reduce((s, m) => s + (m.totalExpense ?? 0), 0);
             const sr = totalInc > 0 ? ((totalInc - totalExp) / totalInc) * 100 : null;
 
             return (

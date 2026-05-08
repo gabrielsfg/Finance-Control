@@ -30,6 +30,7 @@ namespace FinanceControl.Domain.Interfaces.Services
         Task<ProfitabilityTotalsDto> GetInvestmentProfitabilityTotalsAsync(int userId, DateOnly startDate, DateOnly finishDate);
         Task<AnnualReturnsResponseDto> GetInvestmentAnnualReturnsAsync(int userId, DateOnly startDate, DateOnly finishDate);
         Task<List<ProfitabilityVsCdiPointDto>> GetInvestmentProfitabilityVsCdiAsync(int userId, DateOnly startDate, DateOnly finishDate);
+        Task<ProfitabilityVsBenchmarksResponseDto> GetInvestmentProfitabilityVsBenchmarksAsync(int userId, DateOnly startDate, DateOnly finishDate);
         Task<InvestmentLaunchesResponseDto> GetInvestmentLaunchesAsync(int userId, DateOnly startDate, DateOnly finishDate);
     }
 }

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { accountsApi } from "@/lib/api/accounts";
+import { MOCK_ACCOUNTS } from "@/lib/mocks";
 import type {
   CreateAccountRequest,
   UpdateAccountRequest,
@@ -11,7 +12,8 @@ const QUERY_KEY = ["accounts"];
 export const useAccounts = () => {
   return useQuery({
     queryKey: QUERY_KEY,
-    queryFn: accountsApi.getAll,
+    queryFn: () => Promise.resolve(MOCK_ACCOUNTS),
+    staleTime: Infinity,
   });
 };
 

@@ -1,11 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { TrendingUp, ArrowUp } from "lucide-react";
-import { Chart, registerables } from "chart.js";
-import { formatPercent } from "@/lib/utils/formatNumber";
-
-Chart.register(...registerables);
+import { ResponsiveContainer, AreaChart, Area } from "recharts";
 
 type Props = {
   savingsRate: number;
@@ -20,42 +16,15 @@ export const SavingsRateCard = ({
   savingsRateHistory = DEFAULT_HISTORY,
   change,
 }: Props) => {
-  const sparkRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    if (!sparkRef.current) return;
-    const existing = Chart.getChart(sparkRef.current);
-    if (existing) existing.destroy();
-
-    new Chart(sparkRef.current.getContext("2d")!, {
-      type: "line",
-      data: {
-        labels: savingsRateHistory.map((_, i) => `M${i + 1}`),
-        datasets: [
-          {
-            data: savingsRateHistory,
-            borderColor: "#00c98d",
-            backgroundColor: "#00c98d25",
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` ${c.raw}%` } } },
-        scales: { x: { display: false }, y: { display: false } },
-      },
-    });
-  }, [savingsRateHistory]);
-
-  const rawChange = change ?? (savingsRateHistory.length >= 2
-    ? savingsRateHistory[savingsRateHistory.length - 1] - savingsRateHistory[savingsRateHistory.length - 2]
-    : 0);
+  const rawChange =
+    change ??
+    (savingsRateHistory.length >= 2
+      ? savingsRateHistory[savingsRateHistory.length - 1] -
+        savingsRateHistory[savingsRateHistory.length - 2]
+      : 0);
   const isPositive = rawChange >= 0;
+
+  const data = savingsRateHistory.map((v, i) => ({ i, v }));
 
   return (
     <div className="border-border bg-surface flex flex-col gap-2 rounded-xl border p-5">
@@ -73,7 +42,25 @@ export const SavingsRateCard = ({
       </p>
 
       <div className="h-9">
-        <canvas ref={sparkRef} />
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="sgFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#00c98d" stopOpacity={0.18} />
+                <stop offset="95%" stopColor="#00c98d" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area
+              type="monotone"
+              dataKey="v"
+              stroke="#00c98d"
+              strokeWidth={2}
+              fill="url(#sgFill)"
+              dot={false}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
 
       <div className="flex items-center gap-1">
@@ -82,7 +69,8 @@ export const SavingsRateCard = ({
           className={isPositive ? "text-green" : "text-red rotate-180"}
         />
         <span className={`font-mono text-[11px] ${isPositive ? "text-green" : "text-red"}`}>
-          {isPositive ? "+" : ""}{rawChange.toFixed(1)}pp
+          {isPositive ? "+" : ""}
+          {rawChange.toFixed(1)}pp
         </span>
         <span className="text-text-muted text-[11px]">vs. mês anterior</span>
       </div>

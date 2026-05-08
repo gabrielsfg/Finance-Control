@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 type Bill = {
@@ -45,7 +46,12 @@ export const UpcomingBillsCard = ({ bills = PLACEHOLDER_BILLS }: Props) => {
     <div className="border-border bg-surface rounded-xl border p-5">
       <div className="mb-4 flex items-center justify-between">
         <p className="font-display font-600 text-text text-[15px]">Próximas contas a pagar</p>
-        <span className="text-text-muted text-[12px]">{bills.length} pendentes</span>
+        <div className="flex items-center gap-3">
+          <span className="text-text-muted text-[12px]">{bills.length} pendentes</span>
+          <Link href="/recurring" className="font-500 text-text-sub hover:text-green text-[12px] transition-colors">
+            Ver todas →
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">

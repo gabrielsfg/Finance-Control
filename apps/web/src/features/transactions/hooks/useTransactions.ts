@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { transactionsApi } from "@/lib/api/transactions";
+import { MOCK_TRANSACTIONS } from "@/lib/mocks";
 import type {
   TransactionItem,
   CreateTransactionRequest,
@@ -12,15 +13,15 @@ const KEY = ["transactions"] as const;
 export const useTransactions = () =>
   useQuery<TransactionItem[]>({
     queryKey: KEY,
-    queryFn: () => transactionsApi.getAll(),
-    staleTime: 60_000,
+    queryFn: () => Promise.resolve(MOCK_TRANSACTIONS),
+    staleTime: Infinity,
   });
 
 export const useTransactionsFiltered = (params: GetTransactionsFilterParams) =>
   useQuery<TransactionItem[]>({
     queryKey: ["transactions", "filtered", params],
-    queryFn: () => transactionsApi.getFiltered(params),
-    staleTime: 60_000,
+    queryFn: () => Promise.resolve(MOCK_TRANSACTIONS),
+    staleTime: Infinity,
   });
 
 export const useCreateTransaction = () => {

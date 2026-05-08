@@ -53,6 +53,7 @@ export type DaySpend = {
   income: number; // income (centavos)
   net: number;    // income - expense (centavos)
   state: DayHeatmapState;
+  vsLastMonth: number | null; // positive = more than last month, negative = less, null = no prev data
 };
 
 // ── /api/analytics/category-evolution ────────────────────────────────────────
@@ -119,8 +120,25 @@ export type AnnualReturnsResponse = {
 
 export type ProfitabilityVsCdiPoint = {
   label: string;
-  portfolioPct: number; // e.g. 0.71
+  portfolioPct: number;
   cdiPct: number;
+  ibovPct?: number;
+  ipcaPlus5Pct?: number;
+};
+
+export type ProfitabilityBenchmarkTotals = {
+  portfolioAllTimePct: number;
+  cdiAllTimePct: number;
+  ibovAllTimePct: number;
+  ipcaPlus5AllTimePct: number;
+  vsCdiPct: number;
+  vsIbovPct: number;
+  vsIpcaPlus5Pct: number;
+};
+
+export type ProfitabilityVsBenchmarksResponse = {
+  points: ProfitabilityVsCdiPoint[];
+  totals: ProfitabilityBenchmarkTotals;
 };
 
 // ── /api/analytics/projection/net-worth ──────────────────────────────────────

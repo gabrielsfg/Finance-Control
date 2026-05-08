@@ -102,5 +102,24 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
         public string Label { get; set; } = string.Empty;
         public decimal PortfolioPct { get; set; }
         public decimal CdiPct { get; set; }
+        public decimal? IbovPct { get; set; }
+        public decimal? IpcaPlus5Pct { get; set; }
+    }
+
+    public class ProfitabilityBenchmarkTotalsDto
+    {
+        public decimal PortfolioAllTimePct { get; set; }
+        public decimal CdiAllTimePct { get; set; }
+        public decimal IbovAllTimePct { get; set; }
+        public decimal IpcaPlus5AllTimePct { get; set; }
+        public decimal VsCdiPct { get; set; }
+        public decimal VsIbovPct { get; set; }
+        public decimal VsIpcaPlus5Pct { get; set; }
+    }
+
+    public class ProfitabilityVsBenchmarksResponseDto
+    {
+        public List<ProfitabilityVsCdiPointDto> Points { get; set; } = [];
+        public ProfitabilityBenchmarkTotalsDto Totals { get; set; } = new();
     }
 }

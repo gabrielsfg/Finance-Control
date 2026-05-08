@@ -1,5 +1,4 @@
-import { useQuery, useQueries } from "@tanstack/react-query";
-import { analyticsApi } from "@/lib/api/analytics";
+import { useQuery } from "@tanstack/react-query";
 import type {
   AnalyticsSummaryResponse,
   MonthlyData,
@@ -10,6 +9,7 @@ import type {
   ProfitabilityTotals,
   AnnualReturnsResponse,
   ProfitabilityVsCdiPoint,
+  ProfitabilityVsBenchmarksResponse,
   InvestmentLaunchesResponse,
   NetWorthProjectionResponse,
   CategoryProjection,
@@ -22,166 +22,173 @@ import type {
   BalanceProjectionResponse,
   CommitmentsImpactResponse,
 } from "@/lib/types/analytics.types";
+import {
+  MOCK_ANALYTICS_SUMMARY,
+  MOCK_ANALYTICS_MONTHLY,
+  MOCK_ANALYTICS_HEATMAP,
+  MOCK_CATEGORY_EVOLUTION,
+  MOCK_NET_WORTH,
+  MOCK_INVESTMENT_EVOLUTION,
+  MOCK_PROFITABILITY_TOTALS,
+  MOCK_ANNUAL_RETURNS,
+  MOCK_PROFITABILITY_VS_BENCHMARKS,
+  MOCK_INVESTMENT_LAUNCHES,
+  MOCK_NET_WORTH_PROJECTION,
+  MOCK_CATEGORY_PROJECTION,
+  MOCK_PASSIVE_INCOME,
+  MOCK_MILESTONES,
+  MOCK_PORTFOLIO_COMPOSITION,
+  MOCK_REAL_NET_WORTH,
+  MOCK_BALANCE_EVOLUTION,
+  MOCK_FUTURE_COMMITMENTS,
+  MOCK_BALANCE_PROJECTION,
+  MOCK_COMMITMENTS_IMPACT,
+} from "@/lib/mocks";
 
-export const useAnalyticsSummary = (startDate: string, finishDate: string) =>
+const INF = Infinity;
+
+export const useAnalyticsSummary = (_s: string, _f: string) =>
   useQuery<AnalyticsSummaryResponse>({
-    queryKey: ["analytics", "summary", startDate, finishDate],
-    queryFn: () => analyticsApi.getSummary(startDate, finishDate),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "summary", "mock"],
+    queryFn: () => Promise.resolve(MOCK_ANALYTICS_SUMMARY),
+    staleTime: INF,
   });
 
-export const useAnalyticsMonthly = (startDate: string, finishDate: string) =>
+export const useAnalyticsMonthly = (_s: string, _f: string) =>
   useQuery<MonthlyData[]>({
-    queryKey: ["analytics", "monthly", startDate, finishDate],
-    queryFn: () => analyticsApi.getIncomeExpense(startDate, finishDate),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "monthly", "mock"],
+    queryFn: () => Promise.resolve(MOCK_ANALYTICS_MONTHLY),
+    staleTime: INF,
   });
 
-export const useAnalyticsHeatmap = (startDate: string, finishDate: string) =>
+export const useAnalyticsHeatmap = (_s: string, _f: string) =>
   useQuery<DaySpend[]>({
-    queryKey: ["analytics", "heatmap", startDate, finishDate],
-    queryFn: () => analyticsApi.getSpendingHeatmap(startDate, finishDate),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "heatmap", "mock"],
+    queryFn: () => Promise.resolve(MOCK_ANALYTICS_HEATMAP),
+    staleTime: INF,
   });
 
-export const useAnalyticsCategoryEvolution = (startDate: string, finishDate: string, categoryIds: number[]) => {
-  const results = useQueries({
-    queries: categoryIds.map((id) => ({
-      queryKey: ["analytics", "category-evolution", startDate, finishDate, id] as const,
-      queryFn: () => analyticsApi.getCategoryEvolution(startDate, finishDate, id),
-      staleTime: 5 * 60 * 1000,
-    })),
-  });
+export const useAnalyticsCategoryEvolution = (_s: string, _f: string, _ids: number[]) => ({
+  data: MOCK_CATEGORY_EVOLUTION,
+  isLoading: false,
+  isError: false,
+});
 
-  const isLoading = results.some((r) => r.isLoading);
-  const isError = results.some((r) => r.isError);
-
-  // Merge all per-category arrays into a single array keyed by label
-  const data: CategoryMonthlyData[] | undefined =
-    !isLoading && results.length > 0
-      ? (() => {
-          const byLabel = new Map<string, CategoryMonthlyData>();
-          for (const result of results) {
-            for (const row of result.data ?? []) {
-              const existing = byLabel.get(row.label) ?? { label: row.label };
-              byLabel.set(row.label, { ...existing, ...row });
-            }
-          }
-          return Array.from(byLabel.values());
-        })()
-      : undefined;
-
-  return { data, isLoading, isError };
-};
-
-export const useAnalyticsNetWorth = (startDate: string, finishDate: string) =>
+export const useAnalyticsNetWorth = (_s: string, _f: string) =>
   useQuery<NetWorthPoint[]>({
-    queryKey: ["analytics", "net-worth", startDate, finishDate],
-    queryFn: () => analyticsApi.getNetWorthEvolution(startDate, finishDate),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "net-worth", "mock"],
+    queryFn: () => Promise.resolve(MOCK_NET_WORTH),
+    staleTime: INF,
   });
 
-export const useAnalyticsInvestmentEvolution = (startDate: string, finishDate: string) =>
+export const useAnalyticsInvestmentEvolution = (_s: string, _f: string) =>
   useQuery<InvestmentEvolutionResponse>({
-    queryKey: ["analytics", "investment-evolution", startDate, finishDate],
-    queryFn: () => analyticsApi.getInvestmentEvolution(startDate, finishDate),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "investment-evolution", "mock"],
+    queryFn: () => Promise.resolve(MOCK_INVESTMENT_EVOLUTION),
+    staleTime: INF,
   });
 
-export const useInvestmentProfitabilityTotals = (startDate: string, finishDate: string) =>
+export const useInvestmentProfitabilityTotals = (_s: string, _f: string) =>
   useQuery<ProfitabilityTotals>({
-    queryKey: ["analytics", "investment-profitability-totals", startDate, finishDate],
-    queryFn: () => analyticsApi.getInvestmentProfitabilityTotals(startDate, finishDate),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "profitability-totals", "mock"],
+    queryFn: () => Promise.resolve(MOCK_PROFITABILITY_TOTALS),
+    staleTime: INF,
   });
 
-export const useInvestmentAnnualReturns = (startDate: string, finishDate: string) =>
+export const useInvestmentAnnualReturns = (_s: string, _f: string) =>
   useQuery<AnnualReturnsResponse>({
-    queryKey: ["analytics", "investment-annual-returns", startDate, finishDate],
-    queryFn: () => analyticsApi.getInvestmentAnnualReturns(startDate, finishDate),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "annual-returns", "mock"],
+    queryFn: () => Promise.resolve(MOCK_ANNUAL_RETURNS),
+    staleTime: INF,
   });
 
-export const useInvestmentProfitabilityVsCdi = (startDate: string, finishDate: string) =>
+export const useInvestmentProfitabilityVsCdi = (_s: string, _f: string) =>
   useQuery<ProfitabilityVsCdiPoint[]>({
-    queryKey: ["analytics", "investment-vs-cdi", startDate, finishDate],
-    queryFn: () => analyticsApi.getInvestmentProfitabilityVsCdi(startDate, finishDate),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "vs-cdi", "mock"],
+    queryFn: () => Promise.resolve(MOCK_PROFITABILITY_VS_BENCHMARKS.points),
+    staleTime: INF,
   });
 
-export const useInvestmentLaunches = (startDate: string, finishDate: string) =>
+export const useInvestmentProfitabilityVsBenchmarks = (_s: string, _f: string) =>
+  useQuery<ProfitabilityVsBenchmarksResponse>({
+    queryKey: ["analytics", "vs-benchmarks", "mock"],
+    queryFn: () => Promise.resolve(MOCK_PROFITABILITY_VS_BENCHMARKS),
+    staleTime: INF,
+  });
+
+export const useInvestmentLaunches = (_s: string, _f: string) =>
   useQuery<InvestmentLaunchesResponse>({
-    queryKey: ["analytics", "investment-launches", startDate, finishDate],
-    queryFn: () => analyticsApi.getInvestmentLaunches(startDate, finishDate),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "launches", "mock"],
+    queryFn: () => Promise.resolve(MOCK_INVESTMENT_LAUNCHES),
+    staleTime: INF,
   });
 
-export const useNetWorthProjection = (projectionMonths = 24) =>
+export const useNetWorthProjection = (_months = 24) =>
   useQuery<NetWorthProjectionResponse>({
-    queryKey: ["analytics", "net-worth-projection", projectionMonths],
-    queryFn: () => analyticsApi.getNetWorthProjection(projectionMonths),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "nw-projection", "mock"],
+    queryFn: () => Promise.resolve(MOCK_NET_WORTH_PROJECTION),
+    staleTime: INF,
   });
 
-export const useCategoryProjection = (lookbackMonths = 3) =>
+export const useCategoryProjection = (_months = 3) =>
   useQuery<CategoryProjection[]>({
-    queryKey: ["analytics", "category-projection", lookbackMonths],
-    queryFn: () => analyticsApi.getCategoryProjection(lookbackMonths),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "cat-projection", "mock"],
+    queryFn: () => Promise.resolve(MOCK_CATEGORY_PROJECTION),
+    staleTime: INF,
   });
 
-export const usePassiveIncomeProjection = (projectionMonths = 24) =>
+export const usePassiveIncomeProjection = (_months = 24) =>
   useQuery<PassiveIncomeProjectionResponse>({
-    queryKey: ["analytics", "passive-income-projection", projectionMonths],
-    queryFn: () => analyticsApi.getPassiveIncomeProjection(projectionMonths),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "passive-income", "mock"],
+    queryFn: () => Promise.resolve(MOCK_PASSIVE_INCOME),
+    staleTime: INF,
   });
 
 export const useFinancialMilestones = () =>
   useQuery<FinancialMilestonesResponse>({
-    queryKey: ["analytics", "milestones"],
-    queryFn: () => analyticsApi.getFinancialMilestones(),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "milestones", "mock"],
+    queryFn: () => Promise.resolve(MOCK_MILESTONES),
+    staleTime: INF,
   });
 
-export const usePortfolioCompositionProjection = (projectionMonths = 12) =>
+export const usePortfolioCompositionProjection = (_months = 12) =>
   useQuery<PortfolioCompositionProjectionResponse>({
-    queryKey: ["analytics", "portfolio-composition-projection", projectionMonths],
-    queryFn: () => analyticsApi.getPortfolioCompositionProjection(projectionMonths),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "portfolio-composition", "mock"],
+    queryFn: () => Promise.resolve(MOCK_PORTFOLIO_COMPOSITION),
+    staleTime: INF,
   });
 
 export const useRealNetWorth = () =>
   useQuery<RealNetWorthResponse>({
-    queryKey: ["analytics", "real-net-worth"],
-    queryFn: () => analyticsApi.getRealNetWorth(),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "real-nw", "mock"],
+    queryFn: () => Promise.resolve(MOCK_REAL_NET_WORTH),
+    staleTime: INF,
   });
 
-export const useBalanceEvolution = (startDate: string, finishDate: string) =>
+export const useBalanceEvolution = (_s: string, _f: string) =>
   useQuery<BalanceEvolutionPoint[]>({
-    queryKey: ["analytics", "balance-evolution", startDate, finishDate],
-    queryFn: () => analyticsApi.getBalanceEvolution(startDate, finishDate),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "balance-evolution", "mock"],
+    queryFn: () => Promise.resolve(MOCK_BALANCE_EVOLUTION),
+    staleTime: INF,
   });
 
-export const useFutureCommitments = (months = 6) =>
+export const useFutureCommitments = (_months = 6) =>
   useQuery<FutureCommitmentsItem[]>({
-    queryKey: ["analytics", "future-commitments", months],
-    queryFn: () => analyticsApi.getFutureCommitments(months),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "future-commitments", "mock"],
+    queryFn: () => Promise.resolve(MOCK_FUTURE_COMMITMENTS),
+    staleTime: INF,
   });
 
-export const useBalanceProjection = (lookbackDays = 30) =>
+export const useBalanceProjection = (_days = 30) =>
   useQuery<BalanceProjectionResponse>({
-    queryKey: ["analytics", "balance-projection", lookbackDays],
-    queryFn: () => analyticsApi.getBalanceProjection(lookbackDays),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "balance-projection", "mock"],
+    queryFn: () => Promise.resolve(MOCK_BALANCE_PROJECTION),
+    staleTime: INF,
   });
 
-export const useCommitmentsImpact = (months = 6) =>
+export const useCommitmentsImpact = (_months = 6) =>
   useQuery<CommitmentsImpactResponse>({
-    queryKey: ["analytics", "commitments-impact", months],
-    queryFn: () => analyticsApi.getCommitmentsImpact(months),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["analytics", "commitments-impact", "mock"],
+    queryFn: () => Promise.resolve(MOCK_COMMITMENTS_IMPACT),
+    staleTime: INF,
   });
