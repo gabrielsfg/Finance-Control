@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2, Star, CreditCard, Landmark, PiggyBank, Wallet, Banknote, TrendingUp, TrendingDown } from "lucide-react";
+import { Pencil, Trash2, Star, CreditCard, Landmark, PiggyBank, Wallet, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { AccountItem, AccountType } from "@/lib/types/accounts.types";
@@ -16,61 +16,50 @@ const ACCOUNT_TYPE_CONFIG: Record<
   Cash:     { label: "Dinheiro",       color: "#F5CE42", Icon: Banknote },
 };
 
-const DEFAULT_SPARKLINE = [100, 105, 98, 110, 108, 115, 112, 120];
-
-function Sparkline({ data, color }: { data: number[]; color: string }) {
-  if (data.length < 2) return null;
-  const w = 100;
-  const h = 28;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const step = w / (data.length - 1);
-  const pts = data.map((v, i) => `${i * step},${h - ((v - min) / range) * h}`).join(" ");
-  const fill = `${pts} ${(data.length - 1) * step},${h} 0,${h}`;
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-full w-full">
-      <polygon points={fill} fill={`${color}18`} />
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 type AccountCardProps = {
   account: AccountItem;
-  onEdit: (account: AccountItem) => void;
+  onCardClick: () => void;
+  onEdit: () => void;
   onDelete: (account: AccountItem) => void;
-  sparklineData?: number[];
-  trendPercent?: number;
+  onSetDefault: (account: AccountItem) => void;
   isConnected?: boolean;
 };
 
 export const AccountCard = ({
   account,
+  onCardClick,
   onEdit,
   onDelete,
-  sparklineData = DEFAULT_SPARKLINE,
-  trendPercent,
+  onSetDefault,
   isConnected = false,
 }: AccountCardProps) => {
   const config = ACCOUNT_TYPE_CONFIG[account.type];
   const { Icon, color, label } = config;
   const isNegative = account.currentAmount < 0;
 
-  const trend = trendPercent ?? (() => {
-    const first = sparklineData[0];
-    const last = sparklineData[sparklineData.length - 1];
-    return first !== 0 ? ((last - first) / Math.abs(first)) * 100 : 0;
-  })();
-  const trendUp = trend >= 0;
-  const sparkColor = isNegative ? "#F25F5C" : color;
+  const isCredit = account.type === "Credit";
+  const creditUsed = isCredit ? Math.abs(account.currentAmount) : 0;
+  const creditLimit = isCredit && account.creditLimit ? account.creditLimit : 0;
+  const creditUsedPercent = creditLimit > 0 ? Math.min((creditUsed / creditLimit) * 100, 100) : 0;
+  const creditBarColor = creditUsedPercent >= 90 ? "#F25F5C" : creditUsedPercent >= 70 ? "#F5A623" : "#7C6FE0";
 
   return (
-    <div className="border-border bg-surface group relative flex flex-col gap-3 rounded-xl border p-5 transition-shadow hover:shadow-sm">
-      {account.isDefaultAccount && (
-        <div className="absolute top-3 right-3">
+    <div
+      className="border-border bg-surface group relative flex flex-col gap-3 rounded-xl border p-5 transition-shadow hover:shadow-sm cursor-pointer"
+      onClick={onCardClick}
+    >
+      {account.isDefaultAccount ? (
+        <div className="absolute top-3 right-3" title="Conta principal">
           <Star size={13} className="fill-yellow text-yellow" />
         </div>
+      ) : (
+        <button
+          onClick={(e) => { e.stopPropagation(); onSetDefault(account); }}
+          title="Definir como conta principal"
+          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+        >
+          <Star size={13} className="text-text-muted hover:text-yellow hover:fill-yellow transition-colors" />
+        </button>
       )}
 
       {/* Header */}
@@ -99,44 +88,55 @@ export const AccountCard = ({
         </div>
       </div>
 
-      {/* Balance + trend */}
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="text-text-muted mb-0.5 text-[11px] tracking-[0.04em] uppercase">Saldo atual</p>
-          <p
-            className={cn(
-              "font-money font-600 text-[22px] tracking-tight",
-              isNegative ? "text-red" : "text-text",
-            )}
-          >
-            {isNegative ? "-" : ""}
-            {formatCurrency(Math.abs(account.currentAmount / 100))}
-          </p>
-        </div>
-        <div className={cn("flex items-center gap-1 text-[12px] font-medium", trendUp ? "text-green" : "text-red")}>
-          {trendUp ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-          <span className="font-mono">{trendUp ? "+" : ""}{trend.toFixed(1)}%</span>
-          <span className="text-text-muted text-[11px] font-normal">30d</span>
-        </div>
+      {/* Balance */}
+      <div>
+        <p className="text-text-muted mb-0.5 text-[11px] tracking-[0.04em] uppercase">
+          {isCredit ? "Fatura atual" : "Saldo atual"}
+        </p>
+        <p
+          className={cn(
+            "font-money font-600 text-[22px] tracking-tight",
+            isNegative ? "text-red" : "text-text",
+          )}
+        >
+          {formatCurrency(Math.abs(account.currentAmount / 100))}
+        </p>
       </div>
 
-      {/* Sparkline */}
-      <div className="h-8">
-        <Sparkline data={sparklineData} color={sparkColor} />
-      </div>
+      {/* Credit limit progress bar */}
+      {isCredit && creditLimit > 0 && (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-text-muted">Limite utilizado</span>
+            <span className="font-mono font-medium" style={{ color: creditBarColor }}>
+              {formatCurrency(creditUsed / 100)}{" "}
+              <span className="text-text-muted font-normal">/ {formatCurrency(creditLimit / 100)}</span>
+            </span>
+          </div>
+          <div className="bg-surface2 h-1.5 w-full overflow-hidden rounded-full">
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{ width: `${creditUsedPercent}%`, backgroundColor: creditBarColor }}
+            />
+          </div>
+          <p className="text-text-muted text-right text-[10px]">{creditUsedPercent.toFixed(0)}% usado</p>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
         <button
-          onClick={() => onEdit(account)}
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          title="Editar conta"
           className="border-border text-text-sub hover:bg-surface2 hover:text-text flex h-7 flex-1 items-center justify-center gap-1.5 rounded-lg border text-[13px] transition-colors"
         >
           <Pencil size={12} />
           Editar
         </button>
         <button
-          onClick={() => onDelete(account)}
-          className="border-border text-text-sub hover:bg-red/10 hover:text-red flex h-7 flex-1 items-center justify-center gap-1.5 rounded-lg border text-[13px] transition-colors"
+          onClick={(e) => { e.stopPropagation(); onDelete(account); }}
+          title="Excluir conta"
+          className="border-red/40 text-red hover:bg-red/10 flex h-7 flex-1 items-center justify-center gap-1.5 rounded-lg border text-[13px] transition-colors"
         >
           <Trash2 size={12} />
           Excluir

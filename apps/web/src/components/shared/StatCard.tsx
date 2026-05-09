@@ -39,8 +39,8 @@ export const StatCard = ({
           <Icon size={15} strokeWidth={1.75} style={{ color: iconColor }} />
         </div>
       </div>
-      <p className="font-money font-600 text-text text-[22px]">
-        {showNegative ? "-" : ""}{formatCurrency(value)}
+      <p className={cn("font-money font-600 text-[22px]", showNegative ? "text-red" : "text-green")}>
+        {formatCurrency(value)}
       </p>
       {change !== undefined && (
         <p className="mt-1.5 flex items-baseline gap-1 flex-wrap">

@@ -15,5 +15,6 @@ namespace FinanceControl.Shared.Dtos.Request
         public EnumPaymentMethod? PaymentMethod { get; set; }
         public int? TotalInstallments { get; set; }
         public EnumRecurrenceType? Recurrence { get; set; }
+        public List<string>? Tags { get; set; }
     }
 }

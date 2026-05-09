@@ -5,24 +5,44 @@ import { Loader2, Plus, RefreshCw, AlertCircle } from "lucide-react";
 import { AccountsNetWorthHero } from "@/features/accounts/components/AccountsNetWorthHero";
 import { AccountsEmptyState } from "@/features/accounts/components/AccountsEmptyState";
 import { AccountCard } from "@/features/accounts/components/AccountCard";
-import { CreateAccountModal } from "@/features/accounts/components/CreateAccountModal";
-import { EditAccountModal } from "@/features/accounts/components/EditAccountModal";
+import { AccountDrawer } from "@/features/accounts/components/AccountDrawer";
 import { DeleteAccountModal } from "@/features/accounts/components/DeleteAccountModal";
+import { SetDefaultAccountModal } from "@/features/accounts/components/SetDefaultAccountModal";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { usePageNova } from "@/lib/hooks/usePageHeader";
+import { MOCK_ACCOUNTS_PREVIOUS } from "@/lib/mocks";
 import type { AccountItem } from "@/lib/types/accounts.types";
+import type { AccountDrawerMode } from "@/features/accounts/components/AccountDrawer";
 
 export function AccountsPage() {
   const { data: accounts, isLoading, isError } = useAccounts();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<AccountItem | null>(null);
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState<AccountDrawerMode>("create");
+  const [drawerAccount, setDrawerAccount] = useState<AccountItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AccountItem | null>(null);
+  const [setDefaultTarget, setSetDefaultTarget] = useState<AccountItem | null>(null);
 
-  usePageNova("Nova conta", () => setCreateOpen(true));
+  usePageNova("Nova conta", () => openDrawer("create"));
 
-  const totalBalance = accounts?.reduce((sum, a) => sum + a.currentAmount, 0) ?? 0;
-  const totalAssets = accounts?.filter((a) => a.currentAmount > 0).reduce((sum, a) => sum + a.currentAmount, 0) ?? 0;
-  const totalLiabilities = accounts?.filter((a) => a.currentAmount < 0).reduce((sum, a) => sum + Math.abs(a.currentAmount), 0) ?? 0;
+  const openDrawer = (mode: AccountDrawerMode, account?: AccountItem) => {
+    setDrawerMode(mode);
+    setDrawerAccount(account ?? null);
+    setDrawerOpen(true);
+  };
+
+  const closeDrawer = () => setDrawerOpen(false);
+
+  const netWorth = accounts?.filter((a) => a.type !== "Credit").reduce((sum, a) => sum + a.currentAmount, 0) ?? 0;
+  const totalInvoice = accounts?.filter((a) => a.type === "Credit").reduce((sum, a) => sum + Math.abs(a.currentAmount), 0) ?? 0;
+  const totalCreditAvailable = accounts?.filter((a) => a.type === "Credit" && a.creditLimit).reduce((sum, a) => sum + (a.creditLimit! - Math.abs(a.currentAmount)), 0) ?? 0;
+
+  const prev = MOCK_ACCOUNTS_PREVIOUS;
+  const pct = (curr: number, prev: number) => prev !== 0 ? ((curr - prev) / Math.abs(prev)) * 100 : 0;
+  const netWorthChange = pct(netWorth, prev.netWorth);
+  const invoiceChange = pct(totalInvoice, prev.totalInvoice);
+  const creditAvailableChange = pct(Math.max(0, totalCreditAvailable), prev.totalCreditAvailable);
+
   const hasAccounts = !!accounts?.length;
 
   if (isLoading) {
@@ -53,10 +73,15 @@ export function AccountsPage() {
 
         {hasAccounts && (
           <AccountsNetWorthHero
-            totalBalance={totalBalance}
-            totalAssets={totalAssets}
-            totalLiabilities={totalLiabilities}
-            accountCount={accounts!.length}
+            netWorth={netWorth}
+            totalInvoice={totalInvoice}
+            totalCreditAvailable={totalCreditAvailable}
+            netWorthChange={netWorthChange}
+            invoiceChange={invoiceChange}
+            creditAvailableChange={creditAvailableChange}
+            previousNetWorth={prev.netWorth}
+            previousInvoice={prev.totalInvoice}
+            previousCreditAvailable={prev.totalCreditAvailable}
           />
         )}
 
@@ -66,13 +91,14 @@ export function AccountsPage() {
               <AccountCard
                 key={account.id}
                 account={account}
-                onEdit={setEditTarget}
-                onDelete={setDeleteTarget}
+                onCardClick={() => openDrawer("detail", account)}
+                onEdit={() => openDrawer("edit", account)}
+                onDelete={(a) => setDeleteTarget(a)}
+                onSetDefault={(a) => setSetDefaultTarget(a)}
               />
             ))}
-            {/* Placeholder card */}
             <button
-              onClick={() => setCreateOpen(true)}
+              onClick={() => openDrawer("create")}
               className="border-border text-text-muted hover:border-green/40 hover:text-green flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed transition-colors"
             >
               <div className="border-border flex h-10 w-10 items-center justify-center rounded-full border border-dashed">
@@ -82,10 +108,10 @@ export function AccountsPage() {
             </button>
           </div>
         ) : (
-          <AccountsEmptyState onCreateClick={() => setCreateOpen(true)} />
+          <AccountsEmptyState onCreateClick={() => openDrawer("create")} />
         )}
 
-        {/* Open Finance section — static placeholder (V2 feature) */}
+        {/* Open Finance — V2 placeholder */}
         <div className="border-border bg-surface rounded-xl border p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
@@ -98,10 +124,10 @@ export function AccountsPage() {
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { name: "Nubank",  color: "#820AD1", initial: "N", txCount: 0 },
-              { name: "Itaú",    color: "#F77F00", initial: "I", txCount: 0 },
-              { name: "XP",      color: "#FF6B00", initial: "X", txCount: 0 },
-              { name: "B3",      color: "#E50000", initial: "B", txCount: 0 },
+              { name: "Nubank",  color: "#820AD1", initial: "N" },
+              { name: "Itaú",    color: "#F77F00", initial: "I" },
+              { name: "XP",      color: "#FF6B00", initial: "X" },
+              { name: "B3",      color: "#E50000", initial: "B" },
             ].map((bank) => (
               <div key={bank.name} className="border-border bg-surface2 flex items-center gap-3 rounded-xl border p-3 opacity-60">
                 <div
@@ -124,9 +150,19 @@ export function AccountsPage() {
         </div>
       </div>
 
-      <CreateAccountModal open={createOpen} onClose={() => setCreateOpen(false)} />
-      <EditAccountModal account={editTarget} onClose={() => setEditTarget(null)} />
+      <AccountDrawer
+        open={drawerOpen}
+        mode={drawerMode}
+        account={drawerAccount}
+        onClose={closeDrawer}
+        onDeleteRequest={(a) => {
+          closeDrawer();
+          setDeleteTarget(a);
+        }}
+      />
+
       <DeleteAccountModal account={deleteTarget} onClose={() => setDeleteTarget(null)} />
+      <SetDefaultAccountModal account={setDefaultTarget} onClose={() => setSetDefaultTarget(null)} />
     </>
   );
 }

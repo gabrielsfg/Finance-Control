@@ -9,5 +9,6 @@ namespace FinanceControl.Shared.Dtos.Response
         public EnumAccountType Type { get; set; }
         public int CurrentAmount { get; set; }
         public bool IsDefaultAccount { get; set; }
+        public int? CreditLimit { get; set; }
     }
 }

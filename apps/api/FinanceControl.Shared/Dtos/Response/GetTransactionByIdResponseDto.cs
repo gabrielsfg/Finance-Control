@@ -20,5 +20,6 @@ namespace FinanceControl.Shared.Dtos.Response
         public EnumPaymentMethod? PaymentMethod { get; set; }
         public int? InstallmentNumber { get; set; }
         public int? TotalInstallments { get; set; }
+        public List<GetTagResponseDto> Tags { get; set; } = new();
     }
 }

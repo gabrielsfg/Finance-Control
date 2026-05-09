@@ -22,5 +22,6 @@ namespace FinanceControl.Shared.Dtos.Response
         public int? TotalInstallments { get; set; }
         public int? AreaId { get; set; }
         public string? AreaName { get; set; }
+        public List<GetTagResponseDto> Tags { get; set; } = new();
     }
 }

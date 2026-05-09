@@ -4,6 +4,7 @@ import type {
   CreateTransactionRequest,
   UpdateTransactionRequest,
   GetTransactionsFilterParams,
+  TransactionsFilteredResponse,
 } from "@/lib/types/transactions.types";
 
 export const transactionsApi = {
@@ -12,8 +13,8 @@ export const transactionsApi = {
     return res.data;
   },
 
-  getFiltered: async (params: GetTransactionsFilterParams): Promise<TransactionItem[]> => {
-    const res = await api.get<TransactionItem[]>("/transaction/filtered", { params });
+  getFiltered: async (params: GetTransactionsFilterParams): Promise<TransactionsFilteredResponse> => {
+    const res = await api.get<TransactionsFilteredResponse>("/transaction/filtered", { params });
     return res.data;
   },
 
@@ -23,12 +24,11 @@ export const transactionsApi = {
   },
 
   update: async (id: number, data: UpdateTransactionRequest): Promise<TransactionItem[]> => {
-    const res = await api.patch<TransactionItem[]>(`/transaction/${id}`, data);
-    return res.data;
+    const res = await api.patch<{ transactions: TransactionItem[] }>(`/transaction/${id}`, data);
+    return res.data.transactions;
   },
 
-  delete: async (id: number): Promise<TransactionItem[]> => {
-    const res = await api.delete<TransactionItem[]>(`/transaction/${id}`);
-    return res.data;
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/transaction/${id}`);
   },
 };

@@ -6,6 +6,7 @@ export type AccountItem = {
   type: AccountType;
   currentAmount: number;
   isDefaultAccount: boolean;
+  creditLimit?: number | null;
 };
 
 export type AccountDetail = {
@@ -42,4 +43,9 @@ export type UpdateAccountRequest = {
 
 export type DeleteAccountRequest = {
   password: string;
+};
+
+export type BalanceHistoryItem = {
+  date: string;
+  balance: number;
 };

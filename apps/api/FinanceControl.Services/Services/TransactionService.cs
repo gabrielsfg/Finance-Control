@@ -59,6 +59,9 @@ namespace FinanceControl.Services.Services
                     return Result<CreateTransactionResponseDto>.Failure("Invalid payment type.");
 
                 await _context.SaveChangesAsync();
+
+                await AssociateTagsAsync(createdTransactions, requestDto.Tags, userId);
+
                 await dbTransaction.CommitAsync();
 
                 var transactionIds = createdTransactions.Select(t => t.Id).ToList();
@@ -79,7 +82,7 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<GetTransactionResponseDto>> GetAllTransactionsFilteredAsync(GetTransactionsFilterRequestDto requestDto, int userId)
+        public async Task<GetTransactionsFilteredResponseDto> GetAllTransactionsFilteredAsync(GetTransactionsFilterRequestDto requestDto, int userId)
         {
             var query = GetTransactionQuery(userId)
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate);
@@ -102,7 +105,48 @@ namespace FinanceControl.Services.Services
                 query = query.Where(t => subCategoryIds.Contains(t.SubCategoryId));
             }
 
-            return await query.ToListAsync();
+            var totals = await query
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    TotalIncome = g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (int?)t.Value) ?? 0,
+                    TotalExpense = g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (int?)t.Value) ?? 0,
+                })
+                .FirstOrDefaultAsync();
+
+            var totalIncome = totals?.TotalIncome ?? 0;
+            var totalExpense = totals?.TotalExpense ?? 0;
+
+            var page = Math.Max(1, requestDto.Page);
+            var pageSize = Math.Clamp(requestDto.PageSize, 1, 100);
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+            var sortAsc = requestDto.SortOrder?.ToLower() == "asc";
+            var sorted = requestDto.SortField?.ToLower() == "value"
+                ? (sortAsc ? query.OrderBy(t => t.Value) : query.OrderByDescending(t => t.Value))
+                : (sortAsc ? query.OrderBy(t => t.TransactionDate) : query.OrderByDescending(t => t.TransactionDate));
+
+            var items = await sorted
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new GetTransactionsFilteredResponseDto
+            {
+                TotalIncome = totalIncome,
+                TotalExpense = totalExpense,
+                Balance = totalIncome - totalExpense,
+                Page = new PagedResponse<GetTransactionResponseDto>
+                {
+                    CurrentPage = page,
+                    TotalPages = Math.Max(1, totalPages),
+                    PageSize = pageSize,
+                    TotalItems = totalItems,
+                    RowCount = items.Count,
+                    Items = items,
+                }
+            };
         }
 
         public async Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsByBudgetAsync(int budgetId, int userId)
@@ -169,48 +213,80 @@ namespace FinanceControl.Services.Services
                     PaymentMethod = t.PaymentMethod,
                     InstallmentNumber = t.InstallmentNumber,
                     TotalInstallments = t.TotalInstallments,
+                    Tags = t.Tags.Select(tag => new GetTagResponseDto { Id = tag.Id, Name = tag.Name }).ToList(),
                 })
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> UpdateTransactionAsync(UpdateTransactionRequestDto requestDto, int id, int userId)
+        public async Task<Result<CreateTransactionResponseDto>> UpdateTransactionAsync(UpdateTransactionRequestDto requestDto, int id, int userId)
         {
             var transaction = await _context.Transactions
                 .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
 
             if (transaction is null)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Transaction not found.");
+                return Result<CreateTransactionResponseDto>.Failure("Transaction not found.");
 
             var accountExists = await _context.Accounts
                 .AnyAsync(a => a.Id == requestDto.AccountId && a.UserId == userId);
             if (!accountExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
+                return Result<CreateTransactionResponseDto>.Failure("Invalid parameters.");
 
             var subCategoryExists = await _context.SubCategories
                 .AnyAsync(sc => sc.Id == requestDto.SubCategoryId && sc.UserId == userId);
             if (!subCategoryExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
+                return Result<CreateTransactionResponseDto>.Failure("Invalid parameters.");
 
-            if (requestDto.BudgetId.HasValue)
+            if (transaction.PaymentType != requestDto.PaymentType)
             {
-                var budgetExists = await _context.Budgets
-                    .AnyAsync(b => b.Id == requestDto.BudgetId && b.UserId == userId);
-                if (!budgetExists)
-                    return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
+                var deleteResult = await DeleteTransactionAsync(id, userId);
+                if (deleteResult.IsFailure)
+                    return Result<CreateTransactionResponseDto>.Failure(deleteResult.Error);
+
+                var createDto = new CreateTransactionRequestDto
+                {
+                    SubCategoryId = requestDto.SubCategoryId,
+                    AccountId = requestDto.AccountId,
+                    Value = requestDto.Value,
+                    Type = requestDto.Type,
+                    Description = requestDto.Description,
+                    TransactionDate = requestDto.TransactionDate,
+                    PaymentType = requestDto.PaymentType,
+                    PaymentMethod = requestDto.PaymentMethod,
+                    TotalInstallments = requestDto.TotalInstallments,
+                    Recurrence = requestDto.Recurrence,
+                    IncludeInBudget = requestDto.IncludeInBudget,
+                    Tags = requestDto.Tags,
+                };
+
+                return await CreateTransactionAsync(createDto, userId);
             }
 
             transaction.AccountId = requestDto.AccountId;
             transaction.SubCategoryId = requestDto.SubCategoryId;
-            transaction.BudgetId = requestDto.BudgetId;
             transaction.Value = requestDto.Value;
+            transaction.Type = requestDto.Type;
             transaction.Description = requestDto.Description;
             transaction.TransactionDate = requestDto.TransactionDate;
             transaction.PaymentMethod = requestDto.PaymentMethod;
 
+            if (requestDto.IncludeInBudget)
+            {
+                var activeBudget = await _context.Budgets
+                    .FirstOrDefaultAsync(b => b.IsActive && b.UserId == userId);
+                transaction.BudgetId = activeBudget?.Id;
+            }
+            else
+            {
+                transaction.BudgetId = null;
+            }
+
             await _context.SaveChangesAsync();
 
-            var transactions = await GetAllTransactionsAsync(userId);
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
+            await AssociateTagsAsync([transaction], requestDto.Tags, userId);
+
+            var transactionIds = new List<int> { transaction.Id };
+            var response = await BuildCreateResponseAsync(transactionIds);
+            return Result<CreateTransactionResponseDto>.Success(response);
         }
 
         public async Task<Result<IEnumerable<GetTransactionResponseDto>>> DeleteTransactionAsync(int id, int userId)
@@ -587,12 +663,14 @@ namespace FinanceControl.Services.Services
                         .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
                         .Select(a => a.Area.Name)
                         .FirstOrDefault(),
+                    Tags = t.Tags.Select(tag => new GetTagResponseDto { Id = tag.Id, Name = tag.Name }).ToList(),
                 });
         }
 
         private async Task<CreateTransactionResponseDto> BuildCreateResponseAsync(List<int> transactionIds)
         {
             var transactions = await _context.Transactions
+                .Include(t => t.Tags)
                 .Where(t => transactionIds.Contains(t.Id))
                 .Select(t => new GetTransactionResponseDto
                 {
@@ -621,10 +699,48 @@ namespace FinanceControl.Services.Services
                         .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
                         .Select(a => a.Area.Name)
                         .FirstOrDefault(),
+                    Tags = t.Tags.Select(tag => new GetTagResponseDto { Id = tag.Id, Name = tag.Name }).ToList(),
                 })
                 .ToListAsync();
 
             return new CreateTransactionResponseDto { Transactions = transactions };
+        }
+
+        private async Task AssociateTagsAsync(List<Transaction> transactions, List<string>? tagNames, int userId)
+        {
+            if (tagNames is null || tagNames.Count == 0)
+                return;
+
+            var normalizedNames = tagNames.Select(n => n.Trim()).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (normalizedNames.Count == 0)
+                return;
+
+            var existingTags = await _context.Tags
+                .Where(t => t.UserId == userId && normalizedNames.Contains(t.Name))
+                .ToListAsync();
+
+            var existingNames = existingTags.Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var name in normalizedNames.Where(n => !existingNames.Contains(n)))
+            {
+                var tag = new Tag { UserId = userId, Name = name };
+                _context.Tags.Add(tag);
+                existingTags.Add(tag);
+            }
+
+            await _context.SaveChangesAsync();
+
+            foreach (var transaction in transactions)
+            {
+                var fullTransaction = await _context.Transactions
+                    .Include(t => t.Tags)
+                    .FirstAsync(t => t.Id == transaction.Id);
+
+                fullTransaction.Tags.Clear();
+                foreach (var tag in existingTags)
+                    fullTransaction.Tags.Add(tag);
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         private static (int firstValue, int otherValue) CalculateInstallmentValues(int total, int installments)

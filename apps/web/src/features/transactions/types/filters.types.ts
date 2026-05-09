@@ -7,6 +7,9 @@ export type TxDatePreset =
   | "custom-year"
   | "custom-range";
 
+export type TxSortField = "date" | "value";
+export type TxSortOrder = "desc" | "asc";
+
 export type TransactionsFilter = {
   preset: TxDatePreset;
   customYear: number;
@@ -17,4 +20,6 @@ export type TransactionsFilter = {
   categoryIds: number[];
   subCategoryIds: number[];
   typeFilter: "All" | "Income" | "Expense" | "Transfer";
+  sortField: TxSortField;
+  sortOrder: TxSortOrder;
 };

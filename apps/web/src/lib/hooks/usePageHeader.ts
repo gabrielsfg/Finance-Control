@@ -19,14 +19,13 @@ export function usePageNova(label: string, onClick: () => void) {
 }
 
 export function usePageFilter(node: ReactNode) {
-  const setFilterNode = useHeaderStore((s) => s.setFilterNode);
+  // setFilterNode is stable (Zustand), so this is safe to include in deps
+  const setFilterNode = useHeaderStore.getState().setFilterNode;
 
-  // Update on every render — Header reads from store, minimal overhead
   useEffect(() => {
     setFilterNode(node);
   });
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => setFilterNode(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps

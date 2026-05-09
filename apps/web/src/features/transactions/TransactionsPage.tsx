@@ -25,8 +25,6 @@ function initFilterFromParam(dateParam: string | null): TransactionsFilter {
   return { ...base, preset: "custom-range", startDate: dateParam, finishDate: dateParam };
 }
 
-const PAGE_SIZE = 12;
-
 const TYPE_FILTER_LABELS: Record<TransactionsFilter["typeFilter"], string> = {
   All: "Todos",
   Income: "Receitas",
@@ -41,6 +39,7 @@ export function TransactionsPage() {
   const [filter, setFilter] = useState<TransactionsFilter>(() => initFilterFromParam(dateParam));
   const [filterDay, setFilterDay] = useState<string | null>(dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : null);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const [drawerOpen, setDrawerOpen] = useState(() => searchParams.get("new") === "1");
   const [drawerMode, setDrawerMode] = useState<DrawerMode>(() =>
@@ -49,7 +48,6 @@ export function TransactionsPage() {
   const [drawerTransaction, setDrawerTransaction] = useState<TransactionItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TransactionItem | null>(null);
 
-  // For chip lookups
   const { data: accountsRaw = [] } = useAccounts();
   const { data: subcatsRaw  = [] } = useSubCategories();
   const { data: budgetsRaw  = [] } = useBudgets();
@@ -94,36 +92,39 @@ export function TransactionsPage() {
 
   const { start, finish } = buildTxDateRange(filter);
 
-  const { data: allTransactions, isLoading, isError } = useTransactionsFiltered({
+  const { data: response, isLoading, isError } = useTransactionsFiltered({
     startDate: start,
     finishDate: finish,
     budgetIds: filter.budgetIds.length > 0 ? filter.budgetIds : undefined,
     accountIds: filter.accountIds.length > 0 ? filter.accountIds : undefined,
     categoryIds: filter.categoryIds.length > 0 ? filter.categoryIds : undefined,
     subCategoryIds: filter.subCategoryIds.length > 0 ? filter.subCategoryIds : undefined,
+    page,
+    pageSize,
+    sortField: filter.sortField,
+    sortOrder: filter.sortOrder,
   });
 
-  const filtered = useMemo(() => {
-    if (!allTransactions) return [];
-    return allTransactions.filter((t) => {
+  const items = response?.page.items ?? [];
+  const totalIncome = response?.totalIncome ?? 0;
+  const totalExpense = response?.totalExpense ?? 0;
+  const balance = response?.balance ?? 0;
+  const previousTotalIncome = response?.previousTotalIncome;
+  const previousTotalExpense = response?.previousTotalExpense;
+  const previousBalance = response?.previousBalance;
+  const totalPages = response?.page.totalPages ?? 1;
+  const totalItems = response?.page.totalItems ?? 0;
+  const rowCount = response?.page.rowCount ?? 0;
+
+  // Client-side typeFilter and filterDay filtering (applied on top of server items)
+  const visibleItems = useMemo(() => {
+    return items.filter((t) => {
       if (filterDay && t.transactionDate !== filterDay) return false;
       if (filter.typeFilter === "Transfer" && t.recurringTransactionId === null && t.parentTransactionId === null) return false;
       if (filter.typeFilter !== "All" && filter.typeFilter !== "Transfer" && t.type !== filter.typeFilter) return false;
       return true;
     });
-  }, [allTransactions, filterDay, filter.typeFilter]);
-
-  const totalIncome = filtered.filter((t) => t.type === "Income").reduce((s, t) => s + t.value, 0);
-  const totalExpense = filtered.filter((t) => t.type === "Expense").reduce((s, t) => s + t.value, 0);
-  const balance = totalIncome - totalExpense;
-
-  const sorted = useMemo(
-    () => [...filtered].sort((a, b) => b.transactionDate.localeCompare(a.transactionDate)),
-    [filtered],
-  );
-
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  }, [items, filterDay, filter.typeFilter]);
 
   // ── Active filter chips ────────────────────────────────────────────────────
   type Chip = { id: string; label: string; color?: string; onRemove: () => void };
@@ -233,7 +234,7 @@ export function TransactionsPage() {
         <div>
           <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Transações</h1>
           <p className="text-text-muted mt-0.5 text-[13px]">
-            {filtered.length} transaç{filtered.length !== 1 ? "ões" : "ão"}
+            {totalItems} transaç{totalItems !== 1 ? "ões" : "ão"}
           </p>
 
           {/* Active filter chips */}
@@ -267,10 +268,13 @@ export function TransactionsPage() {
           totalIncome={totalIncome}
           totalExpense={totalExpense}
           balance={balance}
+          previousTotalIncome={previousTotalIncome}
+          previousTotalExpense={previousTotalExpense}
+          previousBalance={previousBalance}
         />
 
         <TransactionsList
-          transactions={paginated}
+          transactions={visibleItems}
           subcategoryMeta={metaSubcategories}
           onView={(t) => {
             setDrawerTransaction(t);
@@ -288,7 +292,11 @@ export function TransactionsPage() {
         <TransactionsPagination
           page={page}
           totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          rowCount={rowCount}
           onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
         />
       </div>
 

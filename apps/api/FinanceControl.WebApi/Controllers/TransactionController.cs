@@ -58,19 +58,9 @@ namespace FinanceControl.WebApi.Controllers
         }
 
         [HttpGet("filtered")]
-        public async Task<IActionResult> GetAllTransactionsFilteredAsync([FromQuery] DateOnly startDate, [FromQuery] DateOnly finishDate, [FromQuery] List<int>? budgetIds, [FromQuery] List<int>? accountIds, [FromQuery] List<int>? categoryIds, [FromQuery] List<int>? subCategoryIds)
+        public async Task<IActionResult> GetAllTransactionsFilteredAsync([FromQuery] GetTransactionsFilterRequestDto requestDto)
         {
             var userId = GetUserId();
-
-            var requestDto = new GetTransactionsFilterRequestDto
-            {
-                StartDate = startDate,
-                FinishDate = finishDate,
-                BudgetIds = budgetIds,
-                AccountIds = accountIds,
-                CategoryIds = categoryIds,
-                SubCategoryIds = subCategoryIds,
-            };
 
             var result = await _transactionService.GetAllTransactionsFilteredAsync(requestDto, userId);
             return Ok(result);
@@ -155,7 +145,9 @@ namespace FinanceControl.WebApi.Controllers
 
             var result = await _transactionService.UpdateTransactionAsync(requestDto, id, userId);
             if (result.IsFailure)
-                return NotFound(new { error = result.Error });
+                return result.Error == "Transaction not found."
+                    ? NotFound(new { error = result.Error })
+                    : BadRequest(new { error = result.Error });
 
             return Ok(result.Value);
         }

@@ -146,6 +146,7 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
                   <button
                     onClick={() => handleDelete(tx.id)}
                     disabled={deleteOp.isPending}
+                    title="Excluir operação"
                     className="text-text-muted hover:text-red ml-1 transition-colors"
                   >
                     <Trash2 size={14} />

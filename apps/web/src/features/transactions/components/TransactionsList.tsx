@@ -190,12 +190,14 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
                 <div className="absolute right-4 flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                   <button
                     onClick={(e) => { e.stopPropagation(); onEdit(t); }}
+                    title="Editar transação"
                     className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
                   >
                     <Pencil size={13} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); onDelete(t); }}
+                    title="Excluir transação"
                     className="text-red/60 hover:bg-red/10 flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:text-red"
                   >
                     <Trash2 size={13} />

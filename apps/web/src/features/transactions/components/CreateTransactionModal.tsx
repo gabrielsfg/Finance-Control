@@ -142,6 +142,7 @@ export const CreateTransactionModal = ({ open, onClose, defaultType = "Expense" 
           ? (values.recurrence as RecurrenceType)
           : null,
         includeInBudget: values.includeInBudget,
+        tags: [],
       });
       handleClose();
     } catch {

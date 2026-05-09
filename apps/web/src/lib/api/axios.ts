@@ -34,12 +34,14 @@ api.interceptors.response.use(
 
         localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("refreshToken", data.refreshToken);
+        document.cookie = `accessToken=${data.accessToken}; path=/; max-age=604800; SameSite=Lax`;
 
         original.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(original);
       } catch {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        document.cookie = "accessToken=; path=/; max-age=0; SameSite=Lax";
         window.location.href = "/login";
       }
     }

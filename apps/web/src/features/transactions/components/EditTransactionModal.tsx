@@ -95,7 +95,6 @@ export const EditTransactionModal = ({ transaction, onClose }: Props) => {
       await mutateAsync({
         id: transaction.id,
         data: {
-          budgetId: transaction.budgetId,
           subCategoryId: Number(values.subCategoryId),
           accountId: Number(values.accountId),
           value: Math.round(parseFloat(values.value) * 100),
@@ -105,6 +104,12 @@ export const EditTransactionModal = ({ transaction, onClose }: Props) => {
             values.paymentMethod === "Debit" || values.paymentMethod === "Credit"
               ? values.paymentMethod
               : null,
+          type: transaction.type,
+          paymentType: transaction.paymentType,
+          totalInstallments: transaction.totalInstallments,
+          recurrence: null,
+          includeInBudget: transaction.budgetId !== null,
+          tags: transaction.tags.map((t) => t.name),
         },
       });
       handleClose();

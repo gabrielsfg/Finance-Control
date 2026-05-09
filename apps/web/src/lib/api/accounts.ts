@@ -2,6 +2,7 @@ import { api } from "./axios";
 import type {
   AccountItem,
   AccountDetail,
+  BalanceHistoryItem,
   CreateAccountRequest,
   UpdateAccountRequest,
   DeleteAccountRequest,
@@ -30,6 +31,11 @@ export const accountsApi = {
 
   delete: async (id: number, data: DeleteAccountRequest): Promise<AccountItem[]> => {
     const response = await api.delete<AccountItem[]>(`/account/${id}`, { data });
+    return response.data;
+  },
+
+  getBalanceHistory: async (id: number, days = 30): Promise<BalanceHistoryItem[]> => {
+    const response = await api.get<BalanceHistoryItem[]>(`/account/${id}/balance-history`, { params: { days } });
     return response.data;
   },
 };

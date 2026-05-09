@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { accountsApi } from "@/lib/api/accounts";
-import { MOCK_ACCOUNTS } from "@/lib/mocks";
+import { MOCK_ACCOUNTS, MOCK_BALANCE_HISTORIES } from "@/lib/mocks";
 import type {
   CreateAccountRequest,
   UpdateAccountRequest,
@@ -25,6 +25,9 @@ export const useCreateAccount = () => {
     onSuccess: (updatedAccounts) => {
       queryClient.setQueryData(QUERY_KEY, updatedAccounts);
     },
+    onError: () => {
+      queryClient.setQueryData(QUERY_KEY, MOCK_ACCOUNTS);
+    },
   });
 };
 
@@ -37,6 +40,18 @@ export const useUpdateAccount = () => {
     onSuccess: (updatedAccounts) => {
       queryClient.setQueryData(QUERY_KEY, updatedAccounts);
     },
+    onError: () => {
+      queryClient.setQueryData(QUERY_KEY, MOCK_ACCOUNTS);
+    },
+  });
+};
+
+export const useBalanceHistory = (accountId: number, days = 30) => {
+  return useQuery({
+    queryKey: ["accounts", accountId, "balance-history", days],
+    queryFn: () => Promise.resolve(MOCK_BALANCE_HISTORIES[accountId] ?? []),
+    staleTime: Infinity,
+    enabled: accountId > 0,
   });
 };
 
@@ -48,6 +63,9 @@ export const useDeleteAccount = () => {
       accountsApi.delete(id, data),
     onSuccess: (updatedAccounts) => {
       queryClient.setQueryData(QUERY_KEY, updatedAccounts);
+    },
+    onError: () => {
+      queryClient.setQueryData(QUERY_KEY, MOCK_ACCOUNTS);
     },
   });
 };

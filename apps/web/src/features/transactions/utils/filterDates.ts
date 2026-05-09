@@ -50,6 +50,8 @@ export function defaultTxFilter(): TransactionsFilter {
     categoryIds: [],
     subCategoryIds: [],
     typeFilter: "All",
+    sortField: "date",
+    sortOrder: "desc",
   };
 }
 

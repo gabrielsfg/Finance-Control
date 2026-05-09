@@ -1,55 +1,58 @@
 "use client";
 
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { TrendingUp, CreditCard, Wallet } from "lucide-react";
+import { StatCard } from "@/components/shared/StatCard";
 
 type Props = {
-  totalBalance: number;
-  totalAssets: number;
-  totalLiabilities: number;
-  accountCount: number;
+  netWorth: number;
+  totalInvoice: number;
+  totalCreditAvailable: number;
+  netWorthChange?: number;
+  invoiceChange?: number;
+  creditAvailableChange?: number;
+  previousNetWorth?: number;
+  previousInvoice?: number;
+  previousCreditAvailable?: number;
 };
 
-export const AccountsNetWorthHero = ({ totalBalance, totalAssets, totalLiabilities, accountCount }: Props) => (
-  <div
-    className="border-border rounded-[16px] border px-8 py-7"
-    style={{
-      background: "linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%)",
-    }}
-  >
-    <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-      {/* Net worth */}
-      <div>
-        <p className="text-text-muted mb-2 text-[13px] tracking-[0.06em] uppercase">
-          Patrimônio Líquido
-        </p>
-        <p
-          className="font-money font-600 text-[40px] tracking-tight"
-          style={{ color: totalBalance >= 0 ? "var(--green)" : "var(--red)" }}
-        >
-          {totalBalance < 0 ? "-" : ""}
-          {formatCurrency(Math.abs(totalBalance / 100))}
-        </p>
-      </div>
-
-      {/* Ativos / Passivos / Contas */}
-      <div className="hidden gap-8 sm:flex">
-        <div className="text-right">
-          <p className="text-text-muted mb-1 text-[12px] tracking-[0.05em] uppercase">Total Ativos</p>
-          <p className="font-money font-600 text-green text-[20px]">
-            {formatCurrency(totalAssets / 100)}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-text-muted mb-1 text-[12px] tracking-[0.05em] uppercase">Total Passivos</p>
-          <p className="font-money font-600 text-red text-[20px]">
-            {totalLiabilities > 0 ? "-" : ""}{formatCurrency(Math.abs(totalLiabilities / 100))}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-text-muted mb-1 text-[12px] tracking-[0.05em] uppercase">Contas</p>
-          <p className="font-money font-600 text-text text-[20px]">{accountCount}</p>
-        </div>
-      </div>
-    </div>
+export const AccountsNetWorthHero = ({
+  netWorth,
+  totalInvoice,
+  totalCreditAvailable,
+  netWorthChange,
+  invoiceChange,
+  creditAvailableChange,
+  previousNetWorth,
+  previousInvoice,
+  previousCreditAvailable,
+}: Props) => (
+  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <StatCard
+      label="Patrimônio Líquido"
+      value={Math.abs(netWorth / 100)}
+      showNegative={netWorth < 0}
+      change={netWorthChange}
+      previousValue={previousNetWorth !== undefined ? previousNetWorth / 100 : undefined}
+      icon={TrendingUp}
+      iconColor="#00C98D"
+    />
+    <StatCard
+      label="Fatura Atual"
+      value={totalInvoice / 100}
+      showNegative={totalInvoice > 0}
+      change={invoiceChange}
+      previousValue={previousInvoice !== undefined ? previousInvoice / 100 : undefined}
+      lowerIsBetter
+      icon={CreditCard}
+      iconColor="#F25F5C"
+    />
+    <StatCard
+      label="Limite Disponível"
+      value={Math.max(0, totalCreditAvailable) / 100}
+      change={creditAvailableChange}
+      previousValue={previousCreditAvailable !== undefined ? previousCreditAvailable / 100 : undefined}
+      icon={Wallet}
+      iconColor="#7C6FE0"
+    />
   </div>
 );

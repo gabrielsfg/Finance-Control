@@ -43,6 +43,7 @@ import {
 } from "@/features/transactions/hooks/useTransactions";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { TagInput } from "@/features/transactions/components/TagInput";
 import type {
   TransactionItem,
   TransactionType,
@@ -317,16 +318,29 @@ const createSchema = z
       ctx.addIssue({ code: "custom", path: ["recurrence"], message: "Selecione a recorrência" });
   });
 
-const editSchema = z.object({
-  description: z.string().min(1, "Descrição obrigatória"),
-  value: z.string().min(1, "Valor obrigatório"),
-  transactionDate: z.string().min(1, "Data obrigatória"),
-  subCategoryId: z.string().min(1, "Categoria obrigatória"),
-  accountId: z.string().min(1, "Conta obrigatória"),
-  paymentMethod: z.enum(["Debit", "Credit", ""]).optional(),
-  type: z.enum(["Expense", "Income"]),
-  includeInBudget: z.boolean(),
-});
+const editSchema = z
+  .object({
+    description: z.string().min(1, "Descrição obrigatória"),
+    value: z.string().min(1, "Valor obrigatório"),
+    transactionDate: z.string().min(1, "Data obrigatória"),
+    subCategoryId: z.string().min(1, "Categoria obrigatória"),
+    accountId: z.string().min(1, "Conta obrigatória"),
+    paymentMethod: z.enum(["Debit", "Credit", ""]).optional(),
+    type: z.enum(["Expense", "Income"]),
+    paymentType: z.enum(["OneTime", "Installment", "Recurring"]),
+    totalInstallments: z.string().optional(),
+    recurrence: z.string().optional(),
+    includeInBudget: z.boolean(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.paymentType === "Installment") {
+      const n = Number(data.totalInstallments);
+      if (!data.totalInstallments || isNaN(n) || n < 2 || n > 60)
+        ctx.addIssue({ code: "custom", path: ["totalInstallments"], message: "Parcelas: 2 a 60" });
+    }
+    if (data.paymentType === "Recurring" && !data.recurrence)
+      ctx.addIssue({ code: "custom", path: ["recurrence"], message: "Selecione a recorrência" });
+  });
 
 type CreateValues = z.infer<typeof createSchema>;
 type EditValues = z.infer<typeof editSchema>;
@@ -398,6 +412,18 @@ function DetailView({
               </span>
             )}
         </div>
+        {transaction.tags.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {transaction.tags.map((tag) => (
+              <span
+                key={tag.id}
+                className="bg-green/10 text-green rounded-md px-2 py-0.5 text-[11px] font-medium"
+              >
+                {tag.name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Details list */}
@@ -468,6 +494,7 @@ function CreateForm({
   const { data: accounts = [] } = useAccounts();
   const [serverError, setServerError] = useState<string | null>(null);
   const [transactionType, setTransactionType] = useState<TransactionType>(defaultType);
+  const [createTags, setCreateTags] = useState<string[]>([]);
 
   const {
     register,
@@ -524,8 +551,10 @@ function CreateForm({
             ? (values.recurrence as RecurrenceType)
             : null,
         includeInBudget: values.includeInBudget,
+        tags: createTags,
       });
       reset();
+      setCreateTags([]);
       setTransactionType(defaultType);
       onClose();
     } catch {
@@ -663,6 +692,10 @@ function CreateForm({
         </FormField>
       )}
 
+      <FormField label="Tags">
+        <TagInput value={createTags} onChange={setCreateTags} />
+      </FormField>
+
       {transactionType === "Expense" && (
         <BudgetToggle
           checked={watch("includeInBudget")}
@@ -701,6 +734,7 @@ function EditForm({
   const { data: subcategories = [] } = useSubCategories();
   const { data: accounts = [] } = useAccounts();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [editTags, setEditTags] = useState<string[]>(() => transaction.tags.map((t) => t.name));
 
   const {
     register,
@@ -715,6 +749,7 @@ function EditForm({
 
   useEffect(() => {
     setTransactionType(transaction.type);
+    setEditTags(transaction.tags.map((t) => t.name));
     reset({
       description: transaction.description,
       value: String(transaction.value / 100),
@@ -723,6 +758,9 @@ function EditForm({
       accountId: String(transaction.accountId),
       paymentMethod: transaction.paymentMethod ?? "",
       type: transaction.type,
+      paymentType: transaction.paymentType,
+      totalInstallments: "",
+      recurrence: "",
       includeInBudget: transaction.budgetId !== null,
     });
     setServerError(null);
@@ -732,6 +770,7 @@ function EditForm({
   const subCategoryValue = watch("subCategoryId");
   const accountValue = watch("accountId");
   const paymentMethodValue = watch("paymentMethod");
+  const editPaymentType = watch("paymentType") as PaymentType;
 
   const accountLabel = accounts.find((a) => String(a.id) === accountValue)?.name;
   const subCategoryLabel = subcategories.find((s) => String(s.id) === subCategoryValue)?.name;
@@ -743,16 +782,27 @@ function EditForm({
       await mutateAsync({
         id: transaction.id,
         data: {
-          budgetId: values.includeInBudget ? transaction.budgetId : null,
           subCategoryId: Number(values.subCategoryId),
           accountId: Number(values.accountId),
           value: Math.round(parseFloat(values.value) * 100),
+          type: transactionType,
           description: values.description,
           transactionDate: values.transactionDate,
+          paymentType: values.paymentType as PaymentType,
           paymentMethod:
             values.paymentMethod === "Debit" || values.paymentMethod === "Credit"
               ? values.paymentMethod
               : null,
+          totalInstallments:
+            values.paymentType === "Installment" && values.totalInstallments
+              ? Number(values.totalInstallments)
+              : null,
+          recurrence:
+            values.paymentType === "Recurring" && values.recurrence
+              ? (values.recurrence as RecurrenceType)
+              : null,
+          includeInBudget: values.includeInBudget,
+          tags: editTags,
         },
       });
       onClose();
@@ -856,6 +906,58 @@ function EditForm({
           </SelectTrigger>
           <PaymentMethodSelectContent />
         </Select>
+      </FormField>
+
+      <FormField label="Tipo de pagamento">
+        <Select
+          value={editPaymentType}
+          onValueChange={(v) => setValue("paymentType", v as PaymentType)}
+        >
+          <SelectTrigger className={TRIGGER_CLASS}>
+            <SelectValue />
+          </SelectTrigger>
+          <PaymentTypeSelectContent />
+        </Select>
+      </FormField>
+
+      {editPaymentType !== transaction.paymentType && (
+        <p className="text-orange bg-orange/8 border-orange/20 rounded-lg border px-3.5 py-2.5 text-[12px]">
+          Trocar o tipo de pagamento recriará a transação. O ID original será removido.
+        </p>
+      )}
+
+      {editPaymentType === "Installment" && (
+        <FormField label="Número de parcelas" error={errors.totalInstallments?.message}>
+          <input
+            {...register("totalInstallments")}
+            type="number"
+            min="2"
+            max="60"
+            placeholder="Ex: 12"
+            className={cn(INPUT_CLASS, errors.totalInstallments && "border-red/60")}
+          />
+        </FormField>
+      )}
+
+      {editPaymentType === "Recurring" && (
+        <FormField label="Recorrência" error={errors.recurrence?.message}>
+          <Select onValueChange={(v) => setValue("recurrence", v as string)}>
+            <SelectTrigger className={cn(TRIGGER_CLASS, errors.recurrence && "border-red/60")}>
+              <SelectValue placeholder="Selecionar frequência" />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(RECURRENCE_LABELS) as RecurrenceType[]).map((r) => (
+                <SelectItem key={r} value={r}>
+                  {RECURRENCE_LABELS[r]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+      )}
+
+      <FormField label="Tags">
+        <TagInput value={editTags} onChange={setEditTags} />
       </FormField>
 
       {transactionType === "Expense" && (
@@ -969,6 +1071,7 @@ export function TransactionDrawer({
           </div>
           <button
             onClick={onClose}
+            title="Fechar"
             className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
           >
             <X size={16} />

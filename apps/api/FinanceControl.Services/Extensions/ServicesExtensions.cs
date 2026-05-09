@@ -18,6 +18,7 @@ namespace FinanceControl.Services.Extensions
             services.AddScoped<IAreaCategoryService, AreaCategoryService>();
             services.AddScoped<IBudgetSubCategoryAllocationService, BudgetSubCategoryAllocationService>();
             services.AddScoped<ITransactionService, TransactionService>();
+            services.AddScoped<ITagService, TagService>();
             services.AddSingleton<IBankService, BankService>();
             services.AddScoped<IGoalService, GoalService>();
             services.AddScoped<IAnalyticsService, AnalyticsService>();

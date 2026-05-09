@@ -24,7 +24,8 @@ export const useAuthStore = create<AuthState>()(
       login: (accessToken, refreshToken) => {
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
-        document.cookie = `accessToken=${accessToken}; path=/; SameSite=Lax`;
+        // 7-day cookie so the middleware never loses auth between sessions
+        document.cookie = `accessToken=${accessToken}; path=/; max-age=604800; SameSite=Lax`;
         set({ accessToken, refreshToken, isAuthenticated: true });
       },
 
@@ -39,7 +40,7 @@ export const useAuthStore = create<AuthState>()(
         }
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
-        document.cookie = "accessToken=; path=/; max-age=0";
+        document.cookie = "accessToken=; path=/; max-age=0; SameSite=Lax";
         set({ accessToken: null, refreshToken: null, user: null, isAuthenticated: false });
       },
 

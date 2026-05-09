@@ -1,5 +1,5 @@
 import type { DashboardSummary } from "@/lib/types/dashboard.types";
-import type { AccountItem } from "@/lib/types/accounts.types";
+import type { AccountItem, BalanceHistoryItem } from "@/lib/types/accounts.types";
 import type { TransactionItem } from "@/lib/types/transactions.types";
 import type { Budget } from "@/lib/types/budgets.types";
 import type { InvestmentPortfolio } from "@/lib/types/investments.types";
@@ -82,28 +82,54 @@ export const MOCK_ACCOUNTS: AccountItem[] = [
   { id: 1, name: "Nubank",              type: "Checking", currentAmount:  482300, isDefaultAccount: true  },
   { id: 2, name: "Itaú Conta Corrente", type: "Checking", currentAmount:  198700, isDefaultAccount: false },
   { id: 3, name: "XP Investimentos",   type: "Savings",  currentAmount: 1540000, isDefaultAccount: false },
-  { id: 4, name: "Cartão de Crédito",  type: "Credit",   currentAmount:  -89400, isDefaultAccount: false },
-  { id: 5, name: "Carteira",           type: "Cash",     currentAmount:   15000, isDefaultAccount: false },
+  { id: 4, name: "Nubank Roxinho",      type: "Credit",   currentAmount:  -89400, isDefaultAccount: false, creditLimit: 300000 },
+  { id: 5, name: "Itaú Mastercard",    type: "Credit",   currentAmount: -218500, isDefaultAccount: false, creditLimit: 250000 },
+  { id: 6, name: "Carteira",           type: "Cash",     currentAmount:   15000, isDefaultAccount: false },
 ];
+
+// Previous month values for accounts summary comparison
+export const MOCK_ACCOUNTS_PREVIOUS = {
+  netWorth:           2100000, // R$ 21.000,00
+  totalInvoice:        270000, // R$ 2.700,00
+  totalCreditAvailable: 280000, // R$ 2.800,00
+};
+
+function buildBalanceHistory(baseBalance: number, deltas: number[]): BalanceHistoryItem[] {
+  const today = new Date();
+  let running = baseBalance;
+  return deltas.map((delta, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (deltas.length - 1 - i));
+    running += delta;
+    return { date: d.toISOString().slice(0, 10), balance: running };
+  });
+}
+
+export const MOCK_BALANCE_HISTORIES: Record<number, BalanceHistoryItem[]> = {
+  1: buildBalanceHistory(320000, [0, 5000, -2000, 8000, 0, -3000, 12000, 0, 4000, -1000, 0, 6000, -2500, 0, 9000, 0, -4000, 3000, 0, 7000, -1500, 0, 5000, -3000, 8000, 0, 2000, -1000, 4000, 120300]),
+  2: buildBalanceHistory(150000, [0, 2000, 0, -1000, 3000, 0, -2000, 0, 5000, -1000, 0, 2500, 0, -500, 4000, 0, -2000, 1000, 0, 3000, -1500, 0, 2000, -1000, 4000, 0, 1000, -500, 2000, 40700]),
+  3: buildBalanceHistory(1400000, [0, 10000, 0, 5000, -3000, 0, 15000, 0, -5000, 8000, 0, 12000, -4000, 0, 20000, 0, -8000, 6000, 0, 15000, -5000, 0, 10000, -3000, 18000, 0, 5000, -2000, 8000, 50000]),
+  6: buildBalanceHistory(12000, [0, 500, -200, 0, 800, -300, 0, 1000, -500, 0, 500, 0, -200, 700, 0, -400, 300, 0, 600, -200, 0, 500, -300, 800, 0, 200, -100, 400, -100, 500]),
+};
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
 
 export const MOCK_TRANSACTIONS: TransactionItem[] = [
-  { id:  1, budgetId: 1, description: "Salário maio",          value: 850000, type: "Income",  transactionDate: "2026-05-05", paymentType: "Recurring",   paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId:  1, subCategoryName: "Salário",        accountId: 1, accountName: "Nubank",  recurringTransactionId: 10, parentTransactionId: null },
-  { id:  2, budgetId: null, description: "Freelance design UI", value: 120000, type: "Income",  transactionDate: "2026-05-01", paymentType: "OneTime",     paymentMethod: null,     installmentNumber: null, totalInstallments: null, subCategoryId:  2, subCategoryName: "Freelance",      accountId: 1, accountName: "Nubank",  recurringTransactionId: null, parentTransactionId: null },
-  { id:  3, budgetId: 1, description: "Aluguel",               value: 180000, type: "Expense", transactionDate: "2026-05-05", paymentType: "Recurring",   paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId:  3, subCategoryName: "Aluguel",        accountId: 1, accountName: "Nubank",  recurringTransactionId: 12, parentTransactionId: null },
-  { id:  4, budgetId: 1, description: "Supermercado Extra",    value:  34750, type: "Expense", transactionDate: "2026-05-06", paymentType: "OneTime",     paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId:  4, subCategoryName: "Alimentação",    accountId: 1, accountName: "Nubank",  recurringTransactionId: null, parentTransactionId: null },
-  { id:  5, budgetId: 1, description: "Ifood — Jantar",        value:   6290, type: "Expense", transactionDate: "2026-05-02", paymentType: "OneTime",     paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId:  5, subCategoryName: "Restaurante",    accountId: 4, accountName: "Cartão",  recurringTransactionId: null, parentTransactionId: null },
-  { id:  6, budgetId: 1, description: "Netflix",               value:   5590, type: "Expense", transactionDate: "2026-05-04", paymentType: "Recurring",   paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId:  6, subCategoryName: "Streaming",      accountId: 4, accountName: "Cartão",  recurringTransactionId: 11, parentTransactionId: null },
-  { id:  7, budgetId: 1, description: "Spotify",               value:   1990, type: "Expense", transactionDate: "2026-05-04", paymentType: "Recurring",   paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId:  6, subCategoryName: "Streaming",      accountId: 4, accountName: "Cartão",  recurringTransactionId: 13, parentTransactionId: null },
-  { id:  8, budgetId: 1, description: "Farmácia São João",     value:   8700, type: "Expense", transactionDate: "2026-05-03", paymentType: "OneTime",     paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId:  7, subCategoryName: "Saúde",          accountId: 4, accountName: "Cartão",  recurringTransactionId: null, parentTransactionId: null },
-  { id:  9, budgetId: 1, description: "Gasolina Shell",        value:  15000, type: "Expense", transactionDate: "2026-05-03", paymentType: "OneTime",     paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId:  8, subCategoryName: "Combustível",    accountId: 1, accountName: "Nubank",  recurringTransactionId: null, parentTransactionId: null },
-  { id: 10, budgetId: 1, description: "Uber",                  value:   2850, type: "Expense", transactionDate: "2026-05-02", paymentType: "OneTime",     paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId:  9, subCategoryName: "Aplicativo",     accountId: 4, accountName: "Cartão",  recurringTransactionId: null, parentTransactionId: null },
-  { id: 11, budgetId: 1, description: "Academia Smart Fit",    value:  10990, type: "Expense", transactionDate: "2026-05-01", paymentType: "Recurring",   paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId: 10, subCategoryName: "Academia",       accountId: 4, accountName: "Cartão",  recurringTransactionId: 14, parentTransactionId: null },
-  { id: 12, budgetId: 1, description: "Ingresso cinema",       value:   4600, type: "Expense", transactionDate: "2026-04-30", paymentType: "OneTime",     paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId: 11, subCategoryName: "Entretenimento", accountId: 4, accountName: "Cartão",  recurringTransactionId: null, parentTransactionId: null },
-  { id: 13, budgetId: 1, description: "Energia elétrica",      value:  18500, type: "Expense", transactionDate: "2026-04-28", paymentType: "Recurring",   paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId: 12, subCategoryName: "Energia",        accountId: 1, accountName: "Nubank",  recurringTransactionId: 15, parentTransactionId: null },
-  { id: 14, budgetId: 1, description: "Internet Vivo",         value:   9990, type: "Expense", transactionDate: "2026-04-27", paymentType: "Recurring",   paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId: 13, subCategoryName: "Internet",       accountId: 1, accountName: "Nubank",  recurringTransactionId: 16, parentTransactionId: null },
-  { id: 15, budgetId: 1, description: "MacBook Pro 14",        value:  58250, type: "Expense", transactionDate: "2026-05-06", paymentType: "Installment", paymentMethod: "Credit", installmentNumber: 2,    totalInstallments: 12,   subCategoryId: 14, subCategoryName: "Eletrônicos",    accountId: 4, accountName: "Cartão",  recurringTransactionId: null, parentTransactionId: null },
+  { id:  1, budgetId: 1, description: "Salário maio",          value: 850000, type: "Income",  transactionDate: "2026-05-05", paymentType: "Recurring",   paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId:  1, subCategoryName: "Salário",        accountId: 1, accountName: "Nubank",  recurringTransactionId: 10, parentTransactionId: null, tags: [] },
+  { id:  2, budgetId: null, description: "Freelance design UI", value: 120000, type: "Income",  transactionDate: "2026-05-01", paymentType: "OneTime",     paymentMethod: null,     installmentNumber: null, totalInstallments: null, subCategoryId:  2, subCategoryName: "Freelance",      accountId: 1, accountName: "Nubank",  recurringTransactionId: null, parentTransactionId: null, tags: [] },
+  { id:  3, budgetId: 1, description: "Aluguel",               value: 180000, type: "Expense", transactionDate: "2026-05-05", paymentType: "Recurring",   paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId:  3, subCategoryName: "Aluguel",        accountId: 1, accountName: "Nubank",  recurringTransactionId: 12, parentTransactionId: null, tags: [] },
+  { id:  4, budgetId: 1, description: "Supermercado Extra",    value:  34750, type: "Expense", transactionDate: "2026-05-06", paymentType: "OneTime",     paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId:  4, subCategoryName: "Alimentação",    accountId: 1, accountName: "Nubank",  recurringTransactionId: null, parentTransactionId: null, tags: [{ id: 1, name: "Mercado" }, { id: 2, name: "Essencial" }] },
+  { id:  5, budgetId: 1, description: "Ifood — Jantar",        value:   6290, type: "Expense", transactionDate: "2026-05-02", paymentType: "OneTime",     paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId:  5, subCategoryName: "Restaurante",    accountId: 4, accountName: "Cartão",  recurringTransactionId: null, parentTransactionId: null, tags: [{ id: 3, name: "Delivery" }] },
+  { id:  6, budgetId: 1, description: "Netflix",               value:   5590, type: "Expense", transactionDate: "2026-05-04", paymentType: "Recurring",   paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId:  6, subCategoryName: "Streaming",      accountId: 4, accountName: "Cartão",  recurringTransactionId: 11, parentTransactionId: null, tags: [] },
+  { id:  7, budgetId: 1, description: "Spotify",               value:   1990, type: "Expense", transactionDate: "2026-05-04", paymentType: "Recurring",   paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId:  6, subCategoryName: "Streaming",      accountId: 4, accountName: "Cartão",  recurringTransactionId: 13, parentTransactionId: null, tags: [] },
+  { id:  8, budgetId: 1, description: "Farmácia São João",     value:   8700, type: "Expense", transactionDate: "2026-05-03", paymentType: "OneTime",     paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId:  7, subCategoryName: "Saúde",          accountId: 4, accountName: "Cartão",  recurringTransactionId: null, parentTransactionId: null, tags: [] },
+  { id:  9, budgetId: 1, description: "Gasolina Shell",        value:  15000, type: "Expense", transactionDate: "2026-05-03", paymentType: "OneTime",     paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId:  8, subCategoryName: "Combustível",    accountId: 1, accountName: "Nubank",  recurringTransactionId: null, parentTransactionId: null, tags: [] },
+  { id: 10, budgetId: 1, description: "Uber",                  value:   2850, type: "Expense", transactionDate: "2026-05-02", paymentType: "OneTime",     paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId:  9, subCategoryName: "Aplicativo",     accountId: 4, accountName: "Cartão",  recurringTransactionId: null, parentTransactionId: null, tags: [] },
+  { id: 11, budgetId: 1, description: "Academia Smart Fit",    value:  10990, type: "Expense", transactionDate: "2026-05-01", paymentType: "Recurring",   paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId: 10, subCategoryName: "Academia",       accountId: 4, accountName: "Cartão",  recurringTransactionId: 14, parentTransactionId: null, tags: [] },
+  { id: 12, budgetId: 1, description: "Ingresso cinema",       value:   4600, type: "Expense", transactionDate: "2026-04-30", paymentType: "OneTime",     paymentMethod: "Credit", installmentNumber: null, totalInstallments: null, subCategoryId: 11, subCategoryName: "Entretenimento", accountId: 4, accountName: "Cartão",  recurringTransactionId: null, parentTransactionId: null, tags: [] },
+  { id: 13, budgetId: 1, description: "Energia elétrica",      value:  18500, type: "Expense", transactionDate: "2026-04-28", paymentType: "Recurring",   paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId: 12, subCategoryName: "Energia",        accountId: 1, accountName: "Nubank",  recurringTransactionId: 15, parentTransactionId: null, tags: [] },
+  { id: 14, budgetId: 1, description: "Internet Vivo",         value:   9990, type: "Expense", transactionDate: "2026-04-27", paymentType: "Recurring",   paymentMethod: "Debit",  installmentNumber: null, totalInstallments: null, subCategoryId: 13, subCategoryName: "Internet",       accountId: 1, accountName: "Nubank",  recurringTransactionId: 16, parentTransactionId: null, tags: [] },
+  { id: 15, budgetId: 1, description: "MacBook Pro 14",        value:  58250, type: "Expense", transactionDate: "2026-05-06", paymentType: "Installment", paymentMethod: "Credit", installmentNumber: 2,    totalInstallments: 12,   subCategoryId: 14, subCategoryName: "Eletrônicos",    accountId: 4, accountName: "Cartão",  recurringTransactionId: null, parentTransactionId: null, tags: [] },
 ];
 
 // ─── Budgets ──────────────────────────────────────────────────────────────────

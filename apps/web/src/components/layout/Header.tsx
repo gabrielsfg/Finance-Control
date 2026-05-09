@@ -14,6 +14,7 @@ export const Header = () => {
       {/* Sidebar toggle */}
       <button
         onClick={toggleSidebar}
+        title="Alternar sidebar"
         className="text-text-sub hover:bg-surface2 hover:text-text flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] transition-colors"
         aria-label="Alternar sidebar"
       >
@@ -30,6 +31,7 @@ export const Header = () => {
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
+          title="Alternar tema"
           className="text-text-sub hover:bg-surface2 hover:text-text flex h-9 w-9 items-center justify-center rounded-[9px] transition-colors"
           aria-label="Alternar tema"
         >
@@ -41,7 +43,7 @@ export const Header = () => {
         </button>
 
         {/* Notifications */}
-        <button className="text-text-sub hover:bg-surface2 hover:text-text relative flex h-9 w-9 items-center justify-center rounded-[9px] transition-colors">
+        <button title="Notificações" className="text-text-sub hover:bg-surface2 hover:text-text relative flex h-9 w-9 items-center justify-center rounded-[9px] transition-colors">
           <Bell size={16} strokeWidth={1.75} />
           <span className="bg-green absolute top-2 right-2 h-1.5 w-1.5 rounded-full" />
         </button>

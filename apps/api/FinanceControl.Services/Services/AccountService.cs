@@ -7,6 +7,7 @@ using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 
 namespace FinanceControl.Services.Services
 {
@@ -91,7 +92,8 @@ namespace FinanceControl.Services.Services
                     CurrentAmount = _context.Transactions
                         .Where(t => t.AccountId == a.Id && t.UserId == userId)
                         .Sum(t => t.Type == EnumTransactionType.Income ? t.Value : -t.Value),
-                    IsDefaultAccount = a.IsDefaultAccount
+                    IsDefaultAccount = a.IsDefaultAccount,
+                    CreditLimit = a.CreditLimit
                 })
                 .ToListAsync();
 
@@ -217,6 +219,47 @@ namespace FinanceControl.Services.Services
 
             var accounts = await GetAllAccountAsync(userId);
             return Result<IEnumerable<GetAccountItemResponseDto>>.Success(accounts);
+        }
+
+        public async Task<IEnumerable<BalanceHistoryItemDto>?> GetBalanceHistoryAsync(int accountId, int userId, int days = 30)
+        {
+            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == accountId && a.UserId == userId);
+            if (account == null)
+                return null;
+
+            var cutoff = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-(days - 1));
+
+            var transactions = await _context.Transactions
+                .Where(t => t.AccountId == accountId && t.UserId == userId)
+                .Select(t => new { t.TransactionDate, t.Value, t.Type })
+                .ToListAsync();
+
+            // Balance before the window
+            var baseBalance = transactions
+                .Where(t => t.TransactionDate < cutoff)
+                .Sum(t => t.Type == EnumTransactionType.Income ? t.Value : -t.Value);
+
+            var dailyDeltas = transactions
+                .Where(t => t.TransactionDate >= cutoff)
+                .GroupBy(t => t.TransactionDate)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Sum(t => t.Type == EnumTransactionType.Income ? t.Value : -t.Value)
+                );
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var result = new List<BalanceHistoryItemDto>(days);
+            var running = baseBalance;
+
+            for (var d = cutoff; d <= today; d = d.AddDays(1))
+            {
+                if (dailyDeltas.TryGetValue(d, out var delta))
+                    running += delta;
+
+                result.Add(new BalanceHistoryItemDto { Date = d, Balance = running });
+            }
+
+            return result;
         }
     }
 }

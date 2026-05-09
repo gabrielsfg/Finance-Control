@@ -26,12 +26,16 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
   }, [theme]);
 
   // Prefetch silencioso para o search global funcionar mesmo sem visitar as páginas.
-  // staleTime espelhado dos hooks de cada feature para evitar refetches redundantes.
+  // Só busca se o cache ainda não tiver dados (evita sobrescrever mocks durante dev).
   useEffect(() => {
-    qc.prefetchQuery({ queryKey: ["accounts"],      queryFn: accountsApi.getAll,              staleTime: 60_000 });
-    qc.prefetchQuery({ queryKey: ["categories"],    queryFn: categoriesApi.getAll,            staleTime: 60_000 });
-    qc.prefetchQuery({ queryKey: ["investments"],   queryFn: investmentsApi.getPortfolio,     staleTime: 5 * 60_000 });
-    qc.prefetchQuery({ queryKey: ["transactions"],  queryFn: transactionsApi.getAll,          staleTime: 60_000 });
+    if (!qc.getQueryData(["accounts"]))
+      qc.prefetchQuery({ queryKey: ["accounts"],     queryFn: accountsApi.getAll,          staleTime: 60_000 });
+    if (!qc.getQueryData(["categories"]))
+      qc.prefetchQuery({ queryKey: ["categories"],   queryFn: categoriesApi.getAll,        staleTime: 60_000 });
+    if (!qc.getQueryData(["investments"]))
+      qc.prefetchQuery({ queryKey: ["investments"],  queryFn: investmentsApi.getPortfolio, staleTime: 5 * 60_000 });
+    if (!qc.getQueryData(["transactions"]))
+      qc.prefetchQuery({ queryKey: ["transactions"], queryFn: transactionsApi.getAll,      staleTime: 60_000 });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

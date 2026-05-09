@@ -1,35 +1,57 @@
 "use client";
 
-import { ArrowUpRight, ArrowDownRight, ArrowLeftRight } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { ArrowUpRight, ArrowDownRight, Wallet } from "lucide-react";
+import { StatCard } from "@/components/shared/StatCard";
 
 type Props = {
   totalIncome: number;
   totalExpense: number;
   balance: number;
+  previousTotalIncome?: number;
+  previousTotalExpense?: number;
+  previousBalance?: number;
 };
 
-export const TransactionsSummary = ({ totalIncome, totalExpense, balance }: Props) => {
-  const items = [
-    { label: "Receitas", value: totalIncome, color: "text-green", icon: ArrowUpRight },
-    { label: "Despesas", value: totalExpense, color: "text-red", icon: ArrowDownRight },
-    { label: "Saldo", value: balance, color: balance >= 0 ? "text-green" : "text-red", icon: ArrowLeftRight },
-  ];
+function pctChange(current: number, previous: number | undefined): number | undefined {
+  if (previous === undefined || previous === 0) return undefined;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
 
-  return (
-    <div className="grid grid-cols-3 gap-3">
-      {items.map(({ label, value, color, icon: Icon }) => (
-        <div key={label} className="border-border bg-surface rounded-xl border px-5 py-4">
-          <div className="text-text-muted mb-1 flex items-center gap-1.5 text-[13px]">
-            <Icon size={13} />
-            {label}
-          </div>
-          <p className={cn("font-money font-600 text-[20px]", color)}>
-            {value < 0 ? "-" : ""}{formatCurrency(Math.abs(value) / 100)}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-};
+export const TransactionsSummary = ({
+  totalIncome,
+  totalExpense,
+  balance,
+  previousTotalIncome,
+  previousTotalExpense,
+  previousBalance,
+}: Props) => (
+  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <StatCard
+      label="Receitas"
+      value={totalIncome / 100}
+      icon={ArrowUpRight}
+      iconColor="#00C98D"
+      change={pctChange(totalIncome, previousTotalIncome)}
+      previousValue={previousTotalIncome !== undefined ? previousTotalIncome / 100 : undefined}
+    />
+    <StatCard
+      label="Despesas"
+      value={totalExpense / 100}
+      showNegative
+      icon={ArrowDownRight}
+      iconColor="#F25F5C"
+      change={pctChange(totalExpense, previousTotalExpense)}
+      previousValue={previousTotalExpense !== undefined ? previousTotalExpense / 100 : undefined}
+      lowerIsBetter
+    />
+    <StatCard
+      label="Saldo"
+      value={Math.abs(balance) / 100}
+      showNegative={balance < 0}
+      icon={Wallet}
+      iconColor="#4A9EFF"
+      change={pctChange(balance, previousBalance)}
+      previousValue={previousBalance !== undefined ? previousBalance / 100 : undefined}
+    />
+  </div>
+);

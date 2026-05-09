@@ -29,5 +29,6 @@ namespace FinanceControl.Domain.Entities
         public RecurringTransaction? RecurringTransaction { get; set; }
         public Transaction? ParentTransaction { get; set; }
         public ICollection<Transaction> Installments { get; set; } = new List<Transaction>();
+        public ICollection<Tag> Tags { get; set; } = new List<Tag>();
     }
 }

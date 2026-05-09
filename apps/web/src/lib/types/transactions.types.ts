@@ -11,6 +11,11 @@ export type RecurrenceType =
   | "Semiannually"
   | "Annually";
 
+export type TagItem = {
+  id: number;
+  name: string;
+};
+
 export type TransactionItem = {
   id: number;
   budgetId: number | null;
@@ -28,6 +33,7 @@ export type TransactionItem = {
   paymentMethod: PaymentMethod | null;
   installmentNumber: number | null;
   totalInstallments: number | null;
+  tags: TagItem[];
 };
 
 export type SubCategoryItem = {
@@ -50,17 +56,26 @@ export type CreateTransactionRequest = {
   paymentMethod: PaymentMethod | null;
   totalInstallments: number | null;
   recurrence: RecurrenceType | null;
+  tags: string[];
 };
 
 export type UpdateTransactionRequest = {
-  budgetId: number | null;
   subCategoryId: number;
   accountId: number;
   value: number;
+  type: TransactionType;
   description: string;
   transactionDate: string;
+  paymentType: PaymentType;
   paymentMethod: PaymentMethod | null;
+  totalInstallments: number | null;
+  recurrence: RecurrenceType | null;
+  includeInBudget: boolean;
+  tags: string[];
 };
+
+export type TxSortField = "date" | "value";
+export type TxSortOrder = "desc" | "asc";
 
 export type GetTransactionsFilterParams = {
   startDate: string;
@@ -69,4 +84,25 @@ export type GetTransactionsFilterParams = {
   accountIds?: number[];
   categoryIds?: number[];
   subCategoryIds?: number[];
+  page?: number;
+  pageSize?: number;
+  sortField?: TxSortField;
+  sortOrder?: TxSortOrder;
+};
+
+export type TransactionsFilteredResponse = {
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  previousTotalIncome?: number;
+  previousTotalExpense?: number;
+  previousBalance?: number;
+  page: {
+    currentPage: number;
+    totalPages: number;
+    pageSize: number;
+    totalItems: number;
+    rowCount: number;
+    items: TransactionItem[];
+  };
 };

@@ -3,18 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import {
   SlidersHorizontal, ChevronRight, Check,
-  CalendarDays, Tag, Wallet, BookOpen, ListFilter,
+  CalendarDays, Tag, Wallet, BookOpen, ListFilter, ArrowUpDown, DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
 import { getCategoryColor } from "@/lib/config/categoryColors";
-import type { TransactionsFilter, TxDatePreset } from "../types/filters.types";
+import type { TransactionsFilter, TxDatePreset, TxSortField, TxSortOrder } from "../types/filters.types";
 import { activeTxDateLabel, availableTxYears, defaultTxFilter } from "../utils/filterDates";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Section = "date" | "categories" | "type" | "accounts" | "budgets";
+type Section = "date" | "categories" | "type" | "accounts" | "budgets" | "sort";
 
 const DATE_PRESETS: { id: TxDatePreset; label: string }[] = [
   { id: "current-month",  label: "Mês atual" },
@@ -287,6 +287,13 @@ function CheckRow({
 }
 
 // ── Section panel content ─────────────────────────────────────────────────────
+const SORT_OPTIONS: { field: TxSortField; order: TxSortOrder; label: string; icon: React.ElementType }[] = [
+  { field: "date",  order: "desc", label: "Mais recente primeiro", icon: CalendarDays },
+  { field: "date",  order: "asc",  label: "Mais antigo primeiro",  icon: CalendarDays },
+  { field: "value", order: "desc", label: "Maior valor primeiro",  icon: DollarSign },
+  { field: "value", order: "asc",  label: "Menor valor primeiro",  icon: DollarSign },
+];
+
 function SectionContent({
   section, draft, setDraft, accounts, categories, subcategories, budgets,
 }: {
@@ -472,16 +479,51 @@ function SectionContent({
     );
   }
 
+  if (section === "sort") {
+    return (
+      <div className="flex flex-col gap-1">
+        {SORT_OPTIONS.map(opt => {
+          const active = draft.sortField === opt.field && draft.sortOrder === opt.order;
+          const Icon = opt.icon;
+          return (
+            <button
+              key={`${opt.field}-${opt.order}`}
+              onClick={() => setDraft(d => ({ ...d, sortField: opt.field, sortOrder: opt.order }))}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface3",
+              )}
+            >
+              <span className={cn(
+                "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                active ? "border-green" : "border-border",
+              )}>
+                {active && <span className="bg-green h-2.5 w-2.5 rounded-full" />}
+              </span>
+              <Icon size={14} className={cn("shrink-0", active ? "text-green" : "text-text-muted")} />
+              <span className={cn("text-[14px]", active ? "text-text font-medium" : "text-text-sub")}>
+                {opt.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return null;
 }
 
 // ── Main panel ────────────────────────────────────────────────────────────────
-const SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
+const FILTER_SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: "date",       label: "Data",       icon: CalendarDays },
   { id: "type",       label: "Tipo",       icon: ListFilter },
   { id: "categories", label: "Categoria",  icon: Tag },
   { id: "accounts",   label: "Contas",     icon: Wallet },
   { id: "budgets",    label: "Orçamentos", icon: BookOpen },
+];
+
+const SORT_SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
+  { id: "sort", label: "Ordenação", icon: ArrowUpDown },
 ];
 
 function countActive(filter: TransactionsFilter): number {
@@ -585,7 +627,7 @@ export function TransactionsFilters({ filter, onChange }: Props) {
         >
           {/* Left nav */}
           <div className="border-border bg-surface2 flex w-44 shrink-0 flex-col border-r py-2">
-            {SECTIONS.map(({ id, label, icon: Icon }) => {
+            {FILTER_SECTIONS.map(({ id, label, icon: Icon }) => {
               const isActive = section === id;
               let badge = 0;
               if (id === "categories")  badge = draft.categoryIds.length + draft.subCategoryIds.length;
@@ -613,6 +655,38 @@ export function TransactionsFilters({ filter, onChange }: Props) {
                       isActive ? "bg-green text-black" : "bg-green/20 text-green",
                     )}>
                       {badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+
+            {/* Separator */}
+            <div className="border-border mx-3 my-1.5 border-t" />
+            <p className="text-text-muted px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider">Ordenação</p>
+
+            {SORT_SECTIONS.map(({ id, label, icon: Icon }) => {
+              const isActive = section === id;
+              const isDefault = draft.sortField === "date" && draft.sortOrder === "desc";
+              return (
+                <button
+                  key={id}
+                  onClick={() => setSection(id)}
+                  className={cn(
+                    "flex items-center gap-2.5 px-3 py-3 text-left text-[14px] transition-colors",
+                    isActive
+                      ? "bg-green/10 text-green font-semibold"
+                      : "text-text-sub hover:bg-surface3 hover:text-text",
+                  )}
+                >
+                  <Icon size={14} strokeWidth={1.75} className="shrink-0" />
+                  <span className="flex-1">{label}</span>
+                  {!isDefault && (
+                    <span className={cn(
+                      "flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold",
+                      isActive ? "bg-green text-black" : "bg-green/20 text-green",
+                    )}>
+                      1
                     </span>
                   )}
                 </button>

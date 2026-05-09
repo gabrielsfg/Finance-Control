@@ -639,6 +639,38 @@ namespace FinanceControl.Data.Migrations
                     b.ToTable("SubCategories", (string)null);
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.Tag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Tags", (string)null);
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.Transaction", b =>
                 {
                     b.Property<int>("Id")
@@ -824,6 +856,21 @@ namespace FinanceControl.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("UserPreferences", (string)null);
+                });
+
+            modelBuilder.Entity("TagTransaction", b =>
+                {
+                    b.Property<int>("TagsId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TransactionsId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("TagsId", "TransactionsId");
+
+                    b.HasIndex("TransactionsId");
+
+                    b.ToTable("TransactionTags", (string)null);
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.Account", b =>
@@ -1039,6 +1086,15 @@ namespace FinanceControl.Data.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.Tag", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.Transaction", b =>
                 {
                     b.HasOne("FinanceControl.Domain.Entities.Account", "Account")
@@ -1094,6 +1150,21 @@ namespace FinanceControl.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TagTransaction", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FinanceControl.Domain.Entities.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("TransactionsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.Account", b =>
