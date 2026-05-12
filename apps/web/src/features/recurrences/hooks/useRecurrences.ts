@@ -40,6 +40,14 @@ export function useCancelRecurring() {
   });
 }
 
+export function useReactivateRecurring() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => recurrencesApi.reactivateRecurring(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
 export function useDeleteRecurring() {
   const qc = useQueryClient();
   return useMutation({

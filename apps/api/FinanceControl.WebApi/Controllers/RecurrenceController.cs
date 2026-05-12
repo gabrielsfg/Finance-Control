@@ -67,6 +67,15 @@ namespace FinanceControl.WebApi.Controllers
             return NoContent();
         }
 
+        /// <summary>PATCH /api/recurrences/recurring/{id}/reactivate — reativa recorrência cancelada</summary>
+        [HttpPatch("recurring/{id:int}/reactivate")]
+        public async Task<IActionResult> ReactivateRecurringAsync([FromRoute] int id)
+        {
+            var result = await _service.ReactivateRecurringAsync(GetUserId(), id);
+            if (result.IsFailure) return NotFound(new { message = result.Error });
+            return Ok(result.Value);
+        }
+
         /// <summary>DELETE /api/recurrences/recurring/{id} — remove recorrência e desvincula transações geradas</summary>
         [HttpDelete("recurring/{id:int}")]
         public async Task<IActionResult> DeleteRecurringAsync([FromRoute] int id)

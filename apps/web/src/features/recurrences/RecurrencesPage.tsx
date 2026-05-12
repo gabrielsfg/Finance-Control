@@ -7,8 +7,9 @@ import { RecurrencesHeader } from "./components/RecurrencesHeader";
 import { RecurringList } from "./components/RecurringList";
 import { InstallmentList } from "./components/InstallmentList";
 import { RecurrenceDrawer } from "./components/RecurrenceDrawer";
+import { RecurrenceEditDrawer, type EditTarget } from "./components/RecurrenceEditDrawer";
 import { CancelRecurringDialog } from "./components/CancelRecurringDialog";
-import { useRecurrencePage, useCancelRecurring } from "./hooks/useRecurrences";
+import { useRecurrencePage, useCancelRecurring, useReactivateRecurring } from "./hooks/useRecurrences";
 import { defaultRecurrenceFilter } from "@/lib/types/recurrences.types";
 import type { RecurrenceFilter, RecurringItem, InstallmentItem } from "@/lib/types/recurrences.types";
 
@@ -21,10 +22,13 @@ const MONTH_NAMES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out"
 export function RecurrencesPage() {
   const { data, isLoading } = useRecurrencePage();
   const cancelMutation = useCancelRecurring();
+  const reactivateMutation = useReactivateRecurring();
 
   const [filter, setFilter] = useState<RecurrenceFilter>(defaultRecurrenceFilter());
   const [drawer, setDrawer] = useState<DrawerItem | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [cancelItem, setCancelItem] = useState<RecurringItem | null>(null);
 
   // Filter recurring: show active + cancelled that were still active in selected month
@@ -44,8 +48,9 @@ export function RecurrencesPage() {
       // if inactive, only show if it was still active at some point during the month
       if (!r.isActive && end && end < firstDayOfMonth) return false;
 
-      // category filter
-      if (filter.categoryIds.length > 0 && !filter.categoryIds.includes(r.categoryId)) return false;
+      // category / subcategory filter (subCategoryIds is source of truth since toggling a category auto-toggles its subs)
+      if (filter.subCategoryIds.length > 0 && !filter.subCategoryIds.includes(r.subCategoryId)) return false;
+      else if (filter.subCategoryIds.length === 0 && filter.categoryIds.length > 0 && !filter.categoryIds.includes(r.categoryId)) return false;
 
       // account filter
       if (filter.accountIds.length > 0 && !filter.accountIds.includes(r.accountId)) return false;
@@ -68,7 +73,8 @@ export function RecurrencesPage() {
       if (start > lastDayOfMonth) return false;
       if (endMonth < firstDayOfMonth) return false;
 
-      if (filter.categoryIds.length > 0 && !filter.categoryIds.includes(inst.categoryId)) return false;
+      if (filter.subCategoryIds.length > 0 && !filter.subCategoryIds.includes(inst.subCategoryId)) return false;
+      else if (filter.subCategoryIds.length === 0 && filter.categoryIds.length > 0 && !filter.categoryIds.includes(inst.categoryId)) return false;
       if (filter.accountIds.length > 0 && !filter.accountIds.includes(inst.accountId)) return false;
 
       return true;
@@ -88,9 +94,33 @@ export function RecurrencesPage() {
     setDrawerOpen(true);
   }
 
+  function openEdit(target: EditTarget) {
+    setEditTarget(target);
+    setEditOpen(true);
+  }
+
+  function handleEditFromCard(target: EditTarget) {
+    openEdit(target);
+  }
+
+  function handleEditFromDrawer(target: DrawerItem) {
+    setDrawerOpen(false);
+    setTimeout(() => openEdit(target as EditTarget), 250);
+  }
+
+  function closeEdit() {
+    setEditOpen(false);
+    setTimeout(() => setEditTarget(null), 300);
+  }
+
   function handleCancelFromDrawer(item: RecurringItem) {
     setDrawerOpen(false);
     setTimeout(() => setCancelItem(item), 300);
+  }
+
+  function handleReactivate(item: RecurringItem) {
+    reactivateMutation.mutate(item.id);
+    setDrawerOpen(false);
   }
 
   function handleConfirmCancel() {
@@ -152,15 +182,16 @@ export function RecurrencesPage() {
             items={filteredRecurring}
             totalMonthly={data?.subscriptionMonthlyAmount ?? 0}
             onView={item => openDrawer({ kind: "recurring", item })}
-            onEdit={item => openDrawer({ kind: "recurring", item })}
+            onEdit={item => handleEditFromCard({ kind: "recurring", item })}
             onCancel={item => setCancelItem(item)}
+            onReactivate={handleReactivate}
           />
           <InstallmentList
             items={filteredInstallments}
             totalMonthly={data?.installmentMonthlyAmount ?? 0}
             totalRemaining={totalRemainingInstallments}
             onView={item => openDrawer({ kind: "installment", item })}
-            onEdit={item => openDrawer({ kind: "installment", item })}
+            onEdit={item => handleEditFromCard({ kind: "installment", item })}
           />
         </div>
       ) : (
@@ -170,8 +201,9 @@ export function RecurrencesPage() {
               items={filteredRecurring}
               totalMonthly={data?.subscriptionMonthlyAmount ?? 0}
               onView={item => openDrawer({ kind: "recurring", item })}
-              onEdit={item => openDrawer({ kind: "recurring", item })}
+              onEdit={item => handleEditFromCard({ kind: "recurring", item })}
               onCancel={item => setCancelItem(item)}
+              onReactivate={handleReactivate}
             />
           )}
           {showInstallments && (
@@ -180,7 +212,7 @@ export function RecurrencesPage() {
               totalMonthly={data?.installmentMonthlyAmount ?? 0}
               totalRemaining={totalRemainingInstallments}
               onView={item => openDrawer({ kind: "installment", item })}
-              onEdit={item => openDrawer({ kind: "installment", item })}
+              onEdit={item => handleEditFromCard({ kind: "installment", item })}
             />
           )}
         </div>
@@ -191,8 +223,16 @@ export function RecurrencesPage() {
         open={drawerOpen}
         data={drawer}
         onClose={() => setDrawerOpen(false)}
-        onEdit={() => {}}
+        onEdit={handleEditFromDrawer}
         onCancel={handleCancelFromDrawer}
+        onReactivate={handleReactivate}
+      />
+
+      {/* Edit drawer */}
+      <RecurrenceEditDrawer
+        open={editOpen}
+        target={editTarget}
+        onClose={closeEdit}
       />
 
       {/* Cancel dialog */}

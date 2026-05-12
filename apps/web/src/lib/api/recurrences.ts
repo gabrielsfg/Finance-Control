@@ -26,6 +26,11 @@ export const recurrencesApi = {
     await api.patch(`/recurrences/recurring/${id}/cancel`);
   },
 
+  reactivateRecurring: async (id: number): Promise<RecurringItem> => {
+    const res = await api.patch<RecurringItem>(`/recurrences/recurring/${id}/reactivate`);
+    return res.data;
+  },
+
   deleteRecurring: async (id: number): Promise<void> => {
     await api.delete(`/recurrences/recurring/${id}`);
   },

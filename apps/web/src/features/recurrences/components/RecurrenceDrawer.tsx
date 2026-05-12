@@ -28,6 +28,7 @@ type Props = {
   onClose: () => void;
   onEdit: (data: DrawerItem) => void;
   onCancel: (item: RecurringItem) => void;
+  onReactivate: (item: RecurringItem) => void;
 };
 
 function DetailRow({ icon: Icon, label, value, valueClass }: {
@@ -44,10 +45,11 @@ function DetailRow({ icon: Icon, label, value, valueClass }: {
   );
 }
 
-function RecurringDetail({ item, onEdit, onCancel }: {
+function RecurringDetail({ item, onEdit, onCancel, onReactivate }: {
   item: RecurringItem;
   onEdit: () => void;
   onCancel: () => void;
+   onReactivate: () => void;
 }) {
   const color = getCategoryColor(item.categoryColor, item.categoryName);
   const startDate = new Date(item.startDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
@@ -109,22 +111,31 @@ function RecurringDetail({ item, onEdit, onCancel }: {
       </div>
 
       {/* Actions */}
-      {item.isActive && (
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
+        {item.isActive ? (
+          <>
+            <button
+              onClick={onEdit}
+              className="bg-surface2 hover:bg-surface3 text-text border-border w-full rounded-xl border py-3 text-[14px] font-semibold transition-colors"
+            >
+              Editar assinatura
+            </button>
+            <button
+              onClick={onCancel}
+              className="text-red hover:bg-red/10 border-red/25 w-full rounded-xl border py-3 text-[14px] font-semibold transition-colors"
+            >
+              Cancelar assinatura
+            </button>
+          </>
+        ) : (
           <button
-            onClick={onEdit}
-            className="bg-surface2 hover:bg-surface3 text-text border-border w-full rounded-xl border py-3 text-[14px] font-semibold transition-colors"
+            onClick={onReactivate}
+            className="text-green hover:bg-green/10 border-green/30 w-full rounded-xl border py-3 text-[14px] font-semibold transition-colors"
           >
-            Editar assinatura
+            Reativar assinatura
           </button>
-          <button
-            onClick={onCancel}
-            className="text-red hover:bg-red/10 border-red/25 w-full rounded-xl border py-3 text-[14px] font-semibold transition-colors"
-          >
-            Cancelar assinatura
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -239,7 +250,7 @@ function InstallmentDetail({ item, onEdit }: {
   );
 }
 
-export function RecurrenceDrawer({ open, data, onClose, onEdit, onCancel }: Props) {
+export function RecurrenceDrawer({ open, data, onClose, onEdit, onCancel, onReactivate }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -289,6 +300,7 @@ export function RecurrenceDrawer({ open, data, onClose, onEdit, onCancel }: Prop
               item={data.item}
               onEdit={() => onEdit(data)}
               onCancel={() => onCancel(data.item)}
+              onReactivate={() => onReactivate(data.item)}
             />
           )}
           {data?.kind === "installment" && (

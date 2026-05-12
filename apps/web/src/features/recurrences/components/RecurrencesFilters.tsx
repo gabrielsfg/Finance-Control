@@ -19,14 +19,17 @@ const TYPE_OPTIONS: { id: RecurrenceFilter["typeFilter"]; label: string }[] = [
 type Section = "month" | "type" | "categories" | "accounts";
 
 function CheckRow({
-  checked, onClick, label, color,
+  checked, onClick, label, color, indent,
 }: {
-  checked: boolean; onClick: () => void; label: string; color?: string;
+  checked: boolean; onClick: () => void; label: string; color?: string; indent?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface3"
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface3",
+        indent && "pl-6",
+      )}
     >
       <span className={cn(
         "flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors",
@@ -95,14 +98,47 @@ function MonthPicker({
 }
 
 function SectionContent({
-  section, draft, setDraft, accounts, categories,
+  section, draft, setDraft, accounts, categories, subcategories,
 }: {
   section: Section;
   draft: RecurrenceFilter;
   setDraft: React.Dispatch<React.SetStateAction<RecurrenceFilter>>;
   accounts: { id: number; name: string }[];
   categories: { id: number; name: string; color: string }[];
+  subcategories: { id: number; name: string; categoryId: number; color: string }[];
 }) {
+  function toggleCategory(catId: number) {
+    const catSubIds = subcategories.filter(s => s.categoryId === catId).map(s => s.id);
+    const catChecked = draft.categoryIds.includes(catId);
+    if (catChecked) {
+      setDraft(d => ({
+        ...d,
+        categoryIds: d.categoryIds.filter(id => id !== catId),
+        subCategoryIds: d.subCategoryIds.filter(id => !catSubIds.includes(id)),
+      }));
+    } else {
+      setDraft(d => ({
+        ...d,
+        categoryIds: [...d.categoryIds, catId],
+        subCategoryIds: [...new Set([...d.subCategoryIds, ...catSubIds])],
+      }));
+    }
+  }
+
+  function toggleSubCategory(subId: number, catId: number) {
+    const catSubIds = subcategories.filter(s => s.categoryId === catId).map(s => s.id);
+    const subChecked = draft.subCategoryIds.includes(subId);
+    const newSubIds = subChecked
+      ? draft.subCategoryIds.filter(id => id !== subId)
+      : [...draft.subCategoryIds, subId];
+
+    const allSubsChecked = catSubIds.every(id => newSubIds.includes(id));
+    const newCatIds = allSubsChecked
+      ? [...new Set([...draft.categoryIds, catId])]
+      : draft.categoryIds.filter(id => id !== catId);
+
+    setDraft(d => ({ ...d, subCategoryIds: newSubIds, categoryIds: newCatIds }));
+  }
   if (section === "month") {
     return (
       <MonthPicker
@@ -130,23 +166,32 @@ function SectionContent({
 
   if (section === "categories") {
     return (
-      <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 300 }}>
+      <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 340 }}>
         {categories.length === 0
           ? <p className="text-text-muted py-4 text-center text-[14px]">Nenhuma categoria</p>
-          : categories.map(cat => (
-            <CheckRow
-              key={cat.id}
-              checked={draft.categoryIds.includes(cat.id)}
-              onClick={() => setDraft(d => ({
-                ...d,
-                categoryIds: d.categoryIds.includes(cat.id)
-                  ? d.categoryIds.filter(id => id !== cat.id)
-                  : [...d.categoryIds, cat.id],
-              }))}
-              label={cat.name}
-              color={cat.color}
-            />
-          ))
+          : categories.map(cat => {
+            const catSubs = subcategories.filter(s => s.categoryId === cat.id);
+            return (
+              <div key={cat.id}>
+                <CheckRow
+                  checked={draft.categoryIds.includes(cat.id)}
+                  onClick={() => toggleCategory(cat.id)}
+                  label={cat.name}
+                  color={cat.color}
+                />
+                {catSubs.map(sub => (
+                  <CheckRow
+                    key={sub.id}
+                    checked={draft.subCategoryIds.includes(sub.id)}
+                    onClick={() => toggleSubCategory(sub.id, cat.id)}
+                    label={sub.name}
+                    color={sub.color}
+                    indent
+                  />
+                ))}
+              </div>
+            );
+          })
         }
       </div>
     );
@@ -191,6 +236,7 @@ function countActive(filter: RecurrenceFilter): number {
   if (filter.month !== now.getMonth() + 1 || filter.year !== now.getFullYear()) n++;
   if (filter.typeFilter !== "All") n++;
   if (filter.categoryIds.length > 0) n++;
+  if (filter.subCategoryIds.length > 0) n++;
   if (filter.accountIds.length > 0) n++;
   return n;
 }
@@ -218,6 +264,13 @@ export function RecurrencesFilters({ filter, onChange }: Props) {
     }])).values()
   ).sort((a, b) => a.name.localeCompare(b.name));
 
+  const subcategories = subcatsRaw.map(s => ({
+    id: s.id,
+    name: s.name,
+    categoryId: s.categoryId,
+    color: getCategoryColor(s.categoryColor, s.categoryName),
+  })).sort((a, b) => a.name.localeCompare(b.name));
+
   useEffect(() => { setDraft(filter); }, [filter]);
 
   useEffect(() => {
@@ -236,6 +289,7 @@ export function RecurrencesFilters({ filter, onChange }: Props) {
       month: now.getMonth() + 1,
       year: now.getFullYear(),
       categoryIds: [],
+      subCategoryIds: [],
       accountIds: [],
       typeFilter: "All",
     };
@@ -280,7 +334,7 @@ export function RecurrencesFilters({ filter, onChange }: Props) {
               const now = new Date();
               if (id === "month" && (draft.month !== now.getMonth() + 1 || draft.year !== now.getFullYear())) badge = 1;
               if (id === "type" && draft.typeFilter !== "All") badge = 1;
-              if (id === "categories") badge = draft.categoryIds.length;
+              if (id === "categories") badge = draft.categoryIds.length + draft.subCategoryIds.length;
               if (id === "accounts") badge = draft.accountIds.length;
 
               return (
@@ -332,6 +386,7 @@ export function RecurrencesFilters({ filter, onChange }: Props) {
               setDraft={setDraft}
               accounts={accounts}
               categories={categories}
+              subcategories={subcategories}
             />
           </div>
         </div>

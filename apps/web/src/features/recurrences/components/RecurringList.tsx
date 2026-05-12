@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, X, RefreshCw } from "lucide-react";
+import { Pencil, X, RefreshCw, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { getCategoryColor } from "@/lib/config/categoryColors";
@@ -23,9 +23,10 @@ type Props = {
   onView: (item: RecurringItem) => void;
   onEdit: (item: RecurringItem) => void;
   onCancel: (item: RecurringItem) => void;
+  onReactivate: (item: RecurringItem) => void;
 };
 
-export function RecurringList({ items, totalMonthly, onView, onEdit, onCancel }: Props) {
+export function RecurringList({ items, totalMonthly, onView, onEdit, onCancel, onReactivate }: Props) {
   if (items.length === 0) {
     return (
       <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border py-12 text-center">
@@ -104,20 +105,30 @@ export function RecurringList({ items, totalMonthly, onView, onEdit, onCancel }:
 
               {/* Actions — appear on hover */}
               <div className="absolute right-4 flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                <button
-                  onClick={e => { e.stopPropagation(); onEdit(item); }}
-                  title="Editar assinatura"
-                  className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
-                >
-                  <Pencil size={13} />
-                </button>
-                {item.isActive && (
+                {item.isActive ? (
+                  <>
+                    <button
+                      onClick={e => { e.stopPropagation(); onEdit(item); }}
+                      title="Editar assinatura"
+                      className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); onCancel(item); }}
+                      title="Cancelar assinatura"
+                      className="text-red/60 hover:bg-red/10 flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:text-red"
+                    >
+                      <X size={13} />
+                    </button>
+                  </>
+                ) : (
                   <button
-                    onClick={e => { e.stopPropagation(); onCancel(item); }}
-                    title="Cancelar assinatura"
-                    className="text-red/60 hover:bg-red/10 flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:text-red"
+                    onClick={e => { e.stopPropagation(); onReactivate(item); }}
+                    title="Reativar assinatura"
+                    className="text-green/70 hover:bg-green/10 hover:text-green flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
                   >
-                    <X size={13} />
+                    <RotateCcw size={13} />
                   </button>
                 )}
               </div>

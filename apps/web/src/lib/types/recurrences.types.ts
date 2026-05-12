@@ -80,6 +80,7 @@ export type RecurrenceFilter = {
   month: number;
   year: number;
   categoryIds: number[];
+  subCategoryIds: number[];
   accountIds: number[];
   typeFilter: "All" | "Recurring" | "Installment";
 };
@@ -90,6 +91,7 @@ export function defaultRecurrenceFilter(): RecurrenceFilter {
     month: now.getMonth() + 1,
     year: now.getFullYear(),
     categoryIds: [],
+    subCategoryIds: [],
     accountIds: [],
     typeFilter: "All",
   };

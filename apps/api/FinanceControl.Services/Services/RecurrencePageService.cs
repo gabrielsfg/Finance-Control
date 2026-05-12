@@ -162,6 +162,25 @@ namespace FinanceControl.Services.Services
             return Result<bool>.Success(true);
         }
 
+        public async Task<Result<RecurringTransactionResponseDto>> ReactivateRecurringAsync(int userId, int id)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var rt = await context.RecurringTransactions
+                .Include(r => r.SubCategory).ThenInclude(s => s.Category)
+                .Include(r => r.Account)
+                .FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId);
+
+            if (rt is null)   return Result<RecurringTransactionResponseDto>.Failure("Recurring transaction not found.");
+            if (rt.IsActive)  return Result<RecurringTransactionResponseDto>.Failure("Recurring transaction is already active.");
+
+            rt.IsActive = true;
+            rt.EndDate  = null;
+            await context.SaveChangesAsync();
+
+            return Result<RecurringTransactionResponseDto>.Success(MapRecurring(rt));
+        }
+
         public async Task<Result<bool>> DeleteRecurringAsync(int userId, int id)
         {
             await using var context = _contextFactory.CreateDbContext();
