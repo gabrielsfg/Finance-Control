@@ -52,6 +52,7 @@ namespace FinanceControl.Shared.Dtos.Response
         public int SubscriptionMonthlyAmount { get; set; }
         public int ActiveRecurringCount { get; set; }
         public int ActiveInstallmentCount { get; set; }
+        public int MonthlyIncome { get; set; }
         public IReadOnlyList<RecurringTransactionResponseDto> Recurring { get; set; }
         public IReadOnlyList<InstallmentSummaryResponseDto> Installments { get; set; }
     }

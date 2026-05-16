@@ -6,6 +6,7 @@ export const MOCK_RECURRENCES: RecurrencePageData = {
   installmentMonthlyAmount: 39220,
   activeRecurringCount: 5,
   activeInstallmentCount: 5,
+  monthlyIncome: 980000,
   recurring: [
     {
       id: 1,

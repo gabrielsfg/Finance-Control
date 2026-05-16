@@ -52,6 +52,7 @@ export type RecurrencePageData = {
   installmentMonthlyAmount: number;
   activeRecurringCount: number;
   activeInstallmentCount: number;
+  monthlyIncome: number;
   recurring: RecurringItem[];
   installments: InstallmentItem[];
 };
