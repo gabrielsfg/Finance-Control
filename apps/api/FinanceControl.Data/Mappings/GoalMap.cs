@@ -22,6 +22,8 @@ namespace FinanceControl.Data.Mappings
             builder.Property(g => g.TargetDate).IsRequired();
             builder.Property(g => g.TargetAssetType).HasConversion<string>();
             builder.Property(g => g.TargetTicker).HasMaxLength(20);
+            builder.Property(g => g.IncludeInNetWorth);
+            builder.Property(g => g.AchievedAt).HasColumnType("timestamp with time zone");
             builder.Property(g => g.CreatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("now()")
@@ -35,6 +37,11 @@ namespace FinanceControl.Data.Mappings
                 .WithMany()
                 .HasForeignKey(g => g.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(g => g.Account)
+                .WithMany()
+                .HasForeignKey(g => g.AccountId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

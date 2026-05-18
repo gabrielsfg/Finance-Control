@@ -16,6 +16,7 @@ namespace FinanceControl.Data.Mappings
                 .IsRequired();
             builder.Property(a => a.GoalAmount);
             builder.Property(a => a.IsDefaultAccount);
+            builder.Property(a => a.IsSystem);
             builder.Property(a => a.BillingDueDay);
             builder.Property(a => a.CreditLimit);
             builder.Property(a => a.CreatedAt)

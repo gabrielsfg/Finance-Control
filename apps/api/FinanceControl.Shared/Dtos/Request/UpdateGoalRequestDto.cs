@@ -15,5 +15,6 @@ namespace FinanceControl.Shared.Dtos.Request
         public string? TargetTicker { get; set; }
         public string? ImageUrl { get; set; }
         public DateOnly? TargetDate { get; set; }
+        public bool? IncludeInNetWorth { get; set; }
     }
 }

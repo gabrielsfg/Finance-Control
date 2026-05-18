@@ -302,10 +302,6 @@ namespace FinanceControl.Services.Services
             var accounts = _context.Accounts.Where(a => a.UserId == userId);
             _context.Accounts.RemoveRange(accounts);
 
-            var goalCheckpoints = _context.GoalCheckpoints
-                .Where(gc => _context.Goals.Any(g => g.Id == gc.GoalId && g.UserId == userId));
-            _context.GoalCheckpoints.RemoveRange(goalCheckpoints);
-
             var goals = _context.Goals.Where(g => g.UserId == userId);
             _context.Goals.RemoveRange(goals);
 

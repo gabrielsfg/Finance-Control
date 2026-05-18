@@ -13,13 +13,16 @@ namespace FinanceControl.Domain.Entities
         public EnumGoalStatus Status { get; set; } = EnumGoalStatus.Active;
         public string? Color { get; set; }
         public DateOnly TargetDate { get; set; }
+        public bool IncludeInNetWorth { get; set; } = false;
+        public DateTime? AchievedAt { get; set; }
         // Item-only fields
+        public int? AccountId { get; set; }
         public string? Url { get; set; }
         public string? ImageUrl { get; set; }
         // Investment-only fields
         public EnumAssetType? TargetAssetType { get; set; }
         public string? TargetTicker { get; set; }
 
-        public ICollection<GoalCheckpoint> Checkpoints { get; set; } = [];
+        public Account? Account { get; set; }
     }
 }

@@ -17,20 +17,25 @@ namespace FinanceControl.Shared.Dtos.Response
         public DateOnly TargetDate { get; init; }
         public EnumAssetType? TargetAssetType { get; init; }
         public string? TargetTicker { get; init; }
-        public int? LatestCheckpointAmount { get; init; }
+        public int? CurrentAmount { get; init; }
+        public bool IncludeInNetWorth { get; init; }
+        public DateTime? AchievedAt { get; init; }
+        public int? AccountId { get; init; }
         public DateTime CreatedAt { get; init; }
         public DateTime? UpdatedAt { get; init; }
     }
 
     public class GoalDetailResponseDto : GoalResponseDto
     {
-        public IReadOnlyList<GoalCheckpointDto> Checkpoints { get; init; } = [];
+        public IReadOnlyList<GoalTransactionDto> Transactions { get; init; } = [];
     }
 
-    public class GoalCheckpointDto
+    public class GoalTransactionDto
     {
         public int Id { get; init; }
         public int Amount { get; init; }
-        public DateTime RecordedAt { get; init; }
+        public EnumTransactionType Type { get; init; }
+        public string Description { get; init; } = string.Empty;
+        public DateOnly TransactionDate { get; init; }
     }
 }

@@ -11,8 +11,9 @@ namespace FinanceControl.Domain.Interfaces.Services
         Task<IReadOnlyList<GoalResponseDto>> GetAllAsync(int userId, EnumGoalType? type, EnumGoalStatus? status);
         Task<GoalDetailResponseDto?> GetByIdAsync(int userId, int id);
         Task<Result<GoalResponseDto>> UpdateAsync(int userId, int id, UpdateGoalRequestDto dto);
-        Task<Result<bool>> DeleteAsync(int userId, int id);
-        Task<Result<GoalCheckpointDto>> RecordCheckpointAsync(int userId, int id, int amount);
-        Task<Result<GoalResponseDto>> AchieveAsync(int userId, int id);
+        Task<Result<bool>> DeleteAsync(int userId, int id, int? returnToAccountId);
+        Task<Result<GoalResponseDto>> RecordContributionAsync(int userId, int id, RecordGoalContributionRequestDto dto);
+        Task<Result<GoalResponseDto>> WithdrawAsync(int userId, int id, WithdrawGoalRequestDto dto);
+        Task<Result<GoalResponseDto>> RegisterPurchaseAsync(int userId, int id, RegisterGoalPurchaseRequestDto dto);
     }
 }

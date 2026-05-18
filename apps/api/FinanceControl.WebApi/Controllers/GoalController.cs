@@ -3,7 +3,6 @@ using FinanceControl.Services.Extensions;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Enums;
 using FinanceControl.WebApi.Controllers.Base;
-using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,28 +14,15 @@ namespace FinanceControl.WebApi.Controllers
     public class GoalController : BaseController
     {
         private readonly IGoalService _goalService;
-        private readonly IValidator<CreateGoalRequestDto> _createValidator;
-        private readonly IValidator<UpdateGoalRequestDto> _updateValidator;
-        private readonly IValidator<RecordGoalCheckpointRequestDto> _checkpointValidator;
 
-        public GoalController(
-            IGoalService goalService,
-            IValidator<CreateGoalRequestDto> createValidator,
-            IValidator<UpdateGoalRequestDto> updateValidator,
-            IValidator<RecordGoalCheckpointRequestDto> checkpointValidator)
+        public GoalController(IGoalService goalService)
         {
-            _goalService          = goalService;
-            _createValidator      = createValidator;
-            _updateValidator      = updateValidator;
-            _checkpointValidator  = checkpointValidator;
+            _goalService = goalService;
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateAsync([FromBody] CreateGoalRequestDto dto)
         {
-            var validation = _createValidator.Validate(dto);
-            if (validation.ToActionResult() is { } err) return err;
-
             var result = await _goalService.CreateAsync(GetUserId(), dto);
             return Created($"/api/goals/{result.Id}", result);
         }
@@ -61,45 +47,45 @@ namespace FinanceControl.WebApi.Controllers
         [HttpPatch("{id:int}")]
         public async Task<IActionResult> UpdateAsync([FromRoute] int id, [FromBody] UpdateGoalRequestDto dto)
         {
-            var validation = _updateValidator.Validate(dto);
-            if (validation.ToActionResult() is { } err) return err;
-
             var result = await _goalService.UpdateAsync(GetUserId(), id, dto);
             if (result.IsFailure) return NotFound();
             return Ok(result.Value);
         }
 
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeleteAsync([FromRoute] int id)
+        public async Task<IActionResult> DeleteAsync([FromRoute] int id, [FromQuery] int? returnToAccountId)
         {
-            var result = await _goalService.DeleteAsync(GetUserId(), id);
-            if (result.IsFailure) return NotFound();
+            var result = await _goalService.DeleteAsync(GetUserId(), id, returnToAccountId);
+            if (result.IsFailure)
+            {
+                if (result.Error!.Contains("balance"))
+                    return UnprocessableEntity(new { message = result.Error });
+                return NotFound();
+            }
             return NoContent();
         }
 
-        [HttpPost("{id:int}/checkpoint")]
-        public async Task<IActionResult> RecordCheckpointAsync([FromRoute] int id, [FromBody] RecordGoalCheckpointRequestDto dto)
+        [HttpPost("{id:int}/contribute")]
+        public async Task<IActionResult> RecordContributionAsync([FromRoute] int id, [FromBody] RecordGoalContributionRequestDto dto)
         {
-            var validation = _checkpointValidator.Validate(dto);
-            if (validation.ToActionResult() is { } err) return err;
-
-            var result = await _goalService.RecordCheckpointAsync(GetUserId(), id, dto.Amount);
-            if (result.IsFailure) return NotFound();
-            return Created($"/api/goals/{id}/checkpoints", result.Value);
+            var result = await _goalService.RecordContributionAsync(GetUserId(), id, dto);
+            if (result.IsFailure) return result.Error!.Contains("not found") ? NotFound() : UnprocessableEntity(new { message = result.Error });
+            return Ok(result.Value);
         }
 
-        [HttpPost("{id:int}/achieve")]
-        public async Task<IActionResult> AchieveAsync([FromRoute] int id)
+        [HttpPost("{id:int}/withdraw")]
+        public async Task<IActionResult> WithdrawAsync([FromRoute] int id, [FromBody] WithdrawGoalRequestDto dto)
         {
-            var result = await _goalService.AchieveAsync(GetUserId(), id);
+            var result = await _goalService.WithdrawAsync(GetUserId(), id, dto);
+            if (result.IsFailure) return result.Error!.Contains("not found") ? NotFound() : UnprocessableEntity(new { message = result.Error });
+            return Ok(result.Value);
+        }
 
-            if (result.IsFailure)
-            {
-                if (result.Error == "conflict")
-                    return Conflict(new { message = "Goal is not in Active status." });
-                return NotFound();
-            }
-
+        [HttpPost("{id:int}/purchase")]
+        public async Task<IActionResult> RegisterPurchaseAsync([FromRoute] int id, [FromBody] RegisterGoalPurchaseRequestDto dto)
+        {
+            var result = await _goalService.RegisterPurchaseAsync(GetUserId(), id, dto);
+            if (result.IsFailure) return result.Error!.Contains("not found") ? NotFound() : UnprocessableEntity(new { message = result.Error });
             return Ok(result.Value);
         }
     }
