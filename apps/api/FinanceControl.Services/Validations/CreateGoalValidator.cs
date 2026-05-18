@@ -18,6 +18,13 @@ namespace FinanceControl.Services.Validations
             RuleFor(x => x.TargetAmount)
                 .GreaterThan(0).WithMessage("TargetAmount must be greater than zero.");
 
+            RuleFor(x => x.TargetDate)
+                .NotEqual(default(DateOnly)).WithMessage("TargetDate is required.");
+
+            RuleFor(x => x.Color)
+                .Matches("^#[0-9A-Fa-f]{6}$").WithMessage("Color must be a valid hex color (e.g. #4A9EFF).")
+                .When(x => x.Color is not null);
+
             RuleFor(x => x.Url)
                 .MaximumLength(500).WithMessage("Url must not exceed 500 characters.")
                 .When(x => x.Url is not null);

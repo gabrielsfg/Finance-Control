@@ -9,7 +9,10 @@ namespace FinanceControl.Shared.Dtos.Request
         public int? TargetAmount { get; set; }
         public EnumGoalPriority? Priority { get; set; }
         public EnumGoalStatus? Status { get; set; }
+        public string? Color { get; set; }
         public string? Url { get; set; }
+        public EnumAssetType? TargetAssetType { get; set; }
+        public string? TargetTicker { get; set; }
         public string? ImageUrl { get; set; }
         public DateOnly? TargetDate { get; set; }
     }

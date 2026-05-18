@@ -9,6 +9,8 @@ type StatCardProps = {
   previousValue?: number;
   lowerIsBetter?: boolean;
   showNegative?: boolean;
+  neutral?: boolean;
+  subText?: string;
   icon: LucideIcon;
   iconColor: string;
   className?: string;
@@ -21,12 +23,18 @@ export const StatCard = ({
   previousValue,
   lowerIsBetter = false,
   showNegative = false,
+  neutral = false,
+  subText,
   icon: Icon,
   iconColor,
   className,
 }: StatCardProps) => {
   const rawPositive = (change ?? 0) >= 0;
   const isGood = lowerIsBetter ? !rawPositive : rawPositive;
+
+  const valueColor = neutral
+    ? value >= 0 ? "text-green" : "text-red"
+    : showNegative ? "text-red" : "text-text";
 
   return (
     <div className={cn("border-border bg-surface rounded-xl border p-5", className)}>
@@ -39,9 +47,12 @@ export const StatCard = ({
           <Icon size={15} strokeWidth={1.75} style={{ color: iconColor }} />
         </div>
       </div>
-      <p className={cn("font-money font-600 text-[22px]", showNegative ? "text-red" : "text-green")}>
+      <p className={cn("font-money font-600 text-[22px]", valueColor)}>
         {formatCurrency(value)}
       </p>
+      {subText !== undefined && (
+        <p className="text-text-muted mt-1.5 text-[12px]">{subText}</p>
+      )}
       {change !== undefined && (
         <p className="mt-1.5 flex items-baseline gap-1 flex-wrap">
           <span className={cn("font-mono text-[12px] font-medium", isGood ? "text-green" : "text-red")}>

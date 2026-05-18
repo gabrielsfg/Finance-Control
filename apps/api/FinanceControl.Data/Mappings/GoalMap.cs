@@ -16,9 +16,12 @@ namespace FinanceControl.Data.Mappings
             builder.Property(g => g.TargetAmount).IsRequired();
             builder.Property(g => g.Priority).HasConversion<string>().IsRequired();
             builder.Property(g => g.Status).HasConversion<string>().IsRequired();
+            builder.Property(g => g.Color).HasMaxLength(7);
             builder.Property(g => g.Url).HasMaxLength(500);
             builder.Property(g => g.ImageUrl).HasMaxLength(500);
-            builder.Property(g => g.TargetDate);
+            builder.Property(g => g.TargetDate).IsRequired();
+            builder.Property(g => g.TargetAssetType).HasConversion<string>();
+            builder.Property(g => g.TargetTicker).HasMaxLength(20);
             builder.Property(g => g.CreatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("now()")

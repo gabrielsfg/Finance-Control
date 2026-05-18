@@ -1,3 +1,5 @@
+import type { AssetType } from "@/lib/types/investments.types";
+
 export type GoalType = "Item" | "Investment";
 export type GoalPriority = "Low" | "Medium" | "High";
 export type GoalStatus = "Active" | "Achieved" | "Cancelled";
@@ -16,9 +18,12 @@ export type Goal = {
   targetAmount: number;
   priority: GoalPriority;
   status: GoalStatus;
+  color: string | null;
   url: string | null;
   imageUrl: string | null;
-  targetDate: string | null;
+  targetDate: string;
+  targetAssetType: AssetType | null;
+  targetTicker: string | null;
   latestCheckpointAmount: number | null;
   createdAt: string;
   updatedAt: string | null;
@@ -34,9 +39,12 @@ export type CreateGoalRequest = {
   type: GoalType;
   targetAmount: number;
   priority?: GoalPriority;
+  color?: string;
   url?: string;
   imageUrl?: string;
-  targetDate?: string;
+  targetDate: string;
+  targetAssetType?: AssetType;
+  targetTicker?: string;
 };
 
 export type UpdateGoalRequest = {
@@ -45,7 +53,10 @@ export type UpdateGoalRequest = {
   targetAmount?: number;
   priority?: GoalPriority;
   status?: GoalStatus;
+  color?: string;
   url?: string;
   imageUrl?: string;
   targetDate?: string;
+  targetAssetType?: AssetType;
+  targetTicker?: string;
 };

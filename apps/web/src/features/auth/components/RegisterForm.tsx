@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   registerSchema,
@@ -11,12 +10,9 @@ import {
   getPasswordStrength,
 } from "@/features/auth/schemas/authSchema";
 import { authApi } from "@/lib/api/auth";
-import { useAuthStore } from "@/lib/stores/authStore";
 import { cn } from "@/lib/utils";
 
 export const RegisterForm = ({ onSwitch }: { onSwitch: () => void }) => {
-  const router = useRouter();
-  const { login } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [passwordValue, setPasswordValue] = useState("");
   const [serverError, setServerError] = useState<string | null>(null);
@@ -38,10 +34,8 @@ export const RegisterForm = ({ onSwitch }: { onSwitch: () => void }) => {
   const onSubmit = async (data: RegisterFormData) => {
     setServerError(null);
     try {
-      const response = await authApi.register(data);
-      login(response.accessToken, response.refreshToken);
-      router.refresh();
-      router.push("/dashboard");
+      await authApi.register(data);
+      onSwitch();
     } catch {
       setServerError("Este e-mail já está em uso. Tente fazer login.");
     }

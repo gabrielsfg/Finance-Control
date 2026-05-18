@@ -11,11 +11,14 @@ namespace FinanceControl.Domain.Entities
         public int TargetAmount { get; set; }
         public EnumGoalPriority Priority { get; set; } = EnumGoalPriority.Medium;
         public EnumGoalStatus Status { get; set; } = EnumGoalStatus.Active;
+        public string? Color { get; set; }
+        public DateOnly TargetDate { get; set; }
         // Item-only fields
         public string? Url { get; set; }
         public string? ImageUrl { get; set; }
         // Investment-only fields
-        public DateOnly? TargetDate { get; set; }
+        public EnumAssetType? TargetAssetType { get; set; }
+        public string? TargetTicker { get; set; }
 
         public ICollection<GoalCheckpoint> Checkpoints { get; set; } = [];
     }

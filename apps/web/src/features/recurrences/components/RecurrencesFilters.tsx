@@ -301,8 +301,25 @@ export function RecurrencesFilters({ filter, onChange }: Props) {
   const active = countActive(filter);
   const MONTH_NAMES_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
+  function stepMonth(direction: -1 | 1) {
+    let m = filter.month + direction;
+    let y = filter.year;
+    if (m < 1) { m = 12; y--; }
+    if (m > 12) { m = 1; y++; }
+    onChange({ ...filter, month: m, year: y });
+  }
+
   return (
-    <div ref={ref} className="relative">
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => stepMonth(-1)}
+        title="Mês anterior"
+        className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-full transition-colors"
+      >
+        <ChevronLeft size={15} />
+      </button>
+
+      <div ref={ref} className="relative">
       <button
         onClick={() => { setOpen(o => !o); setDraft(filter); }}
         className={cn(
@@ -391,6 +408,15 @@ export function RecurrencesFilters({ filter, onChange }: Props) {
           </div>
         </div>
       )}
+      </div>
+
+      <button
+        onClick={() => stepMonth(1)}
+        title="Próximo mês"
+        className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-full transition-colors"
+      >
+        <ChevronRight size={15} />
+      </button>
     </div>
   );
 }

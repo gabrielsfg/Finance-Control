@@ -31,9 +31,12 @@ namespace FinanceControl.Services.Services
                 TargetAmount = dto.TargetAmount,
                 Priority    = dto.Priority,
                 Status      = EnumGoalStatus.Active,
-                Url         = dto.Url,
-                ImageUrl    = dto.ImageUrl,
-                TargetDate  = dto.TargetDate,
+                Color           = dto.Color,
+                Url             = dto.Url,
+                ImageUrl        = dto.ImageUrl,
+                TargetDate      = dto.TargetDate,
+                TargetAssetType = dto.TargetAssetType,
+                TargetTicker    = dto.TargetTicker,
             };
 
             context.Goals.Add(goal);
@@ -59,17 +62,31 @@ namespace FinanceControl.Services.Services
             var latestCheckpoints = await context.GoalCheckpoints
                 .Where(c => ids.Contains(c.GoalId))
                 .GroupBy(c => c.GoalId)
-                .Select(g => new { GoalId = g.Key, Amount = g.OrderByDescending(c => c.RecordedAt).First().Amount })
+                .Select(g => new { GoalId = g.Key, Amount = g.Sum(c => c.Amount) })
                 .ToDictionaryAsync(x => x.GoalId, x => x.Amount);
 
-            // For Investment goals, also compute current portfolio value to override the checkpoint
-            var investmentPortfolioValue = await GetInvestmentPortfolioValueAsync(context, userId);
+            // Load all active investments once, then filter per goal
+            var allInvestments = await context.Investments
+                .Where(i => i.UserId == userId && i.CurrentQuantity > 0)
+                .Select(i => new { i.AssetType, i.Ticker, i.CurrentQuantity, i.CurrentPrice })
+                .ToListAsync();
 
             return goals.Select(g =>
             {
-                int? currentAmount = g.Type == EnumGoalType.Investment
-                    ? (int?)investmentPortfolioValue
-                    : latestCheckpoints.TryGetValue(g.Id, out var cp) ? cp : null;
+                int? currentAmount;
+                if (g.Type == EnumGoalType.Investment)
+                {
+                    var subset = allInvestments.AsEnumerable();
+                    if (g.TargetTicker is not null)
+                        subset = subset.Where(i => i.Ticker == g.TargetTicker);
+                    else if (g.TargetAssetType.HasValue)
+                        subset = subset.Where(i => i.AssetType == g.TargetAssetType.Value);
+                    currentAmount = (int)subset.Sum(i => Math.Round(i.CurrentQuantity * i.CurrentPrice));
+                }
+                else
+                {
+                    currentAmount = latestCheckpoints.TryGetValue(g.Id, out var cp) ? cp : null;
+                }
                 return MapToResponse(g, currentAmount);
             }).ToList();
         }
@@ -86,9 +103,9 @@ namespace FinanceControl.Services.Services
 
             int? currentAmount;
             if (goal.Type == EnumGoalType.Investment)
-                currentAmount = (int?)await GetInvestmentPortfolioValueAsync(context, userId);
+                currentAmount = (int?)await GetInvestmentPortfolioValueAsync(context, userId, goal.TargetAssetType, goal.TargetTicker);
             else
-                currentAmount = goal.Checkpoints.FirstOrDefault()?.Amount;
+                currentAmount = goal.Checkpoints.Any() ? goal.Checkpoints.Sum(c => c.Amount) : null;
 
             return new GoalDetailResponseDto
             {
@@ -99,9 +116,12 @@ namespace FinanceControl.Services.Services
                 TargetAmount           = goal.TargetAmount,
                 Priority               = goal.Priority,
                 Status                 = goal.Status,
+                Color                  = goal.Color,
                 Url                    = goal.Url,
                 ImageUrl               = goal.ImageUrl,
                 TargetDate             = goal.TargetDate,
+                TargetAssetType        = goal.TargetAssetType,
+                TargetTicker           = goal.TargetTicker,
                 LatestCheckpointAmount = currentAmount,
                 CreatedAt              = goal.CreatedAt,
                 UpdatedAt              = goal.UpdatedAt,
@@ -123,21 +143,22 @@ namespace FinanceControl.Services.Services
             if (dto.TargetAmount.HasValue)    goal.TargetAmount = dto.TargetAmount.Value;
             if (dto.Priority.HasValue)        goal.Priority    = dto.Priority.Value;
             if (dto.Status.HasValue)          goal.Status      = dto.Status.Value;
-            if (dto.Url is not null)          goal.Url         = dto.Url;
-            if (dto.ImageUrl is not null)     goal.ImageUrl    = dto.ImageUrl;
-            if (dto.TargetDate.HasValue)      goal.TargetDate  = dto.TargetDate;
+            if (dto.Color is not null)              goal.Color           = dto.Color;
+            if (dto.Url is not null)                goal.Url             = dto.Url;
+            if (dto.ImageUrl is not null)           goal.ImageUrl        = dto.ImageUrl;
+            if (dto.TargetDate.HasValue)            goal.TargetDate      = dto.TargetDate;
+            if (dto.TargetAssetType.HasValue)       goal.TargetAssetType = dto.TargetAssetType;
+            if (dto.TargetTicker is not null)       goal.TargetTicker    = dto.TargetTicker;
 
             await context.SaveChangesAsync();
 
-            var latestCheckpoint = await context.GoalCheckpoints
+            var checkpointSum = await context.GoalCheckpoints
                 .Where(c => c.GoalId == id)
-                .OrderByDescending(c => c.RecordedAt)
-                .Select(c => (int?)c.Amount)
-                .FirstOrDefaultAsync();
+                .SumAsync(c => (int?)c.Amount);
 
             int? currentAmount = goal.Type == EnumGoalType.Investment
-                ? (int?)await GetInvestmentPortfolioValueAsync(context, userId)
-                : latestCheckpoint;
+                ? (int?)await GetInvestmentPortfolioValueAsync(context, userId, goal.TargetAssetType, goal.TargetTicker)
+                : checkpointSum;
 
             return Result<GoalResponseDto>.Success(MapToResponse(goal, currentAmount));
         }
@@ -194,20 +215,29 @@ namespace FinanceControl.Services.Services
             await context.SaveChangesAsync();
 
             int? currentAmount = goal.Type == EnumGoalType.Investment
-                ? (int?)await GetInvestmentPortfolioValueAsync(context, userId)
+                ? (int?)await GetInvestmentPortfolioValueAsync(context, userId, goal.TargetAssetType, goal.TargetTicker)
                 : await context.GoalCheckpoints
                     .Where(c => c.GoalId == id)
-                    .OrderByDescending(c => c.RecordedAt)
-                    .Select(c => (int?)c.Amount)
-                    .FirstOrDefaultAsync();
+                    .SumAsync(c => (int?)c.Amount);
 
             return Result<GoalResponseDto>.Success(MapToResponse(goal, currentAmount));
         }
 
-        private static async Task<long> GetInvestmentPortfolioValueAsync(ApplicationDbContext context, int userId)
+        private static async Task<long> GetInvestmentPortfolioValueAsync(
+            ApplicationDbContext context,
+            int userId,
+            EnumAssetType? assetType,
+            string? ticker)
         {
-            var investments = await context.Investments
-                .Where(i => i.UserId == userId && i.CurrentQuantity > 0)
+            var query = context.Investments
+                .Where(i => i.UserId == userId && i.CurrentQuantity > 0);
+
+            if (ticker is not null)
+                query = query.Where(i => i.Ticker == ticker);
+            else if (assetType.HasValue)
+                query = query.Where(i => i.AssetType == assetType.Value);
+
+            var investments = await query
                 .Select(i => new { i.CurrentQuantity, i.CurrentPrice })
                 .ToListAsync();
 
@@ -224,9 +254,12 @@ namespace FinanceControl.Services.Services
                 TargetAmount           = goal.TargetAmount,
                 Priority               = goal.Priority,
                 Status                 = goal.Status,
+                Color                  = goal.Color,
                 Url                    = goal.Url,
                 ImageUrl               = goal.ImageUrl,
                 TargetDate             = goal.TargetDate,
+                TargetAssetType        = goal.TargetAssetType,
+                TargetTicker           = goal.TargetTicker,
                 LatestCheckpointAmount = latestCheckpoint,
                 CreatedAt              = goal.CreatedAt,
                 UpdatedAt              = goal.UpdatedAt,
