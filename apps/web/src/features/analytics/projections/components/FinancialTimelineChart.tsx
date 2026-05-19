@@ -54,7 +54,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return (
     <div className="border-border bg-surface rounded-lg border px-3 py-2 shadow-md">
       <p className="text-text-muted mb-1 text-[11px]">{label}</p>
-      <p className="font-money text-green text-[13px]">
+      <p className="font-money text-text text-[13px]">
         {formatCurrency(payload[0]?.value / 100)}
       </p>
     </div>
@@ -112,7 +112,7 @@ export function FinancialTimelineChart({ data }: Props) {
                 <stop offset="95%" stopColor="var(--green)" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <CartesianGrid stroke="var(--border-chart)" />
             <XAxis
               dataKey="label"
               tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "DM Sans" }}

@@ -73,7 +73,10 @@ export function InstallmentList({ items, totalMonthly, totalRemaining, expanded 
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px]"
                       style={{ backgroundColor: `${color}20` }}
                     >
-                      <Layers size={16} strokeWidth={1.75} style={{ color }} />
+                      {item.subCategoryEmoji
+                        ? <span className="text-[18px] leading-none">{item.subCategoryEmoji}</span>
+                        : <Layers size={16} strokeWidth={1.75} style={{ color }} />
+                      }
                     </div>
                     <div className="min-w-0">
                       <p className="text-text truncate text-[14px] font-semibold">{item.description}</p>
@@ -176,7 +179,10 @@ export function InstallmentList({ items, totalMonthly, totalRemaining, expanded 
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]"
                     style={{ backgroundColor: `${color}18` }}
                   >
-                    <Layers size={14} strokeWidth={1.75} style={{ color }} />
+                    {item.subCategoryEmoji
+                      ? <span className="text-[16px] leading-none">{item.subCategoryEmoji}</span>
+                      : <Layers size={14} strokeWidth={1.75} style={{ color }} />
+                    }
                   </div>
 
                   <div className="min-w-0 flex-1">

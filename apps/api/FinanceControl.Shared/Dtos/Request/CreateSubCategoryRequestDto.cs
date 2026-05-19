@@ -9,6 +9,7 @@ namespace FinanceControl.Shared.Dtos.Request
     public class CreateSubCategoryRequestDto
     {
         public string Name { get; set; }
+        public string? Emoji { get; set; }
         public int CategoryId { get; set; }
     }
 }

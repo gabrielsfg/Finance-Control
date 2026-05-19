@@ -251,7 +251,6 @@ export function RecurrencesPage() {
           value={subscriptionNetMonthly / 100}
           icon={RefreshCw}
           iconColor="#7C6FE0"
-          neutral
           subText={`${formatCurrency(Math.abs(subscriptionAnnual) / 100)} ao ano`}
         />
         <StatCard
@@ -259,7 +258,6 @@ export function RecurrencesPage() {
           value={installmentNetMonthly / 100}
           icon={Layers}
           iconColor="#4A9EFF"
-          neutral
           subText={`${installmentRemainingNet >= 0 ? "+" : "-"}${formatCurrency(Math.abs(installmentRemainingNet) / 100)} restante`}
         />
         <StatCard
@@ -267,7 +265,6 @@ export function RecurrencesPage() {
           value={(subscriptionNetMonthly + installmentNetMonthly) / 100}
           icon={Wallet}
           iconColor="#F25F5C"
-          neutral
           subText={
             (data?.monthlyIncome ?? 0) > 0
               ? `${(((subscriptionNetMonthly + installmentNetMonthly) / data!.monthlyIncome) * 100).toFixed(1)}% da renda mensal`

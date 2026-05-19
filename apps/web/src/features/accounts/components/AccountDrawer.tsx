@@ -31,7 +31,7 @@ type Props = {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CREDIT_TYPES: AccountType[] = ["Credit", "Checking"];
+const CREDIT_TYPES: AccountType[] = ["Credit"];
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   Checking: "Conta Corrente",

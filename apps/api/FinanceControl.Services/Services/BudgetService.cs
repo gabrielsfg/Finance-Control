@@ -179,6 +179,7 @@ namespace FinanceControl.Services.Services
                             Id = al.Id,
                             SubCategoryId = al.SubCategoryId,
                             SubCategoryName = al.SubCategory.Name,
+                            SubCategoryEmoji = al.SubCategory.Emoji,
                             ExpectedValue = al.ExpectedValue,
                             SpentValue = spent,
                             AllocationType = al.AllocationType
@@ -383,6 +384,7 @@ namespace FinanceControl.Services.Services
                         Id = al.Id,
                         SubCategoryId = al.SubCategoryId,
                         SubCategoryName = al.SubCategory.Name,
+                        SubCategoryEmoji = al.SubCategory.Emoji,
                         ExpectedValue = al.ExpectedValue,
                         AllocationType = al.AllocationType
                     }).ToList()

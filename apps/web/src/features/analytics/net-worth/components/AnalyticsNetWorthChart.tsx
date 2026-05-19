@@ -44,7 +44,9 @@ export const AnalyticsNetWorthChart = ({ data }: Props) => {
         <div className="bg-surface2 mb-5 grid grid-cols-3 gap-3 rounded-xl p-4">
           <div>
             <p className="text-text-muted text-[12px]">Patrimônio líquido</p>
-            <p className="font-money font-600 text-green text-[18px]">{formatCurrency((latest.netWorth ?? 0) / 100)}</p>
+            <p className={`font-money font-600 text-[18px] ${(latest.netWorth ?? 0) < 0 ? "text-red" : "text-text"}`}>
+              {(latest.netWorth ?? 0) < 0 && "-"}{formatCurrency(Math.abs(latest.netWorth ?? 0) / 100)}
+            </p>
           </div>
           <div>
             <p className="text-text-muted text-[12px]">Total de ativos</p>
@@ -74,7 +76,7 @@ export const AnalyticsNetWorthChart = ({ data }: Props) => {
                 <stop offset="95%" stopColor="var(--red)" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <CartesianGrid stroke="var(--border-chart)" />
             <XAxis
               dataKey="label"
               tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}

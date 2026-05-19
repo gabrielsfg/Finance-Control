@@ -88,5 +88,13 @@ namespace FinanceControl.WebApi.Controllers
             if (result.IsFailure) return result.Error!.Contains("not found") ? NotFound() : UnprocessableEntity(new { message = result.Error });
             return Ok(result.Value);
         }
+
+        [HttpGet("{id:int}/investment-transactions")]
+        public async Task<IActionResult> GetInvestmentTransactionsAsync([FromRoute] int id)
+        {
+            var result = await _goalService.GetInvestmentTransactionsAsync(GetUserId(), id);
+            if (result.IsFailure) return result.Error!.Contains("not found") ? NotFound() : UnprocessableEntity(new { message = result.Error });
+            return Ok(result.Value);
+        }
     }
 }

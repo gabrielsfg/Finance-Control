@@ -149,48 +149,6 @@ namespace FinanceControl.Services.Services
             };
         }
 
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsByBudgetAsync(int budgetId, int userId)
-        {
-            var budgetExists = await _context.Budgets
-                .AnyAsync(b => b.Id == budgetId && b.UserId == userId);
-            if (!budgetExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
-
-            var transactions = await GetTransactionQuery(userId)
-                .Where(t => t.BudgetId == budgetId)
-                .ToListAsync();
-
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
-        }
-
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsByAccountAsync(int accountId, int userId)
-        {
-            var accountExists = await _context.Accounts
-                .AnyAsync(a => a.Id == accountId && a.UserId == userId);
-            if (!accountExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
-
-            var transactions = await GetTransactionQuery(userId)
-                .Where(t => t.AccountId == accountId)
-                .ToListAsync();
-
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
-        }
-
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsBySubCategoryAsync(int subCategoryId, int userId)
-        {
-            var subCategoryExists = await _context.SubCategories
-                .AnyAsync(sc => sc.Id == subCategoryId && sc.UserId == userId);
-            if (!subCategoryExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
-
-            var transactions = await GetTransactionQuery(userId)
-                .Where(t => t.SubCategoryId == subCategoryId)
-                .ToListAsync();
-
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
-        }
-
         public async Task<GetTransactionByIdResponseDto?> GetTransactionByIdAsync(int id, int userId)
         {
             return await _context.Transactions
@@ -201,6 +159,7 @@ namespace FinanceControl.Services.Services
                     BudgetId = t.BudgetId,
                     SubCategoryId = t.SubCategoryId,
                     SubCategoryName = t.SubCategory.Name,
+                    SubCategoryEmoji = t.SubCategory.Emoji,
                     AccountId = t.AccountId,
                     AccountName = t.Account.Name,
                     RecurringTransactionId = t.RecurringTransactionId,
@@ -304,67 +263,6 @@ namespace FinanceControl.Services.Services
             return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
         }
 
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> UpdateRecurringTransactionAsync(UpdateRecurringTransactionRequestDto requestDto, int recurringId, int userId)
-        {
-            var recurring = await _context.RecurringTransactions
-                .FirstOrDefaultAsync(rt => rt.Id == recurringId && rt.UserId == userId);
-
-            if (recurring is null)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Recurring transaction not found.");
-
-            var accountExists = await _context.Accounts
-                .AnyAsync(a => a.Id == requestDto.AccountId && a.UserId == userId);
-            if (!accountExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
-
-            var subCategoryExists = await _context.SubCategories
-                .AnyAsync(sc => sc.Id == requestDto.SubCategoryId && sc.UserId == userId);
-            if (!subCategoryExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
-
-            if (requestDto.BudgetId.HasValue)
-            {
-                var budgetExists = await _context.Budgets
-                    .AnyAsync(b => b.Id == requestDto.BudgetId && b.UserId == userId);
-                if (!budgetExists)
-                    return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
-            }
-
-            if (requestDto.EndDate.HasValue && requestDto.EndDate.Value <= DateOnly.FromDateTime(DateTime.UtcNow))
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("EndDate must be a future date.");
-
-            recurring.AccountId = requestDto.AccountId;
-            recurring.SubCategoryId = requestDto.SubCategoryId;
-            recurring.BudgetId = requestDto.BudgetId;
-            recurring.Value = requestDto.Value;
-            recurring.Description = requestDto.Description;
-            recurring.EndDate = requestDto.EndDate;
-
-            await _context.SaveChangesAsync();
-
-            var transactions = await GetAllTransactionsAsync(userId);
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
-        }
-
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> CancelRecurringTransactionAsync(int recurringId, int userId)
-        {
-            var recurring = await _context.RecurringTransactions
-                .FirstOrDefaultAsync(rt => rt.Id == recurringId && rt.UserId == userId);
-
-            if (recurring is null)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Recurring transaction not found.");
-
-            if (!recurring.IsActive)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Recurring transaction is already inactive.");
-
-            recurring.IsActive = false;
-
-            await _context.SaveChangesAsync();
-
-            var transactions = await GetAllTransactionsAsync(userId);
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
-        }
-
         /// <summary>
         /// Main Page Endpoints
         /// </summary>
@@ -413,6 +311,7 @@ namespace FinanceControl.Services.Services
                     Value = t.Value,
                     Type = t.Type,
                     SubCategoryName = t.SubCategory.Name,
+                    SubCategoryEmoji = t.SubCategory.Emoji,
                     CategoryName = t.SubCategory.Category.Name
                 })
                 .ToListAsync();
@@ -455,6 +354,7 @@ namespace FinanceControl.Services.Services
                 .Select(a => new
                 {
                     SubCategoryName = a.SubCategory.Name,
+                    SubCategoryEmoji = a.SubCategory.Emoji,
                     CategoryName = a.SubCategory.Category.Name,
                     CategoryColor = a.SubCategory.Category.Color,
                     Allocated = a.ExpectedValue,
@@ -479,6 +379,7 @@ namespace FinanceControl.Services.Services
                 TopSubCategories = topSubCategories.Select(x => new BudgetSubCategorySummaryDto
                 {
                     SubCategoryName = x.SubCategoryName,
+                    SubCategoryEmoji = x.SubCategoryEmoji,
                     CategoryName = x.CategoryName,
                     CategoryColor = x.CategoryColor,
                     Spent = x.Spent,
@@ -509,6 +410,125 @@ namespace FinanceControl.Services.Services
                 .OrderByDescending(x => x.TotalSpent)
                 .Take(5)
                 .ToListAsync();
+        }
+
+        public async Task<List<SpendingPredictionItemDto>> GetSpendingPredictionAsync(MainPageSummaryRequestDto requestDto)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var currentMonth = new DateOnly(today.Year, today.Month, 1);
+            var daysInMonth = DateTime.DaysInMonth(today.Year, today.Month);
+            var historyStart = currentMonth.AddMonths(-6);
+            var historyEnd = currentMonth.AddDays(-1);
+
+            // Current month expenses grouped by day
+            var currentByDay = await context.Transactions
+                .Where(t => t.UserId == requestDto.UserId
+                    && t.Type == EnumTransactionType.Expense
+                    && t.TransactionDate >= currentMonth
+                    && t.TransactionDate <= today)
+                .GroupBy(t => t.TransactionDate.Day)
+                .Select(g => new { Day = g.Key, Total = g.Sum(t => t.Value) })
+                .ToDictionaryAsync(x => x.Day, x => x.Total);
+
+            // Historical expenses: (year, month, day, value)
+            var historicalExpenses = await context.Transactions
+                .Where(t => t.UserId == requestDto.UserId
+                    && t.Type == EnumTransactionType.Expense
+                    && t.TransactionDate >= historyStart
+                    && t.TransactionDate <= historyEnd)
+                .Select(t => new { t.TransactionDate.Year, t.TransactionDate.Month, t.TransactionDate.Day, t.Value })
+                .ToListAsync();
+
+            var pastMonths = Enumerable.Range(1, 6)
+                .Select(i => currentMonth.AddMonths(-i))
+                .Where(m => historicalExpenses.Any(e => e.Year == m.Year && e.Month == m.Month))
+                .ToList();
+
+            // ── Detect fixed-date expenses ────────────────────────────────────────
+            // A day-of-month is "fixed" if a similar amount (within ±10% of the median)
+            // appears on that same day in at least 3 of the last 6 months.
+            var fixedDayAvg = new Dictionary<int, int>(); // day-of-month -> avg amount
+
+            for (int d = 1; d <= 31; d++)
+            {
+                var amounts = pastMonths
+                    .Select(m =>
+                    {
+                        int lastDay = DateTime.DaysInMonth(m.Year, m.Month);
+                        if (d > lastDay) return (long?)null;
+                        return (long?)historicalExpenses
+                            .Where(e => e.Year == m.Year && e.Month == m.Month && e.Day == d)
+                            .Sum(e => (long)e.Value);
+                    })
+                    .Where(v => v.HasValue && v.Value > 0)
+                    .Select(v => v!.Value)
+                    .OrderBy(v => v)
+                    .ToList();
+
+                if (amounts.Count < 3) continue;
+
+                long median = amounts[amounts.Count / 2];
+                int consistent = amounts.Count(v => Math.Abs(v - median) <= median * 0.10);
+                if (consistent >= 3)
+                    fixedDayAvg[d] = (int)amounts.Average();
+            }
+
+            // ── Weekday average for non-fixed days ────────────────────────────────
+            var weekdayAvg = new Dictionary<DayOfWeek, int>();
+            foreach (DayOfWeek dow in Enum.GetValues<DayOfWeek>())
+            {
+                long totalSpend = 0;
+                int occurrences = 0;
+
+                foreach (var m in pastMonths)
+                {
+                    int daysInHistMonth = DateTime.DaysInMonth(m.Year, m.Month);
+                    for (int d = 1; d <= daysInHistMonth; d++)
+                    {
+                        var date = new DateOnly(m.Year, m.Month, d);
+                        if (date.DayOfWeek != dow) continue;
+                        if (fixedDayAvg.ContainsKey(d)) continue; // exclude fixed days
+
+                        long daySpend = historicalExpenses
+                            .Where(e => e.Year == m.Year && e.Month == m.Month && e.Day == d)
+                            .Sum(e => (long)e.Value);
+
+                        totalSpend += daySpend;
+                        occurrences++;
+                    }
+                }
+
+                weekdayAvg[dow] = occurrences > 0 ? (int)(totalSpend / occurrences) : 0;
+            }
+
+            // ── Build result ──────────────────────────────────────────────────────
+            var result = new List<SpendingPredictionItemDto>(daysInMonth);
+            int runningCurrent = 0;
+            long runningHistorical = 0;
+
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                if (day <= today.Day)
+                    runningCurrent += currentByDay.GetValueOrDefault(day, 0);
+
+                var date = new DateOnly(today.Year, today.Month, day);
+                int dailyDelta = fixedDayAvg.TryGetValue(day, out int fixedAmt)
+                    ? fixedAmt
+                    : weekdayAvg[date.DayOfWeek];
+
+                runningHistorical += dailyDelta;
+
+                result.Add(new SpendingPredictionItemDto
+                {
+                    Day = day,
+                    CurrentExpense = day <= today.Day ? runningCurrent : null,
+                    HistoricalAverage = (int)runningHistorical
+                });
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -635,13 +655,14 @@ namespace FinanceControl.Services.Services
         private IQueryable<GetTransactionResponseDto> GetTransactionQuery(int userId)
         {
             return _context.Transactions
-                .Where(t => t.UserId == userId)
+                .Where(t => t.UserId == userId && !t.Account.IsSystem)
                 .Select(t => new GetTransactionResponseDto
                 {
                     Id = t.Id,
                     BudgetId = t.BudgetId,
                     SubCategoryId = t.SubCategoryId,
                     SubCategoryName = t.SubCategory.Name,
+                    SubCategoryEmoji = t.SubCategory.Emoji,
                     AccountId = t.AccountId,
                     AccountName = t.Account.Name,
                     RecurringTransactionId = t.RecurringTransactionId,
@@ -678,6 +699,7 @@ namespace FinanceControl.Services.Services
                     BudgetId = t.BudgetId,
                     SubCategoryId = t.SubCategoryId,
                     SubCategoryName = t.SubCategory.Name,
+                    SubCategoryEmoji = t.SubCategory.Emoji,
                     AccountId = t.AccountId,
                     AccountName = t.Account.Name,
                     RecurringTransactionId = t.RecurringTransactionId,

@@ -16,10 +16,9 @@ export const DashboardStatsRow = ({ balanceSummary, currentMonth }: Props) => {
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard
         label="Patrimônio Líquido"
-        value={Math.abs(netWorth)}
+        value={netWorth}
         change={balanceSummary.netWorthChange}
         previousValue={balanceSummary.previousNetWorth !== undefined ? balanceSummary.previousNetWorth / 100 : undefined}
-        showNegative={netWorth < 0}
         icon={TrendingUp}
         iconColor="#4A9EFF"
       />
@@ -33,20 +32,18 @@ export const DashboardStatsRow = ({ balanceSummary, currentMonth }: Props) => {
       />
       <StatCard
         label={`Despesas — ${currentMonth}`}
-        value={balanceSummary.totalExpenses / 100}
+        value={-(balanceSummary.totalExpenses / 100)}
         change={balanceSummary.expenseChange}
         previousValue={balanceSummary.previousExpenses !== undefined ? balanceSummary.previousExpenses / 100 : undefined}
         lowerIsBetter
-        showNegative
         icon={ArrowDown}
         iconColor="#F25F5C"
       />
       <StatCard
         label={`Saldo — ${currentMonth}`}
-        value={Math.abs(balanceSummary.balance / 100)}
+        value={balanceSummary.balance / 100}
         change={balanceSummary.balanceChange}
-        previousValue={balanceSummary.previousBalance !== undefined ? Math.abs(balanceSummary.previousBalance / 100) : undefined}
-        showNegative={balanceSummary.balance < 0}
+        previousValue={balanceSummary.previousBalance !== undefined ? balanceSummary.previousBalance / 100 : undefined}
         icon={Wallet2}
         iconColor="#7C6FE0"
       />

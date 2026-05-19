@@ -204,7 +204,10 @@ export function CategoriesPage() {
                             }`}
                           >
                             <div className="w-4 shrink-0" />
-                            <Tag size={12} className="text-text-muted shrink-0" />
+                            {sub.emoji
+                              ? <span className="text-[14px] leading-none shrink-0">{sub.emoji}</span>
+                              : <Tag size={12} className="text-text-muted shrink-0" />
+                            }
                             <span className="text-text-sub text-[13px] flex-1">{sub.name}</span>
 
                             <div className="flex items-center gap-1">

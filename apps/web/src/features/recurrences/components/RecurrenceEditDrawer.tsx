@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
@@ -8,7 +8,6 @@ import {
   Loader2,
   X,
   ChevronRight,
-  Calendar as CalendarIcon,
   CreditCard,
   Wallet,
   Landmark,
@@ -29,6 +28,7 @@ import { getCategoryColor } from "@/lib/config/categoryColors";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useUpdateRecurring } from "../hooks/useRecurrences";
+import { DatePickerField } from "@/components/shared/DatePickerField";
 import { useUpdateTransaction } from "@/features/transactions/hooks/useTransactions";
 import type { AccountItem } from "@/lib/types/accounts.types";
 import type { SubCategoryItem } from "@/lib/types/transactions.types";
@@ -101,11 +101,11 @@ function AccountSelectContent({ accounts }: { accounts: AccountItem[] }) {
 }
 
 function CategorySelectContent({ subcategories }: { subcategories: SubCategoryItem[] }) {
-  const grouped = subcategories.reduce<Record<string, { id: number; name: string; color: string; catColor: string; catId: number }[]>>(
+  const grouped = subcategories.reduce<Record<string, { id: number; name: string; emoji: string | null; color: string; catColor: string; catId: number }[]>>(
     (acc, sub) => {
       const catColor = getCategoryColor(sub.categoryColor, sub.categoryName);
       if (!acc[sub.categoryName]) acc[sub.categoryName] = [];
-      acc[sub.categoryName].push({ id: sub.id, name: sub.name, color: catColor, catColor, catId: sub.categoryId });
+      acc[sub.categoryName].push({ id: sub.id, name: sub.name, emoji: sub.emoji, color: catColor, catColor, catId: sub.categoryId });
       return acc;
     },
     {},
@@ -128,10 +128,10 @@ function CategorySelectContent({ subcategories }: { subcategories: SubCategoryIt
           {subs.map((s) => (
             <SelectItem key={s.id} value={String(s.id)} className="pl-6">
               <div className="flex items-center gap-2.5 py-0.5">
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full opacity-70"
-                  style={{ backgroundColor: s.color }}
-                />
+                {s.emoji
+                  ? <span className="text-[14px] leading-none shrink-0">{s.emoji}</span>
+                  : <span className="h-2 w-2 shrink-0 rounded-full opacity-70" style={{ backgroundColor: s.color }} />
+                }
                 <span className="text-[14px]">{s.name}</span>
               </div>
             </SelectItem>
@@ -139,160 +139,6 @@ function CategorySelectContent({ subcategories }: { subcategories: SubCategoryIt
         </div>
       ))}
     </SelectContent>
-  );
-}
-
-// ── Single-date calendar picker (popover trigger + grid) ──────────────────────
-function DatePickerField({
-  value,
-  onChange,
-  placeholder,
-  allowClear,
-}: {
-  value: string; // YYYY-MM-DD or ""
-  onChange: (next: string) => void;
-  placeholder?: string;
-  allowClear?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const today = new Date();
-  const parsed = value ? new Date(value + "T00:00:00") : null;
-  const [viewYear, setViewYear] = useState(parsed?.getFullYear() ?? today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(parsed?.getMonth() ?? today.getMonth());
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    if (open) document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  useEffect(() => {
-    if (open && parsed) {
-      setViewYear(parsed.getFullYear());
-      setViewMonth(parsed.getMonth());
-    }
-  }, [open, value]);
-
-  function prevMonth() {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
-    else setViewMonth(m => m - 1);
-  }
-  function nextMonth() {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
-    else setViewMonth(m => m + 1);
-  }
-
-  function pick(dateStr: string) {
-    onChange(dateStr);
-    setOpen(false);
-  }
-
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const cells: (string | null)[] = Array(firstDay).fill(null);
-  for (let d = 1; d <= daysInMonth; d++) {
-    const month = String(viewMonth + 1).padStart(2, "0");
-    const day = String(d).padStart(2, "0");
-    cells.push(`${viewYear}-${month}-${day}`);
-  }
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const todayStr = today.toISOString().slice(0, 10);
-  const label = value
-    ? new Date(value + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })
-    : placeholder ?? "Selecionar data";
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className={cn(
-          INPUT_CLASS,
-          "flex items-center justify-between gap-2 text-left",
-          !value && "text-text-muted",
-        )}
-      >
-        <span className="flex items-center gap-2.5">
-          <CalendarIcon size={15} className="text-text-muted shrink-0" />
-          <span className={cn("text-[15px]", value ? "text-text" : "text-text-muted")}>{label}</span>
-        </span>
-        {allowClear && value && (
-          <span
-            role="button"
-            aria-label="Limpar data"
-            tabIndex={0}
-            onClick={e => { e.stopPropagation(); onChange(""); }}
-            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); onChange(""); } }}
-            className="text-text-muted hover:text-text"
-          >
-            <X size={14} />
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div className="border-border bg-surface absolute left-0 top-12 z-[70] rounded-xl border p-4 shadow-2xl" style={{ minWidth: 280 }}>
-          {/* Month nav */}
-          <div className="mb-3 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={prevMonth}
-              className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface3"
-            >
-              <ChevronRight size={14} className="rotate-180" />
-            </button>
-            <span className="text-text text-[13px] font-semibold">
-              {MONTH_NAMES[viewMonth]} {viewYear}
-            </span>
-            <button
-              type="button"
-              onClick={nextMonth}
-              className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface3"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-
-          {/* Week headers */}
-          <div className="mb-1 grid grid-cols-7">
-            {WEEK_DAYS.map(d => (
-              <div key={d} className="text-text-muted py-1 text-center text-[10px] font-medium">{d}</div>
-            ))}
-          </div>
-
-          {/* Days grid */}
-          <div className="grid grid-cols-7">
-            {cells.map((dateStr, i) => {
-              if (!dateStr) return <div key={`empty-${i}`} />;
-              const isSelected = dateStr === value;
-              const isToday = dateStr === todayStr;
-              return (
-                <div key={dateStr} className="flex items-center justify-center py-0.5">
-                  <button
-                    type="button"
-                    onClick={() => pick(dateStr)}
-                    className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-full text-[13px] transition-all",
-                      isSelected
-                        ? "bg-green text-black font-bold"
-                        : isToday
-                          ? "border-border border text-text font-semibold"
-                          : "text-text-sub hover:bg-surface3 hover:text-text",
-                    )}
-                  >
-                    {parseInt(dateStr.slice(8))}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -376,7 +222,8 @@ function RecurringEditForm({
   const subCategoryId = watch("subCategoryId");
   const accountId = watch("accountId");
   const endDate = watch("endDate") ?? "";
-  const subLabel = subcategories.find((s) => String(s.id) === subCategoryId)?.name;
+  const subSelected = subcategories.find((s) => String(s.id) === subCategoryId);
+  const subLabel = subSelected ? (subSelected.emoji ? `${subSelected.emoji} ${subSelected.name}` : subSelected.name) : undefined;
   const accLabel = accounts.find((a) => String(a.id) === accountId)?.name;
 
   const onSubmit = async (values: RecurringValues) => {
@@ -514,7 +361,8 @@ function InstallmentEditForm({
   const accountId = watch("accountId");
   const paymentMethod = watch("paymentMethod");
   const transactionDate = watch("transactionDate") ?? "";
-  const subLabel = subcategories.find((s) => String(s.id) === subCategoryId)?.name;
+  const subSelected = subcategories.find((s) => String(s.id) === subCategoryId);
+  const subLabel = subSelected ? (subSelected.emoji ? `${subSelected.emoji} ${subSelected.name}` : subSelected.name) : undefined;
   const accLabel = accounts.find((a) => String(a.id) === accountId)?.name;
   const pmLabel =
     paymentMethod === "Debit" ? "Débito" : paymentMethod === "Credit" ? "Crédito" : undefined;

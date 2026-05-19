@@ -54,7 +54,7 @@ export const RecentTransactions = ({
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] text-[14px]"
                   style={{ backgroundColor: `${color}22` }}
                 >
-                  💸
+                  {tx.subCategoryEmoji ?? "💸"}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
@@ -76,13 +76,13 @@ export const RecentTransactions = ({
                   <p
                     className={cn(
                       "font-money font-500 text-[14px]",
-                      isIncome ? "text-green" : isTransfer ? "text-text-sub" : "text-red",
+                      isIncome ? "text-green" : isTransfer ? "text-text-sub" : "text-text",
                     )}
                   >
                     {isIncome ? "+" : isTransfer ? "" : "-"}
                     {formatCurrency(Math.abs(tx.value / 100))}
                   </p>
-                  <p className="text-text-muted mt-0.5 text-[11px]">{tx.subCategoryName}</p>
+                  <p className="text-text-muted mt-0.5 text-[11px]">{tx.subCategoryEmoji ? `${tx.subCategoryEmoji} ${tx.subCategoryName}` : tx.subCategoryName}</p>
                 </div>
               </div>
             );

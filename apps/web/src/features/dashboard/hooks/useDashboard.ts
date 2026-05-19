@@ -1,9 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { MOCK_DASHBOARD } from "@/lib/mocks";
+import { dashboardApi } from "@/lib/api/dashboard";
 
-export const useDashboard = () =>
+type DashboardParams = {
+  startDate: string;
+  finishDate: string;
+  budgetId?: number;
+};
+
+export const useDashboard = (params: DashboardParams) =>
   useQuery({
-    queryKey: ["dashboard", "mock"],
-    queryFn: () => Promise.resolve(MOCK_DASHBOARD),
-    staleTime: Infinity,
+    queryKey: ["dashboard", params],
+    queryFn: () => dashboardApi.getSummary(params),
+    staleTime: 60_000,
   });

@@ -43,6 +43,7 @@ type SearchResult = {
   sublabel?: string;
   badge?: string;
   color?: string;
+  emoji?: string | null;
   href: string;
 };
 
@@ -143,6 +144,7 @@ function useGlobalSearch(query: string): Section[] {
             label: sub.name,
             sublabel: cat.name,
             color: getCategoryColor(cat.color, cat.name),
+            emoji: sub.emoji,
             href: "/categories",
           });
         }
@@ -206,7 +208,7 @@ function useGlobalSearch(query: string): Section[] {
 
 // ─── Icon per kind ─────────────────────────────────────────────────────────────
 
-function KindIcon({ kind, color }: { kind: ResultKind; color?: string }) {
+function KindIcon({ kind, color, emoji }: { kind: ResultKind; color?: string; emoji?: string | null }) {
   const cls = "shrink-0";
   if (kind === "page") return <ChevronRight size={14} className={cn(cls, "text-text-muted")} />;
   if (kind === "transaction") return <ArrowLeftRight size={14} className={cn(cls, "text-blue")} />;
@@ -221,6 +223,7 @@ function KindIcon({ kind, color }: { kind: ResultKind; color?: string }) {
     );
   }
   if (kind === "subcategory") {
+    if (emoji) return <span className="text-[14px] leading-none shrink-0">{emoji}</span>;
     return (
       <div
         className="h-2.5 w-2.5 shrink-0 rounded-full opacity-70"
@@ -378,7 +381,7 @@ export const GlobalSearch = () => {
                           isActive ? "bg-surface2" : "hover:bg-surface2/60",
                         )}
                       >
-                        <KindIcon kind={result.kind} color={result.color} />
+                        <KindIcon kind={result.kind} color={result.color} emoji={result.emoji} />
 
                         <div className="min-w-0 flex-1">
                           <p className="text-text truncate text-[13px] font-medium">{result.label}</p>

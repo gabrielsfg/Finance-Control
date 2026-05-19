@@ -29,9 +29,9 @@ export const NetWorthHero = ({ balanceSummary }: Props) => {
         </p>
         <p
           className="font-money font-600 text-[40px] tracking-tight"
-          style={{ color: netWorth >= 0 ? "var(--green)" : "var(--red)" }}
+          style={{ color: netWorth >= 0 ? "var(--text)" : "var(--red)" }}
         >
-          {formatCurrency(netWorth)}
+          {netWorth < 0 && "-"}{formatCurrency(Math.abs(netWorth))}
         </p>
         {balanceSummary.netWorthChange !== undefined && (
           <div className="mt-2 flex items-center gap-2">

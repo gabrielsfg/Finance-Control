@@ -66,6 +66,7 @@ export function TransactionsPage() {
       id: s.id,
       name: s.name,
       color: getCategoryColor(s.categoryColor, s.categoryName),
+      emoji: s.emoji,
     })), [subcatsRaw]);
 
   const metaAccounts = useMemo(() =>

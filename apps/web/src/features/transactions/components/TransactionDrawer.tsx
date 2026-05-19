@@ -44,6 +44,7 @@ import {
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { TagInput } from "@/features/transactions/components/TagInput";
+import { DatePickerField } from "@/components/shared/DatePickerField";
 import type {
   TransactionItem,
   TransactionType,
@@ -124,11 +125,11 @@ const ACCOUNT_TYPE_LABELS: Record<AccountItem["type"], string> = {
 const DROPDOWN_PROPS = { alignItemWithTrigger: false, sideOffset: 4 } as const;
 
 function CategorySelectContent({ subcategories }: { subcategories: SubCategoryItem[] }) {
-  const grouped = subcategories.reduce<Record<string, { id: number; name: string; color: string; catColor: string; catId: number }[]>>(
+  const grouped = subcategories.reduce<Record<string, { id: number; name: string; emoji: string | null; color: string; catColor: string; catId: number }[]>>(
     (acc, sub) => {
       const catColor = getCategoryColor(sub.categoryColor, sub.categoryName);
       if (!acc[sub.categoryName]) acc[sub.categoryName] = [];
-      acc[sub.categoryName].push({ id: sub.id, name: sub.name, color: catColor, catColor, catId: sub.categoryId });
+      acc[sub.categoryName].push({ id: sub.id, name: sub.name, emoji: sub.emoji, color: catColor, catColor, catId: sub.categoryId });
       return acc;
     },
     {},
@@ -153,10 +154,10 @@ function CategorySelectContent({ subcategories }: { subcategories: SubCategoryIt
           {subs.map((s) => (
             <SelectItem key={s.id} value={String(s.id)} className="pl-6">
               <div className="flex items-center gap-2.5 py-0.5">
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full opacity-70"
-                  style={{ backgroundColor: s.color }}
-                />
+                {s.emoji
+                  ? <span className="text-[14px] leading-none shrink-0">{s.emoji}</span>
+                  : <span className="h-2 w-2 shrink-0 rounded-full opacity-70" style={{ backgroundColor: s.color }} />
+                }
                 <span className="text-[14px]">{s.name}</span>
               </div>
             </SelectItem>
@@ -430,7 +431,11 @@ function DetailView({
       <div className="border-border bg-surface2 divide-border flex flex-col divide-y rounded-xl border">
         <DetailRow icon={<Calendar size={15} />} label="Data" value={dateLabel} />
         <DetailRow icon={<Wallet size={15} />} label="Conta" value={transaction.accountName} />
-        <DetailRow icon={<Tag size={15} />} label="Categoria" value={transaction.subCategoryName} />
+        <DetailRow
+          icon={<Tag size={15} />}
+          label="Categoria"
+          value={transaction.subCategoryEmoji ? `${transaction.subCategoryEmoji} ${transaction.subCategoryName}` : transaction.subCategoryName}
+        />
         <DetailRow
           icon={<CreditCard size={15} />}
           label="Tipo de pagamento"
@@ -524,7 +529,10 @@ function CreateForm({
   const subCategoryIdValue = watch("subCategoryId");
 
   const createAccountLabel = accounts.find((a) => String(a.id) === accountIdValue)?.name;
-  const createSubCategoryLabel = subcategories.find((s) => String(s.id) === subCategoryIdValue)?.name;
+  const createSubCategorySelected = subcategories.find((s) => String(s.id) === subCategoryIdValue);
+  const createSubCategoryLabel = createSubCategorySelected
+    ? (createSubCategorySelected.emoji ? `${createSubCategorySelected.emoji} ${createSubCategorySelected.name}` : createSubCategorySelected.name)
+    : undefined;
 
 
   const onSubmit = async (values: CreateValues) => {
@@ -610,10 +618,10 @@ function CreateForm({
       </FormField>
 
       <FormField label="Data" error={errors.transactionDate?.message}>
-        <input
-          {...register("transactionDate")}
-          type="date"
-          className={cn(INPUT_CLASS, errors.transactionDate && "border-red/60")}
+        <DatePickerField
+          value={watch("transactionDate") ?? ""}
+          onChange={v => setValue("transactionDate", v, { shouldValidate: true })}
+          hasError={!!errors.transactionDate}
         />
       </FormField>
 
@@ -773,7 +781,10 @@ function EditForm({
   const editPaymentType = watch("paymentType") as PaymentType;
 
   const accountLabel = accounts.find((a) => String(a.id) === accountValue)?.name;
-  const subCategoryLabel = subcategories.find((s) => String(s.id) === subCategoryValue)?.name;
+  const subCategorySelected = subcategories.find((s) => String(s.id) === subCategoryValue);
+  const subCategoryLabel = subCategorySelected
+    ? (subCategorySelected.emoji ? `${subCategorySelected.emoji} ${subCategorySelected.name}` : subCategorySelected.name)
+    : undefined;
   const paymentMethodLabel = paymentMethodValue === "Debit" ? "Débito" : paymentMethodValue === "Credit" ? "Crédito" : undefined;
 
   const onSubmit = async (values: EditValues) => {
@@ -859,10 +870,9 @@ function EditForm({
       </FormField>
 
       <FormField label="Data">
-        <input
-          {...register("transactionDate")}
-          type="date"
-          className={INPUT_CLASS}
+        <DatePickerField
+          value={watch("transactionDate") ?? ""}
+          onChange={v => setValue("transactionDate", v, { shouldValidate: true })}
         />
       </FormField>
 

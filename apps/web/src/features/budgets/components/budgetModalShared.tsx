@@ -31,6 +31,7 @@ export type DraftAllocation = {
   id: number;
   subCategoryId: number;
   subCategoryName: string;
+  subCategoryEmoji?: string | null;
   categoryName: string;
   categoryColor: string | null;
   expectedValue: number; // cents
@@ -125,9 +126,10 @@ export function SubcategoryPicker({
                   onClick={() => onPick(s)}
                   className="hover:bg-surface2 flex w-full items-center gap-2 px-3 py-2 text-left transition-colors"
                 >
-                  {s.categoryColor && (
-                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: s.categoryColor }} />
-                  )}
+                  {s.emoji
+                    ? <span className="text-[14px] leading-none shrink-0">{s.emoji}</span>
+                    : s.categoryColor && <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: s.categoryColor }} />
+                  }
                   <span className="text-text text-[13px]">{s.name}</span>
                 </button>
               ))}
@@ -255,6 +257,7 @@ export function Step2({
       id: uid(),
       subCategoryId: sub.id,
       subCategoryName: sub.name,
+      subCategoryEmoji: sub.emoji,
       categoryName: sub.categoryName,
       categoryColor: sub.categoryColor ?? null,
       expectedValue: cents,
@@ -308,10 +311,10 @@ export function Step2({
                 <div className="border-border border-t px-3 pb-3 pt-2 flex flex-col gap-2">
                   {area.allocations.map((a) => (
                     <div key={a.id} className="flex items-center gap-2">
-                      <div
-                        className="h-2 w-2 rounded-full shrink-0"
-                        style={{ backgroundColor: a.allocationType === "Expense" ? "var(--red)" : "var(--green)" }}
-                      />
+                      {a.subCategoryEmoji
+                        ? <span className="text-[13px] leading-none shrink-0">{a.subCategoryEmoji}</span>
+                        : <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: a.allocationType === "Expense" ? "var(--red)" : "var(--green)" }} />
+                      }
                       <span className="text-text flex-1 text-[13px]">{a.subCategoryName}</span>
                       <span className="font-money text-text-muted text-[12px] shrink-0">
                         {formatCurrency(a.expectedValue / 100)}
@@ -501,10 +504,10 @@ export function Step3({
                     return (
                       <div key={alloc.id} className="flex flex-col gap-1 min-w-0">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className="h-2 w-2 rounded-full shrink-0"
-                            style={{ backgroundColor: alloc.allocationType === "Expense" ? "var(--red)" : "var(--green)" }}
-                          />
+                          {alloc.subCategoryEmoji
+                            ? <span className="text-[12px] leading-none shrink-0">{alloc.subCategoryEmoji}</span>
+                            : <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: alloc.allocationType === "Expense" ? "var(--red)" : "var(--green)" }} />
+                          }
                           <span className="text-text flex-1 text-[12px] truncate">{alloc.subCategoryName}</span>
                           <span className="font-money text-text-muted text-[11px] shrink-0">
                             {formatCurrency(alloc.expectedValue / 100)}

@@ -10,7 +10,7 @@ import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { AnalyticsFilter, AssetClassFilter, DatePreset, TransactionTypeFilter } from "../types/filters.types";
-import { availableYears, defaultFilter, presetLabel } from "../utils/filterDates";
+import { availableYears, defaultFilter } from "../utils/filterDates";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Section = "date" | "type" | "categories" | "accounts" | "assetclass";
@@ -420,7 +420,6 @@ export function AnalyticsFilters({ filter, onChange, mode }: Props) {
 
   const sections = getSections(mode);
   const active   = countActive(filter, mode);
-  const dateLabel = presetLabel(filter.preset, filter.customYear);
 
   return (
     <div ref={ref} className="relative">
@@ -442,9 +441,6 @@ export function AnalyticsFilters({ filter, onChange, mode }: Props) {
           </span>
         )}
       </button>
-
-      {/* Date label chip */}
-      <span className="text-text-muted ml-2 text-[12px]">{dateLabel}</span>
 
       {/* Panel */}
       {open && (

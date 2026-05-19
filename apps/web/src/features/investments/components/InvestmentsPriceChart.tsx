@@ -113,7 +113,7 @@ export const InvestmentsPriceChart = ({ investments }: Props) => {
                 <stop offset="100%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={true} />
+            <CartesianGrid stroke="var(--border-chart)" vertical={true} />
             <XAxis
               dataKey="date"
               tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "DM Sans" }}

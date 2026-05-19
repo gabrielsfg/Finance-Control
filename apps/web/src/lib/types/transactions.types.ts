@@ -21,6 +21,7 @@ export type TransactionItem = {
   budgetId: number | null;
   subCategoryId: number;
   subCategoryName: string;
+  subCategoryEmoji: string | null;
   accountId: number;
   accountName: string;
   recurringTransactionId: number | null;
@@ -42,6 +43,7 @@ export type SubCategoryItem = {
   categoryName: string;
   categoryColor: string | null;
   name: string;
+  emoji: string | null;
 };
 
 export type CreateTransactionRequest = {

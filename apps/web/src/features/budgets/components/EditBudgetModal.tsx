@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronRight } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUpdateBudget } from "@/features/budgets/hooks/useBudgets";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
@@ -21,8 +14,8 @@ import {
   uid,
   type DraftArea,
 } from "./budgetModalShared";
+import { cn } from "@/lib/utils";
 
-// Converts a Budget's flat allocation list back into DraftArea[] for editing.
 function budgetToDraftAreas(budget: Budget): DraftArea[] {
   const map = new Map<string, DraftArea>();
   for (const alloc of budget.allocations) {
@@ -34,6 +27,7 @@ function budgetToDraftAreas(budget: Budget): DraftArea[] {
       id: uid(),
       subCategoryId: alloc.subCategoryId,
       subCategoryName: alloc.subCategoryName,
+      subCategoryEmoji: alloc.subCategoryEmoji,
       categoryName: alloc.categoryName,
       categoryColor: alloc.categoryColor,
       expectedValue: alloc.allocated,
@@ -59,7 +53,6 @@ export function EditBudgetModal({ budget, onClose }: Props) {
   const [startDay, setStartDay] = useState(1);
   const [areas, setAreas] = useState<DraftArea[]>([]);
 
-  // Populate state whenever a different budget is opened
   useEffect(() => {
     if (!budget) return;
     setStep(1);
@@ -99,17 +92,43 @@ export function EditBudgetModal({ budget, onClose }: Props) {
   };
 
   const hasAllocs = areas.some((a) => a.allocations.length > 0);
+  const open = !!budget;
 
   return (
-    <Dialog open={!!budget} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="sm:max-w-2xl flex flex-col max-h-[90svh]">
-        <DialogHeader>
-          <DialogTitle className="font-display text-[18px]">Editar orçamento</DialogTitle>
-        </DialogHeader>
+    <>
+      <div
+        onClick={handleClose}
+        className={cn(
+          "fixed inset-0 z-40 transition-all duration-300",
+          open ? "pointer-events-auto backdrop-blur-sm bg-black/40" : "pointer-events-none opacity-0",
+        )}
+      />
 
-        <StepIndicator step={step} />
+      <div
+        className={cn(
+          "bg-surface border-border fixed inset-y-0 right-0 z-50 flex w-full max-w-[520px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
+          open ? "translate-x-0" : "translate-x-full",
+        )}
+      >
+        {/* Header */}
+        <div className="border-border flex items-center justify-between border-b px-6 py-5">
+          <h2 className="font-display font-600 text-text text-[17px]">Editar orçamento</h2>
+          <button
+            onClick={handleClose}
+            title="Fechar"
+            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
 
-        <div className="flex-1 overflow-y-auto px-0.5">
+        {/* Step indicator */}
+        <div className="border-border border-b px-6 py-4">
+          <StepIndicator step={step} />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
           {step === 1 && (
             <Step1
               name={name} setName={setName}
@@ -125,28 +144,31 @@ export function EditBudgetModal({ budget, onClose }: Props) {
           )}
         </div>
 
-        <DialogFooter className="mt-2 gap-2">
-          <Button variant="outline" size="sm" onClick={handleClose}>Cancelar</Button>
-          {step > 1 && (
-            <Button variant="outline" size="sm" onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}>
-              Voltar
-            </Button>
-          )}
-          {step < 3 ? (
-            <Button
-              size="sm"
-              disabled={step === 1 ? !name.trim() : !hasAllocs}
-              onClick={() => setStep((s) => (s + 1) as 2 | 3)}
-            >
-              Próximo <ChevronRight size={14} />
-            </Button>
-          ) : (
-            <Button size="sm" disabled={updateBudget.isPending} onClick={handleSubmit}>
-              {updateBudget.isPending ? "Salvando..." : "Salvar alterações"}
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {/* Footer */}
+        <div className="border-border shrink-0 border-t px-6 py-4">
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={handleClose}>Cancelar</Button>
+            {step > 1 && (
+              <Button variant="outline" onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}>
+                Voltar
+              </Button>
+            )}
+            {step < 3 ? (
+              <Button
+                className="flex-1"
+                disabled={step === 1 ? !name.trim() : !hasAllocs}
+                onClick={() => setStep((s) => (s + 1) as 2 | 3)}
+              >
+                Próximo <ChevronRight size={14} />
+              </Button>
+            ) : (
+              <Button className="flex-1" disabled={updateBudget.isPending} onClick={handleSubmit}>
+                {updateBudget.isPending ? "Salvando..." : "Salvar alterações"}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

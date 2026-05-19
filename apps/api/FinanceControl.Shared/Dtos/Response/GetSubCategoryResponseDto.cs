@@ -13,5 +13,6 @@ namespace FinanceControl.Shared.Dtos.Response
         public string CategoryName { get; set; }
         public string? CategoryColor { get; set; }
         public string Name { get; set; }
+        public string? Emoji { get; set; }
     }
 }

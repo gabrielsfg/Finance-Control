@@ -9,6 +9,7 @@ export type RecurringItem = {
   id: number;
   subCategoryId: number;
   subCategoryName: string;
+  subCategoryEmoji: string | null;
   categoryId: number;
   categoryName: string;
   categoryColor: string | null;
@@ -29,6 +30,7 @@ export type InstallmentItem = {
   id: number;
   subCategoryId: number;
   subCategoryName: string;
+  subCategoryEmoji: string | null;
   categoryId: number;
   categoryName: string;
   categoryColor: string | null;

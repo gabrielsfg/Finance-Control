@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { categoriesApi, subCategoriesApi } from "@/lib/api/categories";
-import { MOCK_CATEGORIES } from "@/lib/mocks";
 import type {
   CreateCategoryRequest,
   UpdateCategoryRequest,
@@ -12,8 +11,8 @@ import type {
 export const useCategories = () =>
   useQuery({
     queryKey: ["categories"],
-    queryFn: () => Promise.resolve(MOCK_CATEGORIES),
-    staleTime: Infinity,
+    queryFn: categoriesApi.getAll,
+    staleTime: 60_000,
   });
 
 export const useCreateCategory = () => {

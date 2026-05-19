@@ -193,7 +193,7 @@ export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: {
           <div style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={points} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="25%">
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <CartesianGrid stroke="var(--border-chart)" />
                 <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                 <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1) + "%"} width={46} />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--surface2)" }} />
@@ -218,7 +218,7 @@ export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: {
           <div style={{ height: 260 }} className="mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={cumulativeData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <CartesianGrid stroke="var(--border-chart)" />
                 <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                 <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1) + "%"} width={50} />
                 <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />

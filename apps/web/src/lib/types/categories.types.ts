@@ -4,6 +4,7 @@ export type SubCategory = {
   categoryName: string;
   categoryColor: string | null;
   name: string;
+  emoji: string | null;
 };
 
 export type Category = {
@@ -31,10 +32,12 @@ export type UpdateCategoriesRequest = {
 
 export type CreateSubCategoryRequest = {
   name: string;
+  emoji?: string;
   categoryId: number;
 };
 
 export type UpdateSubCategoryRequest = {
   name: string;
+  emoji?: string;
   categoryId: number;
 };

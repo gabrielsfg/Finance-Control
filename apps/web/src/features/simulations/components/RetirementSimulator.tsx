@@ -318,7 +318,7 @@ export const RetirementSimulator = () => {
                           <stop offset="95%" stopColor="var(--yellow)" stopOpacity={0}    />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <CartesianGrid stroke="var(--border-chart)" />
                       <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                       <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
                       <Tooltip content={<CustomTooltip />} />
@@ -432,7 +432,7 @@ export const RetirementSimulator = () => {
                             <stop offset="95%" stopColor="var(--orange)" stopOpacity={0}    />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                        <CartesianGrid stroke="var(--border-chart)" />
                         <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                         <YAxis tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v.toFixed(0)}%`} width={48} />
                         <Tooltip content={<InflationTooltip />} />

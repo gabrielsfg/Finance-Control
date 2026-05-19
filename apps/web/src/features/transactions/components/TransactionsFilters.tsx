@@ -258,9 +258,9 @@ function PresetPill({ active, onClick, children }: { active: boolean; onClick: (
 
 // ── Checkable row ─────────────────────────────────────────────────────────────
 function CheckRow({
-  checked, onClick, label, color, indent,
+  checked, onClick, label, color, emoji, indent,
 }: {
-  checked: boolean; onClick: () => void; label: string; color?: string; indent?: boolean;
+  checked: boolean; onClick: () => void; label: string; color?: string; emoji?: string | null; indent?: boolean;
 }) {
   return (
     <button
@@ -276,9 +276,10 @@ function CheckRow({
       )}>
         <Check size={11} strokeWidth={3} />
       </span>
-      {color && (
-        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-      )}
+      {emoji
+        ? <span className="text-[14px] leading-none shrink-0">{emoji}</span>
+        : color && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+      }
       <span className={cn("text-[14px]", checked ? "text-text font-medium" : "text-text-sub")}>
         {label}
       </span>
@@ -302,7 +303,7 @@ function SectionContent({
   setDraft: React.Dispatch<React.SetStateAction<TransactionsFilter>>;
   accounts: { id: number; name: string }[];
   categories: { id: number; name: string; color: string }[];
-  subcategories: { id: number; name: string; categoryId: number; color: string }[];
+  subcategories: { id: number; name: string; categoryId: number; color: string; emoji?: string | null }[];
   budgets: { id: number; name: string }[];
 }) {
   const years = availableTxYears();
@@ -432,6 +433,7 @@ function SectionContent({
                     onClick={() => toggleSubCategory(sub.id, cat.id)}
                     label={sub.name}
                     color={sub.color}
+                    emoji={sub.emoji}
                     indent
                   />
                 ))}
@@ -567,6 +569,7 @@ export function TransactionsFilters({ filter, onChange }: Props) {
     name: s.name,
     categoryId: s.categoryId,
     color: getCategoryColor(s.categoryColor, s.categoryName),
+    emoji: s.emoji,
   })).sort((a, b) => a.name.localeCompare(b.name));
 
   const budgets = budgetsRaw.map(b => ({ id: b.id, name: b.name }));

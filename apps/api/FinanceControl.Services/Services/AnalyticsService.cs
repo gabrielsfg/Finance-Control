@@ -219,49 +219,6 @@ namespace FinanceControl.Services.Services
             return result;
         }
 
-        public async Task<List<ExpensesByCategoryDto>> GetExpensesByCategoryAsync(AnalyticsRequestDto requestDto)
-        {
-            await using var context = _contextFactory.CreateDbContext();
-
-            var rows = await context.Transactions
-                .Where(t => t.UserId == requestDto.UserId)
-                .Where(t => t.Type == (requestDto.TransactionType ?? EnumTransactionType.Expense))
-                .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
-                .WhereIf(requestDto.AccountIds.Count > 0,  t => requestDto.AccountIds.Contains(t.AccountId))
-                .WhereIf(requestDto.CategoryIds.Count > 0, t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
-                .WhereIf(requestDto.PaymentType.HasValue, t => t.PaymentType == requestDto.PaymentType)
-                .Select(t => new
-                {
-                    CategoryId = t.SubCategory.Category.Id,
-                    CategoryName = t.SubCategory.Category.Name,
-                    SubCategoryId = t.SubCategory.Id,
-                    SubCategoryName = t.SubCategory.Name,
-                    t.Value
-                })
-                .ToListAsync();
-
-            return rows
-                .GroupBy(r => new { r.CategoryId, r.CategoryName })
-                .Select(cg => new ExpensesByCategoryDto
-                {
-                    CategoryId = cg.Key.CategoryId,
-                    CategoryName = cg.Key.CategoryName,
-                    Total = cg.Sum(r => r.Value),
-                    Subcategories = cg
-                        .GroupBy(r => new { r.SubCategoryId, r.SubCategoryName })
-                        .Select(sg => new SubCategoryExpenseItemDto
-                        {
-                            Id = sg.Key.SubCategoryId,
-                            Name = sg.Key.SubCategoryName,
-                            Total = sg.Sum(r => r.Value)
-                        })
-                        .OrderByDescending(s => s.Total)
-                        .ToList()
-                })
-                .OrderByDescending(c => c.Total)
-                .ToList();
-        }
-
         public async Task<List<CategoryEvolutionItemDto>> GetCategoryEvolutionAsync(AnalyticsRequestDto requestDto, int categoryId)
         {
             await using var context = _contextFactory.CreateDbContext();
@@ -705,65 +662,6 @@ namespace FinanceControl.Services.Services
             {
                 CurrentBalance = currentBalance,
                 Months = result
-            };
-        }
-
-        public async Task<BudgetPaceDto?> GetBudgetPaceAsync(int budgetId, int userId)
-        {
-            await using var context = _contextFactory.CreateDbContext();
-
-            var budget = await context.Budgets
-                .FirstOrDefaultAsync(b => b.Id == budgetId && b.UserId == userId);
-
-            if (budget is null) return null;
-
-            var periodStart = new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, budget.StartDate);
-            var periodEnd = budget.Recurrence switch
-            {
-                EnumBudgetRecurrence.Weekly       => periodStart.AddDays(7),
-                EnumBudgetRecurrence.Biweekly     => periodStart.AddDays(14),
-                EnumBudgetRecurrence.Monthly      => periodStart.AddMonths(1),
-                EnumBudgetRecurrence.Semiannually => periodStart.AddMonths(6),
-                EnumBudgetRecurrence.Annually     => periodStart.AddYears(1),
-                _                                 => periodStart.AddMonths(1)
-            };
-
-            var totalExpected = await context.BudgetSubcategoryAllocations
-                .Where(a => a.BudgetId == budgetId)
-                .SumAsync(a => (int?)a.ExpectedValue) ?? 0;
-
-            var totalDays = (periodEnd.ToDateTime(TimeOnly.MinValue) - periodStart.ToDateTime(TimeOnly.MinValue)).TotalDays;
-            var dailyIdeal = totalDays > 0 ? Math.Round((decimal)totalExpected / (decimal)totalDays, 2) : 0m;
-
-            // Accumulated daily expenses within the current period (up to today)
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var effectiveEnd = today < periodEnd ? today : periodEnd;
-
-            var dailyExpenses = await context.Transactions
-                .Where(t => t.UserId == userId)
-                .Where(t => t.BudgetId == budgetId)
-                .Where(t => t.Type == EnumTransactionType.Expense)
-                .Where(t => t.TransactionDate >= periodStart && t.TransactionDate <= effectiveEnd)
-                .GroupBy(t => t.TransactionDate)
-                .Select(g => new { Date = g.Key, Total = g.Sum(t => t.Value) })
-                .OrderBy(x => x.Date)
-                .ToListAsync();
-
-            var actual = new List<BudgetPacePointDto>();
-            var accumulated = 0;
-            foreach (var day in dailyExpenses)
-            {
-                accumulated += day.Total;
-                actual.Add(new BudgetPacePointDto { Date = day.Date, Accumulated = accumulated });
-            }
-
-            return new BudgetPaceDto
-            {
-                DailyIdeal = dailyIdeal,
-                PeriodStart = periodStart,
-                PeriodEnd = periodEnd,
-                TotalExpected = totalExpected,
-                Actual = actual
             };
         }
 

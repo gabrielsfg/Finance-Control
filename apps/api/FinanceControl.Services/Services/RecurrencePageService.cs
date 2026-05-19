@@ -227,9 +227,10 @@ namespace FinanceControl.Services.Services
         private static RecurringTransactionResponseDto MapRecurring(RecurringTransaction r) => new()
         {
             Id              = r.Id,
-            SubCategoryId   = r.SubCategoryId,
-            SubCategoryName = r.SubCategory?.Name ?? string.Empty,
-            CategoryId      = r.SubCategory?.CategoryId ?? 0,
+            SubCategoryId    = r.SubCategoryId,
+            SubCategoryName  = r.SubCategory?.Name ?? string.Empty,
+            SubCategoryEmoji = r.SubCategory?.Emoji,
+            CategoryId       = r.SubCategory?.CategoryId ?? 0,
             CategoryName    = r.SubCategory?.Category?.Name ?? string.Empty,
             CategoryColor   = r.SubCategory?.Category?.Color,
             AccountId       = r.AccountId,
@@ -256,6 +257,7 @@ namespace FinanceControl.Services.Services
                 Id                    = t.Id,
                 SubCategoryId         = t.SubCategoryId,
                 SubCategoryName       = t.SubCategory?.Name ?? string.Empty,
+                SubCategoryEmoji      = t.SubCategory?.Emoji,
                 CategoryId            = t.SubCategory?.CategoryId ?? 0,
                 CategoryName          = t.SubCategory?.Category?.Name ?? string.Empty,
                 CategoryColor         = t.SubCategory?.Category?.Color,

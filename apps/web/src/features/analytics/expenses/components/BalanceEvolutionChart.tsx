@@ -52,7 +52,7 @@ export function BalanceEvolutionChart({ data }: Props) {
                 <stop offset="95%" stopColor="var(--green)" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <CartesianGrid stroke="var(--border-chart)" />
             <XAxis
               dataKey="label"
               tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }}

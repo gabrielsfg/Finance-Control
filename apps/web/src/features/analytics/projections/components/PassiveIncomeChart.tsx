@@ -148,7 +148,7 @@ export function PassiveIncomeChart({ data }: Props) {
         </div>
         <div>
           <p className="text-text-muted text-[12px]">Renda passiva mensal</p>
-          <p className="font-money font-600 text-green text-[18px]">
+          <p className="font-money font-600 text-text text-[18px]">
             {formatCurrency(currentMonthlyPassiveIncome / 100)}
           </p>
           <p className="text-text-muted mt-0.5 text-[11px]">
@@ -219,7 +219,7 @@ export function PassiveIncomeChart({ data }: Props) {
                 <stop offset="95%" stopColor="var(--red)" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <CartesianGrid stroke="var(--border-chart)" />
             <XAxis
               dataKey="label"
               tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }}

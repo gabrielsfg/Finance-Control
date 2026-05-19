@@ -10,13 +10,11 @@ import type {
   UpdateInvestmentPriceRequest,
 } from "@/lib/types/investments.types";
 
-import { MOCK_INVESTMENTS } from "@/lib/mocks";
-
 export const useInvestments = () =>
   useQuery<InvestmentPortfolio>({
     queryKey: ["investments"],
-    queryFn: () => Promise.resolve(MOCK_INVESTMENTS),
-    staleTime: Infinity,
+    queryFn: investmentsApi.getPortfolio,
+    staleTime: 60_000,
   });
 
 export const useInvestmentById = (id: number) =>

@@ -10,7 +10,6 @@ import { DeleteAccountModal } from "@/features/accounts/components/DeleteAccount
 import { SetDefaultAccountModal } from "@/features/accounts/components/SetDefaultAccountModal";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { usePageNova } from "@/lib/hooks/usePageHeader";
-import { MOCK_ACCOUNTS_PREVIOUS } from "@/lib/mocks";
 import type { AccountItem } from "@/lib/types/accounts.types";
 import type { AccountDrawerMode } from "@/features/accounts/components/AccountDrawer";
 
@@ -37,11 +36,6 @@ export function AccountsPage() {
   const totalInvoice = accounts?.filter((a) => a.type === "Credit").reduce((sum, a) => sum + Math.abs(a.currentAmount), 0) ?? 0;
   const totalCreditAvailable = accounts?.filter((a) => a.type === "Credit" && a.creditLimit).reduce((sum, a) => sum + (a.creditLimit! - Math.abs(a.currentAmount)), 0) ?? 0;
 
-  const prev = MOCK_ACCOUNTS_PREVIOUS;
-  const pct = (curr: number, prev: number) => prev !== 0 ? ((curr - prev) / Math.abs(prev)) * 100 : 0;
-  const netWorthChange = pct(netWorth, prev.netWorth);
-  const invoiceChange = pct(totalInvoice, prev.totalInvoice);
-  const creditAvailableChange = pct(Math.max(0, totalCreditAvailable), prev.totalCreditAvailable);
 
   const hasAccounts = !!accounts?.length;
 
@@ -76,12 +70,6 @@ export function AccountsPage() {
             netWorth={netWorth}
             totalInvoice={totalInvoice}
             totalCreditAvailable={totalCreditAvailable}
-            netWorthChange={netWorthChange}
-            invoiceChange={invoiceChange}
-            creditAvailableChange={creditAvailableChange}
-            previousNetWorth={prev.netWorth}
-            previousInvoice={prev.totalInvoice}
-            previousCreditAvailable={prev.totalCreditAvailable}
           />
         )}
 

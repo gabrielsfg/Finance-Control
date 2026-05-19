@@ -16,7 +16,7 @@ export const InvestmentsKpiCards = ({ summary }: Props) => {
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {/* Patrimônio Total */}
+      {/* Patrimônio Total — valor bruto, sempre branco */}
       <div className="border-border bg-surface rounded-xl border p-5">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-text-muted text-[12px] uppercase tracking-[0.04em]">Patrimônio Total</span>
@@ -24,7 +24,7 @@ export const InvestmentsKpiCards = ({ summary }: Props) => {
             <DollarSign size={15} strokeWidth={1.75} style={{ color: "var(--green)" }} />
           </div>
         </div>
-        <p className="font-money font-600 text-green text-[22px]">{formatCurrency(summary.currentValue / 100)}</p>
+        <p className="font-money font-600 text-text text-[22px]">{formatCurrency(summary.currentValue / 100)}</p>
         <p className="mt-1.5 text-text-sub text-[12px]">
           Patrimônio investido: {formatCurrency(summary.totalInvested / 100)}
         </p>
@@ -38,12 +38,12 @@ export const InvestmentsKpiCards = ({ summary }: Props) => {
             <TrendingUp size={15} strokeWidth={1.75} style={{ color: returnPositive ? "var(--green)" : "var(--red)" }} />
           </div>
         </div>
-        <p className={cn("font-money font-600 text-[22px]", returnPositive ? "text-green" : "text-red")}>
-          {formatCurrency(Math.abs(summary.totalReturn) / 100)}
+        <p className={cn("font-money font-600 text-[22px]", returnPositive ? "text-text" : "text-red")}>
+          {!returnPositive && "-"}{formatCurrency(Math.abs(summary.totalReturn) / 100)}
         </p>
         <p className="mt-1.5 flex flex-wrap items-baseline gap-1">
           <span className={cn("font-mono text-[12px] font-medium", returnPositive ? "text-green" : "text-red")}>
-            {formatPercentNeutral(Math.abs(summary.totalReturnPercent))}
+            {!returnPositive && "-"}{formatPercentNeutral(Math.abs(summary.totalReturnPercent))}
           </span>
           <span className="text-text-muted text-[12px]">sobre o aporte</span>
         </p>
@@ -57,12 +57,12 @@ export const InvestmentsKpiCards = ({ summary }: Props) => {
             <ArrowUpDown size={15} strokeWidth={1.75} style={{ color: gainLossPositive ? "var(--green)" : "var(--red)" }} />
           </div>
         </div>
-        <p className={cn("font-money font-600 text-[22px]", gainLossPositive ? "text-green" : "text-red")}>
-          {formatPercentNeutral(Math.abs(summary.totalReturnPercent))}
+        <p className={cn("font-money font-600 text-[22px]", gainLossPositive ? "text-text" : "text-red")}>
+          {!gainLossPositive && "-"}{formatPercentNeutral(Math.abs(summary.totalReturnPercent))}
         </p>
         <p className="mt-1.5">
           <span className={cn("font-mono text-[12px] font-medium", gainLossPositive ? "text-green" : "text-red")}>
-            {formatCurrency(Math.abs(gainLoss) / 100)}
+            {!gainLossPositive && "-"}{formatCurrency(Math.abs(gainLoss) / 100)}
           </span>
           <span className="text-text-muted text-[12px] ml-1">em valor</span>
         </p>
@@ -76,8 +76,8 @@ export const InvestmentsKpiCards = ({ summary }: Props) => {
             <Percent size={15} strokeWidth={1.75} style={{ color: yieldPositive ? "var(--green)" : "var(--red)" }} />
           </div>
         </div>
-        <p className={cn("font-money font-600 text-[22px]", yieldPositive ? "text-green" : "text-red")}>
-          {formatPercentNeutral(Math.abs(summary.totalReturnPercent))}
+        <p className={cn("font-money font-600 text-[22px]", yieldPositive ? "text-text" : "text-red")}>
+          {!yieldPositive && "-"}{formatPercentNeutral(Math.abs(summary.totalReturnPercent))}
         </p>
       </div>
     </div>

@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Loader2, X } from "lucide-react";
 import { usePageFilter } from "@/lib/hooks/usePageHeader";
+import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
+import { getCategoryColor } from "@/lib/config/categoryColors";
 import { AnalyticsSummaryCards } from "@/features/analytics/expenses/components/AnalyticsSummaryCards";
 import { AnalyticsTrendChart } from "@/features/analytics/expenses/components/AnalyticsTrendChart";
 import { AnalyticsCategoryBreakdown } from "@/features/analytics/expenses/components/AnalyticsCategoryBreakdown";
@@ -43,7 +46,7 @@ import {
   useCommitmentsImpact,
 } from "@/features/analytics/hooks/useAnalytics";
 import type { AnalyticsFilter } from "./types/filters.types";
-import { defaultFilter, buildDateRange } from "./utils/filterDates";
+import { defaultFilter, buildDateRange, presetLabel } from "./utils/filterDates";
 
 type Tab = "gastos" | "patrimonio" | "investimentos" | "projecoes";
 type InvestmentSubTab = "geral" | "rentabilidade" | "lancamentos";
@@ -61,34 +64,115 @@ const INVESTMENT_SUBTABS: { id: InvestmentSubTab; label: string }[] = [
   { id: "lancamentos",   label: "Lançamentos" },
 ];
 
+const TX_TYPE_LABELS: Record<string, string> = {
+  expense: "Despesas", income: "Receitas", recurring: "Recorrentes", installment: "Parceladas",
+};
+
+const ASSET_CLASS_LABELS: Record<string, string> = {
+  "Renda Fixa": "Renda Fixa", "Tesouro Direto": "Tesouro Direto",
+  "Renda Variável": "Ações", "FII": "FII", "Internacional": "Internacional", "Cripto": "Cripto",
+};
+
 export function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("gastos");
   const [investmentSubTab, setInvestmentSubTab] = useState<InvestmentSubTab>("geral");
   const [filter, setFilter] = useState<AnalyticsFilter>(defaultFilter());
 
-  usePageFilter(
-    <AnalyticsFilters
-      filter={filter}
-      onChange={setFilter}
-      mode={
-        activeTab === "gastos" || activeTab === "patrimonio"
-          ? "expenses"
-          : activeTab === "investimentos"
-            ? "investments"
-            : "none"
+  const { data: accountsRaw = [] } = useAccounts();
+  const { data: subcatsRaw  = [] } = useSubCategories();
+
+  const metaAccounts = useMemo(() => accountsRaw.map(a => ({ id: a.id, name: a.name })), [accountsRaw]);
+  const metaCategories = useMemo(() =>
+    Array.from(
+      new Map(subcatsRaw.map(s => [s.categoryId, {
+        id: s.categoryId,
+        name: s.categoryName,
+        color: getCategoryColor(s.categoryColor, s.categoryName),
+      }])).values()
+    ), [subcatsRaw]);
+
+  const filterMode = activeTab === "gastos" || activeTab === "patrimonio"
+    ? "expenses"
+    : activeTab === "investimentos"
+      ? "investments"
+      : "none";
+
+  type Chip = { id: string; label: string; color?: string; onRemove: () => void };
+  const activeChips = useMemo<Chip[]>(() => {
+    const chips: Chip[] = [];
+
+    if (filter.preset !== "last-6-months") {
+      chips.push({
+        id: "preset",
+        label: presetLabel(filter.preset, filter.customYear),
+        onRemove: () => setFilter(f => ({ ...f, preset: "last-6-months" })),
+      });
+    }
+
+    if (filterMode === "expenses") {
+      if (filter.transactionType !== "all") {
+        chips.push({
+          id: "txtype",
+          label: TX_TYPE_LABELS[filter.transactionType] ?? filter.transactionType,
+          onRemove: () => setFilter(f => ({ ...f, transactionType: "all" })),
+        });
       }
-    />,
+      for (const id of filter.categoryIds) {
+        const cat = metaCategories.find(c => c.id === id);
+        if (cat) chips.push({
+          id: `cat-${id}`,
+          label: cat.name,
+          color: cat.color,
+          onRemove: () => setFilter(f => ({ ...f, categoryIds: f.categoryIds.filter(x => x !== id) })),
+        });
+      }
+    }
+
+    if (filterMode === "investments" && filter.assetClass !== "all") {
+      chips.push({
+        id: "assetclass",
+        label: ASSET_CLASS_LABELS[filter.assetClass] ?? filter.assetClass,
+        onRemove: () => setFilter(f => ({ ...f, assetClass: "all" })),
+      });
+    }
+
+    if (filterMode !== "none") {
+      for (const id of filter.accountIds) {
+        const acc = metaAccounts.find(a => a.id === id);
+        if (acc) chips.push({
+          id: `acc-${id}`,
+          label: acc.name,
+          onRemove: () => setFilter(f => ({ ...f, accountIds: f.accountIds.filter(x => x !== id) })),
+        });
+      }
+    }
+
+    return chips;
+  }, [filter, filterMode, metaCategories, metaAccounts]);
+
+  usePageFilter(
+    <AnalyticsFilters filter={filter} onChange={setFilter} mode={filterMode} />,
   );
 
   const { start, finish } = buildDateRange(filter);
 
-  // For the heatmap calendar: when range spans multiple months, show the last
-  // month of the selection. When it's a single month, show that month.
-  const calendarMonthStart = finish.slice(0, 7) + "-01";
+  const today = new Date();
+  const [calendarMonth, setCalendarMonth] = useState(
+    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`
+  );
+  const calendarMonthStart = calendarMonth + "-01";
+
+  function shiftCalendarMonth(delta: number) {
+    const [y, m] = calendarMonth.split("-").map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    setCalendarMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
 
   const summary           = useAnalyticsSummary(start, finish);
   const monthly           = useAnalyticsMonthly(start, finish);
-  const heatmap           = useAnalyticsHeatmap(calendarMonthStart, finish);
+  const [cmY, cmM] = calendarMonth.split("-").map(Number);
+  const calendarEnd = new Date(cmY, cmM, 0).toISOString().slice(0, 10);
+  const heatmap           = useAnalyticsHeatmap(calendarMonthStart, calendarEnd);
   const categoryIds = summary.data?.categoryBreakdown.items.map((c) => c.categoryId) ?? [];
   const catEvol           = useAnalyticsCategoryEvolution(start, finish, categoryIds);
   const netWorth          = useAnalyticsNetWorth(start, finish);
@@ -124,7 +208,30 @@ export function AnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Analytics</h1>
+      <div>
+        <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Analytics</h1>
+        {activeChips.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {activeChips.map(chip => (
+              <div
+                key={chip.id}
+                className="border-border bg-surface2 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px]"
+              >
+                {chip.color && (
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: chip.color }} />
+                )}
+                <span className="text-text-sub">{chip.label}</span>
+                <button
+                  onClick={chip.onRemove}
+                  className="text-text-muted hover:text-red ml-0.5 transition-colors"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Tab bar */}
       <TabChips items={TABS} value={activeTab} onChange={setActiveTab} />
@@ -146,7 +253,9 @@ export function AnalyticsPage() {
 
           <AnalyticsSpendCalendar
             data={heatmap.data ?? []}
-            month={calendarMonthStart.slice(0, 7)}
+            month={calendarMonth}
+            onPrev={() => shiftCalendarMonth(-1)}
+            onNext={() => shiftCalendarMonth(1)}
           />
         </>
       )}
@@ -225,7 +334,7 @@ export function AnalyticsPage() {
             return (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  { label: "Saldo proj. fim do mês", value: bp ? `${(bp.projectedBalance / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: "text-green" },
+                  { label: "Saldo proj. fim do mês", value: bp ? `${bp.projectedBalance < 0 ? "-" : ""}${(Math.abs(bp.projectedBalance) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: bp && bp.projectedBalance < 0 ? "text-red" : "text-text" },
                   { label: "Próx. compromissos",     value: nextCommitments > 0 ? `${(nextCommitments / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: "text-orange" },
                   { label: "Patrimônio em 12m",      value: projectedIn12m > 0 ? `${(projectedIn12m / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: "text-blue" },
                   { label: "Meta de poupança anual", value: annualSavingsGoal > 0 ? `${(annualSavingsGoal / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: "text-purple" },
@@ -257,7 +366,7 @@ export function AnalyticsPage() {
             <ProjectedSpendingHeatmap data={categoryProjection.data} />
           )}
           <FutureCommitmentsChart data={futureCommitments.data ?? []} />
-          <CommitmentsImpactChart data={commitmentsImpact.data ?? { months: [] }} />
+          <CommitmentsImpactChart data={commitmentsImpact.data ?? { currentBalance: 0, months: [] }} />
         </div>
       )}
     </div>

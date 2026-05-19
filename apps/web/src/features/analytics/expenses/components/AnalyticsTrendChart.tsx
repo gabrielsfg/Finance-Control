@@ -34,7 +34,7 @@ export const AnalyticsTrendChart = ({ data }: Props) => (
         <div className="w-full flex-1" style={{ minHeight: 240 }}>
           <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <CartesianGrid stroke="var(--border-chart)" />
               <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={70} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--surface2)", opacity: 0.5 }} />

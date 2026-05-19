@@ -1,20 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { goalsApi } from "@/lib/api/goals";
-import { MOCK_GOALS } from "@/lib/mocks";
-import type { CreateGoalRequest, UpdateGoalRequest, GoalType, GoalStatus } from "@/lib/types/goal.types";
+import type {
+  CreateGoalRequest,
+  UpdateGoalRequest,
+  ContributeGoalRequest,
+  WithdrawGoalRequest,
+  PurchaseGoalRequest,
+  GoalType,
+  GoalStatus,
+} from "@/lib/types/goal.types";
 
 export const useGoals = (params?: { type?: GoalType; status?: GoalStatus }) =>
   useQuery({
     queryKey: ["goals", params],
-    queryFn: () => Promise.resolve(MOCK_GOALS),
-    staleTime: Infinity,
+    queryFn: () => goalsApi.getAll(params),
+    staleTime: 60_000,
   });
 
-export const useGoalDetail = (id: number) =>
+export const useGoalDetail = (id: number | null) =>
   useQuery({
     queryKey: ["goals", id],
-    queryFn: () => goalsApi.getById(id),
+    queryFn: () => goalsApi.getById(id!),
     staleTime: 60_000,
+    enabled: id !== null,
   });
 
 export const useCreateGoal = () => {
@@ -29,30 +37,50 @@ export const useUpdateGoal = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateGoalRequest }) => goalsApi.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["goals"] }),
+    onSuccess: (updated) => queryClient.setQueryData(["goals", updated.id], updated),
   });
 };
 
 export const useDeleteGoal = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => goalsApi.delete(id),
+    mutationFn: ({ id, returnToAccountId }: { id: number; returnToAccountId?: number }) =>
+      goalsApi.delete(id, returnToAccountId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["goals"] }),
   });
 };
 
-export const useRecordCheckpoint = () => {
+export const useContributeGoal = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, amount }: { id: number; amount: number }) => goalsApi.recordCheckpoint(id, amount),
+    mutationFn: ({ id, data }: { id: number; data: ContributeGoalRequest }) =>
+      goalsApi.contribute(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["goals"] }),
   });
 };
 
-export const useAchieveGoal = () => {
+export const useWithdrawGoal = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => goalsApi.achieve(id),
+    mutationFn: ({ id, data }: { id: number; data: WithdrawGoalRequest }) =>
+      goalsApi.withdraw(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["goals"] }),
+  });
+};
+
+export const useGoalInvestmentTransactions = (id: number | null) =>
+  useQuery({
+    queryKey: ["goals", id, "investment-transactions"],
+    queryFn: () => goalsApi.getInvestmentTransactions(id!),
+    staleTime: 60_000,
+    enabled: id !== null,
+  });
+
+export const usePurchaseGoal = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: PurchaseGoalRequest }) =>
+      goalsApi.purchase(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["goals"] }),
   });
 };

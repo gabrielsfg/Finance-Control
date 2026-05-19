@@ -96,6 +96,9 @@ const AreaRow = ({ group }: { group: AreaGroup }) => {
               <div key={alloc.id} className="pl-4 border-l-2" style={{ borderColor: `${color}60` }}>
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2 min-w-0">
+                    {alloc.subCategoryEmoji && (
+                      <span className="text-[13px] leading-none shrink-0">{alloc.subCategoryEmoji}</span>
+                    )}
                     <span className="text-text text-[13px] truncate">{alloc.subCategoryName}</span>
                     <span className="text-text-muted text-[11px] shrink-0">· {alloc.categoryName}</span>
                   </div>

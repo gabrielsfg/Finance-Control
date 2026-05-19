@@ -62,18 +62,6 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
-        [HttpGet("expenses-by-category")]
-        public async Task<IActionResult> GetExpensesByCategoryAsync(
-            [FromQuery] DateOnly startDate,
-            [FromQuery] DateOnly finishDate,
-            [FromQuery] List<int>? accountIds,
-            [FromQuery] EnumPaymentType? paymentType)
-        {
-            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds: null, transactionType: null, paymentType);
-            var result = await _analyticsService.GetExpensesByCategoryAsync(filter);
-            return Ok(result);
-        }
-
         [HttpGet("category-evolution")]
         public async Task<IActionResult> GetCategoryEvolutionAsync(
             [FromQuery] DateOnly startDate,
@@ -107,17 +95,6 @@ namespace FinanceControl.WebApi.Controllers
                 return BadRequest(new { error = "months must be between 1 and 24." });
 
             var result = await _analyticsService.GetFutureCommitmentsAsync(GetUserId(), months);
-            return Ok(result);
-        }
-
-        [HttpGet("budget-pace")]
-        public async Task<IActionResult> GetBudgetPaceAsync([FromQuery] int budgetId)
-        {
-            var validation = this.ValidatePositiveId(budgetId, "budgetId");
-            if (validation is not null) return validation;
-
-            var result = await _analyticsService.GetBudgetPaceAsync(budgetId, GetUserId());
-            if (result is null) return NotFound();
             return Ok(result);
         }
 

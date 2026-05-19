@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { DashboardStatsRow } from "@/features/dashboard/components/DashboardStatsRow";
 import { RecentTransactions } from "@/features/dashboard/components/RecentTransactions";
 import { MonthlyEvolutionChart } from "@/features/dashboard/components/MonthlyEvolutionChart";
+import { SpendingPredictionChart } from "@/features/dashboard/components/SpendingPredictionChart";
 import { CategoryDonutChart } from "@/features/dashboard/components/CategoryDonutChart";
 import { AiInsightCard } from "@/features/dashboard/components/AiInsightCard";
 import { ActiveBudgetCard } from "@/features/dashboard/components/ActiveBudgetCard";
@@ -11,8 +12,17 @@ import { UpcomingBillsCard } from "@/features/dashboard/components/UpcomingBills
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
 import { formatDateMonth } from "@/lib/utils/formatDate";
 
+function getCurrentMonthRange() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  return { startDate: fmt(start), finishDate: fmt(end) };
+}
+
 export function DashboardPage() {
-  const { data, isLoading, isError } = useDashboard();
+  const params = getCurrentMonthRange();
+  const { data, isLoading, isError } = useDashboard(params);
   const currentMonth = formatDateMonth(new Date());
 
   if (isLoading) {
@@ -31,7 +41,7 @@ export function DashboardPage() {
     );
   }
 
-  const { balanceSummary, recentTransactions, budgetSummary, topCategories } = data;
+  const { balanceSummary, recentTransactions, budgetSummary, topCategories, spendingPrediction } = data;
 
   return (
     <div className="flex flex-col gap-5">
@@ -41,6 +51,8 @@ export function DashboardPage() {
       </div>
 
       <DashboardStatsRow balanceSummary={balanceSummary} currentMonth={currentMonth} />
+
+      <SpendingPredictionChart data={spendingPrediction ?? []} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px] lg:min-h-[360px]">
         <MonthlyEvolutionChart />

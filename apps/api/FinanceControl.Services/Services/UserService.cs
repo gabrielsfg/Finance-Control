@@ -338,6 +338,22 @@ namespace FinanceControl.Services.Services
                 IsSystem = true
             });
 
+            // System transfer category/subcategory (used by goal contributions and transfers)
+            var transferCategoryName = preferredLanguage == "pt-BR" ? "Outros" : "Other";
+            var transferSubName      = preferredLanguage == "pt-BR" ? "Transferência" : "Transfer";
+            var transferCategory = new Category { UserId = userId, Name = transferCategoryName, IsSystem = true };
+            _context.Categories.Add(transferCategory);
+            await _context.SaveChangesAsync();
+
+            _context.SubCategories.Add(new SubCategory
+            {
+                UserId     = userId,
+                CategoryId = transferCategory.Id,
+                Name       = transferSubName,
+                IsSystem   = true,
+            });
+            await _context.SaveChangesAsync();
+
             // Default categories and subcategories
             foreach (var (categoryName, subcategoryNames) in UserSeedData.GetCategories(preferredLanguage))
             {

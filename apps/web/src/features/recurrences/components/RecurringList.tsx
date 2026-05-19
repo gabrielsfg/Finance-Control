@@ -83,7 +83,10 @@ export function RecurringList({ items, totalMonthly, expanded = false, onView, o
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]"
                     style={{ backgroundColor: `${color}18` }}
                   >
-                    <RefreshCw size={14} strokeWidth={1.75} style={{ color }} />
+                    {item.subCategoryEmoji
+                      ? <span className="text-[16px] leading-none">{item.subCategoryEmoji}</span>
+                      : <RefreshCw size={14} strokeWidth={1.75} style={{ color }} />
+                    }
                   </div>
                   <div className="min-w-0">
                     <p className="text-text truncate text-[13px] font-semibold">{item.description}</p>
@@ -183,7 +186,10 @@ export function RecurringList({ items, totalMonthly, expanded = false, onView, o
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]"
                   style={{ backgroundColor: `${color}18` }}
                 >
-                  <RefreshCw size={14} strokeWidth={1.75} style={{ color }} />
+                  {item.subCategoryEmoji
+                    ? <span className="text-[16px] leading-none">{item.subCategoryEmoji}</span>
+                    : <RefreshCw size={14} strokeWidth={1.75} style={{ color }} />
+                  }
                 </div>
 
                 {/* Info */}

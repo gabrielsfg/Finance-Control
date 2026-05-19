@@ -38,7 +38,7 @@ export const AnalyticsCategoryEvolutionChart = ({ data, categories }: Props) => 
         <div className="w-full" style={{ height: 260 }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <CartesianGrid stroke="var(--border-chart)" />
               <XAxis
                 dataKey="label"
                 tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}

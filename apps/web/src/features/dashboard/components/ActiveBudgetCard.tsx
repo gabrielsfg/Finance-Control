@@ -96,7 +96,10 @@ export const ActiveBudgetCard = ({ budget }: Props) => {
             <div key={sub.subCategoryName}>
               <div className="mb-1.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: color }} />
+                  {sub.subCategoryEmoji
+                    ? <span className="text-[13px] leading-none">{sub.subCategoryEmoji}</span>
+                    : <div className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: color }} />
+                  }
                   <span className="text-text-sub text-[13px]">{sub.subCategoryName}</span>
                 </div>
                 <span

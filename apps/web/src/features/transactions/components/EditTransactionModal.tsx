@@ -205,7 +205,7 @@ export const EditTransactionModal = ({ transaction, onClose }: Props) => {
                     </p>
                     {subs.map((s) => (
                       <SelectItem key={s.id} value={String(s.id)}>
-                        {s.name}
+                        {s.emoji ? `${s.emoji} ${s.name}` : s.name}
                       </SelectItem>
                     ))}
                   </div>

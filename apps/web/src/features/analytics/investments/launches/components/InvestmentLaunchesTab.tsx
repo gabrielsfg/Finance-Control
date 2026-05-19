@@ -72,7 +72,7 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
             <ArrowDownLeft size={18} className="text-green" strokeWidth={1.75} />
           </div>
           <p className="font-display font-700 text-text text-[16px]">Total comprado</p>
-          <p className="font-money font-700 text-green mt-1 text-[20px]">{formatCurrency(totalBought / 100)}</p>
+          <p className="font-money font-700 text-text mt-1 text-[20px]">{formatCurrency(totalBought / 100)}</p>
           <p className="text-text-muted mt-0.5 text-[12px]">
             {summary?.buyCount ?? 0} operações
           </p>
@@ -102,7 +102,7 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
             <div style={{ height: 240 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={monthPoints} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="30%">
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <CartesianGrid stroke="var(--border-chart)" />
                   <XAxis
                     dataKey="label"
                     tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}

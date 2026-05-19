@@ -130,7 +130,7 @@ export function ProjectedNetWorthChart({ data }: Props) {
         </div>
         <div>
           <p className="text-text-muted text-[12px]">Projetado em {data.projected.length} meses</p>
-          <p className="font-money font-600 text-green text-[18px]">
+          <p className="font-money font-600 text-text text-[18px]">
             {formatCurrency(projected24 / 100)}
           </p>
           {monthsUntilTarget !== null && targetAmount !== null && (
@@ -144,7 +144,7 @@ export function ProjectedNetWorthChart({ data }: Props) {
       <div className="w-full" style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <CartesianGrid stroke="var(--border-chart)" />
             <XAxis
               dataKey="label"
               tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }}

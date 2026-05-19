@@ -1,14 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import type { DaySpend, DayHeatmapState } from "@/lib/types/analytics.types";
 
 const WEEK_DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-type Props = { data: DaySpend[]; month: string };
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+type Props = { data: DaySpend[]; month: string; onPrev: () => void; onNext: () => void };
 
 const BG: Record<DayHeatmapState, string> = {
   Empty:    "border border-border",
@@ -34,19 +39,39 @@ const TEXT: Record<DayHeatmapState, string> = {
   Income4:  "text-white",
 };
 
-export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
+export const AnalyticsSpendCalendar = ({ data, month, onPrev, onNext }: Props) => {
   const router = useRouter();
-  const firstDate = data[0]?.date ? new Date(data[0].date + "T12:00:00") : new Date();
-  const offset = firstDate.getDay();
-  const year = firstDate.getFullYear();
-  const monthNum = firstDate.getMonth();
+  const [year, monthNum1] = month.split("-").map(Number);
+  const monthNum = monthNum1 - 1;
+  const offset = new Date(year, monthNum, 1).getDay();
   const daysInMonth = new Date(year, monthNum + 1, 0).getDate();
 
   const byDate = new Map(data.map((d) => [d.date, d]));
 
+  const monthLabel = `${MONTH_NAMES[monthNum]} ${year}`;
+
   return (
     <div className="border-border bg-surface rounded-xl border p-5">
-      <SectionHeader title="Calendário de Gastos" subtitle={month} />
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="font-display font-700 text-text text-[18px] tracking-tight">Calendário de Gastos</h2>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onPrev}
+            className="text-text-muted hover:text-text hover:bg-surface2 flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <span className="text-text-sub min-w-[120px] text-center text-[13px] font-medium">
+            {monthLabel}
+          </span>
+          <button
+            onClick={onNext}
+            className="text-text-muted hover:text-text hover:bg-surface2 flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+          >
+            <ChevronRight size={15} />
+          </button>
+        </div>
+      </div>
 
       {/* Week day headers */}
       <div className="grid grid-cols-7 mb-1">
@@ -102,15 +127,21 @@ export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
                     : formatCurrency(expense / 100).replace("R$ ", "")}
                 </span>
               )}
-              {/* vs last month indicator dot */}
+              {/* vs last month arrow */}
               {vsLast !== null && expense > 0 && (
                 <div
-                  className={cn(
-                    "absolute top-1 right-1 h-1.5 w-1.5 rounded-full",
-                    vsLast > 0 ? "bg-red/70" : "bg-green/70",
-                  )}
+                  className="absolute top-0.5 right-0.5 text-white"
                   title={vsLast > 0 ? `+${formatCurrency(vsLast / 100)} vs mês anterior` : `${formatCurrency(vsLast / 100)} vs mês anterior`}
-                />
+                >
+                  {vsLast > 0
+                    ? <ArrowUp size={13} strokeWidth={3} />
+                    : <ArrowDown size={13} strokeWidth={3} />
+                  }
+                </div>
+              )}
+              {/* neutral: no movement */}
+              {state === "Empty" && (
+                <span className="text-text-muted text-[11px] leading-none mt-0.5">—</span>
               )}
             </button>
           );
@@ -138,9 +169,9 @@ export const AnalyticsSpendCalendar = ({ data, month }: Props) => {
           <span className="text-text-muted text-[11px]">Sem movimentação</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-red/70" />
+          <ArrowUp size={10} strokeWidth={2.5} className="text-text-muted" />
           <span className="text-text-muted text-[11px]">Mais que mês anterior</span>
-          <div className="h-2 w-2 rounded-full bg-green/70 ml-1" />
+          <ArrowDown size={10} strokeWidth={2.5} className="text-text-muted ml-1" />
           <span className="text-text-muted text-[11px]">Menos que mês anterior</span>
         </div>
       </div>

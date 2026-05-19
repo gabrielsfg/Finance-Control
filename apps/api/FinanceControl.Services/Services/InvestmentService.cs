@@ -78,8 +78,8 @@ namespace FinanceControl.Services.Services
             await using var context = _contextFactory.CreateDbContext();
 
             return await context.InvestmentTransactions
-                .Where(t => t.InvestmentId == investmentId && t.UserId == userId)
                 .Include(t => t.Investment)
+                .Where(t => t.InvestmentId == investmentId && t.UserId == userId)
                 .OrderByDescending(t => t.Date)
                 .Select(t => new InvestmentTransactionDto
                 {
@@ -102,8 +102,8 @@ namespace FinanceControl.Services.Services
             await using var context = _contextFactory.CreateDbContext();
 
             return await context.InvestmentDividends
-                .Where(d => d.InvestmentId == investmentId && d.UserId == userId)
                 .Include(d => d.Investment)
+                .Where(d => d.InvestmentId == investmentId && d.UserId == userId)
                 .OrderByDescending(d => d.Date)
                 .Select(d => new InvestmentDividendDto
                 {

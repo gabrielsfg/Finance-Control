@@ -15,19 +15,30 @@ import Link from "next/link";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
-import { MOCK_ANALYTICS_MONTHLY } from "@/lib/mocks";
+import { analyticsApi } from "@/lib/api/analytics";
 
 type IncomeExpenseItem = {
   month: number;
   year: number;
+  label?: string;
   totalIncome: number;
   totalExpense: number;
 };
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-const fetchMonthlyEvolution = (): Promise<IncomeExpenseItem[]> =>
-  Promise.resolve(MOCK_ANALYTICS_MONTHLY as IncomeExpenseItem[]);
+function getLast12MonthsRange() {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const start = new Date(now.getFullYear() - 1, now.getMonth() + 1, 1);
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  return { startDate: fmt(start), finishDate: fmt(end) };
+}
+
+const fetchMonthlyEvolution = (): Promise<IncomeExpenseItem[]> => {
+  const { startDate, finishDate } = getLast12MonthsRange();
+  return analyticsApi.getIncomeExpense(startDate, finishDate);
+};
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -88,7 +99,7 @@ export const MonthlyEvolutionChart = () => {
                     <stop offset="95%" stopColor="var(--red)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <CartesianGrid stroke="var(--border-chart)" />
                 <XAxis
                   dataKey="label"
                   tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}

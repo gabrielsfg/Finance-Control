@@ -29,8 +29,7 @@ export const AccountsNetWorthHero = ({
   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
     <StatCard
       label="Patrimônio Líquido"
-      value={Math.abs(netWorth / 100)}
-      showNegative={netWorth < 0}
+      value={netWorth / 100}
       change={netWorthChange}
       previousValue={previousNetWorth !== undefined ? previousNetWorth / 100 : undefined}
       icon={TrendingUp}
@@ -38,8 +37,7 @@ export const AccountsNetWorthHero = ({
     />
     <StatCard
       label="Fatura Atual"
-      value={totalInvoice / 100}
-      showNegative={totalInvoice > 0}
+      value={-(totalInvoice / 100)}
       change={invoiceChange}
       previousValue={previousInvoice !== undefined ? previousInvoice / 100 : undefined}
       lowerIsBetter

@@ -25,6 +25,7 @@ export type BudgetAllocation = {
   id: number;
   subCategoryId: number;
   subCategoryName: string;
+  subCategoryEmoji?: string | null;
   categoryName: string;
   categoryColor: string | null;
   areaName: string;

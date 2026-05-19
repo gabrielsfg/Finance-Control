@@ -97,7 +97,7 @@ function RecurringDetail({ item, onEdit, onCancel, onReactivate }: {
 
       {/* Details */}
       <div className="border-border divide-border divide-y rounded-xl border px-4">
-        <DetailRow icon={Tag}      label="Subcategoria"  value={item.subCategoryName} />
+        <DetailRow icon={Tag}      label="Subcategoria"  value={item.subCategoryEmoji ? `${item.subCategoryEmoji} ${item.subCategoryName}` : item.subCategoryName} />
         <DetailRow icon={Wallet}   label="Conta"         value={item.accountName} />
         <DetailRow icon={RefreshCw} label="Recorrência"  value={RECURRENCE_LABELS[item.recurrence]} />
         <DetailRow icon={Calendar} label="Início"        value={startDate} />
@@ -229,7 +229,7 @@ function InstallmentDetail({ item, onEdit }: {
       {/* Details */}
       <div className="border-border divide-border divide-y rounded-xl border px-4">
         <DetailRow icon={Wallet}   label="Conta"         value={item.accountName} />
-        <DetailRow icon={Tag}      label="Subcategoria"  value={item.subCategoryName} />
+        <DetailRow icon={Tag}      label="Subcategoria"  value={item.subCategoryEmoji ? `${item.subCategoryEmoji} ${item.subCategoryName}` : item.subCategoryName} />
         <DetailRow icon={Calendar} label="Início"        value={transactionDate} />
         <DetailRow icon={Calendar} label="Término"       value={endDate} />
         {item.paymentMethod && (

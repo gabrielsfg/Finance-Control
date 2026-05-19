@@ -53,7 +53,7 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
               <Wallet size={18} className="text-green" strokeWidth={1.75} />
             </div>
             <p className="font-display font-700 text-text text-[16px]">Patrimônio atual</p>
-            <p className="font-money font-700 text-green mt-1 text-[20px]">
+            <p className="font-money font-700 text-text mt-1 text-[20px]">
               {formatCurrency(data.currentValue / 100)}
             </p>
           </div>

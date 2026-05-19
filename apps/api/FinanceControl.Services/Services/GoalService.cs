@@ -3,6 +3,7 @@ using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
+using FinanceControl.Shared.Dtos.Response.Investment;
 using FinanceControl.Shared.Enums;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -437,6 +438,44 @@ namespace FinanceControl.Services.Services
             return Result<GoalResponseDto>.Success(MapToResponse(goal, 0));
         }
 
+        public async Task<Result<IReadOnlyList<InvestmentTransactionDto>>> GetInvestmentTransactionsAsync(int userId, int id)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var goal = await context.Goals.FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId);
+            if (goal is null) return Result<IReadOnlyList<InvestmentTransactionDto>>.Failure("Goal not found.");
+            if (goal.Type != EnumGoalType.Investment)
+                return Result<IReadOnlyList<InvestmentTransactionDto>>.Failure("Only investment goals have investment transactions.");
+
+            var query = context.InvestmentTransactions
+                .Where(t => t.UserId == userId);
+
+            if (goal.TargetTicker is not null)
+                query = query.Where(t => t.Investment.Ticker == goal.TargetTicker);
+            else if (goal.TargetAssetType.HasValue)
+                query = query.Where(t => t.Investment.AssetType == goal.TargetAssetType.Value);
+
+            var txs = await query
+                .Include(t => t.Investment)
+                .OrderByDescending(t => t.Date)
+                .Select(t => new InvestmentTransactionDto
+                {
+                    Id           = t.Id,
+                    InvestmentId = t.InvestmentId,
+                    Ticker       = t.Investment.Ticker,
+                    Name         = t.Investment.Name,
+                    Operation    = t.Operation,
+                    Date         = t.Date,
+                    Quantity     = t.Quantity,
+                    UnitPrice    = t.UnitPrice,
+                    OtherCosts   = t.OtherCosts,
+                    TotalValue   = t.TotalValue,
+                })
+                .ToListAsync();
+
+            return Result<IReadOnlyList<InvestmentTransactionDto>>.Success(txs);
+        }
+
         // ── Private helpers ───────────────────────────────────────────────────────
 
         private static async Task<Dictionary<int, int>> ComputeAccountBalancesAsync(
@@ -500,12 +539,13 @@ namespace FinanceControl.Services.Services
         private static async Task<int> GetSystemTransferSubCategoryIdAsync(ApplicationDbContext context, int userId)
         {
             var subCategory = await context.SubCategories
-                .FirstOrDefaultAsync(s => s.IsSystem && s.Name == "Transferência");
+                .FirstOrDefaultAsync(s => s.UserId == userId && s.IsSystem && (s.Name == "Transferência" || s.Name == "Transfer"));
 
             if (subCategory is not null) return subCategory.Id;
 
+            // Fallback: create on demand if seed didn't run (e.g. legacy accounts)
             var category = await context.Categories
-                .FirstOrDefaultAsync(c => c.IsSystem && c.Name == "Outros");
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.IsSystem && (c.Name == "Outros" || c.Name == "Other"));
 
             if (category is null)
             {

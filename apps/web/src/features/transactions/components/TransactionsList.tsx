@@ -35,7 +35,7 @@ function formatDayHeader(dateStr: string) {
   return date.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
 }
 
-type SubcategoryMeta = { id: number; name: string; color: string };
+type SubcategoryMeta = { id: number; name: string; color: string; emoji?: string | null };
 
 type DayGroup = {
   date: string;
@@ -57,6 +57,12 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
   const subColorMap = useMemo(() => {
     const m = new Map<number, string>();
     for (const s of subcategoryMeta) m.set(s.id, s.color);
+    return m;
+  }, [subcategoryMeta]);
+
+  const subEmojiMap = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const s of subcategoryMeta) if (s.emoji) m.set(s.id, s.emoji);
     return m;
   }, [subcategoryMeta]);
 
@@ -102,12 +108,12 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
             <div className="flex items-center gap-3">
               {dayIncome > 0 && (
                 <span className="font-mono text-green text-[12px]">
-                  {formatCurrency(dayIncome / 100)}
+                  +{formatCurrency(dayIncome / 100)}
                 </span>
               )}
               {dayExpense > 0 && (
                 <span className="font-mono text-red text-[12px]">
-                  {formatCurrency(dayExpense / 100)}
+                  -{formatCurrency(dayExpense / 100)}
                 </span>
               )}
             </div>
@@ -118,6 +124,7 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
             const isIncome = t.type === "Income";
             const isTransfer = t.recurringTransactionId !== null && t.type !== "Income" && t.type !== "Expense";
             const subColor = subColorMap.get(t.subCategoryId) ?? getCategoryColor(null, t.subCategoryName);
+            const subEmoji = subEmojiMap.get(t.subCategoryId) ?? t.subCategoryEmoji;
 
             return (
               <div
@@ -173,15 +180,16 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
                       isIncome ? "text-green" : isTransfer ? "text-text-sub" : "text-text",
                     )}
                   >
-                    {formatCurrency(Math.abs(t.value) / 100)}
+                    {isIncome ? "+" : "-"}{formatCurrency(Math.abs(t.value) / 100)}
                   </span>
                   <span
-                    className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                    className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
                     style={{
                       backgroundColor: `rgb(${hexToRgb(subColor)} / 0.15)`,
                       color: subColor,
                     }}
                   >
+                    {subEmoji && <span className="text-[11px] leading-none">{subEmoji}</span>}
                     {t.subCategoryName}
                   </span>
                 </div>

@@ -36,8 +36,7 @@ export const TransactionsSummary = ({
     />
     <StatCard
       label="Despesas"
-      value={totalExpense / 100}
-      showNegative
+      value={-(totalExpense / 100)}
       icon={ArrowDownRight}
       iconColor="#F25F5C"
       change={pctChange(totalExpense, previousTotalExpense)}
@@ -46,8 +45,7 @@ export const TransactionsSummary = ({
     />
     <StatCard
       label="Saldo"
-      value={Math.abs(balance) / 100}
-      showNegative={balance < 0}
+      value={balance / 100}
       icon={Wallet}
       iconColor="#4A9EFF"
       change={pctChange(balance, previousBalance)}

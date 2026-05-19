@@ -24,8 +24,6 @@ if (string.IsNullOrWhiteSpace(jwtToken) || jwtToken.Length < 32)
 //DI Services
 builder.Services.AddAplicationServices();
 builder.Services.AddMemoryCache();
-builder.Services.AddHttpClient<FinanceControl.Domain.Interfaces.Services.ICurrencyService, FinanceControl.Services.Services.CurrencyService>();
-
 
 //DI Repositories
 

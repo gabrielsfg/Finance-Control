@@ -90,7 +90,10 @@ export const TransactionsTable = ({ transactions, search, onEdit, onDelete }: Pr
                 </div>
               </td>
               <td className="hidden px-5 py-3.5 md:table-cell">
-                <span className="text-text-sub text-[13px]">{t.subCategoryName}</span>
+                <span className="text-text-sub flex items-center gap-1 text-[13px]">
+                  {t.subCategoryEmoji && <span className="text-[13px] leading-none">{t.subCategoryEmoji}</span>}
+                  {t.subCategoryName}
+                </span>
               </td>
               <td className="hidden px-5 py-3.5 lg:table-cell">
                 <span className="text-text-sub text-[13px]">{t.accountName}</span>

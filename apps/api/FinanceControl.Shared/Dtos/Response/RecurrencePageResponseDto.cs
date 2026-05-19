@@ -7,6 +7,7 @@ namespace FinanceControl.Shared.Dtos.Response
         public int Id { get; set; }
         public int SubCategoryId { get; set; }
         public string SubCategoryName { get; set; }
+        public string? SubCategoryEmoji { get; set; }
         public int CategoryId { get; set; }
         public string CategoryName { get; set; }
         public string? CategoryColor { get; set; }
@@ -28,6 +29,7 @@ namespace FinanceControl.Shared.Dtos.Response
         public int Id { get; set; }
         public int SubCategoryId { get; set; }
         public string SubCategoryName { get; set; }
+        public string? SubCategoryEmoji { get; set; }
         public int CategoryId { get; set; }
         public string CategoryName { get; set; }
         public string? CategoryColor { get; set; }

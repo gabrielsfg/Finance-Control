@@ -29,8 +29,8 @@ export const AnalyticsSummaryCards = ({ summary }: Props) => {
     {
       label: "Melhor Mês",
       value: summary.bestMonth.label,
-      sub: `Saldo ${formatCurrency(summary.bestMonth.balance / 100)}`,
-      subColor: "var(--green)",
+      sub: `Saldo ${summary.bestMonth.balance < 0 ? "-" : ""}${formatCurrency(Math.abs(summary.bestMonth.balance) / 100)}`,
+      subColor: summary.bestMonth.balance < 0 ? "var(--red)" : "var(--text)",
       icon: Calendar,
       color: "var(--blue)",
       bg: "bg-blue/10",
@@ -38,8 +38,8 @@ export const AnalyticsSummaryCards = ({ summary }: Props) => {
     {
       label: "Pior Mês",
       value: summary.worstMonth.label,
-      sub: `Saldo ${formatCurrency(summary.worstMonth.balance / 100)}`,
-      subColor: "var(--orange)",
+      sub: `Saldo ${summary.worstMonth.balance < 0 ? "-" : ""}${formatCurrency(Math.abs(summary.worstMonth.balance) / 100)}`,
+      subColor: summary.worstMonth.balance < 0 ? "var(--red)" : "var(--text)",
       icon: AlertTriangle,
       color: "var(--orange)",
       bg: "bg-orange/10",

@@ -19,6 +19,7 @@ export type RecentTransaction = {
   value: number;
   type: "Income" | "Expense" | "Transfer";
   subCategoryName: string;
+  subCategoryEmoji?: string | null;
   categoryName: string;
   isRecurring?: boolean;
   isAutomatic?: boolean;
@@ -26,6 +27,7 @@ export type RecentTransaction = {
 
 export type BudgetSubCategorySummary = {
   subCategoryName: string;
+  subCategoryEmoji?: string | null;
   categoryName: string;
   categoryColor: string | null;
   spent: number;
@@ -47,9 +49,16 @@ export type TopCategoryItem = {
   totalSpent: number;
 };
 
+export type SpendingPredictionItem = {
+  day: number;
+  currentExpense: number | null;
+  historicalAverage: number;
+};
+
 export type DashboardSummary = {
   balanceSummary: BalanceSummary;
   recentTransactions: RecentTransaction[];
   budgetSummary: BudgetSummary | null;
   topCategories: TopCategoryItem[];
+  spendingPrediction: SpendingPredictionItem[];
 };

@@ -18,6 +18,7 @@ namespace FinanceControl.Shared.Dtos.Others
     public class BudgetSubCategorySummaryDto
     {
         public string SubCategoryName { get; set; } = string.Empty;
+        public string? SubCategoryEmoji { get; set; }
         public string CategoryName { get; set; } = string.Empty;
         public string? CategoryColor { get; set; }
         public int Spent { get; set; }
