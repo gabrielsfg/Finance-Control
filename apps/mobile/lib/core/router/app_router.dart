@@ -25,6 +25,7 @@ import '../../features/budgets/presentation/edit_budget_page.dart';
 import '../../features/budgets/presentation/create_budget_step2_page.dart';
 import '../../features/budgets/presentation/create_budget_step3_page.dart';
 import '../../features/budgets/presentation/create_budget_step4_page.dart';
+import '../../features/analytics/presentation/analytics_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/transactions/data/models/transaction_item.dart';
 import '../../features/wishlist/data/models/wishlist_item.dart';
@@ -78,6 +79,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/reset-password',
         builder: (_, _) => const ResetPasswordPage(),
+      ),
+      GoRoute(
+        path: '/analytics',
+        builder: (_, _) => const AnalyticsPage(),
       ),
       GoRoute(
         path: '/transactions/add',

@@ -7,6 +7,7 @@ using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 
 namespace FinanceControl.Services.Services
 {
@@ -81,17 +82,25 @@ namespace FinanceControl.Services.Services
         public async Task<IEnumerable<GetAccountItemResponseDto>> GetAllAccountAsync(int userId)
         {
             var accounts = await _context.Accounts
-                .Where(a => a.UserId == userId)
+                .Where(a => a.UserId == userId && !a.IsSystem)
                 .OrderBy(a => a.Name)
                 .Select(a => new GetAccountItemResponseDto
                 {
                     Id = a.Id,
                     Name = a.Name,
                     Type = a.Type,
-                    CurrentAmount = _context.Transactions
-                        .Where(t => t.AccountId == a.Id && t.UserId == userId)
-                        .Sum(t => t.Type == EnumTransactionType.Income ? t.Value : -t.Value),
-                    IsDefaultAccount = a.IsDefaultAccount
+                    CurrentAmount =
+                        _context.Transactions
+                            .Where(t => t.AccountId == a.Id && t.UserId == userId)
+                            .Sum(t => t.Type == EnumTransactionType.Income  ?  t.Value
+                                    : t.Type == EnumTransactionType.Expense ? -t.Value
+                                    : t.Type == EnumTransactionType.Transfer ? -t.Value
+                                    : 0) +
+                        _context.Transactions
+                            .Where(t => t.DestinationAccountId == a.Id && t.UserId == userId && t.Type == EnumTransactionType.Transfer)
+                            .Sum(t => (int?)t.Value) ?? 0,
+                    IsDefaultAccount = a.IsDefaultAccount,
+                    CreditLimit = a.CreditLimit
                 })
                 .ToListAsync();
 
@@ -100,14 +109,20 @@ namespace FinanceControl.Services.Services
 
         public async Task<GetAccountByIdResponseDto> GetAccountByIdAsync(int id, int userId)
         {
-            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId == userId && a.Id == id);
+            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId == userId && a.Id == id && !a.IsSystem);
 
             if (account == null)
                 return null;
 
-            var currentAmount = await _context.Transactions
+            var outbound = await _context.Transactions
                 .Where(t => t.AccountId == id && t.UserId == userId)
-                .SumAsync(t => t.Type == EnumTransactionType.Income ? t.Value : -t.Value);
+                .SumAsync(t => t.Type == EnumTransactionType.Income  ?  t.Value
+                             : t.Type == EnumTransactionType.Expense ? -t.Value
+                             : -t.Value); // Transfer out
+            var inbound = await _context.Transactions
+                .Where(t => t.DestinationAccountId == id && t.UserId == userId && t.Type == EnumTransactionType.Transfer)
+                .SumAsync(t => (int?)t.Value) ?? 0;
+            var currentAmount = outbound + inbound;
 
             var rawTransactions = await _context.Transactions
                 .Where(t => t.UserId == userId && t.AccountId == id)
@@ -121,6 +136,7 @@ namespace FinanceControl.Services.Services
                     t.Value,
                     t.Type,
                     SubCategoryName = t.SubCategory.Name,
+                    SubCategoryEmoji = t.SubCategory.Emoji,
                     CategoryName = t.SubCategory.Category.Name
                 })
                 .ToListAsync();
@@ -132,6 +148,7 @@ namespace FinanceControl.Services.Services
                 Value = t.Value,
                 Type = t.Type,
                 SubCategoryName = t.SubCategoryName,
+                SubCategoryEmoji = t.SubCategoryEmoji,
                 CategoryName = t.CategoryName
             }).ToList();
 
@@ -166,6 +183,47 @@ namespace FinanceControl.Services.Services
 
             await _context.SaveChangesAsync();
 
+            if (requestDto.NewBalance.HasValue)
+            {
+                var outSum = await _context.Transactions
+                    .Where(t => t.AccountId == account.Id && t.UserId == userId)
+                    .SumAsync(t => t.Type == EnumTransactionType.Income  ?  t.Value
+                                 : t.Type == EnumTransactionType.Expense ? -t.Value
+                                 : -t.Value);
+                var inSum = await _context.Transactions
+                    .Where(t => t.DestinationAccountId == account.Id && t.UserId == userId && t.Type == EnumTransactionType.Transfer)
+                    .SumAsync(t => (int?)t.Value) ?? 0;
+                var currentBalance = outSum + inSum;
+
+                var diff = requestDto.NewBalance.Value - currentBalance;
+                if (diff != 0)
+                {
+                    var subCategoryId = await _context.SubCategories
+                        .Where(s => s.UserId == userId &&
+                                    (diff > 0
+                                        ? (s.Name == "Other income" || s.Name == "Outras receitas")
+                                        : (s.Name == "Other expense" || s.Name == "Outras despesas")))
+                        .Select(s => (int?)s.Id)
+                        .FirstOrDefaultAsync();
+
+                    if (subCategoryId.HasValue)
+                    {
+                        _context.Transactions.Add(new Transaction
+                        {
+                            UserId = userId,
+                            AccountId = account.Id,
+                            SubCategoryId = subCategoryId.Value,
+                            Value = Math.Abs(diff),
+                            Type = diff > 0 ? EnumTransactionType.Income : EnumTransactionType.Expense,
+                            PaymentType = EnumPaymentType.OneTime,
+                            TransactionDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                            Description = "Balance adjustment",
+                        });
+                        await _context.SaveChangesAsync();
+                    }
+                }
+            }
+
             var accounts = await GetAllAccountAsync(userId);
             return Result<IEnumerable<GetAccountItemResponseDto>>.Success(accounts);
         }
@@ -182,6 +240,58 @@ namespace FinanceControl.Services.Services
 
             var accounts = await GetAllAccountAsync(userId);
             return Result<IEnumerable<GetAccountItemResponseDto>>.Success(accounts);
+        }
+
+        public async Task<IEnumerable<BalanceHistoryItemDto>?> GetBalanceHistoryAsync(int accountId, int userId, int days = 30)
+        {
+            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == accountId && a.UserId == userId && !a.IsSystem);
+            if (account == null)
+                return null;
+
+            var cutoff = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-(days - 1));
+
+            var outbound = await _context.Transactions
+                .Where(t => t.AccountId == accountId && t.UserId == userId)
+                .Select(t => new { t.TransactionDate, t.Value, t.Type, Direction = 1 })
+                .ToListAsync();
+
+            var inbound = await _context.Transactions
+                .Where(t => t.DestinationAccountId == accountId && t.UserId == userId && t.Type == EnumTransactionType.Transfer)
+                .Select(t => new { t.TransactionDate, t.Value, t.Type, Direction = 2 })
+                .ToListAsync();
+
+            int Delta(int value, EnumTransactionType type, int direction) =>
+                direction == 2 ? value :
+                type == EnumTransactionType.Income ? value : -value;
+
+            // Balance before the window
+            var baseBalance =
+                outbound.Where(t => t.TransactionDate < cutoff).Sum(t => Delta(t.Value, t.Type, t.Direction)) +
+                inbound.Where(t => t.TransactionDate < cutoff).Sum(t => Delta(t.Value, t.Type, t.Direction));
+
+            var allInWindow = outbound.Where(t => t.TransactionDate >= cutoff)
+                .Select(t => (t.TransactionDate, Delta: Delta(t.Value, t.Type, t.Direction)))
+                .Concat(inbound.Where(t => t.TransactionDate >= cutoff)
+                    .Select(t => (t.TransactionDate, Delta: Delta(t.Value, t.Type, t.Direction))))
+                .ToList();
+
+            var dailyDeltas = allInWindow
+                .GroupBy(t => t.TransactionDate)
+                .ToDictionary(g => g.Key, g => g.Sum(t => t.Delta));
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var result = new List<BalanceHistoryItemDto>(days);
+            var running = baseBalance;
+
+            for (var d = cutoff; d <= today; d = d.AddDays(1))
+            {
+                if (dailyDeltas.TryGetValue(d, out var delta))
+                    running += delta;
+
+                result.Add(new BalanceHistoryItemDto { Date = d, Balance = running });
+            }
+
+            return result;
         }
     }
 }

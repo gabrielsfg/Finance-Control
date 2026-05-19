@@ -8,6 +8,7 @@ namespace FinanceControl.Shared.Dtos.Response
         public int? BudgetId { get; set; }
         public int SubCategoryId { get; set; }
         public string SubCategoryName { get; set; }
+        public string? SubCategoryEmoji { get; set; }
         public int AccountId { get; set; }
         public string AccountName { get; set; }
         public int? RecurringTransactionId { get; set; }
@@ -22,5 +23,6 @@ namespace FinanceControl.Shared.Dtos.Response
         public int? TotalInstallments { get; set; }
         public int? AreaId { get; set; }
         public string? AreaName { get; set; }
+        public List<GetTagResponseDto> Tags { get; set; } = new();
     }
 }

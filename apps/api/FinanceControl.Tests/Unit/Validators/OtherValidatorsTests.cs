@@ -98,51 +98,51 @@ namespace FinanceControl.Tests.Unit.Validators
             Assert.True(v.Validate(dto).IsValid);
         }
 
-        // --- WishlistValidators ---
+        // --- GoalValidators ---
 
         [Fact]
-        public void CreateWishlistItem_Valid_Passes()
+        public void CreateGoal_Valid_Passes()
         {
-            var v = new CreateWishlistItemValidator();
-            var dto = new CreateWishlistItemRequestDto { Name = "PS5" };
+            var v = new CreateGoalValidator();
+            var dto = new CreateGoalRequestDto { Name = "PS5", Type = EnumGoalType.Item, TargetAmount = 500000 };
             Assert.True(v.Validate(dto).IsValid);
         }
 
         [Fact]
-        public void CreateWishlistItem_EmptyName_Fails()
+        public void CreateGoal_EmptyName_Fails()
         {
-            var v = new CreateWishlistItemValidator();
-            Assert.False(v.Validate(new CreateWishlistItemRequestDto { Name = "" }).IsValid);
+            var v = new CreateGoalValidator();
+            Assert.False(v.Validate(new CreateGoalRequestDto { Name = "", Type = EnumGoalType.Item, TargetAmount = 100 }).IsValid);
         }
 
         [Fact]
-        public void CreateWishlistItem_NameTooLong_Fails()
+        public void CreateGoal_NameTooLong_Fails()
         {
-            var v = new CreateWishlistItemValidator();
-            var dto = new CreateWishlistItemRequestDto { Name = new string('x', 201) };
+            var v = new CreateGoalValidator();
+            var dto = new CreateGoalRequestDto { Name = new string('x', 201), Type = EnumGoalType.Item, TargetAmount = 100 };
             Assert.False(v.Validate(dto).IsValid);
         }
 
         [Fact]
-        public void CreateWishlistItem_NegativeTargetPrice_Fails()
+        public void CreateGoal_ZeroTargetAmount_Fails()
         {
-            var v = new CreateWishlistItemValidator();
-            var dto = new CreateWishlistItemRequestDto { Name = "Item", TargetPrice = -1 };
+            var v = new CreateGoalValidator();
+            var dto = new CreateGoalRequestDto { Name = "Goal", Type = EnumGoalType.Investment, TargetAmount = 0 };
             Assert.False(v.Validate(dto).IsValid);
         }
 
         [Fact]
-        public void RecordWishlistPrice_Valid_Passes()
+        public void RecordGoalCheckpoint_Valid_Passes()
         {
-            var v = new RecordWishlistPriceValidator();
-            Assert.True(v.Validate(new RecordWishlistPriceRequestDto { Price = 100 }).IsValid);
+            var v = new RecordGoalCheckpointValidator();
+            Assert.True(v.Validate(new RecordGoalCheckpointRequestDto { Amount = 100 }).IsValid);
         }
 
         [Fact]
-        public void RecordWishlistPrice_Zero_Fails()
+        public void RecordGoalCheckpoint_Zero_Fails()
         {
-            var v = new RecordWishlistPriceValidator();
-            Assert.False(v.Validate(new RecordWishlistPriceRequestDto { Price = 0 }).IsValid);
+            var v = new RecordGoalCheckpointValidator();
+            Assert.False(v.Validate(new RecordGoalCheckpointRequestDto { Amount = 0 }).IsValid);
         }
 
         // --- BudgetSubCategoryAllocationValidator ---

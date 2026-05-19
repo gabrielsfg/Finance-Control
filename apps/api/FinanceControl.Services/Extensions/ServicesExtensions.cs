@@ -14,13 +14,14 @@ namespace FinanceControl.Services.Extensions
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IBudgetService, BudgetService>();
             services.AddScoped<ISubCategoryService, SubCategoryService>();
-            services.AddScoped<IAreaService, AreaService>();
-            services.AddScoped<IAreaCategoryService, AreaCategoryService>();
-            services.AddScoped<IBudgetSubCategoryAllocationService, BudgetSubCategoryAllocationService>();
             services.AddScoped<ITransactionService, TransactionService>();
-            services.AddSingleton<IBankService, BankService>();
-            services.AddScoped<IWishlistService, WishlistService>();
-            // ICurrencyService / CurrencyService registered via AddHttpClient in Program.cs
+            services.AddScoped<ITagService, TagService>();
+            services.AddScoped<IGoalService, GoalService>();
+            services.AddScoped<IAnalyticsService, AnalyticsService>();
+            services.AddScoped<IInvestmentService, InvestmentService>();
+            services.AddScoped<ISimulationService, SimulationService>();
+            services.AddScoped<IRecurrencePageService, RecurrencePageService>();
+            services.AddHttpClient();
 
             services.AddSingleton<RecurringTransactionJobService>();
             services.AddHostedService<RecurringTransactionHostedService>();

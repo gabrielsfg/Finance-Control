@@ -1,0 +1,131 @@
+"use client";
+
+import { useState } from "react";
+import { Loader2, Plus, Target, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BudgetCard } from "@/features/budgets/components/BudgetCard";
+import { BudgetsSummaryBar } from "@/features/budgets/components/BudgetsSummaryBar";
+import { CreateBudgetModal } from "@/features/budgets/components/CreateBudgetModal";
+import { EditBudgetModal } from "@/features/budgets/components/EditBudgetModal";
+import { useBudgets } from "@/features/budgets/hooks/useBudgets";
+import { usePageNova } from "@/lib/hooks/usePageHeader";
+import type { Budget } from "@/lib/types/budgets.types";
+
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+export function BudgetsPage() {
+  const { data: budgets, isLoading, isError } = useBudgets();
+  const [showCreate, setShowCreate] = useState(false);
+  const [editTarget, setEditTarget] = useState<Budget | null>(null);
+
+  usePageNova("Novo orçamento", () => setShowCreate(true));
+
+  const now = new Date();
+  const [monthOffset, setMonthOffset] = useState(0);
+  const displayDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const monthLabel = `${MONTH_NAMES[displayDate.getMonth()]} ${displayDate.getFullYear()}`;
+  const daysInMonth = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0).getDate();
+  const dayOfMonth = monthOffset === 0 ? now.getDate() : (monthOffset < 0 ? daysInMonth : 1);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 size={24} className="text-green animate-spin" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-text-sub text-[14px]">Erro ao carregar orçamentos. Tente novamente.</p>
+      </div>
+    );
+  }
+
+  const active   = budgets?.filter((b) => b.isActive)  ?? [];
+  const inactive = budgets?.filter((b) => !b.isActive) ?? [];
+  const hasBudgets = !!budgets?.length;
+
+  return (
+    <>
+      <div className="flex flex-col gap-5">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Orçamentos</h1>
+            <p className="text-text-muted mt-0.5 text-[13px]">
+              {hasBudgets ? `${budgets!.length} orçamento${budgets!.length !== 1 ? "s" : ""}` : "Nenhum orçamento"}
+            </p>
+          </div>
+          {/* Month navigation */}
+          <div className="border-border bg-surface flex items-center gap-1 rounded-xl border px-2 py-1.5">
+            <button
+              onClick={() => setMonthOffset((o) => o - 1)}
+              className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <span className="text-text min-w-[130px] text-center text-[13px] font-medium">{monthLabel}</span>
+            <button
+              onClick={() => setMonthOffset((o) => o + 1)}
+              disabled={monthOffset >= 0}
+              className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2 disabled:opacity-30"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+
+        {hasBudgets ? (
+          <>
+            <BudgetsSummaryBar budgets={budgets!} daysInMonth={daysInMonth} dayOfMonth={dayOfMonth} />
+
+            {/* Active budgets */}
+            {active.length > 0 && (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {active.map((budget) => (
+                  <BudgetCard key={budget.id} budget={budget} onEdit={setEditTarget} />
+                ))}
+              </div>
+            )}
+
+            {/* Inactive budgets */}
+            {inactive.length > 0 && (
+              <div>
+                <p className="text-text-muted mb-3 text-[12px] font-medium uppercase tracking-[0.06em]">
+                  Orçamentos Inativos
+                </p>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  {inactive.map((budget) => (
+                    <BudgetCard key={budget.id} budget={budget} onEdit={setEditTarget} inactive />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border py-16 text-center">
+            <div className="bg-surface2 mb-4 flex h-12 w-12 items-center justify-center rounded-[12px]">
+              <Target size={22} className="text-text-muted" strokeWidth={1.5} />
+            </div>
+            <p className="font-500 text-text text-[15px]">Nenhum orçamento criado</p>
+            <p className="text-text-muted mt-1 text-[13px]">
+              Crie um orçamento para acompanhar e controlar seus gastos mensais.
+            </p>
+            <Button size="sm" className="mt-5" onClick={() => setShowCreate(true)}>
+              <Plus size={14} />
+              Criar orçamento
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <CreateBudgetModal open={showCreate} onClose={() => setShowCreate(false)} />
+      <EditBudgetModal budget={editTarget} onClose={() => setEditTarget(null)} />
+    </>
+  );
+}

@@ -116,7 +116,8 @@ namespace FinanceControl.Services.Services
             {
                 CurrencyCode = prefs.CurrencyCode,
                 Locale = prefs.Locale,
-                Country = user?.Country
+                Country = user?.Country,
+                AnalyticsConfig = prefs.AnalyticsConfig
             };
         }
 
@@ -139,13 +140,17 @@ namespace FinanceControl.Services.Services
             if (!string.IsNullOrWhiteSpace(requestDto.Country))
                 user.Country = requestDto.Country.Trim().ToUpper();
 
+            if (requestDto.AnalyticsConfig is not null)
+                prefs.AnalyticsConfig = requestDto.AnalyticsConfig;
+
             await _context.SaveChangesAsync();
 
             return new UserPreferencesResponseDto
             {
                 CurrencyCode = prefs.CurrencyCode,
                 Locale = prefs.Locale,
-                Country = user.Country
+                Country = user.Country,
+                AnalyticsConfig = prefs.AnalyticsConfig
             };
         }
 
@@ -285,8 +290,20 @@ namespace FinanceControl.Services.Services
             var areas = _context.Areas.Where(a => a.UserId == userId);
             _context.Areas.RemoveRange(areas);
 
+            var investmentDividends = _context.InvestmentDividends.Where(d => d.UserId == userId);
+            _context.InvestmentDividends.RemoveRange(investmentDividends);
+
+            var investmentTransactions = _context.InvestmentTransactions.Where(t => t.UserId == userId);
+            _context.InvestmentTransactions.RemoveRange(investmentTransactions);
+
+            var investments = _context.Investments.Where(i => i.UserId == userId);
+            _context.Investments.RemoveRange(investments);
+
             var accounts = _context.Accounts.Where(a => a.UserId == userId);
             _context.Accounts.RemoveRange(accounts);
+
+            var goals = _context.Goals.Where(g => g.UserId == userId);
+            _context.Goals.RemoveRange(goals);
 
             var subCategories = _context.SubCategories.Where(s => s.UserId == userId);
             _context.SubCategories.RemoveRange(subCategories);
@@ -320,6 +337,22 @@ namespace FinanceControl.Services.Services
                 Name = "BalanceUpdate",
                 IsSystem = true
             });
+
+            // System transfer category/subcategory (used by goal contributions and transfers)
+            var transferCategoryName = preferredLanguage == "pt-BR" ? "Outros" : "Other";
+            var transferSubName      = preferredLanguage == "pt-BR" ? "Transferência" : "Transfer";
+            var transferCategory = new Category { UserId = userId, Name = transferCategoryName, IsSystem = true };
+            _context.Categories.Add(transferCategory);
+            await _context.SaveChangesAsync();
+
+            _context.SubCategories.Add(new SubCategory
+            {
+                UserId     = userId,
+                CategoryId = transferCategory.Id,
+                Name       = transferSubName,
+                IsSystem   = true,
+            });
+            await _context.SaveChangesAsync();
 
             // Default categories and subcategories
             foreach (var (categoryName, subcategoryNames) in UserSeedData.GetCategories(preferredLanguage))

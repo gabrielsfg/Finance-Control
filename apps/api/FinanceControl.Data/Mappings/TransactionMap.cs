@@ -57,6 +57,11 @@ namespace FinanceControl.Data.Mappings
                 .HasForeignKey(t => t.AccountId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.HasOne(t => t.DestinationAccount)
+                .WithMany(a => a.IncomingTransfers)
+                .HasForeignKey(t => t.DestinationAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasOne(t => t.RecurringTransaction)
                 .WithMany(rt => rt.Transactions)
                 .HasForeignKey(t => t.RecurringTransactionId)

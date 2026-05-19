@@ -47,15 +47,17 @@ namespace FinanceControl.WebApi.Controllers
             var recentTask = _transactionService.GetRecentTransactionsAsync(filter);
             var budgetTask = _transactionService.GetBudgetSummaryAsync(filter);
             var topCategoriesTask = _transactionService.GetTopCategoriesAsync(filter);
+            var predictionTask = _transactionService.GetSpendingPredictionAsync(filter);
 
-            await Task.WhenAll(balanceTask, recentTask, budgetTask, topCategoriesTask);
+            await Task.WhenAll(balanceTask, recentTask, budgetTask, topCategoriesTask, predictionTask);
 
             var result = new MainPageSummaryResponseDto
             {
                 BalanceSummary = balanceTask.Result,
                 RecentTransactions = recentTask.Result,
                 BudgetSummary = budgetTask.Result,
-                TopCategories = topCategoriesTask.Result
+                TopCategories = topCategoriesTask.Result,
+                SpendingPrediction = predictionTask.Result
             };
 
             return Ok(result);

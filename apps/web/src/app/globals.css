@@ -1,0 +1,144 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* Fonts */
+  --font-display: var(--font-space-grotesk);
+  --font-sans: var(--font-dm-sans);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* shadcn semantic tokens → design system */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--green);
+  --color-primary-foreground: #000000;
+  --color-secondary: var(--surface2);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--surface2);
+  --color-muted-foreground: var(--text-sub);
+  --color-accent: var(--surface2);
+  --color-accent-foreground: var(--text);
+  --color-destructive: var(--red);
+  --color-border: var(--border-color);
+  --color-border-light: var(--border-light);
+  --color-input: var(--surface2);
+  --color-ring: var(--green);
+
+  /* Chart colors */
+  --color-chart-1: var(--green);
+  --color-chart-2: var(--red);
+  --color-chart-3: var(--purple);
+  --color-chart-4: var(--blue);
+  --color-chart-5: var(--orange);
+
+  /* Border radius scale — matches design system */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+  --radius-3xl: 16px;
+
+  /* Design system accent colors as Tailwind utilities */
+  --color-green: var(--green);
+  --color-red: var(--red);
+  --color-purple: var(--purple);
+  --color-blue: var(--blue);
+  --color-orange: var(--orange);
+  --color-yellow: var(--yellow);
+  --color-cyan: var(--cyan);
+
+  /* Surface tokens */
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface2);
+  --color-surface3: var(--surface3);
+
+  /* Text tokens */
+  --color-text: var(--text);
+  --color-text-sub: var(--text-sub);
+  --color-text-muted: var(--text-muted);
+
+  /* Sidebar tokens */
+  --color-sidebar: var(--surface);
+  --color-sidebar-foreground: var(--text);
+  --color-sidebar-primary: var(--green);
+  --color-sidebar-primary-foreground: #000000;
+  --color-sidebar-accent: var(--surface2);
+  --color-sidebar-accent-foreground: var(--text);
+  --color-sidebar-border: var(--border-color);
+  --color-sidebar-ring: var(--green);
+}
+
+/* ── Dark theme (primary) ─────────────────────────────────────────── */
+:root {
+  color-scheme: dark;
+
+  --bg: #08090c;
+  --surface: #0e1117;
+  --surface2: #141920;
+  --surface3: #1a2030;
+  --border-color: #1e2635;
+  --border-light: #252e3d;
+  --border-chart: #2a3447;
+
+  --text: #edf2f7;
+  --text-sub: #8a95a3;
+  --text-muted: #6b7a8d;
+
+  --green: #00c98d;
+  --red: #f25f5c;
+  --purple: #7c6fe0;
+  --blue: #4a9eff;
+  --orange: #f5a623;
+  --yellow: #f5ce42;
+  --cyan: #00d4a0;
+}
+
+/* ── Light theme ──────────────────────────────────────────────────── */
+.light {
+  color-scheme: light;
+
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --surface2: #f0f4f8;
+  --surface3: #e6ecf3;
+  --border-color: #dde4ef;
+  --border-light: #e8edf5;
+  --border-chart: #c8d3e0;
+
+  --text: #0f1318;
+  --text-sub: #566070;
+  --text-muted: #90a0b0;
+
+  --green: #008a55;
+  --red: #cc1a1a;
+  --purple: #5648c8;
+  --blue: #1a6fd4;
+  --orange: #c97500;
+  --yellow: #b89000;
+  --cyan: #009070;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  /* Monetary values always use mono font */
+  .font-money {
+    font-family: var(--font-jetbrains-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+}

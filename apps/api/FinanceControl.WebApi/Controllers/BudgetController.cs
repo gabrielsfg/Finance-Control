@@ -117,5 +117,21 @@ namespace FinanceControl.WebApi.Controllers
 
             return Ok(result.Value);
         }
+
+        [HttpPatch("{id:int}/activate")]
+        public async Task<IActionResult> ActivateBudgetAsync([FromRoute] int id)
+        {
+            var validationResult = this.ValidatePositiveId(id, "id");
+            if (validationResult is not null)
+                return validationResult;
+
+            var userId = GetUserId();
+            var result = await _budgetService.ActivateBudgetAsync(id, userId);
+
+            if (result.IsFailure)
+                return NotFound(new { error = result.Error });
+
+            return Ok(result.Value);
+        }
     }
 }

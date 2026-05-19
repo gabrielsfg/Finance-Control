@@ -84,7 +84,8 @@ namespace FinanceControl.Services.Services
             {
                 Id = b.Id,
                 Name = b.Name,
-                Recurrence = b.Recurrence
+                Recurrence = b.Recurrence,
+                IsActive = b.IsActive
             }).ToListAsync();
 
             return budgets;
@@ -178,6 +179,7 @@ namespace FinanceControl.Services.Services
                             Id = al.Id,
                             SubCategoryId = al.SubCategoryId,
                             SubCategoryName = al.SubCategory.Name,
+                            SubCategoryEmoji = al.SubCategory.Emoji,
                             ExpectedValue = al.ExpectedValue,
                             SpentValue = spent,
                             AllocationType = al.AllocationType
@@ -326,6 +328,23 @@ namespace FinanceControl.Services.Services
             return Result<IEnumerable<GetAllBudgetResponseDto>>.Success(budgets);
         }
 
+        public async Task<Result<IEnumerable<GetAllBudgetResponseDto>>> ActivateBudgetAsync(int id, int userId)
+        {
+            var budget = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId == userId && b.Id == id);
+            if (budget == null)
+                return Result<IEnumerable<GetAllBudgetResponseDto>>.Failure("Budget not found.");
+
+            var currentActive = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId == userId && b.IsActive && b.Id != id);
+            if (currentActive != null)
+                currentActive.IsActive = false;
+
+            budget.IsActive = true;
+            await _context.SaveChangesAsync();
+
+            var budgets = await GetAllBudgetAsync(userId);
+            return Result<IEnumerable<GetAllBudgetResponseDto>>.Success(budgets);
+        }
+
         private async Task<GetBudgetWithAreasResponseDto> BuildBudgetWithAreasResponse(int budgetId, int userId)
         {
             var budget = await _context.Budgets.FirstAsync(b => b.Id == budgetId && b.UserId == userId);
@@ -365,6 +384,7 @@ namespace FinanceControl.Services.Services
                         Id = al.Id,
                         SubCategoryId = al.SubCategoryId,
                         SubCategoryName = al.SubCategory.Name,
+                        SubCategoryEmoji = al.SubCategory.Emoji,
                         ExpectedValue = al.ExpectedValue,
                         AllocationType = al.AllocationType
                     }).ToList()

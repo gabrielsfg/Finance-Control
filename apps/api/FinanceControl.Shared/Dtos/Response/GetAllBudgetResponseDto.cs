@@ -7,5 +7,6 @@ namespace FinanceControl.Shared.Dtos.Response
         public int Id { get; set; }
         public string Name { get; set; }
         public EnumBudgetRecurrence Recurrence { get; set; }
+        public bool IsActive { get; set; }
     }
 }
