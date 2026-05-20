@@ -280,10 +280,6 @@ namespace FinanceControl.Services.Services
                 .Where(a => _context.Budgets.Any(b => b.Id == a.BudgetId && b.UserId == userId));
             _context.BudgetSubcategoryAllocations.RemoveRange(budgetAllocations);
 
-            var areaCategories = _context.AreaCategories
-                .Where(ac => _context.Areas.Any(a => a.Id == ac.AreaId && a.UserId == userId));
-            _context.AreaCategories.RemoveRange(areaCategories);
-
             var budgets = _context.Budgets.Where(b => b.UserId == userId);
             _context.Budgets.RemoveRange(budgets);
 

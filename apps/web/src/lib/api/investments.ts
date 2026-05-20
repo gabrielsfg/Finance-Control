@@ -8,6 +8,7 @@ import type {
   CreateInvestmentDividendRequest,
   UpdateInvestmentPriceRequest,
 } from "@/lib/types/investments.types";
+import type { PricePoint } from "@/lib/types/market.types";
 
 export const investmentsApi = {
   getPortfolio: async (): Promise<InvestmentPortfolio> => {
@@ -47,6 +48,11 @@ export const investmentsApi = {
 
   updatePrice: async (investmentId: number, dto: UpdateInvestmentPriceRequest): Promise<Investment> => {
     const response = await api.patch<Investment>(`/investment/${investmentId}/price`, dto);
+    return response.data;
+  },
+
+  getPriceHistory: async (investmentId: number): Promise<PricePoint[]> => {
+    const response = await api.get<PricePoint[]>(`/investment/${investmentId}/price-history`);
     return response.data;
   },
 };

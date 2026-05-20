@@ -16,7 +16,6 @@ namespace FinanceControl.Data.Data
         public DbSet<Budget> Budgets { get; set; } 
         public DbSet<SubCategory> SubCategories { get; set; }
         public DbSet<Area> Areas { get; set; }
-        public DbSet<AreaCategory> AreaCategories { get; set; }
         public DbSet<BudgetSubcategoryAllocation> BudgetSubcategoryAllocations { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<RecurringTransaction> RecurringTransactions { get; set; }
@@ -27,6 +26,7 @@ namespace FinanceControl.Data.Data
         public DbSet<Investment> Investments { get; set; }
         public DbSet<InvestmentTransaction> InvestmentTransactions { get; set; }
         public DbSet<InvestmentDividend> InvestmentDividends { get; set; }
+        public DbSet<InvestmentPriceHistory> InvestmentPriceHistories { get; set; }
 
         public override int SaveChanges()
         {

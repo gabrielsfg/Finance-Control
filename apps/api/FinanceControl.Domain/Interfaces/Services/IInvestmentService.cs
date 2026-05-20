@@ -13,5 +13,6 @@ namespace FinanceControl.Domain.Interfaces.Services
         Task<InvestmentPortfolioDto> DeleteTransactionAsync(int transactionId, int userId);
         Task<InvestmentPortfolioDto> RegisterDividendAsync(int userId, CreateInvestmentDividendRequestDto dto);
         Task<InvestmentDto> UpdatePriceAsync(int investmentId, int userId, UpdateInvestmentPriceRequestDto dto);
+        Task<List<InvestmentPriceHistoryDto>> GetPriceHistoryAsync(int investmentId, int userId);
     }
 }

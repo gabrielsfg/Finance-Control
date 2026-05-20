@@ -9,6 +9,7 @@ import type {
   CreateInvestmentDividendRequest,
   UpdateInvestmentPriceRequest,
 } from "@/lib/types/investments.types";
+import type { PricePoint } from "@/lib/types/market.types";
 
 export const useInvestments = () =>
   useQuery<InvestmentPortfolio>({
@@ -70,6 +71,14 @@ export const useRegisterDividend = () => {
     },
   });
 };
+
+export const useInvestmentPriceHistory = (investmentId: number) =>
+  useQuery<PricePoint[]>({
+    queryKey: ["investments", investmentId, "price-history"],
+    queryFn: () => investmentsApi.getPriceHistory(investmentId),
+    enabled: investmentId > 0,
+    staleTime: 5 * 60 * 1000,
+  });
 
 export const useUpdateInvestmentPrice = () => {
   const queryClient = useQueryClient();

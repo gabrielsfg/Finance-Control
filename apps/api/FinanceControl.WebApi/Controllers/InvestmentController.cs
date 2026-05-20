@@ -139,6 +139,23 @@ namespace FinanceControl.WebApi.Controllers
             }
         }
 
+        [HttpGet("{id:int}/price-history")]
+        public async Task<IActionResult> GetPriceHistoryAsync([FromRoute] int id)
+        {
+            var validation = this.ValidatePositiveId(id, "id");
+            if (validation is not null) return validation;
+
+            try
+            {
+                var result = await _investmentService.GetPriceHistoryAsync(id, GetUserId());
+                return Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { error = "Investment not found." });
+            }
+        }
+
         [HttpPatch("{id:int}/price")]
         public async Task<IActionResult> UpdatePriceAsync([FromRoute] int id, [FromBody] UpdateInvestmentPriceRequestDto dto)
         {

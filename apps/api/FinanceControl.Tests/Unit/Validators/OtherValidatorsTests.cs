@@ -38,22 +38,6 @@ namespace FinanceControl.Tests.Unit.Validators
             Assert.False(v.Validate(new CreateSubCategoryRequestDto { Name = "Sub", CategoryId = 0 }).IsValid);
         }
 
-        // --- AreaValidator ---
-
-        [Fact]
-        public void CreateArea_Valid_Passes()
-        {
-            var v = new CreateAreaValidator();
-            Assert.True(v.Validate(new CreateAreaRequestDto { Name = "Living", BudgetId = 1 }).IsValid);
-        }
-
-        [Fact]
-        public void CreateArea_BudgetIdZero_Fails()
-        {
-            var v = new CreateAreaValidator();
-            Assert.False(v.Validate(new CreateAreaRequestDto { Name = "Living", BudgetId = 0 }).IsValid);
-        }
-
         // --- UpdateRecurringTransactionValidator ---
 
         [Fact]
@@ -145,30 +129,5 @@ namespace FinanceControl.Tests.Unit.Validators
             Assert.False(v.Validate(new RecordGoalCheckpointRequestDto { Amount = 0 }).IsValid);
         }
 
-        // --- BudgetSubCategoryAllocationValidator ---
-
-        [Fact]
-        public void AddSubCategoryAllocation_Valid_Passes()
-        {
-            var v = new AddBudgetSubCategoryAllocationValidator();
-            var dto = new AddSubCategoryToBudgetRequestDto
-            {
-                ExpectedValue = 200,
-                AllocationType = EnumAllocationType.Expense,
-            };
-            Assert.True(v.Validate(dto).IsValid);
-        }
-
-        [Fact]
-        public void AddSubCategoryAllocation_ZeroExpectedValue_Fails()
-        {
-            var v = new AddBudgetSubCategoryAllocationValidator();
-            var dto = new AddSubCategoryToBudgetRequestDto
-            {
-                ExpectedValue = 0,
-                AllocationType = EnumAllocationType.Expense,
-            };
-            Assert.False(v.Validate(dto).IsValid);
-        }
     }
 }

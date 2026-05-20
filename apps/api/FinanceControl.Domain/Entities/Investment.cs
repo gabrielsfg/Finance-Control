@@ -16,8 +16,11 @@ namespace FinanceControl.Domain.Entities
         public DateOnly? MaturityDate { get; set; }
         public decimal? ExpectedYieldPct { get; set; }
         public int AccountId { get; set; }
+        public string? LogoUrl { get; set; }
+        public string Currency { get; set; } = "BRL";
 
         public Account Account { get; set; } = null!;
+        public ICollection<InvestmentPriceHistory> PriceHistory { get; set; } = [];
         public ICollection<InvestmentTransaction> Transactions { get; set; } = [];
         public ICollection<InvestmentDividend> Dividends { get; set; } = [];
     }

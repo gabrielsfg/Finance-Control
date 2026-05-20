@@ -26,6 +26,8 @@ FinanceControl.sln
 │   ├── Validations/                # FluentValidation validators
 │   ├── Extensions/ServicesExtensions.cs  # DI registration
 │   └── Seeds/
+├── FinanceControl.Workers/         # IHostedService / BackgroundService implementations
+│   └── (all background workers live here)
 ├── FinanceControl.Shared/          # Shared across projects
 │   ├── Dtos/Request/               # One DTO class per file
 │   ├── Dtos/Response/              # One DTO class per file
@@ -239,8 +241,10 @@ CORS policy `"WebApp"` allows `http://localhost:3000` and `https://localhost:300
 
 ## Background services
 
-- `RecurringTransactionHostedService` — `IHostedService` that drives `RecurringTransactionJobService`
-- `RecurringTransactionJobService` — `Singleton`; processes due recurring transactions and creates the next `Transaction` entries
+All `IHostedService` / `BackgroundService` implementations live in the `FinanceControl.Workers` project. Services that contain the job logic (`XxxJobService`) live in `FinanceControl.Services` and are called by the workers.
+
+- `RecurringTransactionHostedService` (Workers) → drives `RecurringTransactionJobService` (Services)
+- Brapi sync workers and any future scheduled jobs follow the same pattern: hosted service in Workers, logic in Services
 
 ## Naming conventions
 

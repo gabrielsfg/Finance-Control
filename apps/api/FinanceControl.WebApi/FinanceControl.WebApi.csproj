@@ -26,6 +26,7 @@
     <ItemGroup>
       <ProjectReference Include="..\FinanceControl.Services\FinanceControl.Services.csproj" />
       <ProjectReference Include="..\FinanceControl.Shared\FinanceControl.Shared.csproj" />
+      <ProjectReference Include="..\FinanceControl.Workers\FinanceControl.Workers.csproj" />
     </ItemGroup>
 
 </Project>

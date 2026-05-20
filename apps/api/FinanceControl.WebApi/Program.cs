@@ -7,6 +7,8 @@ using FinanceControl.Services.Services;
 using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
+using FinanceControl.Workers;
+using FinanceControl.Services.Brapi;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -22,7 +24,9 @@ if (string.IsNullOrWhiteSpace(jwtToken) || jwtToken.Length < 32)
     throw new InvalidOperationException("AppSettings:Token must be at least 32 characters long.");
 
 //DI Services
-builder.Services.AddAplicationServices();
+builder.Services.AddAplicationServices(builder.Configuration);
+builder.Services.AddHostedService<RecurringTransactionHostedService>();
+builder.Services.AddHostedService<BrapiPriceUpdateHostedService>();
 builder.Services.AddMemoryCache();
 
 //DI Repositories

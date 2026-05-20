@@ -21,5 +21,7 @@ namespace FinanceControl.Shared.Dtos.Response.Investment
         public DateOnly? MaturityDate { get; set; }
         public decimal? ExpectedYieldPct { get; set; }
         public int AccountId { get; set; }
+        public string? LogoUrl { get; set; }
+        public string Currency { get; set; } = "BRL";
     }
 }

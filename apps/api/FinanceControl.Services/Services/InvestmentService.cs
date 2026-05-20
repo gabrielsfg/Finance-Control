@@ -104,15 +104,37 @@ namespace FinanceControl.Services.Services
             return await context.InvestmentDividends
                 .Include(d => d.Investment)
                 .Where(d => d.InvestmentId == investmentId && d.UserId == userId)
-                .OrderByDescending(d => d.Date)
+                .OrderByDescending(d => d.PaymentDate)
                 .Select(d => new InvestmentDividendDto
                 {
-                    Id           = d.Id,
-                    InvestmentId = d.InvestmentId,
-                    Ticker       = d.Investment.Ticker,
-                    Date         = d.Date,
-                    Amount       = d.Amount,
-                    Type         = d.Type,
+                    Id            = d.Id,
+                    InvestmentId  = d.InvestmentId,
+                    Ticker        = d.Investment.Ticker,
+                    PaymentDate   = d.PaymentDate,
+                    LastDatePrior = d.LastDatePrior,
+                    Amount        = d.Amount,
+                    Type          = d.Type,
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<InvestmentPriceHistoryDto>> GetPriceHistoryAsync(int investmentId, int userId)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var exists = await context.Investments
+                .AnyAsync(i => i.Id == investmentId && i.UserId == userId);
+
+            if (!exists)
+                throw new KeyNotFoundException($"Investment {investmentId} not found.");
+
+            return await context.InvestmentPriceHistories
+                .Where(h => h.InvestmentId == investmentId)
+                .OrderBy(h => h.Date)
+                .Select(h => new InvestmentPriceHistoryDto
+                {
+                    Date  = h.Date,
+                    Price = h.Price,
                 })
                 .ToListAsync();
         }
@@ -267,6 +289,8 @@ namespace FinanceControl.Services.Services
                 .FirstOrDefaultAsync(i => i.Id == dto.InvestmentId && i.UserId == userId)
                 ?? throw new KeyNotFoundException($"Investment {dto.InvestmentId} not found.");
 
+            var transactionDate = dto.PaymentDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
             // Create the linked income transaction (dividend entering the account)
             var linkedTransaction = new Transaction
             {
@@ -275,7 +299,7 @@ namespace FinanceControl.Services.Services
                 Value           = (int)Math.Min(dto.Amount, int.MaxValue),
                 Type            = EnumTransactionType.Income,
                 Description     = $"Dividendo: {investment.Ticker}",
-                TransactionDate = dto.Date,
+                TransactionDate = transactionDate,
                 PaymentType     = EnumPaymentType.OneTime,
                 SubCategoryId   = await GetDividendSubCategoryIdAsync(context, userId),
             };
@@ -286,7 +310,8 @@ namespace FinanceControl.Services.Services
             {
                 UserId              = userId,
                 InvestmentId        = dto.InvestmentId,
-                Date                = dto.Date,
+                PaymentDate         = dto.PaymentDate,
+                LastDatePrior       = dto.LastDatePrior,
                 Amount              = dto.Amount,
                 Type                = dto.Type,
                 LinkedTransactionId = linkedTransaction.Id,
@@ -343,6 +368,8 @@ namespace FinanceControl.Services.Services
                 MaturityDate      = i.MaturityDate,
                 ExpectedYieldPct  = i.ExpectedYieldPct,
                 AccountId         = i.AccountId,
+                LogoUrl           = i.LogoUrl,
+                Currency          = i.Currency,
             };
         }
 

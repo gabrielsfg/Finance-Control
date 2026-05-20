@@ -14,6 +14,7 @@ import {
   Tag,
   RefreshCw,
   Settings,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/lib/stores/uiStore";
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/transactions", label: "Transações", icon: ArrowLeftRight },
   { href: "/accounts", label: "Contas", icon: Wallet },
   { href: "/investments", label: "Investimentos", icon: TrendingUp },
+  { href: "/market", label: "Mercado", icon: Newspaper },
   { href: "/simulations", label: "Simulações", icon: Calculator },
   { href: "/recurring", label: "Recorrências", icon: RefreshCw },
   { href: "/budgets", label: "Orçamentos", icon: Clock },

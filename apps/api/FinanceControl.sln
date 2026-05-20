@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceControl.WebApi", "Fi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceControl.Tests", "FinanceControl.Tests\FinanceControl.Tests.csproj", "{8250597D-AC16-4E00-A0C2-F006724D488D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceControl.Workers", "FinanceControl.Workers\FinanceControl.Workers.csproj", "{120A4DAB-7C45-484A-8D55-D88CF2846BB7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -94,6 +96,18 @@ Global
 		{8250597D-AC16-4E00-A0C2-F006724D488D}.Release|x64.Build.0 = Release|Any CPU
 		{8250597D-AC16-4E00-A0C2-F006724D488D}.Release|x86.ActiveCfg = Release|Any CPU
 		{8250597D-AC16-4E00-A0C2-F006724D488D}.Release|x86.Build.0 = Release|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Debug|x64.Build.0 = Debug|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Debug|x86.Build.0 = Debug|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Release|x64.ActiveCfg = Release|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Release|x64.Build.0 = Release|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Release|x86.ActiveCfg = Release|Any CPU
+		{120A4DAB-7C45-484A-8D55-D88CF2846BB7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

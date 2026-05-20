@@ -734,8 +734,8 @@ namespace FinanceControl.Services.Services
             // Monthly dividends for the last 12 months (via Investment.UserId)
             var rawDividends = await context.InvestmentDividends
                 .Where(d => d.Investment.UserId == userId)
-                .Where(d => d.Date >= historyStart && d.Date <= today)
-                .Select(d => new { d.Date.Year, d.Date.Month, Amount = (int)d.Amount })
+                .Where(d => d.PaymentDate >= historyStart && d.PaymentDate <= today)
+                .Select(d => new { d.PaymentDate!.Value.Year, d.PaymentDate.Value.Month, Amount = (int)d.Amount })
                 .ToListAsync();
 
             // Monthly expenses for the last 12 months
@@ -1261,8 +1261,8 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
 
             var dividendsByMonth = await context.InvestmentDividends
-                .Where(d => d.UserId == userId && d.Date >= startDate && d.Date <= finishDate)
-                .GroupBy(d => new { d.Date.Year, d.Date.Month })
+                .Where(d => d.UserId == userId && d.PaymentDate >= startDate && d.PaymentDate <= finishDate)
+                .GroupBy(d => new { d.PaymentDate!.Value.Year, d.PaymentDate.Value.Month })
                 .Select(g => new { g.Key.Year, g.Key.Month, Total = g.Sum(d => (long?)d.Amount) ?? 0L })
                 .ToListAsync();
 
@@ -1278,8 +1278,8 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
 
             var allDividends = await context.InvestmentDividends
-                .Where(d => d.UserId == userId && d.Date <= finishDate)
-                .Select(d => new { d.Date.Year, d.Date.Month, d.Amount })
+                .Where(d => d.UserId == userId && d.PaymentDate <= finishDate)
+                .Select(d => new { d.PaymentDate!.Value.Year, d.PaymentDate.Value.Month, d.Amount })
                 .ToListAsync();
 
             // Current portfolio value per investment (to distribute across months proportionally — simplified: use current prices)
@@ -1426,7 +1426,7 @@ namespace FinanceControl.Services.Services
                     .Where(t => t.UserId == userId && t.Date >= from && t.Date <= to && t.Operation == EnumInvestmentOperation.Sell)
                     .SumAsync(t => (long?)t.TotalValue) ?? 0L;
                 var dividends = await context.InvestmentDividends
-                    .Where(d => d.UserId == userId && d.Date >= from && d.Date <= to)
+                    .Where(d => d.UserId == userId && d.PaymentDate >= from && d.PaymentDate <= to)
                     .SumAsync(d => (long?)d.Amount) ?? 0L;
 
                 var netFlow = invested - sold;
@@ -1466,8 +1466,8 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
 
             var allDividends = await context.InvestmentDividends
-                .Where(d => d.UserId == userId && d.Date >= startDate && d.Date <= finishDate)
-                .Select(d => new { d.Date.Year, d.Date.Month, d.Amount })
+                .Where(d => d.UserId == userId && d.PaymentDate >= startDate && d.PaymentDate <= finishDate)
+                .Select(d => new { d.PaymentDate!.Value.Year, d.PaymentDate.Value.Month, d.Amount })
                 .ToListAsync();
 
             var years = Enumerable.Range(startDate.Year, finishDate.Year - startDate.Year + 1).ToList();
@@ -1522,8 +1522,8 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
 
             var allDividends = await context.InvestmentDividends
-                .Where(d => d.UserId == userId && d.Date >= startDate && d.Date <= finishDate)
-                .Select(d => new { d.Date.Year, d.Date.Month, d.Amount })
+                .Where(d => d.UserId == userId && d.PaymentDate >= startDate && d.PaymentDate <= finishDate)
+                .Select(d => new { d.PaymentDate!.Value.Year, d.PaymentDate.Value.Month, d.Amount })
                 .ToListAsync();
 
             var cdiRates = await FetchCdiMonthlyAsync(startDate, finishDate);
@@ -1566,8 +1566,8 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
 
             var allDividends = await context.InvestmentDividends
-                .Where(d => d.UserId == userId && d.Date >= startDate && d.Date <= finishDate)
-                .Select(d => new { d.Date.Year, d.Date.Month, d.Amount })
+                .Where(d => d.UserId == userId && d.PaymentDate >= startDate && d.PaymentDate <= finishDate)
+                .Select(d => new { d.PaymentDate!.Value.Year, d.PaymentDate.Value.Month, d.Amount })
                 .ToListAsync();
 
             var cdiRates  = await FetchCdiMonthlyAsync(startDate, finishDate);

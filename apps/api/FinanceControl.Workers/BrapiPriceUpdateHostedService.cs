@@ -1,18 +1,19 @@
+using FinanceControl.Services.Brapi;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceControl.Services.Services
+namespace FinanceControl.Workers
 {
-    public class RecurringTransactionHostedService : IHostedService, IDisposable
+    public class BrapiPriceUpdateHostedService : IHostedService, IDisposable
     {
-        private readonly RecurringTransactionJobService _jobService;
-        private readonly ILogger<RecurringTransactionHostedService> _logger;
+        private readonly BrapiPriceUpdateJobService _jobService;
+        private readonly ILogger<BrapiPriceUpdateHostedService> _logger;
         private Timer? _timer;
         private CancellationTokenSource? _cts;
 
-        public RecurringTransactionHostedService(
-            RecurringTransactionJobService jobService,
-            ILogger<RecurringTransactionHostedService> logger)
+        public BrapiPriceUpdateHostedService(
+            BrapiPriceUpdateJobService jobService,
+            ILogger<BrapiPriceUpdateHostedService> logger)
         {
             _jobService = jobService;
             _logger = logger;
@@ -22,9 +23,9 @@ namespace FinanceControl.Services.Services
         {
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            var initialDelay = ComputeDelayUntilNextMidnightUtc();
+            var initialDelay = ComputeDelayUntilNext22hUtc();
             _logger.LogInformation(
-                "RecurringTransactionHostedService scheduled. First run in {Delay:hh\\:mm\\:ss}.",
+                "BrapiPriceUpdateHostedService scheduled. First run in {Delay:hh\\:mm\\:ss}.",
                 initialDelay);
 
             _timer = new Timer(OnTimerTick, null, initialDelay, TimeSpan.FromDays(1));
@@ -34,7 +35,7 @@ namespace FinanceControl.Services.Services
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("RecurringTransactionHostedService stopping.");
+            _logger.LogInformation("BrapiPriceUpdateHostedService stopping.");
             _cts?.Cancel();
             _timer?.Change(Timeout.Infinite, Timeout.Infinite);
             return Task.CompletedTask;
@@ -60,15 +61,16 @@ namespace FinanceControl.Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in RecurringTransactionHostedService.");
+                _logger.LogError(ex, "Unhandled exception in BrapiPriceUpdateHostedService.");
             }
         }
 
-        private static TimeSpan ComputeDelayUntilNextMidnightUtc()
+        private static TimeSpan ComputeDelayUntilNext22hUtc()
         {
             var now = DateTime.UtcNow;
-            var nextMidnight = now.Date.AddDays(1); // 00:00:00 tomorrow UTC
-            return nextMidnight - now;
+            var todayAt22h = now.Date.AddHours(22);
+            var target = now < todayAt22h ? todayAt22h : todayAt22h.AddDays(1);
+            return target - now;
         }
 
         public void Dispose()
