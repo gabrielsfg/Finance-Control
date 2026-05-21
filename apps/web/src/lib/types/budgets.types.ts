@@ -29,10 +29,10 @@ export type BudgetAllocation = {
   categoryName: string;
   categoryColor: string | null;
   areaName: string;
-  areaColor: string | null;
   allocated: number;
   spent: number;
   spentPercentage: number;
+  allocationType: AllocationType;
 };
 
 export type UpdateBudgetRequest = {

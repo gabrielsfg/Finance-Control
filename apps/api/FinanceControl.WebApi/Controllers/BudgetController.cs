@@ -66,14 +66,14 @@ namespace FinanceControl.WebApi.Controllers
         }
 
         [HttpGet("{id:int}/allocation")]
-        public async Task<IActionResult> GetBudgetWithAllocationsAsync([FromRoute] int id)
+        public async Task<IActionResult> GetBudgetWithAllocationsAsync([FromRoute] int id, [FromQuery] DateOnly? referenceDate = null)
         {
             var validationResult = this.ValidatePositiveId(id, "id");
             if (validationResult is not null)
                 return validationResult;
 
             var userId = GetUserId();
-            var result = await _budgetService.GetBudgetWithAllocationsAsync(id, userId);
+            var result = await _budgetService.GetBudgetWithAllocationsAsync(id, userId, referenceDate);
 
             if (result == null)
                 return NotFound(new { error = "Budget not found." });

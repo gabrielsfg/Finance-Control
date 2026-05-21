@@ -93,7 +93,7 @@ namespace FinanceControl.Tests.Unit
 
             var subCategory = new SubCategory { Name = "Sub", CategoryId = category.Id, UserId = user.Id };
             context.SubCategories.Add(subCategory);
-            var account = new Account { Name = "Wallet", UserId = user.Id, Type = EnumAccountType.Debit };
+            var account = new Account { Name = "Wallet", UserId = user.Id, Type = EnumAccountType.Checking };
             context.Accounts.Add(account);
             await context.SaveChangesAsync();
 
@@ -137,7 +137,7 @@ namespace FinanceControl.Tests.Unit
 
             var subCategory = new SubCategory { Name = "Sub", CategoryId = category.Id, UserId = user.Id };
             context.SubCategories.Add(subCategory);
-            var account = new Account { Name = "Wallet", UserId = user.Id, Type = EnumAccountType.Debit };
+            var account = new Account { Name = "Wallet", UserId = user.Id, Type = EnumAccountType.Checking };
             context.Accounts.Add(account);
             await context.SaveChangesAsync();
 

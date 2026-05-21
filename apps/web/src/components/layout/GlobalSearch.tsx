@@ -83,7 +83,6 @@ const ASSET_TYPE_LABELS: Record<string, string> = {
 };
 
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
-  Debit: "Débito",
   Checking: "Corrente",
   Savings: "Poupança",
   Credit: "Crédito",

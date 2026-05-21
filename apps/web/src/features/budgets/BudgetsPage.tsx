@@ -1,34 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Loader2, Plus, Target, ChevronLeft, ChevronRight } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { BudgetCard } from "@/features/budgets/components/BudgetCard";
 import { BudgetsSummaryBar } from "@/features/budgets/components/BudgetsSummaryBar";
 import { CreateBudgetModal } from "@/features/budgets/components/CreateBudgetModal";
 import { EditBudgetModal } from "@/features/budgets/components/EditBudgetModal";
+import { BudgetDetailDrawer } from "@/features/budgets/components/BudgetDetailDrawer";
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
 import { usePageNova } from "@/lib/hooks/usePageHeader";
-import type { Budget } from "@/lib/types/budgets.types";
+import type { Budget, BudgetRecurrence } from "@/lib/types/budgets.types";
 
-const MONTH_NAMES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
+function shiftDate(date: Date, recurrence: BudgetRecurrence, direction: number): Date {
+  const d = new Date(date);
+  switch (recurrence) {
+    case "Weekly":      d.setDate(d.getDate() + 7 * direction); break;
+    case "Biweekly":    d.setDate(d.getDate() + 14 * direction); break;
+    case "Monthly":     d.setMonth(d.getMonth() + direction); break;
+    case "Semiannually":d.setMonth(d.getMonth() + 6 * direction); break;
+    case "Annually":    d.setFullYear(d.getFullYear() + direction); break;
+  }
+  return d;
+}
+
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function computePeriod(startDate: string, recurrence: BudgetRecurrence, offset: number) {
+  const now = new Date();
+  const start = shiftDate(parseLocalDate(startDate), recurrence, offset);
+  const end = shiftDate(new Date(start), recurrence, 1);
+
+  const fmt = (d: Date) => format(d, "d MMM", { locale: ptBR });
+  const label = `${fmt(start)} – ${fmt(end)}`;
+
+  const totalDays = Math.round((end.getTime() - start.getTime()) / 86400000);
+  const dayOfPeriod = offset === 0
+    ? Math.max(1, Math.round((now.getTime() - start.getTime()) / 86400000))
+    : offset < 0 ? totalDays : 1;
+
+  return { start, end, label, totalDays, dayOfPeriod, referenceDate: format(start, "yyyy-MM-dd") };
+}
 
 export function BudgetsPage() {
   const { data: budgets, isLoading, isError } = useBudgets();
   const [showCreate, setShowCreate] = useState(false);
+  const [detailTarget, setDetailTarget] = useState<Budget | null>(null);
   const [editTarget, setEditTarget] = useState<Budget | null>(null);
+  const [periodOffset, setPeriodOffset] = useState(0);
 
   usePageNova("Novo orçamento", () => setShowCreate(true));
 
-  const now = new Date();
-  const [monthOffset, setMonthOffset] = useState(0);
-  const displayDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
-  const monthLabel = `${MONTH_NAMES[displayDate.getMonth()]} ${displayDate.getFullYear()}`;
-  const daysInMonth = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0).getDate();
-  const dayOfMonth = monthOffset === 0 ? now.getDate() : (monthOffset < 0 ? daysInMonth : 1);
+  const activeBudget = budgets?.find((b) => b.isActive);
+
+  const period = useMemo(() => {
+    if (!activeBudget) return null;
+    return computePeriod(activeBudget.startDate, activeBudget.recurrence, periodOffset);
+  }, [activeBudget, periodOffset]);
 
   if (isLoading) {
     return (
@@ -61,34 +94,40 @@ export function BudgetsPage() {
               {hasBudgets ? `${budgets!.length} orçamento${budgets!.length !== 1 ? "s" : ""}` : "Nenhum orçamento"}
             </p>
           </div>
-          {/* Month navigation */}
-          <div className="border-border bg-surface flex items-center gap-1 rounded-xl border px-2 py-1.5">
-            <button
-              onClick={() => setMonthOffset((o) => o - 1)}
-              className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2"
-            >
-              <ChevronLeft size={15} />
-            </button>
-            <span className="text-text min-w-[130px] text-center text-[13px] font-medium">{monthLabel}</span>
-            <button
-              onClick={() => setMonthOffset((o) => o + 1)}
-              disabled={monthOffset >= 0}
-              className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2 disabled:opacity-30"
-            >
-              <ChevronRight size={15} />
-            </button>
-          </div>
+          {/* Period navigation — only shown when there's an active budget */}
+          {period && (
+            <div className="border-border bg-surface flex items-center gap-1 rounded-xl border px-2 py-1.5">
+              <button
+                onClick={() => setPeriodOffset((o) => o - 1)}
+                className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2"
+              >
+                <ChevronLeft size={15} />
+              </button>
+              <span className="text-text min-w-[140px] text-center text-[13px] font-medium">{period.label}</span>
+              <button
+                onClick={() => setPeriodOffset((o) => o + 1)}
+                disabled={periodOffset >= 0}
+                className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2 disabled:opacity-30"
+              >
+                <ChevronRight size={15} />
+              </button>
+            </div>
+          )}
         </div>
 
         {hasBudgets ? (
           <>
-            <BudgetsSummaryBar budgets={budgets!} daysInMonth={daysInMonth} dayOfMonth={dayOfMonth} />
+            <BudgetsSummaryBar
+              budgets={budgets!}
+              daysInPeriod={period?.totalDays}
+              dayOfPeriod={period?.dayOfPeriod}
+            />
 
             {/* Active budgets */}
             {active.length > 0 && (
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {active.map((budget) => (
-                  <BudgetCard key={budget.id} budget={budget} onEdit={setEditTarget} />
+                  <BudgetCard key={budget.id} budget={budget} onClick={() => setDetailTarget(budget)} onEdit={setEditTarget} />
                 ))}
               </div>
             )}
@@ -101,7 +140,7 @@ export function BudgetsPage() {
                 </p>
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   {inactive.map((budget) => (
-                    <BudgetCard key={budget.id} budget={budget} onEdit={setEditTarget} inactive />
+                    <BudgetCard key={budget.id} budget={budget} onClick={() => setDetailTarget(budget)} onEdit={setEditTarget} inactive />
                   ))}
                 </div>
               </div>
@@ -125,6 +164,11 @@ export function BudgetsPage() {
       </div>
 
       <CreateBudgetModal open={showCreate} onClose={() => setShowCreate(false)} />
+      <BudgetDetailDrawer
+        budget={detailTarget}
+        onClose={() => setDetailTarget(null)}
+        onEdit={(b) => { setDetailTarget(null); setEditTarget(b); }}
+      />
       <EditBudgetModal budget={editTarget} onClose={() => setEditTarget(null)} />
     </>
   );

@@ -1,4 +1,4 @@
-export type AccountType = "Debit" | "Checking" | "Savings" | "Credit" | "Cash";
+export type AccountType = "Checking" | "Savings" | "Credit" | "Cash";
 
 export type AccountItem = {
   id: number;

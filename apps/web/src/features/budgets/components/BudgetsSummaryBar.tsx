@@ -7,11 +7,11 @@ import type { Budget } from "@/lib/types/budgets.types";
 
 type Props = {
   budgets: Budget[];
-  daysInMonth?: number;
-  dayOfMonth?: number;
+  daysInPeriod?: number;
+  dayOfPeriod?: number;
 };
 
-export const BudgetsSummaryBar = ({ budgets, daysInMonth, dayOfMonth }: Props) => {
+export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props) => {
   const active = budgets.filter((b) => b.isActive);
   const totalAllocated = active.reduce((s, b) => s + b.totalAllocated, 0);
   const totalSpent     = active.reduce((s, b) => s + b.totalSpent,     0);
@@ -20,9 +20,9 @@ export const BudgetsSummaryBar = ({ budgets, daysInMonth, dayOfMonth }: Props) =
   const isOver         = totalSpent > totalAllocated;
 
   const now       = new Date();
-  const dim       = daysInMonth ?? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const dom       = dayOfMonth  ?? now.getDate();
-  const daysLeft  = dim - dom;
+  const dim       = daysInPeriod ?? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const dom       = dayOfPeriod  ?? now.getDate();
+  const daysLeft  = Math.max(0, dim - dom);
 
   // projected overspend
   const dailyRate    = dom > 0 ? totalSpent / dom : 0;

@@ -29,7 +29,7 @@ const CREDIT_TYPES: AccountType[] = ["Credit", "Checking"];
 const schema = z
   .object({
     name: z.string().min(1, "Nome é obrigatório"),
-    type: z.enum(["Debit", "Checking", "Savings", "Credit", "Cash"]),
+    type: z.enum(["Checking", "Savings", "Credit", "Cash"]),
     initialBalance: z.string().optional(),
     goalAmount: z.string().optional(),
     isDefaultAccount: z.boolean(),
@@ -64,7 +64,6 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   Checking: "Conta Corrente",
   Savings: "Poupança",
   Credit: "Cartão de Crédito",
-  Debit: "Débito",
   Cash: "Dinheiro",
 };
 

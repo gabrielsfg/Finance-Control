@@ -1,13 +1,13 @@
 "use client";
 
-import { Bell, Plus, Sun, Moon, PanelLeft } from "lucide-react";
+import { Bell, Plus, Sun, Moon, PanelLeft, FileUp } from "lucide-react";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { useHeaderStore } from "@/lib/stores/headerStore";
 import { GlobalSearch } from "./GlobalSearch";
 
 export const Header = () => {
   const { theme, toggleTheme, toggleSidebar } = useUIStore();
-  const { novaLabel, onNovaClick, filterNode, showSearch } = useHeaderStore();
+  const { novaLabel, onNovaClick, filterNode, showSearch, onImportClick } = useHeaderStore();
 
   return (
     <header className="border-border bg-surface flex h-[58px] shrink-0 items-center gap-3 border-b px-4">
@@ -25,6 +25,18 @@ export const Header = () => {
       {showSearch && <GlobalSearch />}
 
       <div className="ml-auto flex items-center gap-2">
+        {/* Import button — shown only on pages that opt in */}
+        {onImportClick && (
+          <button
+            onClick={onImportClick}
+            title="Importar extrato"
+            className="text-text-sub hover:bg-surface2 hover:text-text flex h-9 items-center gap-1.5 rounded-[9px] px-2.5 text-[13px] font-medium transition-colors"
+          >
+            <FileUp size={15} strokeWidth={1.75} />
+            <span className="hidden sm:inline">Importar</span>
+          </button>
+        )}
+
         {/* Page filter slot */}
         {filterNode}
 

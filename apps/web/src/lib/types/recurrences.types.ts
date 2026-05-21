@@ -80,8 +80,8 @@ export type UpdateRecurringRequest = {
 };
 
 export type RecurrenceFilter = {
-  month: number;
-  year: number;
+  startDate: string;
+  endDate: string;
   categoryIds: number[];
   subCategoryIds: number[];
   accountIds: number[];
@@ -90,9 +90,12 @@ export type RecurrenceFilter = {
 
 export function defaultRecurrenceFilter(): RecurrenceFilter {
   const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const isoDate = (d: Date) => d.toISOString().split("T")[0];
   return {
-    month: now.getMonth() + 1,
-    year: now.getFullYear(),
+    startDate: isoDate(start),
+    endDate: isoDate(end),
     categoryIds: [],
     subCategoryIds: [],
     accountIds: [],

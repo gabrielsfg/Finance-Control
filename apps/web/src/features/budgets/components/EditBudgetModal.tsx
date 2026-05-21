@@ -31,7 +31,7 @@ function budgetToDraftAreas(budget: Budget): DraftArea[] {
       categoryName: alloc.categoryName,
       categoryColor: alloc.categoryColor,
       expectedValue: alloc.allocated,
-      allocationType: "Expense",
+      allocationType: alloc.allocationType,
     });
   }
   return Array.from(map.values());

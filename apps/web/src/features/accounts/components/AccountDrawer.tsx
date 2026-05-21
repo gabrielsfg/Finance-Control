@@ -5,8 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
 import {
-  X, Loader2, Pencil, Trash2, Star, CreditCard, Landmark, PiggyBank,
-  Wallet, Banknote, SlidersHorizontal, Check,
+  X, Loader2, Pencil, Trash2, Star, SlidersHorizontal, Check,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -15,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { useCreateAccount, useUpdateAccount } from "@/features/accounts/hooks/useAccounts";
+import { ACCOUNT_TYPE_CONFIG } from "@/lib/config/accountTypes";
 import type { AccountItem, AccountType } from "@/lib/types/accounts.types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -33,21 +33,9 @@ type Props = {
 
 const CREDIT_TYPES: AccountType[] = ["Credit"];
 
-const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
-  Checking: "Conta Corrente",
-  Savings:  "Poupança",
-  Credit:   "Cartão de Crédito",
-  Debit:    "Débito",
-  Cash:     "Dinheiro",
-};
-
-const ACCOUNT_TYPE_CONFIG: Record<AccountType, { color: string; Icon: React.ElementType }> = {
-  Checking: { color: "#4A9EFF", Icon: Landmark },
-  Savings:  { color: "#00C98D", Icon: PiggyBank },
-  Credit:   { color: "#7C6FE0", Icon: CreditCard },
-  Debit:    { color: "#F5A623", Icon: Wallet },
-  Cash:     { color: "#F5CE42", Icon: Banknote },
-};
+const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = Object.fromEntries(
+  Object.entries(ACCOUNT_TYPE_CONFIG).map(([k, v]) => [k, v.label])
+) as Record<AccountType, string>;
 
 const INPUT_CLASS =
   "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-green/60 h-11 rounded-lg px-3.5 text-[15px]";
@@ -60,7 +48,7 @@ const TRIGGER_CLASS =
 const baseSchema = z
   .object({
     name: z.string().min(1, "Nome é obrigatório"),
-    type: z.enum(["Debit", "Checking", "Savings", "Credit", "Cash"]),
+    type: z.enum(["Checking", "Savings", "Credit", "Cash"]),
     goalAmount: z.string().optional(),
     isDefaultAccount: z.boolean(),
     billingDueDay: z.string().optional(),

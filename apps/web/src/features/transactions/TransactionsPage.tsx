@@ -9,9 +9,12 @@ import { TransactionsList } from "@/features/transactions/components/Transaction
 import { TransactionsPagination } from "@/features/transactions/components/TransactionsPagination";
 import { TransactionDrawer, type DrawerMode } from "@/features/transactions/components/TransactionDrawer";
 import { DeleteTransactionModal } from "@/features/transactions/components/DeleteTransactionModal";
+import { ImportDrawer } from "@/features/import/components/ImportDrawer";
+import { ImportReview, ImportDone } from "@/features/import/components/ImportReview";
+import { useImportFlow } from "@/features/import/hooks/useImportFlow";
 import { useTransactionsFiltered } from "@/features/transactions/hooks/useTransactions";
 import { defaultTxFilter, buildTxDateRange, activeTxDateLabel } from "@/features/transactions/utils/filterDates";
-import { usePageNova, usePageFilter, usePageSearch } from "@/lib/hooks/usePageHeader";
+import { usePageNova, usePageFilter, usePageSearch, usePageImport } from "@/lib/hooks/usePageHeader";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
@@ -47,6 +50,8 @@ export function TransactionsPage() {
   );
   const [drawerTransaction, setDrawerTransaction] = useState<TransactionItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TransactionItem | null>(null);
+
+  const importFlow = useImportFlow();
 
   const { data: accountsRaw = [] } = useAccounts();
   const { data: subcatsRaw  = [] } = useSubCategories();
@@ -86,6 +91,7 @@ export function TransactionsPage() {
     setDrawerTransaction(null);
     setDrawerOpen(true);
   });
+  usePageImport(importFlow.open);
   usePageSearch();
   usePageFilter(
     <TransactionsFilters filter={filter} onChange={handleFilterChange} />
@@ -117,7 +123,6 @@ export function TransactionsPage() {
   const totalItems = response?.page.totalItems ?? 0;
   const rowCount = response?.page.rowCount ?? 0;
 
-  // Client-side typeFilter and filterDay filtering (applied on top of server items)
   const visibleItems = useMemo(() => {
     return items.filter((t) => {
       if (filterDay && t.transactionDate !== filterDay) return false;
@@ -127,7 +132,6 @@ export function TransactionsPage() {
     });
   }, [items, filterDay, filter.typeFilter]);
 
-  // ── Active filter chips ────────────────────────────────────────────────────
   type Chip = { id: string; label: string; color?: string; onRemove: () => void };
 
   const activeChips = useMemo<Chip[]>(() => {
@@ -212,6 +216,16 @@ export function TransactionsPage() {
     return chips;
   }, [filter, filterDay, metaCategories, metaSubcategories, metaAccounts, metaBudgets]);
 
+  // ── Import steps that replace the page content ─────────────────────────────
+  if (importFlow.step === "review") {
+    return <ImportReview flow={importFlow} />;
+  }
+
+  if (importFlow.step === "done") {
+    return <ImportDone flow={importFlow} />;
+  }
+
+  // ── Normal transactions view ───────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -231,14 +245,12 @@ export function TransactionsPage() {
   return (
     <>
       <div className="flex flex-col gap-5">
-        {/* Page title */}
         <div>
           <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Transações</h1>
           <p className="text-text-muted mt-0.5 text-[13px]">
             {totalItems} transaç{totalItems !== 1 ? "ões" : "ão"}
           </p>
 
-          {/* Active filter chips */}
           {activeChips.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {activeChips.map(chip => (
@@ -247,10 +259,7 @@ export function TransactionsPage() {
                   className="border-border bg-surface2 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px]"
                 >
                   {chip.color && (
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: chip.color }}
-                    />
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: chip.color }} />
                   )}
                   <span className="text-text-sub">{chip.label}</span>
                   <button
@@ -312,6 +321,7 @@ export function TransactionsPage() {
         }}
       />
       <DeleteTransactionModal transaction={deleteTarget} onClose={() => setDeleteTarget(null)} />
+      <ImportDrawer flow={importFlow} />
     </>
   );
 }

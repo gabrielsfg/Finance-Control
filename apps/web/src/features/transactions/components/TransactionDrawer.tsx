@@ -17,10 +17,6 @@ import {
   Wallet,
   Tag,
   CreditCard,
-  Landmark,
-  PiggyBank,
-  Banknote,
-  Building2,
   Zap,
   LayoutGrid,
   BookOpen,
@@ -37,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { getCategoryColor } from "@/lib/config/categoryColors";
+import { ACCOUNT_TYPE_CONFIG } from "@/lib/config/accountTypes";
 import {
   useCreateTransaction,
   useUpdateTransaction,
@@ -103,25 +100,6 @@ const VALUE_WRAPPER_CLASS =
 
 // ── Reusable select content components ───────────────────────────────────────
 
-function AccountIcon({ type }: { type: AccountItem["type"] }) {
-  const map: Record<AccountItem["type"], React.ReactNode> = {
-    Checking:  <Landmark size={14} />,
-    Savings:   <PiggyBank size={14} />,
-    Credit:    <CreditCard size={14} />,
-    Debit:     <Wallet size={14} />,
-    Cash:      <Banknote size={14} />,
-  };
-  return <>{map[type] ?? <Building2 size={14} />}</>;
-}
-
-const ACCOUNT_TYPE_LABELS: Record<AccountItem["type"], string> = {
-  Checking: "Conta corrente",
-  Savings:  "Poupança",
-  Credit:   "Cartão de crédito",
-  Debit:    "Cartão de débito",
-  Cash:     "Dinheiro",
-};
-
 const DROPDOWN_PROPS = { alignItemWithTrigger: false, sideOffset: 4 } as const;
 
 function CategorySelectContent({ subcategories }: { subcategories: SubCategoryItem[] }) {
@@ -171,19 +149,26 @@ function CategorySelectContent({ subcategories }: { subcategories: SubCategoryIt
 function AccountSelectContent({ accounts }: { accounts: AccountItem[] }) {
   return (
     <SelectContent {...DROPDOWN_PROPS}>
-      {accounts.map((a) => (
-        <SelectItem key={a.id} value={String(a.id)}>
-          <div className="flex items-center gap-2.5 py-0.5">
-            <span className="text-text-muted">
-              <AccountIcon type={a.type} />
-            </span>
-            <div className="flex flex-col">
-              <span className="text-[14px] font-medium leading-tight">{a.name}</span>
-              <span className="text-text-muted text-[11px] leading-tight">{ACCOUNT_TYPE_LABELS[a.type]}</span>
+      {accounts.map((a) => {
+        const cfg = ACCOUNT_TYPE_CONFIG[a.type];
+        const Icon = cfg.Icon;
+        return (
+          <SelectItem key={a.id} value={String(a.id)}>
+            <div className="flex items-center gap-2.5 py-0.5">
+              <span
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+                style={{ backgroundColor: `${cfg.color}1a` }}
+              >
+                <Icon size={13} style={{ color: cfg.color }} />
+              </span>
+              <div className="flex flex-col">
+                <span className="text-[14px] font-medium leading-tight">{a.name}</span>
+                <span className="text-text-muted text-[11px] leading-tight">{cfg.label}</span>
+              </div>
             </div>
-          </div>
-        </SelectItem>
-      ))}
+          </SelectItem>
+        );
+      })}
     </SelectContent>
   );
 }
@@ -528,7 +513,7 @@ function CreateForm({
   const accountIdValue = watch("accountId");
   const subCategoryIdValue = watch("subCategoryId");
 
-  const createAccountLabel = accounts.find((a) => String(a.id) === accountIdValue)?.name;
+  const createAccountSelected = accounts.find((a) => String(a.id) === accountIdValue);
   const createSubCategorySelected = subcategories.find((s) => String(s.id) === subCategoryIdValue);
   const createSubCategoryLabel = createSubCategorySelected
     ? (createSubCategorySelected.emoji ? `${createSubCategorySelected.emoji} ${createSubCategorySelected.name}` : createSubCategorySelected.name)
@@ -629,7 +614,16 @@ function CreateForm({
         <Select onValueChange={(v) => setValue("accountId", v as string, { shouldValidate: true })}>
           <SelectTrigger className={cn(TRIGGER_CLASS, errors.accountId && "border-red/60")}>
             <SelectValue>
-              {createAccountLabel ?? <span className="text-text-muted">Selecionar conta</span>}
+              {createAccountSelected
+                ? (() => { const cfg = ACCOUNT_TYPE_CONFIG[createAccountSelected.type]; const Icon = cfg.Icon; return (
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: `${cfg.color}1a` }}>
+                        <Icon size={12} style={{ color: cfg.color }} />
+                      </span>
+                      <span>{createAccountSelected.name}</span>
+                    </div>
+                  ); })()
+                : <span className="text-text-muted">Selecionar conta</span>}
             </SelectValue>
           </SelectTrigger>
           <AccountSelectContent accounts={accounts} />
@@ -780,7 +774,7 @@ function EditForm({
   const paymentMethodValue = watch("paymentMethod");
   const editPaymentType = watch("paymentType") as PaymentType;
 
-  const accountLabel = accounts.find((a) => String(a.id) === accountValue)?.name;
+  const accountSelected = accounts.find((a) => String(a.id) === accountValue);
   const subCategorySelected = subcategories.find((s) => String(s.id) === subCategoryValue);
   const subCategoryLabel = subCategorySelected
     ? (subCategorySelected.emoji ? `${subCategorySelected.emoji} ${subCategorySelected.name}` : subCategorySelected.name)
@@ -883,7 +877,16 @@ function EditForm({
         >
           <SelectTrigger className={TRIGGER_CLASS}>
             <SelectValue>
-              {accountLabel ?? <span className="text-text-muted">Selecionar conta</span>}
+              {accountSelected
+                ? (() => { const cfg = ACCOUNT_TYPE_CONFIG[accountSelected.type]; const Icon = cfg.Icon; return (
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: `${cfg.color}1a` }}>
+                        <Icon size={12} style={{ color: cfg.color }} />
+                      </span>
+                      <span>{accountSelected.name}</span>
+                    </div>
+                  ); })()
+                : <span className="text-text-muted">Selecionar conta</span>}
             </SelectValue>
           </SelectTrigger>
           <AccountSelectContent accounts={accounts} />

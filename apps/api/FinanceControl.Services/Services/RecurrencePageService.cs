@@ -51,12 +51,11 @@ namespace FinanceControl.Services.Services
 
             int installmentMonthly = activeInstallments.Sum(i => i.Value);
 
-            // Sum income allocations from the active monthly budget to compute commitment %
-            var monthlyIncome = await context.BudgetSubcategoryAllocations
+            // Sum income allocations from the active budget (any recurrence) to compute commitment %
+            var budgetIncome = await context.BudgetSubcategoryAllocations
                 .Where(a => a.AllocationType == EnumAllocationType.Income
                          && a.Budget.UserId == userId
-                         && a.Budget.IsActive
-                         && a.Budget.Recurrence == EnumBudgetRecurrence.Monthly)
+                         && a.Budget.IsActive)
                 .SumAsync(a => (int?)a.ExpectedValue) ?? 0;
 
             return new RecurrencePageResponseDto
@@ -66,7 +65,7 @@ namespace FinanceControl.Services.Services
                 InstallmentMonthlyAmount  = installmentMonthly,
                 ActiveRecurringCount      = activeRecurring.Count,
                 ActiveInstallmentCount    = activeInstallments.Count,
-                MonthlyIncome             = monthlyIncome,
+                MonthlyIncome             = budgetIncome,
                 Recurring                 = recurringDtos,
                 Installments              = installmentDtos,
             };

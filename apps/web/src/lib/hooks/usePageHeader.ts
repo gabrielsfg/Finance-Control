@@ -40,3 +40,16 @@ export function usePageSearch() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
+
+export function usePageImport(onClick: () => void) {
+  const setImport = useHeaderStore((s) => s.setImport);
+  const clearImport = useHeaderStore((s) => s.clearImport);
+  const onClickRef = useRef(onClick);
+  onClickRef.current = onClick;
+
+  useEffect(() => {
+    setImport(() => onClickRef.current());
+    return () => clearImport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}

@@ -61,7 +61,7 @@ Never create a user-owned entity without `UserId`.
 | Entity | Notes |
 |---|---|
 | `User` | Auth, preferences, lockout, password reset |
-| `Account` | Debit/Checking/Savings/Credit/Cash; balance is derived from transactions, never stored |
+| `Account` | Checking/Savings/Credit/Cash; balance is derived from transactions, never stored |
 | `Category` / `SubCategory` | Two-level hierarchy; transactions always link to a subcategory |
 | `Transaction` | Expense/Income/Transfer; OneTime/Installment/Recurring; links to subcategory |
 | `RecurringTransaction` | Defines the recurrence rule; spawns transactions via a hosted service |
@@ -195,7 +195,7 @@ Key enums:
 | `EnumTransactionType` | `Expense`, `Income`, `Transfer` |
 | `EnumPaymentType` | `OneTime`, `Installment`, `Recurring` |
 | `EnumRecurrenceType` | `None`, `Daily`, `WorkDay`, `Weekly`, `Biweekly`, `Monthly`, `Quarterly`, `Semiannually`, `Annually` |
-| `EnumAccountType` | `Debit`, `Checking`, `Savings`, `Credit`, `Cash` |
+| `EnumAccountType` | `Checking`, `Savings`, `Credit`, `Cash` |
 
 ### Mutations return the updated list
 

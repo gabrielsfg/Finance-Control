@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { SlidersHorizontal, ChevronRight, Check, ChevronLeft, Tag, Wallet, ListFilter } from "lucide-react";
+import { SlidersHorizontal, Check, Tag, Wallet, ListFilter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { RecurrenceFilter } from "@/lib/types/recurrences.types";
-
-const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 const TYPE_OPTIONS: { id: RecurrenceFilter["typeFilter"]; label: string }[] = [
   { id: "All",         label: "Todas" },
@@ -16,7 +14,7 @@ const TYPE_OPTIONS: { id: RecurrenceFilter["typeFilter"]; label: string }[] = [
   { id: "Installment", label: "Parcelamentos" },
 ];
 
-type Section = "month" | "type" | "categories" | "accounts";
+type Section = "type" | "categories" | "accounts";
 
 function CheckRow({
   checked, onClick, label, color, emoji, indent,
@@ -43,60 +41,6 @@ function CheckRow({
       }
       <span className={cn("text-[14px]", checked ? "text-text font-medium" : "text-text-sub")}>{label}</span>
     </button>
-  );
-}
-
-function MonthPicker({
-  month, year, onChange,
-}: {
-  month: number; year: number; onChange: (m: number, y: number) => void;
-}) {
-  const [viewYear, setViewYear] = useState(year);
-
-  return (
-    <div className="select-none">
-      <div className="mb-3 flex items-center justify-between">
-        <button
-          onClick={() => setViewYear(y => y - 1)}
-          className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface3"
-        >
-          <ChevronLeft size={14} />
-        </button>
-        <span className="text-text text-[13px] font-semibold">{viewYear}</span>
-        <button
-          onClick={() => setViewYear(y => y + 1)}
-          className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface3"
-        >
-          <ChevronRight size={14} />
-        </button>
-      </div>
-      <div className="grid grid-cols-3 gap-1.5">
-        {MONTH_NAMES.map((name, i) => {
-          const m = i + 1;
-          const active = m === month && viewYear === year;
-          return (
-            <button
-              key={m}
-              onClick={() => onChange(m, viewYear)}
-              className={cn(
-                "h-9 rounded-lg text-[13px] font-medium transition-all",
-                active
-                  ? "bg-green/15 text-green ring-1 ring-green/30"
-                  : "bg-surface3 text-text-sub hover:text-text",
-              )}
-            >
-              {name}
-            </button>
-          );
-        })}
-      </div>
-      <div className={cn(
-        "mt-3 rounded-lg px-3 py-2 text-center text-[12px]",
-        "bg-green/10 text-green font-medium",
-      )}>
-        {MONTH_NAMES[month - 1]} {year}
-      </div>
-    </div>
   );
 }
 
@@ -141,15 +85,6 @@ function SectionContent({
       : draft.categoryIds.filter(id => id !== catId);
 
     setDraft(d => ({ ...d, subCategoryIds: newSubIds, categoryIds: newCatIds }));
-  }
-  if (section === "month") {
-    return (
-      <MonthPicker
-        month={draft.month}
-        year={draft.year}
-        onChange={(m, y) => setDraft(d => ({ ...d, month: m, year: y }))}
-      />
-    );
   }
 
   if (section === "type") {
@@ -228,16 +163,13 @@ function SectionContent({
 }
 
 const SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
-  { id: "month",      label: "Mês",       icon: ChevronRight },
-  { id: "type",       label: "Tipo",       icon: ListFilter },
-  { id: "categories", label: "Categoria",  icon: Tag },
-  { id: "accounts",   label: "Contas",     icon: Wallet },
+  { id: "type",       label: "Tipo",      icon: ListFilter },
+  { id: "categories", label: "Categoria", icon: Tag },
+  { id: "accounts",   label: "Contas",    icon: Wallet },
 ];
 
 function countActive(filter: RecurrenceFilter): number {
   let n = 0;
-  const now = new Date();
-  if (filter.month !== now.getMonth() + 1 || filter.year !== now.getFullYear()) n++;
   if (filter.typeFilter !== "All") n++;
   if (filter.categoryIds.length > 0) n++;
   if (filter.subCategoryIds.length > 0) n++;
@@ -252,7 +184,7 @@ type Props = {
 
 export function RecurrencesFilters({ filter, onChange }: Props) {
   const [open,    setOpen]    = useState(false);
-  const [section, setSection] = useState<Section>("month");
+  const [section, setSection] = useState<Section>("type");
   const [draft,   setDraft]   = useState<RecurrenceFilter>(filter);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -289,10 +221,8 @@ export function RecurrencesFilters({ filter, onChange }: Props) {
   function apply() { onChange(draft); setOpen(false); }
 
   function clearAll() {
-    const now = new Date();
     const reset: RecurrenceFilter = {
-      month: now.getMonth() + 1,
-      year: now.getFullYear(),
+      ...filter,
       categoryIds: [],
       subCategoryIds: [],
       accountIds: [],
@@ -304,27 +234,9 @@ export function RecurrencesFilters({ filter, onChange }: Props) {
   }
 
   const active = countActive(filter);
-  const MONTH_NAMES_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-
-  function stepMonth(direction: -1 | 1) {
-    let m = filter.month + direction;
-    let y = filter.year;
-    if (m < 1) { m = 12; y--; }
-    if (m > 12) { m = 1; y++; }
-    onChange({ ...filter, month: m, year: y });
-  }
 
   return (
-    <div className="flex items-center gap-1">
-      <button
-        onClick={() => stepMonth(-1)}
-        title="Mês anterior"
-        className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-full transition-colors"
-      >
-        <ChevronLeft size={15} />
-      </button>
-
-      <div ref={ref} className="relative">
+    <div ref={ref} className="relative">
       <button
         onClick={() => { setOpen(o => !o); setDraft(filter); }}
         className={cn(
@@ -335,10 +247,10 @@ export function RecurrencesFilters({ filter, onChange }: Props) {
         )}
       >
         <SlidersHorizontal size={13} />
-        {MONTH_NAMES_FULL[filter.month - 1]} {filter.year}
-        {active > 1 && (
+        Filtros
+        {active > 0 && (
           <span className="bg-green flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-black">
-            {active - 1}
+            {active}
           </span>
         )}
       </button>
@@ -346,15 +258,13 @@ export function RecurrencesFilters({ filter, onChange }: Props) {
       {open && (
         <div
           className="border-border bg-surface absolute right-0 top-10 z-50 flex overflow-hidden rounded-2xl border shadow-xl"
-          style={{ minWidth: 520 }}
+          style={{ minWidth: 460 }}
         >
           {/* Left nav */}
-          <div className="border-border bg-surface2 flex w-44 shrink-0 flex-col border-r py-2">
+          <div className="border-border bg-surface2 flex w-40 shrink-0 flex-col border-r py-2">
             {SECTIONS.map(({ id, label, icon: Icon }) => {
               const isActive = section === id;
               let badge = 0;
-              const now = new Date();
-              if (id === "month" && (draft.month !== now.getMonth() + 1 || draft.year !== now.getFullYear())) badge = 1;
               if (id === "type" && draft.typeFilter !== "All") badge = 1;
               if (id === "categories") badge = draft.categoryIds.length + draft.subCategoryIds.length;
               if (id === "accounts") badge = draft.accountIds.length;
@@ -413,15 +323,6 @@ export function RecurrencesFilters({ filter, onChange }: Props) {
           </div>
         </div>
       )}
-      </div>
-
-      <button
-        onClick={() => stepMonth(1)}
-        title="Próximo mês"
-        className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-full transition-colors"
-      >
-        <ChevronRight size={15} />
-      </button>
     </div>
   );
 }

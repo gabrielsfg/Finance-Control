@@ -21,7 +21,7 @@ namespace FinanceControl.Tests.Unit
             var dto = new CreateAccountRequestDto
             {
                 Name = "Wallet",
-                Type = EnumAccountType.Debit,
+                Type = EnumAccountType.Checking,
                 IsDefaultAccount = false,
             };
 
@@ -44,7 +44,7 @@ namespace FinanceControl.Tests.Unit
             await service.CreateAccountAsync(new CreateAccountRequestDto
             {
                 Name = "First",
-                Type = EnumAccountType.Debit,
+                Type = EnumAccountType.Checking,
                 IsDefaultAccount = true,
             }, user.Id);
 
@@ -75,7 +75,7 @@ namespace FinanceControl.Tests.Unit
             await service.CreateAccountAsync(new CreateAccountRequestDto
             {
                 Name = "First",
-                Type = EnumAccountType.Debit,
+                Type = EnumAccountType.Checking,
                 IsDefaultAccount = true,
             }, user.Id);
 
@@ -105,7 +105,7 @@ namespace FinanceControl.Tests.Unit
 
             var subCat = new SubCategory { Name = "Sub", CategoryId = category.Id, UserId = user.Id };
             context.SubCategories.Add(subCat);
-            var account = new Account { Name = "Wallet", UserId = user.Id, Type = EnumAccountType.Debit };
+            var account = new Account { Name = "Wallet", UserId = user.Id, Type = EnumAccountType.Checking };
             context.Accounts.Add(account);
             await context.SaveChangesAsync();
 
@@ -141,7 +141,7 @@ namespace FinanceControl.Tests.Unit
 
             var user = new User { Email = "u@test.com", Name = "U", PasswordHash = "x" };
             context.Users.Add(user);
-            context.Accounts.Add(new Account { Name = "Wallet", UserId = user.Id, Type = EnumAccountType.Debit });
+            context.Accounts.Add(new Account { Name = "Wallet", UserId = user.Id, Type = EnumAccountType.Checking });
             await context.SaveChangesAsync();
 
             var accounts = (await service.GetAllAccountAsync(user.Id)).ToList();

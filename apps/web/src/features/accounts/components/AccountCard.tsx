@@ -1,20 +1,10 @@
 "use client";
 
-import { Pencil, Trash2, Star, CreditCard, Landmark, PiggyBank, Wallet, Banknote } from "lucide-react";
+import { Pencil, Trash2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import type { AccountItem, AccountType } from "@/lib/types/accounts.types";
-
-const ACCOUNT_TYPE_CONFIG: Record<
-  AccountType,
-  { label: string; color: string; Icon: React.ElementType }
-> = {
-  Checking: { label: "Conta Corrente", color: "#4A9EFF", Icon: Landmark },
-  Savings:  { label: "Poupança",       color: "#00C98D", Icon: PiggyBank },
-  Credit:   { label: "Crédito",        color: "#7C6FE0", Icon: CreditCard },
-  Debit:    { label: "Débito",         color: "#F5A623", Icon: Wallet },
-  Cash:     { label: "Dinheiro",       color: "#F5CE42", Icon: Banknote },
-};
+import { ACCOUNT_TYPE_CONFIG } from "@/lib/config/accountTypes";
+import type { AccountItem } from "@/lib/types/accounts.types";
 
 type AccountCardProps = {
   account: AccountItem;

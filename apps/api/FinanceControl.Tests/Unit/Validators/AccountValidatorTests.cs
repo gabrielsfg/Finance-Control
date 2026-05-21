@@ -12,7 +12,7 @@ namespace FinanceControl.Tests.Unit.Validators
         private static CreateAccountRequestDto ValidDebit() => new()
         {
             Name = "My Account",
-            Type = EnumAccountType.Debit,
+            Type = EnumAccountType.Checking,
         };
 
         private static CreateAccountRequestDto ValidCredit() => new()
@@ -118,7 +118,7 @@ namespace FinanceControl.Tests.Unit.Validators
             {
                 Id = 1,
                 Name = "Account",
-                Type = EnumAccountType.Debit,
+                Type = EnumAccountType.Checking,
                 CreditLimit = 3000,
             };
             Assert.False(_updateValidator.Validate(dto).IsValid);

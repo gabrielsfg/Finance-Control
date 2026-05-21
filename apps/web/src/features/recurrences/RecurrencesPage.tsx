@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RefreshCw, Layers, Wallet, Bell } from "lucide-react";
 import { StatCard } from "@/components/shared/StatCard";
 import { RecurringList } from "./components/RecurringList";
@@ -11,6 +11,7 @@ import { RecurrenceCreateDrawer } from "./components/RecurrenceCreateDrawer";
 import { CancelRecurringDialog } from "./components/CancelRecurringDialog";
 import { RecurrencesFilters } from "./components/RecurrencesFilters";
 import { useRecurrencePage, useCancelRecurring, useReactivateRecurring } from "./hooks/useRecurrences";
+import { useActiveBudget } from "@/features/budgets/hooks/useActiveBudget";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { usePageNova, usePageFilter } from "@/lib/hooks/usePageHeader";
 import { defaultRecurrenceFilter } from "@/lib/types/recurrences.types";
@@ -24,6 +25,7 @@ export function RecurrencesPage() {
   const { data, isLoading } = useRecurrencePage();
   const cancelMutation = useCancelRecurring();
   const reactivateMutation = useReactivateRecurring();
+  const { data: activeBudget } = useActiveBudget();
 
   const [filter, setFilter] = useState<RecurrenceFilter>(defaultRecurrenceFilter());
   const [drawer, setDrawer] = useState<DrawerItem | null>(null);
@@ -33,15 +35,22 @@ export function RecurrencesPage() {
   const [cancelItem, setCancelItem] = useState<RecurringItem | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
+  // Sync filter period with the active budget period whenever it changes
+  useEffect(() => {
+    if (activeBudget) {
+      setFilter(f => ({ ...f, startDate: activeBudget.startDate, endDate: activeBudget.endDate }));
+    }
+  }, [activeBudget?.startDate, activeBudget?.endDate]);
+
   usePageNova("Novo", () => setCreateOpen(true));
   usePageFilter(<RecurrencesFilters filter={filter} onChange={setFilter} />);
 
-  // Filter recurring: show active + cancelled that were still active in selected month
+  // Filter recurring: show active + cancelled that were still active in the budget period
   const filteredRecurring = useMemo(() => {
     if (!data) return [];
 
-    const firstDayOfMonth = new Date(filter.year, filter.month - 1, 1);
-    const lastDayOfMonth  = new Date(filter.year, filter.month, 0);
+    const firstDayOfMonth = new Date(filter.startDate);
+    const lastDayOfMonth  = new Date(filter.endDate);
 
     return data.recurring.filter(r => {
       const start = new Date(r.startDate);
@@ -68,12 +77,12 @@ export function RecurrencesPage() {
     if (!data) return [];
 
     return data.installments.filter(inst => {
-      // active installments or completed ones that were in progress during the month
+      // active installments or completed ones that were in progress during the budget period
       const start = new Date(inst.transactionDate);
       const endMonth = new Date(start);
       endMonth.setMonth(endMonth.getMonth() + inst.totalInstallments - 1);
-      const firstDayOfMonth = new Date(filter.year, filter.month - 1, 1);
-      const lastDayOfMonth  = new Date(filter.year, filter.month, 0);
+      const firstDayOfMonth = new Date(filter.startDate);
+      const lastDayOfMonth  = new Date(filter.endDate);
 
       if (start > lastDayOfMonth) return false;
       if (endMonth < firstDayOfMonth) return false;

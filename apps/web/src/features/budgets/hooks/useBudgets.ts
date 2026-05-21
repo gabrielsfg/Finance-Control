@@ -32,3 +32,11 @@ export const useActivateBudget = () => {
     onSuccess: (updated) => queryClient.setQueryData(["budgets"], updated),
   });
 };
+
+export const useDeleteBudget = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => budgetsApi.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["budgets"] }),
+  });
+};
