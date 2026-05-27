@@ -8,7 +8,7 @@ namespace FinanceControl.Domain.Interfaces.Service
 {
     public interface IUserService
     {
-        Task<User?> RegisterUserAsync(CreateUserRequestDto requestDto);
+        Task<AuthResponseDto?> RegisterUserAsync(CreateUserRequestDto requestDto);
 
         Task<LoginResult> UserLoginAsync(UserLoginRequestDto requestDto);
 

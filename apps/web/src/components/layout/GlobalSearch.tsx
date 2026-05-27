@@ -3,6 +3,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { accountsApi } from "@/lib/api/accounts";
+import { categoriesApi } from "@/lib/api/categories";
+import { investmentsApi } from "@/lib/api/investments";
+import { transactionsApi } from "@/lib/api/transactions";
 import {
   Search,
   ArrowLeftRight,
@@ -242,6 +246,18 @@ export const GlobalSearch = () => {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const qc = useQueryClient();
+
+  const prefetchSearchData = useCallback(() => {
+    if (!qc.getQueryData(["accounts"]))
+      qc.prefetchQuery({ queryKey: ["accounts"], queryFn: accountsApi.getAll, staleTime: 60_000 });
+    if (!qc.getQueryData(["categories"]))
+      qc.prefetchQuery({ queryKey: ["categories"], queryFn: categoriesApi.getAll, staleTime: 60_000 });
+    if (!qc.getQueryData(["investments"]))
+      qc.prefetchQuery({ queryKey: ["investments"], queryFn: investmentsApi.getPortfolio, staleTime: 5 * 60_000 });
+    if (!qc.getQueryData(["transactions"]))
+      qc.prefetchQuery({ queryKey: ["transactions"], queryFn: transactionsApi.getAll, staleTime: 60_000 });
+  }, [qc]);
 
   const sections = useGlobalSearch(query);
   const allResults = sections.flatMap((s) => s.results);
@@ -270,6 +286,7 @@ export const GlobalSearch = () => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
+        prefetchSearchData();
         inputRef.current?.focus();
         setOpen(true);
       }
@@ -280,7 +297,7 @@ export const GlobalSearch = () => {
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, []);
+  }, [prefetchSearchData]);
 
   const navigate = useCallback(
     (result: SearchResult) => {
@@ -334,7 +351,7 @@ export const GlobalSearch = () => {
             setQuery(e.target.value);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => { prefetchSearchData(); setOpen(true); }}
           onKeyDown={handleKeyDown}
           placeholder="Buscar páginas, transações, investimentos..."
           className="text-text placeholder:text-text-muted flex-1 bg-transparent font-sans text-[14px] focus:outline-none"
