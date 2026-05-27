@@ -5,6 +5,8 @@ import { ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCreateBudget } from "@/features/budgets/hooks/useBudgets";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
+import { useCategories } from "@/features/categories/hooks/useCategories";
+import { CreateSubCategoryModal } from "@/features/categories/components/CreateSubCategoryModal";
 import type { BudgetRecurrence } from "@/lib/types/budgets.types";
 import {
   StepIndicator,
@@ -20,17 +22,22 @@ type Props = { open: boolean; onClose: () => void };
 export function CreateBudgetModal({ open, onClose }: Props) {
   const createBudget = useCreateBudget();
   const { data: subCategories = [] } = useSubCategories();
+  const { data: categories = [] } = useCategories();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [name, setName] = useState("");
   const [recurrence, setRecurrence] = useState<BudgetRecurrence>("Monthly");
-  const [startDay, setStartDay] = useState(1);
+  const [startDayStr, setStartDayStr] = useState("1");
   const [areas, setAreas] = useState<DraftArea[]>([]);
+  const [showCreateSubCategory, setShowCreateSubCategory] = useState(false);
 
   const handleClose = () => {
-    setStep(1); setName(""); setRecurrence("Monthly"); setStartDay(1); setAreas([]);
+    setStep(1); setName(""); setRecurrence("Monthly"); setStartDayStr("1"); setAreas([]);
     onClose();
   };
+
+  const startDay = Number(startDayStr);
+  const startDayValid = startDayStr !== "" && startDay >= 1 && startDay <= 31;
 
   const handleSubmit = async () => {
     await createBudget.mutateAsync({
@@ -93,11 +100,16 @@ export function CreateBudgetModal({ open, onClose }: Props) {
             <Step1
               name={name} setName={setName}
               recurrence={recurrence} setRecurrence={setRecurrence}
-              startDay={startDay} setStartDay={setStartDay}
+              startDayStr={startDayStr} setStartDayStr={setStartDayStr}
             />
           )}
           {step === 2 && (
-            <Step2 areas={areas} setAreas={setAreas} subCategories={subCategories} />
+            <Step2
+              areas={areas}
+              setAreas={setAreas}
+              subCategories={subCategories}
+              onNewSubCategory={() => setShowCreateSubCategory(true)}
+            />
           )}
           {step === 3 && (
             <Step3 name={name} recurrence={recurrence} startDay={startDay} areas={areas} />
@@ -116,7 +128,7 @@ export function CreateBudgetModal({ open, onClose }: Props) {
             {step < 3 ? (
               <Button
                 className="flex-1"
-                disabled={step === 1 ? !name.trim() : !hasAllocs}
+                disabled={step === 1 ? !name.trim() || !startDayValid : !hasAllocs}
                 onClick={() => setStep((s) => (s + 1) as 2 | 3)}
               >
                 Próximo <ChevronRight size={14} />
@@ -129,6 +141,13 @@ export function CreateBudgetModal({ open, onClose }: Props) {
           </div>
         </div>
       </div>
+
+      <CreateSubCategoryModal
+        open={showCreateSubCategory}
+        onClose={() => setShowCreateSubCategory(false)}
+        categories={categories}
+        zIndex={60}
+      />
     </>
   );
 }

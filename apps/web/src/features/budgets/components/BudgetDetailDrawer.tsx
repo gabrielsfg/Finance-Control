@@ -22,8 +22,10 @@ const RECURRENCE_LABELS: Record<string, string> = {
 type AreaGroup = {
   areaName: string;
   areaColor: string;
-  totalAllocated: number;
-  totalSpent: number;
+  expenseAllocated: number;
+  expenseSpent: number;
+  incomeAllocated: number;
+  incomeSpent: number;
   allocations: BudgetAllocation[];
 };
 
@@ -35,14 +37,21 @@ function groupByArea(allocations: BudgetAllocation[]): AreaGroup[] {
       map.set(key, {
         areaName: alloc.areaName,
         areaColor: getCategoryColor(alloc.categoryColor, alloc.categoryName),
-        totalAllocated: 0,
-        totalSpent: 0,
+        expenseAllocated: 0,
+        expenseSpent: 0,
+        incomeAllocated: 0,
+        incomeSpent: 0,
         allocations: [],
       });
     }
     const g = map.get(key)!;
-    g.totalAllocated += alloc.allocated;
-    g.totalSpent += alloc.spent;
+    if (alloc.allocationType === "Expense") {
+      g.expenseAllocated += alloc.allocated;
+      g.expenseSpent += alloc.spent;
+    } else {
+      g.incomeAllocated += alloc.allocated;
+      g.incomeSpent += alloc.spent;
+    }
     g.allocations.push(alloc);
   }
   return Array.from(map.values());
@@ -50,9 +59,13 @@ function groupByArea(allocations: BudgetAllocation[]): AreaGroup[] {
 
 function AreaRow({ group }: { group: AreaGroup }) {
   const [open, setOpen] = useState(false);
-  const pct = group.totalAllocated > 0 ? (group.totalSpent / group.totalAllocated) * 100 : 0;
-  const isOver = group.totalSpent > group.totalAllocated;
-  const remaining = group.totalAllocated - group.totalSpent;
+
+  const hasExpense = group.expenseAllocated > 0;
+  const hasIncome  = group.incomeAllocated  > 0;
+  const expensePct  = hasExpense ? (group.expenseSpent / group.expenseAllocated) * 100 : 0;
+  const incomePct   = hasIncome  ? (group.incomeSpent  / group.incomeAllocated)  * 100 : 0;
+  const expenseOver = group.expenseSpent > group.expenseAllocated;
+  const expenseRemaining = group.expenseAllocated - group.expenseSpent;
 
   return (
     <div className="border-border rounded-xl border">
@@ -62,26 +75,40 @@ function AreaRow({ group }: { group: AreaGroup }) {
       >
         <div className="h-3 w-3 shrink-0 rounded-[3px]" style={{ backgroundColor: group.areaColor }} />
         <div className="min-w-0 flex-1 text-left">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 mb-2">
             <span className="font-display font-600 text-text text-[14px]">{group.areaName}</span>
-            <span className="font-money text-text shrink-0 text-[13px]">
-              {formatCurrency(group.totalSpent / 100)}
-              <span className="text-text-muted"> / {formatCurrency(group.totalAllocated / 100)}</span>
-            </span>
-          </div>
-          <div className="mt-2">
-            <ProgressBar value={group.totalSpent} max={group.totalAllocated} height={4} color={group.areaColor} />
-          </div>
-          <div className="mt-1 flex items-center justify-between">
-            <span className="text-text-muted text-[11px]">
+            <span className="text-text-muted text-[11px] shrink-0">
               {group.allocations.length} subcategoria{group.allocations.length !== 1 ? "s" : ""}
             </span>
-            <span className={cn("text-[11px]", remaining < 0 ? "text-red" : "text-text-muted")}>
-              {remaining < 0
-                ? `Estourado ${formatCurrency(Math.abs(remaining) / 100)}`
-                : `${formatPercentNeutral(pct)}%`}
-            </span>
           </div>
+          {hasExpense && (
+            <div className="mb-1.5">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-text-muted text-[11px]">
+                  Despesas · {formatCurrency(group.expenseSpent / 100)}
+                  <span className="text-text-muted/60"> / {formatCurrency(group.expenseAllocated / 100)}</span>
+                </span>
+                <span className={cn("text-[11px]", expenseOver ? "text-red" : "text-text-muted")}>
+                  {expenseOver
+                    ? `+${formatCurrency(Math.abs(expenseRemaining) / 100)}`
+                    : `${formatPercentNeutral(expensePct)}%`}
+                </span>
+              </div>
+              <ProgressBar value={group.expenseSpent} max={group.expenseAllocated} height={4} color="var(--red)" />
+            </div>
+          )}
+          {hasIncome && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-text-muted text-[11px]">
+                  Receitas · {formatCurrency(group.incomeSpent / 100)}
+                  <span className="text-text-muted/60"> / {formatCurrency(group.incomeAllocated / 100)}</span>
+                </span>
+                <span className="text-green text-[11px]">{formatPercentNeutral(incomePct)}%</span>
+              </div>
+              <ProgressBar value={group.incomeSpent} max={group.incomeAllocated} height={4} color="var(--green)" />
+            </div>
+          )}
         </div>
         {open
           ? <ChevronUp size={14} className="text-text-muted shrink-0" />
@@ -130,8 +157,18 @@ export function BudgetDetailDrawer({ budget, onClose, onEdit }: Props) {
 
   const open = !!budget;
   const areaGroups = budget ? groupByArea(budget.allocations ?? []) : [];
-  const isOver = !!budget && budget.spentPercentage > 100;
-  const remaining = budget ? budget.totalAllocated - budget.totalSpent : 0;
+
+  const allocs = budget?.allocations ?? [];
+  const totalExpenseAllocated = allocs.filter((a) => a.allocationType === "Expense").reduce((s, a) => s + a.allocated, 0);
+  const totalExpenseSpent     = allocs.filter((a) => a.allocationType === "Expense").reduce((s, a) => s + a.spent, 0);
+  const totalIncomeAllocated  = allocs.filter((a) => a.allocationType === "Income").reduce((s, a) => s + a.allocated, 0);
+  const totalIncomeSpent      = allocs.filter((a) => a.allocationType === "Income").reduce((s, a) => s + a.spent, 0);
+  const expensePct     = totalExpenseAllocated > 0 ? (totalExpenseSpent / totalExpenseAllocated) * 100 : 0;
+  const incomePct      = totalIncomeAllocated  > 0 ? (totalIncomeSpent  / totalIncomeAllocated)  * 100 : 0;
+  const expenseOver    = totalExpenseSpent > totalExpenseAllocated;
+  const expenseRemaining = totalExpenseAllocated - totalExpenseSpent;
+  const hasExpense = totalExpenseAllocated > 0;
+  const hasIncome  = totalIncomeAllocated  > 0;
 
   const handleClose = () => onClose();
 
@@ -174,29 +211,54 @@ export function BudgetDetailDrawer({ budget, onClose, onEdit }: Props) {
         {budget && (
           <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
             {/* KPI hero */}
-            <div className="border-border bg-surface2 rounded-xl border p-5">
-              <div className="mb-3 flex items-end justify-between">
+            <div className="border-border bg-surface2 rounded-xl border p-5 flex flex-col gap-4">
+              {hasExpense && (
                 <div>
-                  <p className="text-text-muted mb-0.5 text-[11px] uppercase tracking-[0.05em]">Gasto atual</p>
-                  <p className="font-money font-600 text-text text-[26px] tracking-tight">
-                    {formatCurrency(budget.totalSpent / 100)}
-                  </p>
-                  <p className="text-text-muted mt-0.5 text-[13px]">
-                    de {formatCurrency(budget.totalAllocated / 100)}
-                  </p>
+                  <div className="mb-2 flex items-end justify-between">
+                    <div>
+                      <p className="text-text-muted mb-0.5 text-[11px] uppercase tracking-[0.05em]">Despesas</p>
+                      <p className="font-money font-600 text-text text-[24px] tracking-tight">
+                        {formatCurrency(totalExpenseSpent / 100)}
+                      </p>
+                      <p className="text-text-muted mt-0.5 text-[12px]">
+                        de {formatCurrency(totalExpenseAllocated / 100)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={cn("font-money font-600 text-[20px]", expenseOver ? "text-red" : "text-text-muted")}>
+                        {formatPercentNeutral(expensePct)}%
+                      </p>
+                      <p className={cn("text-[11px]", expenseRemaining < 0 ? "text-red" : "text-text-muted")}>
+                        {expenseRemaining < 0
+                          ? `Estourado ${formatCurrency(Math.abs(expenseRemaining) / 100)}`
+                          : `Restam ${formatCurrency(expenseRemaining / 100)}`}
+                      </p>
+                    </div>
+                  </div>
+                  <ProgressBar value={totalExpenseSpent} max={totalExpenseAllocated} height={7} color="var(--red)" />
                 </div>
-                <div className="text-right">
-                  <p className={cn("font-money font-600 text-[22px]", isOver ? "text-red" : "text-green")}>
-                    {formatPercentNeutral(budget.spentPercentage)}%
-                  </p>
-                  <p className={cn("text-[12px]", remaining < 0 ? "text-red" : "text-text-muted")}>
-                    {remaining < 0
-                      ? `Estourado ${formatCurrency(Math.abs(remaining) / 100)}`
-                      : `Restam ${formatCurrency(remaining / 100)}`}
-                  </p>
+              )}
+              {hasIncome && (
+                <div>
+                  <div className="mb-2 flex items-end justify-between">
+                    <div>
+                      <p className="text-text-muted mb-0.5 text-[11px] uppercase tracking-[0.05em]">Receitas</p>
+                      <p className="font-money font-600 text-text text-[24px] tracking-tight">
+                        {formatCurrency(totalIncomeSpent / 100)}
+                      </p>
+                      <p className="text-text-muted mt-0.5 text-[12px]">
+                        de {formatCurrency(totalIncomeAllocated / 100)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-money font-600 text-green text-[20px]">
+                        {formatPercentNeutral(incomePct)}%
+                      </p>
+                    </div>
+                  </div>
+                  <ProgressBar value={totalIncomeSpent} max={totalIncomeAllocated} height={7} color="var(--green)" />
                 </div>
-              </div>
-              <ProgressBar value={budget.totalSpent} max={budget.totalAllocated} height={8} />
+              )}
             </div>
 
             {/* Meta */}

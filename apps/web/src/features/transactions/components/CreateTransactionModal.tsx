@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,10 @@ import { cn } from "@/lib/utils";
 import { useCreateTransaction } from "@/features/transactions/hooks/useTransactions";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { useCategories } from "@/features/categories/hooks/useCategories";
+import { CreateSubCategoryModal } from "@/features/categories/components/CreateSubCategoryModal";
+import { getCategoryColor } from "@/lib/config/categoryColors";
+import type { SubCategoryItem } from "@/lib/types/transactions.types";
 import type { PaymentType, RecurrenceType, TransactionType } from "@/lib/types/transactions.types";
 
 const RECURRENCE_LABELS: Record<RecurrenceType, string> = {
@@ -77,8 +81,13 @@ export const CreateTransactionModal = ({ open, onClose, defaultType = "Expense" 
   const { mutateAsync, isPending } = useCreateTransaction();
   const { data: subcategories = [] } = useSubCategories();
   const { data: accounts = [] } = useAccounts();
+  const { data: categories = [] } = useCategories();
   const [serverError, setServerError] = useState<string | null>(null);
   const [transactionType, setTransactionType] = useState<TransactionType>(defaultType);
+  const [showCreateSubCategory, setShowCreateSubCategory] = useState(false);
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [selectedSub, setSelectedSub] = useState<SubCategoryItem | null>(null);
+  const [categorySearch, setCategorySearch] = useState("");
 
   const {
     register,
@@ -105,21 +114,33 @@ export const CreateTransactionModal = ({ open, onClose, defaultType = "Expense" 
 
   const paymentType = watch("paymentType") as PaymentType;
 
-  const groupedSubcategories = subcategories.reduce<Record<string, typeof subcategories>>(
-    (acc, sub) => {
-      if (!acc[sub.categoryName]) acc[sub.categoryName] = [];
-      acc[sub.categoryName].push(sub);
-      return acc;
-    },
-    {},
-  );
-
   const handleClose = () => {
     reset();
     setServerError(null);
     setTransactionType(defaultType);
+    setSelectedSub(null);
+    setCategoryPickerOpen(false);
+    setCategorySearch("");
     onClose();
   };
+
+  const handlePickSub = (sub: SubCategoryItem) => {
+    setSelectedSub(sub);
+    setValue("subCategoryId", String(sub.id), { shouldValidate: true });
+    setCategoryPickerOpen(false);
+    setCategorySearch("");
+  };
+
+  const groupedFiltered = subcategories
+    .filter((s) =>
+      !categorySearch.trim() ||
+      s.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
+      s.categoryName.toLowerCase().includes(categorySearch.toLowerCase()),
+    )
+    .reduce<Record<string, SubCategoryItem[]>>((acc, s) => {
+      (acc[s.categoryName] ??= []).push(s);
+      return acc;
+    }, {});
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
@@ -151,6 +172,13 @@ export const CreateTransactionModal = ({ open, onClose, defaultType = "Expense" 
   };
 
   return (
+    <>
+    <CreateSubCategoryModal
+      open={showCreateSubCategory}
+      onClose={() => setShowCreateSubCategory(false)}
+      categories={categories}
+      zIndex={60}
+    />
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -243,27 +271,93 @@ export const CreateTransactionModal = ({ open, onClose, defaultType = "Expense" 
           {/* SubCategory */}
           <div className="flex flex-col gap-1.5">
             <label className="text-text-sub text-[13px]">Categoria</label>
-            <Select
-              onValueChange={(v) => setValue("subCategoryId", v, { shouldValidate: true })}
-            >
-              <SelectTrigger className={cn("border-border bg-surface2 text-text h-9 rounded-lg text-[14px]", errors.subCategoryId && "border-red/60")}>
-                <SelectValue placeholder="Selecionar categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(groupedSubcategories).map(([catName, subs]) => (
-                  <div key={catName}>
-                    <p className="text-text-muted px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide">
-                      {catName}
-                    </p>
-                    {subs.map((s) => (
-                      <SelectItem key={s.id} value={String(s.id)}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
+            <div className="relative">
+              {/* Trigger */}
+              <button
+                type="button"
+                onClick={() => setCategoryPickerOpen((o) => !o)}
+                className={cn(
+                  "border-border bg-surface2 text-text h-9 w-full rounded-lg border px-3 text-[13px] flex items-center justify-between gap-2",
+                  errors.subCategoryId && "border-red/60",
+                  categoryPickerOpen && "border-green/60",
+                )}
+              >
+                {selectedSub ? (
+                  <span className="flex items-center gap-2 min-w-0">
+                    {selectedSub.emoji
+                      ? <span className="text-[13px] leading-none shrink-0">{selectedSub.emoji}</span>
+                      : <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: getCategoryColor(selectedSub.categoryColor, selectedSub.categoryName) }} />
+                    }
+                    <span className="truncate">{selectedSub.name}</span>
+                  </span>
+                ) : (
+                  <span className="text-text-muted">Selecionar subcategoria</span>
+                )}
+                {selectedSub
+                  ? <X size={13} className="text-text-muted shrink-0" onClick={(e) => { e.stopPropagation(); setSelectedSub(null); setValue("subCategoryId", "", { shouldValidate: true }); }} />
+                  : <ChevronDown size={13} className="text-text-muted shrink-0" />
+                }
+              </button>
+
+              {/* Dropdown */}
+              {categoryPickerOpen && (
+                <div className="border-border bg-surface absolute left-0 right-0 top-10 z-10 rounded-xl border shadow-xl overflow-hidden">
+                  <div className="border-border flex items-center gap-2 border-b px-3 py-2">
+                    <input
+                      autoFocus
+                      value={categorySearch}
+                      onChange={(e) => setCategorySearch(e.target.value)}
+                      placeholder="Buscar..."
+                      className="bg-transparent text-text placeholder:text-text-muted flex-1 text-[13px] outline-none"
+                    />
+                    <button type="button" onClick={() => { setCategoryPickerOpen(false); setCategorySearch(""); }} className="text-text-muted hover:text-text">
+                      <X size={13} />
+                    </button>
                   </div>
-                ))}
-              </SelectContent>
-            </Select>
+                  <div className="max-h-48 overflow-y-auto">
+                    {Object.keys(groupedFiltered).length === 0 ? (
+                      <p className="text-text-muted px-3 py-4 text-center text-[12px]">Nenhuma encontrada</p>
+                    ) : (
+                      Object.entries(groupedFiltered).map(([cat, subs]) => {
+                        const color = getCategoryColor(subs[0]?.categoryColor, cat);
+                        return (
+                          <div key={cat}>
+                            <div className="bg-surface2/60 flex items-center gap-1.5 px-3 py-1">
+                              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                              <p className="text-text-muted text-[11px] font-medium uppercase tracking-[0.06em]">{cat}</p>
+                            </div>
+                            {subs.map((s) => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => handlePickSub(s)}
+                                className="hover:bg-surface2 flex w-full items-center gap-2 px-3 py-2 text-left transition-colors"
+                              >
+                                {s.emoji
+                                  ? <span className="text-[13px] leading-none shrink-0">{s.emoji}</span>
+                                  : <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                }
+                                <span className="text-text text-[13px]">{s.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                  <div className="border-border border-t px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => { setCategoryPickerOpen(false); setShowCreateSubCategory(true); }}
+                      className="text-text-muted hover:text-green flex w-full items-center gap-1.5 text-[12px] transition-colors"
+                    >
+                      <span className="text-[14px] leading-none">+</span>
+                      Nova subcategoria
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             {errors.subCategoryId && (
               <p className="text-red text-[12px]">{errors.subCategoryId.message}</p>
             )}
@@ -369,5 +463,6 @@ export const CreateTransactionModal = ({ open, onClose, defaultType = "Expense" 
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 };

@@ -10,9 +10,11 @@ import { cn } from "@/lib/utils";
 const inputCls =
   "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-10 px-3.5 text-[14px] outline-none focus:border-green/60 transition-colors";
 
-type Props = { open: boolean; onClose: () => void };
+type Props = { open: boolean; onClose: () => void; zIndex?: number };
 
-export function CreateCategoryModal({ open, onClose }: Props) {
+export function CreateCategoryModal({ open, onClose, zIndex }: Props) {
+  const backdropZ = zIndex ? zIndex - 1 : 40;
+  const drawerZ = zIndex ?? 50;
   const [name, setName] = useState("");
   const [color, setColor] = useState("#00C98D");
   const { mutate: create, isPending } = useCreateCategory();
@@ -32,15 +34,17 @@ export function CreateCategoryModal({ open, onClose }: Props) {
     <>
       <div
         onClick={handleClose}
+        style={{ zIndex: backdropZ }}
         className={cn(
-          "fixed inset-0 z-40 transition-all duration-300",
+          "fixed inset-0 transition-all duration-300",
           open ? "pointer-events-auto backdrop-blur-sm bg-black/40" : "pointer-events-none opacity-0",
         )}
       />
 
       <div
+        style={{ zIndex: drawerZ }}
         className={cn(
-          "bg-surface border-border fixed inset-y-0 right-0 z-50 flex w-full max-w-[400px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
+          "bg-surface border-border fixed inset-y-0 right-0 flex w-full max-w-[400px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >

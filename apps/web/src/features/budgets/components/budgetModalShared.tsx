@@ -7,6 +7,7 @@ import { Plus, Trash2, ChevronRight, ChevronDown, FolderOpen, X, TrendingDown, T
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { ProgressBar } from "@/components/shared/ProgressBar";
+import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { BudgetRecurrence, AllocationType } from "@/lib/types/budgets.types";
 import type { SubCategoryItem } from "@/lib/types/transactions.types";
 
@@ -75,12 +76,13 @@ export function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
 // ── Subcategory picker ────────────────────────────────────────────────────────
 
 export function SubcategoryPicker({
-  subCategories, usedIds, onPick, onClose,
+  subCategories, usedIds, onPick, onClose, onNewSubCategory,
 }: {
   subCategories: SubCategoryItem[];
   usedIds: Set<number>;
   onPick: (sub: SubCategoryItem) => void;
   onClose: () => void;
+  onNewSubCategory?: () => void;
 }) {
   const [search, setSearch] = useState("");
 
@@ -95,6 +97,9 @@ export function SubcategoryPicker({
     (acc[s.categoryName] ??= []).push(s);
     return acc;
   }, {});
+
+  const resolveColor = (subs: SubCategoryItem[]) =>
+    getCategoryColor(subs[0]?.categoryColor, subs[0]?.categoryName);
 
   return (
     <div className="border-border bg-surface rounded-xl border overflow-hidden">
@@ -114,29 +119,45 @@ export function SubcategoryPicker({
         {Object.keys(groups).length === 0 ? (
           <p className="text-text-muted px-3 py-4 text-center text-[12px]">Nenhuma encontrada</p>
         ) : (
-          Object.entries(groups).map(([cat, subs]) => (
-            <div key={cat}>
-              <p className="text-text-muted bg-surface2/60 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.06em]">
-                {cat}
-              </p>
-              {subs.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => onPick(s)}
-                  className="hover:bg-surface2 flex w-full items-center gap-2 px-3 py-2 text-left transition-colors"
-                >
-                  {s.emoji
-                    ? <span className="text-[14px] leading-none shrink-0">{s.emoji}</span>
-                    : s.categoryColor && <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: s.categoryColor }} />
-                  }
-                  <span className="text-text text-[13px]">{s.name}</span>
-                </button>
-              ))}
-            </div>
-          ))
+          Object.entries(groups).map(([cat, subs]) => {
+            const color = resolveColor(subs);
+            return (
+              <div key={cat}>
+                <div className="bg-surface2/60 flex items-center gap-1.5 px-3 py-1">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                  <p className="text-text-muted text-[11px] font-medium uppercase tracking-[0.06em]">{cat}</p>
+                </div>
+                {subs.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => onPick(s)}
+                    className="hover:bg-surface2 flex w-full items-center gap-2 px-3 py-2 text-left transition-colors"
+                  >
+                    {s.emoji
+                      ? <span className="text-[14px] leading-none shrink-0">{s.emoji}</span>
+                      : <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                    }
+                    <span className="text-text text-[13px]">{s.name}</span>
+                  </button>
+                ))}
+              </div>
+            );
+          })
         )}
       </div>
+      {onNewSubCategory && (
+        <div className="border-border border-t px-3 py-2">
+          <button
+            type="button"
+            onClick={onNewSubCategory}
+            className="text-text-muted hover:text-green flex w-full items-center gap-1.5 text-[12px] transition-colors"
+          >
+            <Plus size={12} />
+            Nova subcategoria
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -144,13 +165,22 @@ export function SubcategoryPicker({
 // ── Step 1 — Details ──────────────────────────────────────────────────────────
 
 export function Step1({
-  name, setName, recurrence, setRecurrence, startDay, setStartDay,
+  name, setName, recurrence, setRecurrence, startDayStr, setStartDayStr,
 }: {
   name: string; setName: (v: string) => void;
   recurrence: BudgetRecurrence; setRecurrence: (v: BudgetRecurrence) => void;
-  startDay: number; setStartDay: (v: number) => void;
+  startDayStr: string; setStartDayStr: (v: string) => void;
 }) {
   const inputClass = "border-border bg-surface2 text-text placeholder:text-text-muted h-9 w-full rounded-lg border px-3 text-[13px] outline-none focus:border-green/60";
+
+  const handleDayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, "");
+    if (raw === "") { setStartDayStr(""); return; }
+    const n = Math.min(31, Math.max(1, Number(raw)));
+    setStartDayStr(String(n));
+  };
+
+  const dayInvalid = startDayStr === "" || Number(startDayStr) < 1 || Number(startDayStr) > 31;
 
   return (
     <div className="flex flex-col gap-4">
@@ -189,12 +219,11 @@ export function Step1({
       <div>
         <label className="text-text-muted mb-1 block text-[12px]">Dia de início</label>
         <input
-          type="number"
-          min={1}
-          max={31}
-          value={startDay}
-          onChange={(e) => setStartDay(Math.min(31, Math.max(1, Number(e.target.value))))}
-          className={cn(inputClass, "w-24")}
+          inputMode="numeric"
+          value={startDayStr}
+          onChange={handleDayChange}
+          placeholder="1"
+          className={cn(inputClass, "w-24", dayInvalid && startDayStr !== "" && "border-red/60")}
         />
         <p className="text-text-muted mt-1 text-[11px]">Dia do mês em que o orçamento começa (1–31)</p>
       </div>
@@ -205,17 +234,21 @@ export function Step1({
 // ── Step 2 — Areas & Allocations ──────────────────────────────────────────────
 
 export function Step2({
-  areas, setAreas, subCategories,
+  areas, setAreas, subCategories, onNewSubCategory,
 }: {
   areas: DraftArea[];
   setAreas: (v: DraftArea[]) => void;
   subCategories: SubCategoryItem[];
+  onNewSubCategory?: () => void;
 }) {
   const [pickerAreaId, setPickerAreaId] = useState<number | null>(null);
   const [pendingSubByArea, setPendingSubByArea] = useState<Record<number, SubCategoryItem>>({});
-  const [valueByArea, setValueByArea] = useState<Record<number, string>>({});
+  const [centsByArea, setCentsByArea] = useState<Record<number, number>>({});
   const [typeByArea, setTypeByArea] = useState<Record<number, AllocationType>>({});
   const [collapsedAreas, setCollapsedAreas] = useState<Set<number>>(new Set());
+  // editing: key = `${areaId}-${allocId}`, value = cents being edited
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editingCents, setEditingCents] = useState<number>(0);
 
   const allUsedIds = new Set(areas.flatMap((a) => a.allocations.map((al) => al.subCategoryId)));
 
@@ -241,17 +274,34 @@ export function Step2({
 
   const handlePickSub = (areaId: number, sub: SubCategoryItem) => {
     setPendingSubByArea((p) => ({ ...p, [areaId]: sub }));
-    setValueByArea((p) => ({ ...p, [areaId]: "" }));
+    setCentsByArea((p) => ({ ...p, [areaId]: 0 }));
     setTypeByArea((p) => ({ ...p, [areaId]: p[areaId] ?? "Expense" }));
     setPickerAreaId(null);
   };
 
+  const handleValueKey = (areaId: number, key: string) => {
+    if (key === "Backspace") {
+      setCentsByArea((p) => ({ ...p, [areaId]: Math.floor((p[areaId] ?? 0) / 10) }));
+    } else if (/^\d$/.test(key)) {
+      setCentsByArea((p) => {
+        const prev = p[areaId] ?? 0;
+        const next = prev * 10 + Number(key);
+        return { ...p, [areaId]: next > 9_999_999_99 ? prev : next };
+      });
+    }
+  };
+
+  const formatCents = (cents: number) => {
+    const reais = Math.floor(cents / 100);
+    const centavos = cents % 100;
+    const reaisStr = reais.toLocaleString("pt-BR");
+    return `${reaisStr},${String(centavos).padStart(2, "0")}`;
+  };
+
   const confirmAlloc = (areaId: number) => {
     const sub = pendingSubByArea[areaId];
-    const raw = valueByArea[areaId] ?? "";
-    if (!sub || !raw) return;
-    const cents = Math.round(parseFloat(raw) * 100);
-    if (isNaN(cents) || cents <= 0) return;
+    const cents = centsByArea[areaId] ?? 0;
+    if (!sub || cents <= 0) return;
 
     const alloc: DraftAllocation = {
       id: uid(),
@@ -266,13 +316,39 @@ export function Step2({
 
     setAreas(areas.map((a) => (a.id === areaId ? { ...a, allocations: [...a.allocations, alloc] } : a)));
     setPendingSubByArea((p) => { const n = { ...p }; delete n[areaId]; return n; });
-    setValueByArea((p) => { const n = { ...p }; delete n[areaId]; return n; });
+    setCentsByArea((p) => { const n = { ...p }; delete n[areaId]; return n; });
   };
 
   const removeAlloc = (areaId: number, allocId: number) =>
     setAreas(areas.map((a) =>
       a.id === areaId ? { ...a, allocations: a.allocations.filter((al) => al.id !== allocId) } : a,
     ));
+
+  const startEditAlloc = (areaId: number, allocId: number, currentCents: number) => {
+    setEditingKey(`${areaId}-${allocId}`);
+    setEditingCents(currentCents);
+  };
+
+  const handleEditKey = (key: string) => {
+    if (key === "Backspace") {
+      setEditingCents((p) => Math.floor(p / 10));
+    } else if (/^\d$/.test(key)) {
+      setEditingCents((p) => {
+        const next = p * 10 + Number(key);
+        return next > 9_999_999_99 ? p : next;
+      });
+    }
+  };
+
+  const confirmEditAlloc = (areaId: number, allocId: number) => {
+    if (editingCents <= 0) return;
+    setAreas(areas.map((a) =>
+      a.id === areaId
+        ? { ...a, allocations: a.allocations.map((al) => al.id === allocId ? { ...al, expectedValue: editingCents } : al) }
+        : a,
+    ));
+    setEditingKey(null);
+  };
 
   const inputClass = "border-border bg-surface2 text-text placeholder:text-text-muted h-9 rounded-lg border px-3 text-[13px] outline-none focus:border-green/60";
 
@@ -309,28 +385,65 @@ export function Step2({
 
               {!collapsed && (
                 <div className="border-border border-t px-3 pb-3 pt-2 flex flex-col gap-2">
-                  {area.allocations.map((a) => (
-                    <div key={a.id} className="flex items-center gap-2">
-                      {a.subCategoryEmoji
-                        ? <span className="text-[13px] leading-none shrink-0">{a.subCategoryEmoji}</span>
-                        : <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: a.allocationType === "Expense" ? "var(--red)" : "var(--green)" }} />
-                      }
-                      <span className="text-text flex-1 text-[13px]">{a.subCategoryName}</span>
-                      <span className="font-money text-text-muted text-[12px] shrink-0">
-                        {formatCurrency(a.expectedValue / 100)}
-                      </span>
-                      <button type="button" onClick={() => removeAlloc(area.id, a.id)} className="text-text-muted hover:text-red transition-colors">
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
+                  {area.allocations.map((a) => {
+                    const key = `${area.id}-${a.id}`;
+                    const isEditing = editingKey === key;
+                    return (
+                      <div key={a.id} className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          {a.subCategoryEmoji
+                            ? <span className="text-[13px] leading-none shrink-0">{a.subCategoryEmoji}</span>
+                            : <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: getCategoryColor(a.categoryColor, a.categoryName) }} />
+                          }
+                          <span className="text-text flex-1 text-[13px]">{a.subCategoryName}</span>
+                          <button
+                            type="button"
+                            onClick={() => isEditing ? setEditingKey(null) : startEditAlloc(area.id, a.id, a.expectedValue)}
+                            className={cn(
+                              "font-money text-[12px] shrink-0 transition-colors",
+                              a.allocationType === "Income" ? "text-green hover:text-green/70" : "text-red hover:text-red/70",
+                            )}
+                          >
+                            {formatCurrency(a.expectedValue / 100)}
+                          </button>
+                          <button type="button" onClick={() => removeAlloc(area.id, a.id)} className="text-text-muted hover:text-red transition-colors">
+                            <X size={12} />
+                          </button>
+                        </div>
+                        {isEditing && (
+                          <div className="flex gap-2 pl-4">
+                            <input
+                              autoFocus
+                              readOnly
+                              value={`R$ ${formatCents(editingCents)}`}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") { confirmEditAlloc(area.id, a.id); return; }
+                                if (e.key === "Escape") { setEditingKey(null); return; }
+                                handleEditKey(e.key);
+                              }}
+                              className={cn(inputClass, "flex-1 cursor-default font-money")}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => confirmEditAlloc(area.id, a.id)}
+                              disabled={editingCents <= 0}
+                              className="bg-green text-black h-9 w-9 rounded-lg flex items-center justify-center transition-opacity hover:opacity-90 disabled:opacity-40 shrink-0"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
 
                   {pending && (
                     <div className="bg-surface2 rounded-lg p-2 flex flex-col gap-2">
                       <div className="flex items-center gap-2">
-                        {pending.categoryColor && (
-                          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: pending.categoryColor }} />
-                        )}
+                        {pending.emoji
+                          ? <span className="text-[13px] leading-none shrink-0">{pending.emoji}</span>
+                          : <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: getCategoryColor(pending.categoryColor, pending.categoryName) }} />
+                        }
                         <span className="text-text text-[13px] flex-1">{pending.name}</span>
                         <button type="button" onClick={() => setPendingSubByArea((p) => { const n = { ...p }; delete n[area.id]; return n; })} className="text-text-muted hover:text-text">
                           <X size={12} />
@@ -339,14 +452,14 @@ export function Step2({
                       <div className="flex gap-2">
                         <input
                           autoFocus
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={valueByArea[area.id] ?? ""}
-                          onChange={(e) => setValueByArea((p) => ({ ...p, [area.id]: e.target.value }))}
-                          placeholder="Valor (R$)"
-                          className={cn(inputClass, "flex-1")}
-                          onKeyDown={(e) => e.key === "Enter" && confirmAlloc(area.id)}
+                          readOnly
+                          value={`R$ ${formatCents(centsByArea[area.id] ?? 0)}`}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { confirmAlloc(area.id); return; }
+                            handleValueKey(area.id, e.key);
+                          }}
+                          placeholder="R$ 0,00"
+                          className={cn(inputClass, "flex-1 cursor-default font-money")}
                         />
                         <div className="flex rounded-lg border border-border overflow-hidden shrink-0">
                           {(["Expense", "Income"] as AllocationType[]).map((t) => (
@@ -368,7 +481,7 @@ export function Step2({
                         <button
                           type="button"
                           onClick={() => confirmAlloc(area.id)}
-                          disabled={!valueByArea[area.id]}
+                          disabled={(centsByArea[area.id] ?? 0) <= 0}
                           className="bg-green text-black h-9 w-9 rounded-lg flex items-center justify-center transition-opacity hover:opacity-90 disabled:opacity-40 shrink-0"
                         >
                           <Plus size={14} />
@@ -383,6 +496,7 @@ export function Step2({
                       usedIds={allUsedIds}
                       onPick={(sub) => handlePickSub(area.id, sub)}
                       onClose={() => setPickerAreaId(null)}
+                      onNewSubCategory={onNewSubCategory}
                     />
                   ) : (
                     !pending && (
@@ -410,6 +524,17 @@ export function Step2({
           <Plus size={14} />
           Nova área
         </button>
+
+        {onNewSubCategory && (
+          <button
+            type="button"
+            onClick={onNewSubCategory}
+            className="text-text-muted hover:text-green flex items-center justify-center gap-1.5 text-[12px] transition-colors py-1"
+          >
+            <Plus size={12} />
+            Nova subcategoria
+          </button>
+        )}
       </div>
     </div>
   );
@@ -488,7 +613,14 @@ export function Step3({
               >
                 <FolderOpen size={13} className="text-text-muted shrink-0" />
                 <span className="text-text flex-1 text-left text-[13px] font-medium truncate">{area.name || "Área sem nome"}</span>
-                <span className="font-money text-text-muted text-[12px] shrink-0">{formatCurrency(areaTotal / 100)}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  {areaIncome > 0 && (
+                    <span className="font-money text-green text-[12px]">{formatCurrency(areaIncome / 100)}</span>
+                  )}
+                  {areaExpense > 0 && (
+                    <span className="font-money text-red text-[12px]">{formatCurrency(areaExpense / 100)}</span>
+                  )}
+                </div>
                 <ChevronDown size={13} className={cn("text-text-muted transition-transform shrink-0", expanded && "rotate-180")} />
               </button>
 
@@ -506,7 +638,7 @@ export function Step3({
                         <div className="flex items-center gap-2 min-w-0">
                           {alloc.subCategoryEmoji
                             ? <span className="text-[12px] leading-none shrink-0">{alloc.subCategoryEmoji}</span>
-                            : <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: alloc.allocationType === "Expense" ? "var(--red)" : "var(--green)" }} />
+                            : <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: getCategoryColor(alloc.categoryColor, alloc.categoryName) }} />
                           }
                           <span className="text-text flex-1 text-[12px] truncate">{alloc.subCategoryName}</span>
                           <span className="font-money text-text-muted text-[11px] shrink-0">

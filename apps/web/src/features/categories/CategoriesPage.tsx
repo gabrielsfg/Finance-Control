@@ -14,23 +14,18 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getCategoryColor } from "@/lib/config/categoryColors";
-import {
-  useCategories,
-  useDeleteCategory,
-  useDeleteSubCategory,
-} from "@/features/categories/hooks/useCategories";
+import { useCategories } from "@/features/categories/hooks/useCategories";
 import { CreateCategoryModal } from "@/features/categories/components/CreateCategoryModal";
 import { EditCategoryModal } from "@/features/categories/components/EditCategoryModal";
 import { CreateSubCategoryModal } from "@/features/categories/components/CreateSubCategoryModal";
 import { EditSubCategoryModal } from "@/features/categories/components/EditSubCategoryModal";
+import { DeleteCategoryModal } from "@/features/categories/components/DeleteCategoryModal";
+import { DeleteSubCategoryModal } from "@/features/categories/components/DeleteSubCategoryModal";
 import { usePageNova, usePageSearch } from "@/lib/hooks/usePageHeader";
 import type { Category, SubCategory } from "@/lib/types/categories.types";
 
 export function CategoriesPage() {
   const { data: categories, isLoading, isError } = useCategories();
-
-  const { mutate: deleteCategory } = useDeleteCategory();
-  const { mutate: deleteSubCategory } = useDeleteSubCategory();
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [showCreateCategory, setShowCreateCategory] = useState(false);
@@ -38,8 +33,10 @@ export function CategoriesPage() {
   usePageNova("Nova categoria", () => setShowCreateCategory(true));
   usePageSearch();
   const [editCategory, setEditCategory] = useState<Category | null>(null);
+  const [deleteCategory, setDeleteCategory] = useState<Category | null>(null);
   const [showCreateSub, setShowCreateSub] = useState<number | null>(null);
   const [editSub, setEditSub] = useState<SubCategory | null>(null);
+  const [deleteSub, setDeleteSub] = useState<SubCategory | null>(null);
 
   const toggleExpand = (id: number) =>
     setExpanded((prev) => {
@@ -178,10 +175,7 @@ export function CategoriesPage() {
                         <Pencil size={13} />
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm(`Deletar a categoria "${category.name}"? As subcategorias também serão removidas.`))
-                            deleteCategory(category.id);
-                        }}
+                        onClick={() => setDeleteCategory(category)}
                         className="text-text-muted hover:text-red flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
                         title="Deletar categoria"
                       >
@@ -219,10 +213,7 @@ export function CategoriesPage() {
                                 <Pencil size={12} />
                               </button>
                               <button
-                                onClick={() => {
-                                  if (confirm(`Deletar a subcategoria "${sub.name}"?`))
-                                    deleteSubCategory(sub.id);
-                                }}
+                                onClick={() => setDeleteSub(sub)}
                                 className="text-text-muted hover:text-red flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
                                 title="Deletar subcategoria"
                               >
@@ -282,6 +273,14 @@ export function CategoriesPage() {
         subCategory={editSub}
         onClose={() => setEditSub(null)}
         categories={userCategories}
+      />
+      <DeleteCategoryModal
+        category={deleteCategory}
+        onClose={() => setDeleteCategory(null)}
+      />
+      <DeleteSubCategoryModal
+        subCategory={deleteSub}
+        onClose={() => setDeleteSub(null)}
       />
     </>
   );

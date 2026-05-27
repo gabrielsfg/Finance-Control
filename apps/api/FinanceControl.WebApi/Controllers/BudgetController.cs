@@ -87,12 +87,12 @@ namespace FinanceControl.WebApi.Controllers
             if (validationId is not null)
                 return validationId;
 
+            requestDto.Id = id;
+
             var validationResult = _updateBudgetValidator.Validate(requestDto);
 
             if (validationResult.ToActionResult() is { } errorResult)
                 return errorResult;
-
-            requestDto.Id = id;
             var userId = GetUserId();
             var result = await _budgetService.UpdateBudgetAsync(requestDto, userId);
 

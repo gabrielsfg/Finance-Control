@@ -47,9 +47,22 @@ export const BudgetCard = ({ budget, onClick, onEdit, inactive = false }: Props)
   const deleteBudget = useDeleteBudget();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const isOver = budget.spentPercentage > 100;
-  const remaining = budget.totalAllocated - budget.totalSpent;
-  const areaCount = new Set((budget.allocations ?? []).map((a) => a.areaName)).size;
+  const allocs = budget.allocations ?? [];
+  const expenseAllocs = allocs.filter((a) => a.allocationType === "Expense");
+  const incomeAllocs  = allocs.filter((a) => a.allocationType === "Income");
+
+  const totalExpenseAllocated = expenseAllocs.reduce((s, a) => s + a.allocated, 0);
+  const totalExpenseSpent     = expenseAllocs.reduce((s, a) => s + a.spent, 0);
+  const totalIncomeAllocated  = incomeAllocs.reduce((s, a) => s + a.allocated, 0);
+  const totalIncomeSpent      = incomeAllocs.reduce((s, a) => s + a.spent, 0);
+
+  const expensePct = totalExpenseAllocated > 0 ? (totalExpenseSpent / totalExpenseAllocated) * 100 : 0;
+  const isOver = expensePct > 100;
+  const expenseRemaining = totalExpenseAllocated - totalExpenseSpent;
+  const areaCount = new Set(allocs.map((a) => a.areaName)).size;
+
+  const hasExpense = totalExpenseAllocated > 0;
+  const hasIncome  = totalIncomeAllocated  > 0;
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -75,7 +88,7 @@ export const BudgetCard = ({ budget, onClick, onEdit, inactive = false }: Props)
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <p className="font-display font-600 text-text truncate text-[15px]">{budget.name}</p>
-              <StatusBadge pct={budget.spentPercentage} isActive={budget.isActive} />
+              <StatusBadge pct={expensePct} isActive={budget.isActive} />
             </div>
             <p className="text-text-muted mt-0.5 text-[12px]">
               {RECURRENCE_LABELS[budget.recurrence] ?? budget.recurrence}
@@ -84,26 +97,51 @@ export const BudgetCard = ({ budget, onClick, onEdit, inactive = false }: Props)
         </div>
 
         {/* Totals */}
-        <div className="mb-3 flex items-end justify-between">
-          <div>
-            <p className="font-money font-600 text-text text-[22px]">
-              {formatCurrency(budget.totalSpent / 100)}
-            </p>
-            <p className="text-text-muted mt-0.5 text-[13px]">
-              de {formatCurrency(budget.totalAllocated / 100)}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className={cn("font-money font-600 text-[18px]", isOver ? "text-red" : "text-green")}>
-              {formatPercentNeutral(budget.spentPercentage)}%
-            </p>
-            <p className={cn("text-[12px]", remaining < 0 ? "text-red" : "text-text-muted")}>
-              {remaining < 0 ? "Estourado" : `Restam ${formatCurrency(remaining / 100)}`}
-            </p>
-          </div>
+        <div className="mb-3 flex flex-col gap-2.5">
+          {hasExpense && (
+            <div>
+              <div className="mb-1.5 flex items-end justify-between">
+                <div>
+                  <p className="font-money font-600 text-text text-[20px]">
+                    {formatCurrency(totalExpenseSpent / 100)}
+                  </p>
+                  <p className="text-text-muted mt-0.5 text-[12px]">
+                    de {formatCurrency(totalExpenseAllocated / 100)} em despesas
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className={cn("font-money font-600 text-[16px]", isOver ? "text-red" : "text-text-muted")}>
+                    {formatPercentNeutral(expensePct)}%
+                  </p>
+                  <p className={cn("text-[11px]", expenseRemaining < 0 ? "text-red" : "text-text-muted")}>
+                    {expenseRemaining < 0 ? "Estourado" : `Restam ${formatCurrency(expenseRemaining / 100)}`}
+                  </p>
+                </div>
+              </div>
+              <ProgressBar value={totalExpenseSpent} max={totalExpenseAllocated} height={6} color="var(--red)" />
+            </div>
+          )}
+          {hasIncome && (
+            <div>
+              <div className="mb-1.5 flex items-end justify-between">
+                <div>
+                  <p className="font-money font-600 text-text text-[20px]">
+                    {formatCurrency(totalIncomeSpent / 100)}
+                  </p>
+                  <p className="text-text-muted mt-0.5 text-[12px]">
+                    de {formatCurrency(totalIncomeAllocated / 100)} em receitas
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-money font-600 text-green text-[16px]">
+                    {formatPercentNeutral(totalIncomeAllocated > 0 ? (totalIncomeSpent / totalIncomeAllocated) * 100 : 0)}%
+                  </p>
+                </div>
+              </div>
+              <ProgressBar value={totalIncomeSpent} max={totalIncomeAllocated} height={6} color="var(--green)" />
+            </div>
+          )}
         </div>
-
-        <ProgressBar value={budget.totalSpent} max={budget.totalAllocated} height={8} />
 
         <div className="mt-4">
           <span className="text-text-muted text-[12px]">

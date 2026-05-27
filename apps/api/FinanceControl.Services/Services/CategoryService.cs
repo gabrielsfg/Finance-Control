@@ -54,7 +54,8 @@ namespace FinanceControl.Services.Services
                             Name = s.Name,
                             CategoryId = s.CategoryId,
                             CategoryName = c.Name,
-                            CategoryColor = c.Color
+                            CategoryColor = c.Color,
+                            Emoji = s.Emoji
                         })
                         .ToList()
                 })
