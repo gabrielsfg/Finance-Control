@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/formatters.dart';
+import '../../../core/utils/app_locale.dart';
+import '../../../features/analytics/presentation/home_analytics_view.dart';
+import '../../../features/analytics/presentation/home_filter_sheet.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/home_summary.dart';
 import '../providers/home_provider.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  bool _showAnalytics = false;
+
+  @override
+  Widget build(BuildContext context) {
     final asyncState = ref.watch(homeNotifierProvider);
     final bottomPad = MediaQuery.viewPaddingOf(context).bottom;
 
@@ -31,26 +41,36 @@ class HomePage extends ConsumerWidget {
             ),
             error: (e, _) => _ErrorView(
               message: e.toString(),
-              onRetry: () =>
-                  ref.read(homeNotifierProvider.notifier).refresh(),
+              onRetry: () => ref.read(homeNotifierProvider.notifier).refresh(),
             ),
             data: (state) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 8),
-                _Header(startDate: state.startDate),
+                _Header(
+                  startDate: state.startDate,
+                  onFilterTap: () => _openFilterSheet(context),
+                ),
+                const SizedBox(height: 16),
+                _ViewToggle(
+                  showAnalytics: _showAnalytics,
+                  onToggle: (v) => setState(() => _showAnalytics = v),
+                ),
                 const SizedBox(height: 20),
-                _BalanceCard(summary: state.summary),
-                const SizedBox(height: 14),
-                _BudgetCard(summary: state.summary),
-                const SizedBox(height: 24),
-                _TopCategoriesSection(
-                  categories: state.summary?.topCategories ?? [],
-                ),
-                const SizedBox(height: 24),
-                _RecentTransactionsSection(
-                  transactions: state.summary?.recentTransactions ?? [],
-                ),
+                if (!_showAnalytics) ...[
+                  _BalanceCard(summary: state.summary),
+                  const SizedBox(height: 14),
+                  _BudgetCard(summary: state.summary),
+                  const SizedBox(height: 24),
+                  _TopCategoriesSection(
+                    categories: state.summary?.topCategories ?? [],
+                  ),
+                  const SizedBox(height: 24),
+                  _RecentTransactionsSection(
+                    transactions: state.summary?.recentTransactions ?? [],
+                  ),
+                ] else
+                  const HomeAnalyticsView(),
                 SizedBox(height: bottomPad + 76 + 24),
               ],
             ),
@@ -59,9 +79,97 @@ class HomePage extends ConsumerWidget {
       ),
     );
   }
+
+  void _openFilterSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const HomeFilterSheet(),
+    );
+  }
 }
 
-// ── Error view ──────────────────────────────────────────────────────────────
+// ── View toggle ───────────────────────────────────────────────────────────────
+
+class _ViewToggle extends StatelessWidget {
+  const _ViewToggle({required this.showAnalytics, required this.onToggle});
+
+  final bool showAnalytics;
+  final ValueChanged<bool> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+
+    return Container(
+      height: 38,
+      decoration: BoxDecoration(
+        color: t.isDark
+            ? Colors.white.withValues(alpha: 0.07)
+            : Colors.black.withValues(alpha: 0.06),
+        borderRadius: AppRadius.smAll,
+      ),
+      child: Row(
+        children: [
+          _Tab(
+            label: 'Overview',
+            selected: !showAnalytics,
+            onTap: () => onToggle(false),
+          ),
+          _Tab(
+            label: 'Analytics',
+            selected: showAnalytics,
+            onTap: () => onToggle(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Tab extends StatelessWidget {
+  const _Tab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          margin: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: selected
+                ? (t.isDark ? const Color(0xFF2A2440) : Colors.white)
+                : Colors.transparent,
+            borderRadius: AppRadius.smAll,
+            boxShadow: selected && !t.isDark ? AppShadows.cardLight : [],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: AppTextStyles.bodySm(
+              selected ? t.txtPrimary : t.txtTertiary,
+            ).copyWith(fontWeight: selected ? FontWeight.w600 : FontWeight.w400),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Error view ────────────────────────────────────────────────────────────────
 
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.message, required this.onRetry});
@@ -102,17 +210,19 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-// ── Header ───────────────────────────────────────────────────────────────────
+// ── Header ────────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
-  const _Header({required this.startDate});
+  const _Header({required this.startDate, required this.onFilterTap});
 
   final DateTime startDate;
+  final VoidCallback onFilterTap;
 
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final monthLabel = '${monthName(startDate.month)} ${startDate.year}';
+    final fmt = AppLocaleScope.of(context);
+    final monthLabel = fmt.formatMonthYear(startDate);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,10 +231,31 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Hello 👋', style: AppTextStyles.body(t.txtSecondary)),
+              Row(
+                children: [
+                  Text('Hello', style: AppTextStyles.body(t.txtSecondary)),
+                  const SizedBox(width: 6),
+                  Icon(LucideIcons.hand, size: 16, color: t.txtSecondary),
+                ],
+              ),
               const SizedBox(height: 2),
               Text(monthLabel, style: AppTextStyles.h1(t.txtPrimary)),
             ],
+          ),
+        ),
+        GestureDetector(
+          onTap: onFilterTap,
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: t.isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.05),
+              borderRadius: AppRadius.smAll,
+            ),
+            child: Icon(LucideIcons.slidersHorizontal,
+                size: 18, color: t.txtSecondary),
           ),
         ),
       ],
@@ -132,7 +263,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ── Balance Card ─────────────────────────────────────────────────────────────
+// ── Balance Card ──────────────────────────────────────────────────────────────
 
 class _BalanceCard extends StatelessWidget {
   const _BalanceCard({required this.summary});
@@ -142,6 +273,7 @@ class _BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
 
     return GlassCard(
       child: Column(
@@ -156,7 +288,7 @@ class _BalanceCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             summary != null
-                ? '${summary!.balance < 0 ? '-' : ''}${formatCurrency(summary!.balance)}'
+                ? '${summary!.balance < 0 ? '-' : ''}${fmt.formatCurrency(summary!.balance)}'
                 : '—',
             textAlign: TextAlign.center,
             style: AppTextStyles.moneyLg(t.txtPrimary).copyWith(fontSize: 34),
@@ -168,7 +300,7 @@ class _BalanceCard extends StatelessWidget {
                 child: _MiniCard(
                   label: 'INCOME',
                   value: summary != null
-                      ? formatCurrency(summary!.totalIncome)
+                      ? fmt.formatCurrency(summary!.totalIncome)
                       : '—',
                   isIncome: true,
                 ),
@@ -178,7 +310,7 @@ class _BalanceCard extends StatelessWidget {
                 child: _MiniCard(
                   label: 'EXPENSES',
                   value: summary != null
-                      ? formatCurrency(summary!.totalExpenses)
+                      ? fmt.formatCurrency(summary!.totalExpenses)
                       : '—',
                   isIncome: false,
                 ),
@@ -233,10 +365,7 @@ class _MiniCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: AppTextStyles.moneyMd(color).copyWith(fontSize: 15),
-          ),
+          Text(value, style: AppTextStyles.moneyMd(color).copyWith(fontSize: 15)),
         ],
       ),
     );
@@ -253,15 +382,14 @@ class _BudgetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-
     final percent = summary != null
         ? (summary!.budgetSpentPercentage / 100).clamp(0.0, 1.0)
         : 0.0;
-    final percentStr = summary != null
-        ? '${summary!.budgetSpentPercentage.round()}%'
-        : '—';
+    final percentStr =
+        summary != null ? '${summary!.budgetSpentPercentage.round()}%' : '—';
+    final fmt = AppLocaleScope.of(context);
     final spentStr =
-        summary != null ? formatCurrency(summary!.budgetTotalSpent) : '—';
+        summary != null ? fmt.formatCurrency(summary!.budgetTotalSpent) : '—';
 
     return GlassCard(
       child: Column(
@@ -283,10 +411,7 @@ class _BudgetCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      'Current period',
-                      style: AppTextStyles.h3(t.txtPrimary),
-                    ),
+                    Text('Current period', style: AppTextStyles.h3(t.txtPrimary)),
                   ],
                 ),
               ),
@@ -302,10 +427,8 @@ class _BudgetCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              Text(
-                '$spentStr spent',
-                style: AppTextStyles.bodySm(t.txtSecondary),
-              ),
+              Text('$spentStr spent',
+                  style: AppTextStyles.bodySm(t.txtSecondary)),
               const Spacer(),
               GestureDetector(
                 onTap: () => context.go('/budgets'),
@@ -333,7 +456,6 @@ class _TopCategoriesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-
     if (categories.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -407,7 +529,7 @@ class _CategoryChip extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            formatCurrency(data.totalSpentCents),
+            AppLocaleScope.of(context).formatCurrency(data.totalSpentCents),
             style: AppTextStyles.body(t.txtPrimary).copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
@@ -429,7 +551,6 @@ class _RecentTransactionsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-
     if (transactions.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -437,10 +558,7 @@ class _RecentTransactionsSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              'Recent Transactions',
-              style: AppTextStyles.h3(t.txtPrimary),
-            ),
+            Text('Recent Transactions', style: AppTextStyles.h3(t.txtPrimary)),
             const Spacer(),
             GestureDetector(
               onTap: () => context.go('/transactions'),
@@ -473,9 +591,10 @@ class _TransactionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final amountColor = data.isExpense ? t.error : t.success;
     final sign = data.isExpense ? '-' : '+';
-    final amountStr = '$sign${formatCurrency(data.valueCents.abs())}';
+    final amountStr = '$sign${fmt.formatCurrency(data.valueCents.abs())}';
     final subtitle = '${data.categoryName} · ${data.subCategoryName}';
 
     return Column(
@@ -514,10 +633,8 @@ class _TransactionRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: AppTextStyles.bodySm(t.txtTertiary),
-                    ),
+                    Text(subtitle,
+                        style: AppTextStyles.bodySm(t.txtTertiary)),
                   ],
                 ),
               ),

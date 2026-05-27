@@ -26,6 +26,7 @@ namespace FinanceControl.Services.Services
             Category category = new Category
             {
                 Name = requestDto.Name,
+                Color = requestDto.Color,
                 UserId = userId,
             };
 
@@ -44,13 +45,17 @@ namespace FinanceControl.Services.Services
                 {
                     Id = c.Id,
                     Name = c.Name,
+                    Color = c.Color,
                     SubCategories = c.SubCategories
                         .Where(s => s.UserId == userId && !s.IsSystem)
                         .Select(s => new GetSubCategoryResponseDto
                         {
                             Id = s.Id,
                             Name = s.Name,
-                            CategoryId = s.CategoryId
+                            CategoryId = s.CategoryId,
+                            CategoryName = c.Name,
+                            CategoryColor = c.Color,
+                            Emoji = s.Emoji
                         })
                         .ToList()
                 })
@@ -78,6 +83,7 @@ namespace FinanceControl.Services.Services
                     return Result<IEnumerable<CategoryResponseDto>>.Failure($"Category with id {item.Id} is a system category and cannot be modified.");
 
                 category.Name = item.Name;
+                category.Color = item.Color;
             }
 
             await _context.SaveChangesAsync();

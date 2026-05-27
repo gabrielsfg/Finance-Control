@@ -87,6 +87,22 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result.Value);
         }
 
+        [HttpGet("{id:int}/balance-history")]
+        public async Task<IActionResult> GetBalanceHistoryAsync([FromRoute] int id, [FromQuery] int days = 30)
+        {
+            var validationResult = this.ValidatePositiveId(id, "id");
+            if (validationResult is not null)
+                return validationResult;
+
+            var userId = GetUserId();
+            var result = await _accountService.GetBalanceHistoryAsync(id, userId, days);
+
+            if (result == null)
+                return NotFound(new { error = "Account not found." });
+
+            return Ok(result);
+        }
+
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteAccountByIdAsync([FromRoute]int id)
         {

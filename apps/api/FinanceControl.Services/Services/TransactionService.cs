@@ -59,6 +59,9 @@ namespace FinanceControl.Services.Services
                     return Result<CreateTransactionResponseDto>.Failure("Invalid payment type.");
 
                 await _context.SaveChangesAsync();
+
+                await AssociateTagsAsync(createdTransactions, requestDto.Tags, userId);
+
                 await dbTransaction.CommitAsync();
 
                 var transactionIds = createdTransactions.Select(t => t.Id).ToList();
@@ -79,46 +82,71 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
         }
 
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsByBudgetAsync(int budgetId, int userId)
+        public async Task<GetTransactionsFilteredResponseDto> GetAllTransactionsFilteredAsync(GetTransactionsFilterRequestDto requestDto, int userId)
         {
-            var budgetExists = await _context.Budgets
-                .AnyAsync(b => b.Id == budgetId && b.UserId == userId);
-            if (!budgetExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
+            var query = GetTransactionQuery(userId)
+                .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate);
 
-            var transactions = await GetTransactionQuery(userId)
-                .Where(t => t.BudgetId == budgetId)
+            if (requestDto.BudgetIds is { Count: > 0 })
+                query = query.Where(t => t.BudgetId != null && requestDto.BudgetIds.Contains(t.BudgetId.Value));
+
+            if (requestDto.AccountIds is { Count: > 0 })
+                query = query.Where(t => requestDto.AccountIds.Contains(t.AccountId));
+
+            if (requestDto.SubCategoryIds is { Count: > 0 })
+                query = query.Where(t => requestDto.SubCategoryIds.Contains(t.SubCategoryId));
+
+            if (requestDto.CategoryIds is { Count: > 0 })
+            {
+                var subCategoryIds = await _context.SubCategories
+                    .Where(sc => requestDto.CategoryIds.Contains(sc.CategoryId) && sc.UserId == userId)
+                    .Select(sc => sc.Id)
+                    .ToListAsync();
+                query = query.Where(t => subCategoryIds.Contains(t.SubCategoryId));
+            }
+
+            var totals = await query
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    TotalIncome = g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (int?)t.Value) ?? 0,
+                    TotalExpense = g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (int?)t.Value) ?? 0,
+                })
+                .FirstOrDefaultAsync();
+
+            var totalIncome = totals?.TotalIncome ?? 0;
+            var totalExpense = totals?.TotalExpense ?? 0;
+
+            var page = Math.Max(1, requestDto.Page);
+            var pageSize = Math.Clamp(requestDto.PageSize, 1, 100);
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+            var sortAsc = requestDto.SortOrder?.ToLower() == "asc";
+            var sorted = requestDto.SortField?.ToLower() == "value"
+                ? (sortAsc ? query.OrderBy(t => t.Value) : query.OrderByDescending(t => t.Value))
+                : (sortAsc ? query.OrderBy(t => t.TransactionDate) : query.OrderByDescending(t => t.TransactionDate));
+
+            var items = await sorted
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
-        }
-
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsByAccountAsync(int accountId, int userId)
-        {
-            var accountExists = await _context.Accounts
-                .AnyAsync(a => a.Id == accountId && a.UserId == userId);
-            if (!accountExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
-
-            var transactions = await GetTransactionQuery(userId)
-                .Where(t => t.AccountId == accountId)
-                .ToListAsync();
-
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
-        }
-
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsBySubCategoryAsync(int subCategoryId, int userId)
-        {
-            var subCategoryExists = await _context.SubCategories
-                .AnyAsync(sc => sc.Id == subCategoryId && sc.UserId == userId);
-            if (!subCategoryExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
-
-            var transactions = await GetTransactionQuery(userId)
-                .Where(t => t.SubCategoryId == subCategoryId)
-                .ToListAsync();
-
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
+            return new GetTransactionsFilteredResponseDto
+            {
+                TotalIncome = totalIncome,
+                TotalExpense = totalExpense,
+                Balance = totalIncome - totalExpense,
+                Page = new PagedResponse<GetTransactionResponseDto>
+                {
+                    CurrentPage = page,
+                    TotalPages = Math.Max(1, totalPages),
+                    PageSize = pageSize,
+                    TotalItems = totalItems,
+                    RowCount = items.Count,
+                    Items = items,
+                }
+            };
         }
 
         public async Task<GetTransactionByIdResponseDto?> GetTransactionByIdAsync(int id, int userId)
@@ -131,6 +159,7 @@ namespace FinanceControl.Services.Services
                     BudgetId = t.BudgetId,
                     SubCategoryId = t.SubCategoryId,
                     SubCategoryName = t.SubCategory.Name,
+                    SubCategoryEmoji = t.SubCategory.Emoji,
                     AccountId = t.AccountId,
                     AccountName = t.Account.Name,
                     RecurringTransactionId = t.RecurringTransactionId,
@@ -140,50 +169,83 @@ namespace FinanceControl.Services.Services
                     Description = t.Description,
                     TransactionDate = t.TransactionDate,
                     PaymentType = t.PaymentType,
+                    PaymentMethod = t.PaymentMethod,
                     InstallmentNumber = t.InstallmentNumber,
                     TotalInstallments = t.TotalInstallments,
-                    IsPaid = t.IsPaid
+                    Tags = t.Tags.Select(tag => new GetTagResponseDto { Id = tag.Id, Name = tag.Name }).ToList(),
                 })
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> UpdateTransactionAsync(UpdateTransactionRequestDto requestDto, int id, int userId)
+        public async Task<Result<CreateTransactionResponseDto>> UpdateTransactionAsync(UpdateTransactionRequestDto requestDto, int id, int userId)
         {
             var transaction = await _context.Transactions
                 .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
 
             if (transaction is null)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Transaction not found.");
+                return Result<CreateTransactionResponseDto>.Failure("Transaction not found.");
 
             var accountExists = await _context.Accounts
                 .AnyAsync(a => a.Id == requestDto.AccountId && a.UserId == userId);
             if (!accountExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
+                return Result<CreateTransactionResponseDto>.Failure("Invalid parameters.");
 
             var subCategoryExists = await _context.SubCategories
                 .AnyAsync(sc => sc.Id == requestDto.SubCategoryId && sc.UserId == userId);
             if (!subCategoryExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
+                return Result<CreateTransactionResponseDto>.Failure("Invalid parameters.");
 
-            if (requestDto.BudgetId.HasValue)
+            if (transaction.PaymentType != requestDto.PaymentType)
             {
-                var budgetExists = await _context.Budgets
-                    .AnyAsync(b => b.Id == requestDto.BudgetId && b.UserId == userId);
-                if (!budgetExists)
-                    return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
+                var deleteResult = await DeleteTransactionAsync(id, userId);
+                if (deleteResult.IsFailure)
+                    return Result<CreateTransactionResponseDto>.Failure(deleteResult.Error);
+
+                var createDto = new CreateTransactionRequestDto
+                {
+                    SubCategoryId = requestDto.SubCategoryId,
+                    AccountId = requestDto.AccountId,
+                    Value = requestDto.Value,
+                    Type = requestDto.Type,
+                    Description = requestDto.Description,
+                    TransactionDate = requestDto.TransactionDate,
+                    PaymentType = requestDto.PaymentType,
+                    PaymentMethod = requestDto.PaymentMethod,
+                    TotalInstallments = requestDto.TotalInstallments,
+                    Recurrence = requestDto.Recurrence,
+                    IncludeInBudget = requestDto.IncludeInBudget,
+                    Tags = requestDto.Tags,
+                };
+
+                return await CreateTransactionAsync(createDto, userId);
             }
 
             transaction.AccountId = requestDto.AccountId;
             transaction.SubCategoryId = requestDto.SubCategoryId;
-            transaction.BudgetId = requestDto.BudgetId;
             transaction.Value = requestDto.Value;
+            transaction.Type = requestDto.Type;
             transaction.Description = requestDto.Description;
             transaction.TransactionDate = requestDto.TransactionDate;
+            transaction.PaymentMethod = requestDto.PaymentMethod;
+
+            if (requestDto.IncludeInBudget)
+            {
+                var activeBudget = await _context.Budgets
+                    .FirstOrDefaultAsync(b => b.IsActive && b.UserId == userId);
+                transaction.BudgetId = activeBudget?.Id;
+            }
+            else
+            {
+                transaction.BudgetId = null;
+            }
 
             await _context.SaveChangesAsync();
 
-            var transactions = await GetAllTransactionsAsync(userId);
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
+            await AssociateTagsAsync([transaction], requestDto.Tags, userId);
+
+            var transactionIds = new List<int> { transaction.Id };
+            var response = await BuildCreateResponseAsync(transactionIds);
+            return Result<CreateTransactionResponseDto>.Success(response);
         }
 
         public async Task<Result<IEnumerable<GetTransactionResponseDto>>> DeleteTransactionAsync(int id, int userId)
@@ -195,67 +257,6 @@ namespace FinanceControl.Services.Services
                 return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Transaction not found.");
 
             _context.Transactions.Remove(transaction);
-            await _context.SaveChangesAsync();
-
-            var transactions = await GetAllTransactionsAsync(userId);
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
-        }
-
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> UpdateRecurringTransactionAsync(UpdateRecurringTransactionRequestDto requestDto, int recurringId, int userId)
-        {
-            var recurring = await _context.RecurringTransactions
-                .FirstOrDefaultAsync(rt => rt.Id == recurringId && rt.UserId == userId);
-
-            if (recurring is null)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Recurring transaction not found.");
-
-            var accountExists = await _context.Accounts
-                .AnyAsync(a => a.Id == requestDto.AccountId && a.UserId == userId);
-            if (!accountExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
-
-            var subCategoryExists = await _context.SubCategories
-                .AnyAsync(sc => sc.Id == requestDto.SubCategoryId && sc.UserId == userId);
-            if (!subCategoryExists)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
-
-            if (requestDto.BudgetId.HasValue)
-            {
-                var budgetExists = await _context.Budgets
-                    .AnyAsync(b => b.Id == requestDto.BudgetId && b.UserId == userId);
-                if (!budgetExists)
-                    return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Invalid parameters.");
-            }
-
-            if (requestDto.EndDate.HasValue && requestDto.EndDate.Value <= DateOnly.FromDateTime(DateTime.UtcNow))
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("EndDate must be a future date.");
-
-            recurring.AccountId = requestDto.AccountId;
-            recurring.SubCategoryId = requestDto.SubCategoryId;
-            recurring.BudgetId = requestDto.BudgetId;
-            recurring.Value = requestDto.Value;
-            recurring.Description = requestDto.Description;
-            recurring.EndDate = requestDto.EndDate;
-
-            await _context.SaveChangesAsync();
-
-            var transactions = await GetAllTransactionsAsync(userId);
-            return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
-        }
-
-        public async Task<Result<IEnumerable<GetTransactionResponseDto>>> CancelRecurringTransactionAsync(int recurringId, int userId)
-        {
-            var recurring = await _context.RecurringTransactions
-                .FirstOrDefaultAsync(rt => rt.Id == recurringId && rt.UserId == userId);
-
-            if (recurring is null)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Recurring transaction not found.");
-
-            if (!recurring.IsActive)
-                return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Recurring transaction is already inactive.");
-
-            recurring.IsActive = false;
-
             await _context.SaveChangesAsync();
 
             var transactions = await GetAllTransactionsAsync(userId);
@@ -310,14 +311,26 @@ namespace FinanceControl.Services.Services
                     Value = t.Value,
                     Type = t.Type,
                     SubCategoryName = t.SubCategory.Name,
+                    SubCategoryEmoji = t.SubCategory.Emoji,
                     CategoryName = t.SubCategory.Category.Name
                 })
                 .ToListAsync();
         }
 
-        public async Task<BudgetSummaryDto> GetBudgetSummaryAsync(MainPageSummaryRequestDto requestDto)
+        public async Task<BudgetSummaryDto?> GetBudgetSummaryAsync(MainPageSummaryRequestDto requestDto)
         {
             await using var context = _contextFactory.CreateDbContext();
+
+            var hasBudget = await context.Budgets
+                .AnyAsync(b => b.UserId == requestDto.UserId
+                    && (!requestDto.BudgetId.HasValue || b.Id == requestDto.BudgetId));
+
+            if (!hasBudget)
+                return null;
+
+            var hasAllocations = await context.BudgetSubcategoryAllocations
+                .AnyAsync(a => a.Budget.UserId == requestDto.UserId
+                    && (!requestDto.BudgetId.HasValue || a.BudgetId == requestDto.BudgetId));
 
             var totalExpected = await context.BudgetSubcategoryAllocations
                 .Where(a => a.Budget.UserId == requestDto.UserId)
@@ -335,11 +348,46 @@ namespace FinanceControl.Services.Services
                 ? Math.Round((decimal)totalSpent / totalExpected * 100, 2)
                 : 0m;
 
+            var topSubCategories = await context.BudgetSubcategoryAllocations
+                .Where(a => a.Budget.UserId == requestDto.UserId)
+                .WhereIf(requestDto.BudgetId.HasValue, a => a.BudgetId == requestDto.BudgetId)
+                .Select(a => new
+                {
+                    SubCategoryName = a.SubCategory.Name,
+                    SubCategoryEmoji = a.SubCategory.Emoji,
+                    CategoryName = a.SubCategory.Category.Name,
+                    CategoryColor = a.SubCategory.Category.Color,
+                    Allocated = a.ExpectedValue,
+                    Spent = context.Transactions
+                        .Where(t => t.UserId == requestDto.UserId
+                            && t.SubCategoryId == a.SubCategoryId
+                            && t.Type == EnumTransactionType.Expense
+                            && t.TransactionDate >= requestDto.StartDate
+                            && t.TransactionDate <= requestDto.FinishDate)
+                        .Sum(t => (int?)t.Value) ?? 0
+                })
+                .OrderByDescending(x => x.Spent)
+                .Take(4)
+                .ToListAsync();
+
             return new BudgetSummaryDto
             {
                 TotalExpected = totalExpected,
                 TotalSpent = totalSpent,
-                SpentPercentage = spentPercentage
+                SpentPercentage = spentPercentage,
+                HasAllocations = hasAllocations,
+                TopSubCategories = topSubCategories.Select(x => new BudgetSubCategorySummaryDto
+                {
+                    SubCategoryName = x.SubCategoryName,
+                    SubCategoryEmoji = x.SubCategoryEmoji,
+                    CategoryName = x.CategoryName,
+                    CategoryColor = x.CategoryColor,
+                    Spent = x.Spent,
+                    Allocated = x.Allocated,
+                    SpentPercentage = x.Allocated > 0
+                        ? Math.Round((decimal)x.Spent / x.Allocated * 100, 2)
+                        : 0m
+                }).ToList()
             };
         }
 
@@ -352,15 +400,135 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.Type == EnumTransactionType.Expense)
                 .WhereIf(requestDto.BudgetId.HasValue, t => t.BudgetId == requestDto.BudgetId)
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
-                .GroupBy(t => t.SubCategory.Category.Name)
+                .GroupBy(t => new { t.SubCategory.Category.Name, t.SubCategory.Category.Color })
                 .Select(g => new TopCategoryItemDto
                 {
-                    CategoryName = g.Key,
+                    CategoryName = g.Key.Name,
+                    Color = g.Key.Color,
                     TotalSpent = g.Sum(t => t.Value)
                 })
                 .OrderByDescending(x => x.TotalSpent)
                 .Take(5)
                 .ToListAsync();
+        }
+
+        public async Task<List<SpendingPredictionItemDto>> GetSpendingPredictionAsync(MainPageSummaryRequestDto requestDto)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var currentMonth = new DateOnly(today.Year, today.Month, 1);
+            var daysInMonth = DateTime.DaysInMonth(today.Year, today.Month);
+            var historyStart = currentMonth.AddMonths(-6);
+            var historyEnd = currentMonth.AddDays(-1);
+
+            // Current month expenses grouped by day
+            var currentByDay = await context.Transactions
+                .Where(t => t.UserId == requestDto.UserId
+                    && t.Type == EnumTransactionType.Expense
+                    && t.TransactionDate >= currentMonth
+                    && t.TransactionDate <= today)
+                .GroupBy(t => t.TransactionDate.Day)
+                .Select(g => new { Day = g.Key, Total = g.Sum(t => t.Value) })
+                .ToDictionaryAsync(x => x.Day, x => x.Total);
+
+            // Historical expenses: (year, month, day, value)
+            var historicalExpenses = await context.Transactions
+                .Where(t => t.UserId == requestDto.UserId
+                    && t.Type == EnumTransactionType.Expense
+                    && t.TransactionDate >= historyStart
+                    && t.TransactionDate <= historyEnd)
+                .Select(t => new { t.TransactionDate.Year, t.TransactionDate.Month, t.TransactionDate.Day, t.Value })
+                .ToListAsync();
+
+            var pastMonths = Enumerable.Range(1, 6)
+                .Select(i => currentMonth.AddMonths(-i))
+                .Where(m => historicalExpenses.Any(e => e.Year == m.Year && e.Month == m.Month))
+                .ToList();
+
+            // ── Detect fixed-date expenses ────────────────────────────────────────
+            // A day-of-month is "fixed" if a similar amount (within ±10% of the median)
+            // appears on that same day in at least 3 of the last 6 months.
+            var fixedDayAvg = new Dictionary<int, int>(); // day-of-month -> avg amount
+
+            for (int d = 1; d <= 31; d++)
+            {
+                var amounts = pastMonths
+                    .Select(m =>
+                    {
+                        int lastDay = DateTime.DaysInMonth(m.Year, m.Month);
+                        if (d > lastDay) return (long?)null;
+                        return (long?)historicalExpenses
+                            .Where(e => e.Year == m.Year && e.Month == m.Month && e.Day == d)
+                            .Sum(e => (long)e.Value);
+                    })
+                    .Where(v => v.HasValue && v.Value > 0)
+                    .Select(v => v!.Value)
+                    .OrderBy(v => v)
+                    .ToList();
+
+                if (amounts.Count < 3) continue;
+
+                long median = amounts[amounts.Count / 2];
+                int consistent = amounts.Count(v => Math.Abs(v - median) <= median * 0.10);
+                if (consistent >= 3)
+                    fixedDayAvg[d] = (int)amounts.Average();
+            }
+
+            // ── Weekday average for non-fixed days ────────────────────────────────
+            var weekdayAvg = new Dictionary<DayOfWeek, int>();
+            foreach (DayOfWeek dow in Enum.GetValues<DayOfWeek>())
+            {
+                long totalSpend = 0;
+                int occurrences = 0;
+
+                foreach (var m in pastMonths)
+                {
+                    int daysInHistMonth = DateTime.DaysInMonth(m.Year, m.Month);
+                    for (int d = 1; d <= daysInHistMonth; d++)
+                    {
+                        var date = new DateOnly(m.Year, m.Month, d);
+                        if (date.DayOfWeek != dow) continue;
+                        if (fixedDayAvg.ContainsKey(d)) continue; // exclude fixed days
+
+                        long daySpend = historicalExpenses
+                            .Where(e => e.Year == m.Year && e.Month == m.Month && e.Day == d)
+                            .Sum(e => (long)e.Value);
+
+                        totalSpend += daySpend;
+                        occurrences++;
+                    }
+                }
+
+                weekdayAvg[dow] = occurrences > 0 ? (int)(totalSpend / occurrences) : 0;
+            }
+
+            // ── Build result ──────────────────────────────────────────────────────
+            var result = new List<SpendingPredictionItemDto>(daysInMonth);
+            int runningCurrent = 0;
+            long runningHistorical = 0;
+
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                if (day <= today.Day)
+                    runningCurrent += currentByDay.GetValueOrDefault(day, 0);
+
+                var date = new DateOnly(today.Year, today.Month, day);
+                int dailyDelta = fixedDayAvg.TryGetValue(day, out int fixedAmt)
+                    ? fixedAmt
+                    : weekdayAvg[date.DayOfWeek];
+
+                runningHistorical += dailyDelta;
+
+                result.Add(new SpendingPredictionItemDto
+                {
+                    Day = day,
+                    CurrentExpense = day <= today.Day ? runningCurrent : null,
+                    HistoricalAverage = (int)runningHistorical
+                });
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -379,7 +547,7 @@ namespace FinanceControl.Services.Services
                 Description = dto.Description,
                 TransactionDate = dto.TransactionDate,
                 PaymentType = EnumPaymentType.OneTime,
-                IsPaid = false
+                PaymentMethod = dto.PaymentMethod,
             };
 
             _context.Transactions.Add(transaction);
@@ -405,9 +573,9 @@ namespace FinanceControl.Services.Services
                 Description = dto.Description,
                 TransactionDate = dto.TransactionDate,
                 PaymentType = EnumPaymentType.Installment,
+                PaymentMethod = dto.PaymentMethod,
                 InstallmentNumber = 1,
                 TotalInstallments = dto.TotalInstallments,
-                IsPaid = false
             };
 
             _context.Transactions.Add(parent);
@@ -429,9 +597,9 @@ namespace FinanceControl.Services.Services
                     Description = dto.Description,
                     TransactionDate = dto.TransactionDate.AddMonths(i - 1),
                     PaymentType = EnumPaymentType.Installment,
+                    PaymentMethod = dto.PaymentMethod,
                     InstallmentNumber = i,
                     TotalInstallments = dto.TotalInstallments,
-                    IsPaid = false
                 };
 
                 _context.Transactions.Add(installment);
@@ -477,7 +645,7 @@ namespace FinanceControl.Services.Services
                 Description = dto.Description,
                 TransactionDate = dto.TransactionDate,
                 PaymentType = EnumPaymentType.Recurring,
-                IsPaid = false
+                PaymentMethod = dto.PaymentMethod,
             };
 
             _context.Transactions.Add(transaction);
@@ -487,13 +655,14 @@ namespace FinanceControl.Services.Services
         private IQueryable<GetTransactionResponseDto> GetTransactionQuery(int userId)
         {
             return _context.Transactions
-                .Where(t => t.UserId == userId)
+                .Where(t => t.UserId == userId && !t.Account.IsSystem)
                 .Select(t => new GetTransactionResponseDto
                 {
                     Id = t.Id,
                     BudgetId = t.BudgetId,
                     SubCategoryId = t.SubCategoryId,
                     SubCategoryName = t.SubCategory.Name,
+                    SubCategoryEmoji = t.SubCategory.Emoji,
                     AccountId = t.AccountId,
                     AccountName = t.Account.Name,
                     RecurringTransactionId = t.RecurringTransactionId,
@@ -503,9 +672,10 @@ namespace FinanceControl.Services.Services
                     Description = t.Description,
                     TransactionDate = t.TransactionDate,
                     PaymentType = t.PaymentType,
+                    PaymentMethod = t.PaymentMethod,
                     InstallmentNumber = t.InstallmentNumber,
                     TotalInstallments = t.TotalInstallments,
-                    IsPaid = t.IsPaid,
+
                     AreaId = _context.BudgetSubcategoryAllocations
                         .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
                         .Select(a => (int?)a.AreaId)
@@ -514,12 +684,14 @@ namespace FinanceControl.Services.Services
                         .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
                         .Select(a => a.Area.Name)
                         .FirstOrDefault(),
+                    Tags = t.Tags.Select(tag => new GetTagResponseDto { Id = tag.Id, Name = tag.Name }).ToList(),
                 });
         }
 
         private async Task<CreateTransactionResponseDto> BuildCreateResponseAsync(List<int> transactionIds)
         {
             var transactions = await _context.Transactions
+                .Include(t => t.Tags)
                 .Where(t => transactionIds.Contains(t.Id))
                 .Select(t => new GetTransactionResponseDto
                 {
@@ -527,6 +699,7 @@ namespace FinanceControl.Services.Services
                     BudgetId = t.BudgetId,
                     SubCategoryId = t.SubCategoryId,
                     SubCategoryName = t.SubCategory.Name,
+                    SubCategoryEmoji = t.SubCategory.Emoji,
                     AccountId = t.AccountId,
                     AccountName = t.Account.Name,
                     RecurringTransactionId = t.RecurringTransactionId,
@@ -536,9 +709,10 @@ namespace FinanceControl.Services.Services
                     Description = t.Description,
                     TransactionDate = t.TransactionDate,
                     PaymentType = t.PaymentType,
+                    PaymentMethod = t.PaymentMethod,
                     InstallmentNumber = t.InstallmentNumber,
                     TotalInstallments = t.TotalInstallments,
-                    IsPaid = t.IsPaid,
+
                     AreaId = _context.BudgetSubcategoryAllocations
                         .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
                         .Select(a => (int?)a.AreaId)
@@ -547,10 +721,48 @@ namespace FinanceControl.Services.Services
                         .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)
                         .Select(a => a.Area.Name)
                         .FirstOrDefault(),
+                    Tags = t.Tags.Select(tag => new GetTagResponseDto { Id = tag.Id, Name = tag.Name }).ToList(),
                 })
                 .ToListAsync();
 
             return new CreateTransactionResponseDto { Transactions = transactions };
+        }
+
+        private async Task AssociateTagsAsync(List<Transaction> transactions, List<string>? tagNames, int userId)
+        {
+            if (tagNames is null || tagNames.Count == 0)
+                return;
+
+            var normalizedNames = tagNames.Select(n => n.Trim()).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (normalizedNames.Count == 0)
+                return;
+
+            var existingTags = await _context.Tags
+                .Where(t => t.UserId == userId && normalizedNames.Contains(t.Name))
+                .ToListAsync();
+
+            var existingNames = existingTags.Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var name in normalizedNames.Where(n => !existingNames.Contains(n)))
+            {
+                var tag = new Tag { UserId = userId, Name = name };
+                _context.Tags.Add(tag);
+                existingTags.Add(tag);
+            }
+
+            await _context.SaveChangesAsync();
+
+            foreach (var transaction in transactions)
+            {
+                var fullTransaction = await _context.Transactions
+                    .Include(t => t.Tags)
+                    .FirstAsync(t => t.Id == transaction.Id);
+
+                fullTransaction.Tags.Clear();
+                foreach (var tag in existingTags)
+                    fullTransaction.Tags.Add(tag);
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         private static (int firstValue, int otherValue) CalculateInstallmentValues(int total, int installments)

@@ -9,6 +9,7 @@ namespace FinanceControl.Shared.Dtos.Others
         public int Value { get; set; }
         public EnumTransactionType Type { get; set; }
         public string SubCategoryName { get; set; }
+        public string? SubCategoryEmoji { get; set; }
         public string CategoryName { get; set; }
     }
 }

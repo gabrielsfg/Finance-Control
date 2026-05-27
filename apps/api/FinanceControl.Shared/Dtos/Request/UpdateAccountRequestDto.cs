@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using FinanceControl.Shared.Enums;
 
 namespace FinanceControl.Shared.Dtos.Request
 {
@@ -10,8 +6,11 @@ namespace FinanceControl.Shared.Dtos.Request
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public int CurrentBalance { get; set; }
+        public EnumAccountType Type { get; set; }
         public int? GoalAmount { get; set; }
         public bool IsDefaultAccount { get; set; }
+        public int? BillingDueDay { get; set; }
+        public int? CreditLimit { get; set; }
+        public int? NewBalance { get; set; }
     }
 }

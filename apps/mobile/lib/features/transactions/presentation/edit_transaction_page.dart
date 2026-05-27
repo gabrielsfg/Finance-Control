@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/app_locale.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../accounts/data/models/account.dart';
@@ -38,6 +39,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
   late String? _accountName;
   late DateTime _date;
   late int? _budgetId;
+  late bool _isCredit;
   DateTime? _recurringEndDate;
 
   String? _accountError;
@@ -72,6 +74,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
     _accountName = tx.accountName;
     _date = tx.date;
     _budgetId = tx.budgetId;
+    _isCredit = tx.paymentMethod == 'Credit';
   }
 
   @override
@@ -140,6 +143,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
               transactionDate: dateStr,
               budgetId: _budgetId,
               description: description,
+              paymentMethod: _isCredit ? 'Credit' : 'Debit',
             ),
           );
     }
@@ -173,6 +177,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final actionState = ref.watch(transactionActionProvider);
     final isLoading = actionState is TransactionActionLoading;
 
@@ -344,7 +349,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                                 child: GestureDetector(
                                   onTap: _pickDate,
                                   child: Text(
-                                    formatDate(_date),
+                                    fmt.formatDate(_date),
                                     style: AppTextStyles.body(t.txtPrimary)
                                         .copyWith(fontSize: 14),
                                     textAlign: TextAlign.end,
@@ -360,7 +365,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                                   onTap: _pickEndDate,
                                   child: Text(
                                     _recurringEndDate != null
-                                        ? formatDate(_recurringEndDate!)
+                                        ? fmt.formatDate(_recurringEndDate!)
                                         : 'No end date',
                                     style: AppTextStyles.body(
                                       _recurringEndDate != null
@@ -371,6 +376,31 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                                   ),
                                 ),
                               ),
+
+                            // Payment method
+                            _FieldRow(
+                              label: 'Method',
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _MethodChip(
+                                    label: 'Debit',
+                                    active: !_isCredit,
+                                    onTap: isLoading
+                                        ? null
+                                        : () => setState(() => _isCredit = false),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _MethodChip(
+                                    label: 'Credit',
+                                    active: _isCredit,
+                                    onTap: isLoading
+                                        ? null
+                                        : () => setState(() => _isCredit = true),
+                                  ),
+                                ],
+                              ),
+                            ),
 
                             // Description
                             _FieldRow(
@@ -673,6 +703,59 @@ class _CategorySection extends StatelessWidget {
   }
 }
 
+// ── Method Chip ──────────────────────────────────────────────────────────────
+
+class _MethodChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback? onTap;
+
+  const _MethodChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: active
+              ? t.primary.withValues(alpha: t.isDark ? 0.20 : 0.10)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            width: active ? 1.5 : 1,
+            color: active
+                ? t.primary.withValues(alpha: t.isDark ? 0.55 : 0.45)
+                : t.isDark
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : const Color(0xFF7C3AED).withValues(alpha: 0.15),
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: AppTextStyles.caption(
+              active ? t.primary : t.txtTertiary,
+            ).copyWith(
+              fontSize: 12,
+              fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Account picker sheet ─────────────────────────────────────────────────────
 
 class _AccountPickerSheet extends StatelessWidget {
@@ -682,6 +765,7 @@ class _AccountPickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     return Container(
       decoration: BoxDecoration(
         color: t.isDark ? const Color(0xFF1C1C2E) : Colors.white,
@@ -718,7 +802,7 @@ class _AccountPickerSheet extends StatelessWidget {
                     style: AppTextStyles.body(t.txtPrimary)
                         .copyWith(fontSize: 14)),
                 subtitle: Text(
-                  formatCurrency(acc.balanceCents),
+                  fmt.formatCurrency(acc.balanceCents),
                   style: AppTextStyles.mono(t.txtSecondary, fontSize: 12),
                 ),
                 onTap: () => Navigator.of(context).pop(acc),

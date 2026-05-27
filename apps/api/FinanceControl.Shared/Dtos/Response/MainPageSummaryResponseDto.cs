@@ -11,7 +11,8 @@ namespace FinanceControl.Shared.Dtos.Response
     {
         public BalanceSummaryDto BalanceSummary { get; set; }
         public List<RecentTransactionDto> RecentTransactions { get; set; }
-        public BudgetSummaryDto BudgetSummary { get; set; }
+        public BudgetSummaryDto? BudgetSummary { get; set; }
         public List<TopCategoryItemDto> TopCategories { get; set; }
+        public List<SpendingPredictionItemDto> SpendingPrediction { get; set; }
     }
 }

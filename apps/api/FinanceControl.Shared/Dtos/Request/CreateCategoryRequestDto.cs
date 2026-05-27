@@ -9,5 +9,6 @@ namespace FinanceControl.Shared.Dtos.Request
     public class CreateCategoryRequestDto
     {
         public string Name { get; set; }
+        public string? Color { get; set; }
     }
 }

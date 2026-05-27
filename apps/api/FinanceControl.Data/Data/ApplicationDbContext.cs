@@ -16,12 +16,17 @@ namespace FinanceControl.Data.Data
         public DbSet<Budget> Budgets { get; set; } 
         public DbSet<SubCategory> SubCategories { get; set; }
         public DbSet<Area> Areas { get; set; }
-        public DbSet<AreaCategory> AreaCategories { get; set; }
         public DbSet<BudgetSubcategoryAllocation> BudgetSubcategoryAllocations { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<RecurringTransaction> RecurringTransactions { get; set; }
+        public DbSet<Tag> Tags { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<UserPreferences> UserPreferences { get; set; }
+        public DbSet<Goal> Goals { get; set; }
+        public DbSet<Investment> Investments { get; set; }
+        public DbSet<InvestmentTransaction> InvestmentTransactions { get; set; }
+        public DbSet<InvestmentDividend> InvestmentDividends { get; set; }
+        public DbSet<InvestmentPriceHistory> InvestmentPriceHistories { get; set; }
 
         public override int SaveChanges()
         {
@@ -37,19 +42,14 @@ namespace FinanceControl.Data.Data
 
         private void UpdateOrCreateEntity()
         {
-            var entries = ChangeTracker .Entries<BaseEntity>();
-            var dateTimeBrasilia = TimeZoneInfo
-                .ConvertTimeFromUtc(
-                    DateTime.UtcNow,
-                    TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time")
-                );
+            var entries = ChangeTracker.Entries<BaseEntity>();
 
             foreach (var entry in entries)
             {
                 if (entry.State == EntityState.Added)
-                    entry.Property("CreatedAt").CurrentValue = dateTimeBrasilia;
+                    entry.Property("CreatedAt").CurrentValue = DateTime.UtcNow;
                 else if (entry.State == EntityState.Modified)
-                    entry.Property("UpdatedAt").CurrentValue = dateTimeBrasilia;
+                    entry.Property("UpdatedAt").CurrentValue = DateTime.UtcNow;
             }
         }
 

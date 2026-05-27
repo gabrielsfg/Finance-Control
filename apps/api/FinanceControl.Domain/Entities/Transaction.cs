@@ -13,6 +13,7 @@ namespace FinanceControl.Domain.Entities
         public int? BudgetId { get; set; }
         public int SubCategoryId { get; set; }
         public int AccountId { get; set; }
+        public int? DestinationAccountId { get; set; }
         public int? RecurringTransactionId { get; set; }
         public int? ParentTransactionId { get; set; }
         public int Value { get; set; }
@@ -20,14 +21,16 @@ namespace FinanceControl.Domain.Entities
         public string Description { get; set; }
         public DateOnly TransactionDate { get; set; }
         public EnumPaymentType PaymentType { get; set; }
+        public EnumPaymentMethod? PaymentMethod { get; set; }
         public int? InstallmentNumber { get; set; }
         public int? TotalInstallments { get; set; }
-        public bool IsPaid { get; set; }
         public Budget? Budget { get; set; }
         public SubCategory SubCategory { get; set; }
         public Account Account { get; set; }
+        public Account? DestinationAccount { get; set; }
         public RecurringTransaction? RecurringTransaction { get; set; }
         public Transaction? ParentTransaction { get; set; }
         public ICollection<Transaction> Installments { get; set; } = new List<Transaction>();
+        public ICollection<Tag> Tags { get; set; } = new List<Tag>();
     }
 }

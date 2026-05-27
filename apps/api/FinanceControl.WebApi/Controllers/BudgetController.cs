@@ -66,14 +66,14 @@ namespace FinanceControl.WebApi.Controllers
         }
 
         [HttpGet("{id:int}/allocation")]
-        public async Task<IActionResult> GetBudgetWithAllocationsAsync([FromRoute] int id)
+        public async Task<IActionResult> GetBudgetWithAllocationsAsync([FromRoute] int id, [FromQuery] DateOnly? referenceDate = null)
         {
             var validationResult = this.ValidatePositiveId(id, "id");
             if (validationResult is not null)
                 return validationResult;
 
             var userId = GetUserId();
-            var result = await _budgetService.GetBudgetWithAllocationsAsync(id, userId);
+            var result = await _budgetService.GetBudgetWithAllocationsAsync(id, userId, referenceDate);
 
             if (result == null)
                 return NotFound(new { error = "Budget not found." });
@@ -87,12 +87,12 @@ namespace FinanceControl.WebApi.Controllers
             if (validationId is not null)
                 return validationId;
 
+            requestDto.Id = id;
+
             var validationResult = _updateBudgetValidator.Validate(requestDto);
 
             if (validationResult.ToActionResult() is { } errorResult)
                 return errorResult;
-
-            requestDto.Id = id;
             var userId = GetUserId();
             var result = await _budgetService.UpdateBudgetAsync(requestDto, userId);
 
@@ -111,6 +111,22 @@ namespace FinanceControl.WebApi.Controllers
 
             var userId = GetUserId();
             var result = await _budgetService.DeleteBudgetAsync(id, userId);
+
+            if (result.IsFailure)
+                return NotFound(new { error = result.Error });
+
+            return Ok(result.Value);
+        }
+
+        [HttpPatch("{id:int}/activate")]
+        public async Task<IActionResult> ActivateBudgetAsync([FromRoute] int id)
+        {
+            var validationResult = this.ValidatePositiveId(id, "id");
+            if (validationResult is not null)
+                return validationResult;
+
+            var userId = GetUserId();
+            var result = await _budgetService.ActivateBudgetAsync(id, userId);
 
             if (result.IsFailure)
                 return NotFound(new { error = result.Error });

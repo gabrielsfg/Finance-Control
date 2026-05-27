@@ -8,6 +8,7 @@ import '../../features/accounts/presentation/edit_account_page.dart';
 import '../../features/categories/presentation/categories_page.dart';
 import '../../features/categories/presentation/create_category_page.dart';
 import '../../features/categories/presentation/edit_categories_page.dart';
+import '../../features/categories/presentation/subcategories_page.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/reset_password_page.dart';
@@ -24,8 +25,13 @@ import '../../features/budgets/presentation/edit_budget_page.dart';
 import '../../features/budgets/presentation/create_budget_step2_page.dart';
 import '../../features/budgets/presentation/create_budget_step3_page.dart';
 import '../../features/budgets/presentation/create_budget_step4_page.dart';
+import '../../features/analytics/presentation/analytics_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/transactions/data/models/transaction_item.dart';
+import '../../features/wishlist/data/models/wishlist_item.dart';
+import '../../features/wishlist/presentation/wishlist_detail_page.dart';
+import '../../features/wishlist/presentation/wishlist_form_page.dart';
+import '../../features/wishlist/presentation/wishlist_page.dart';
 import '../../features/transactions/presentation/add_transaction_page.dart';
 import '../../features/transactions/presentation/edit_transaction_page.dart';
 import '../../features/transactions/presentation/transaction_detail_page.dart';
@@ -75,6 +81,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const ResetPasswordPage(),
       ),
       GoRoute(
+        path: '/analytics',
+        builder: (_, _) => const AnalyticsPage(),
+      ),
+      GoRoute(
         path: '/transactions/add',
         builder: (_, _) => const AddTransactionPage(),
       ),
@@ -90,6 +100,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const CreateAccountPage(),
       ),
       GoRoute(
+        path: '/wishlist',
+        builder: (_, _) => const WishlistPage(),
+        routes: [
+          GoRoute(
+            path: 'create',
+            builder: (_, _) => const WishlistFormPage(),
+          ),
+          GoRoute(
+            path: ':id',
+            builder: (_, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return WishlistDetailPage(itemId: id);
+            },
+            routes: [
+              GoRoute(
+                path: 'edit',
+                builder: (_, state) {
+                  final item = state.extra as WishlistItem;
+                  return WishlistFormPage(item: item);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+      GoRoute(
         path: '/categories',
         builder: (_, _) => const CategoriesPage(),
         routes: [
@@ -100,6 +136,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'edit',
             builder: (_, _) => const EditCategoriesPage(),
+          ),
+          GoRoute(
+            path: 'subcategories',
+            builder: (_, _) => const SubcategoriesPage(),
           ),
         ],
       ),

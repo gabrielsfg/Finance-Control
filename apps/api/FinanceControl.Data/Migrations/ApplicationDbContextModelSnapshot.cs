@@ -30,12 +30,15 @@ namespace FinanceControl.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BillingDueDay")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("timezone('America/Sao_Paulo', now())");
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
 
-                    b.Property<int>("CurrentBalance")
+                    b.Property<int?>("CreditLimit")
                         .HasColumnType("integer");
 
                     b.Property<int?>("GoalAmount")
@@ -44,13 +47,20 @@ namespace FinanceControl.Data.Migrations
                     b.Property<bool>("IsDefaultAccount")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
@@ -75,8 +85,8 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("timezone('America/Sao_Paulo', now())");
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -84,7 +94,7 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
@@ -98,38 +108,6 @@ namespace FinanceControl.Data.Migrations
                     b.ToTable("Areas", (string)null);
                 });
 
-            modelBuilder.Entity("FinanceControl.Domain.Entities.AreaCategory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AreaId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("timezone('America/Sao_Paulo', now())");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AreaId");
-
-                    b.HasIndex("CategoryId");
-
-                    b.ToTable("AreaCategories", (string)null);
-                });
-
             modelBuilder.Entity("FinanceControl.Domain.Entities.Budget", b =>
                 {
                     b.Property<int>("Id")
@@ -140,8 +118,8 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("timezone('America/Sao_Paulo', now())");
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -159,7 +137,7 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
@@ -191,8 +169,8 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("timezone('America/Sao_Paulo', now())");
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<int>("ExpectedValue")
                         .HasColumnType("integer");
@@ -202,7 +180,7 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -223,10 +201,13 @@ namespace FinanceControl.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Color")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("timezone('America/Sao_Paulo', now())");
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<bool>("IsSystem")
                         .ValueGeneratedOnAdd()
@@ -239,7 +220,7 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
@@ -249,6 +230,298 @@ namespace FinanceControl.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Categories", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.Goal", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("AchievedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IncludeInNetWorth")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TargetAmount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TargetAssetType")
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("TargetDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("TargetTicker")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Goals", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.Investment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AssetType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("AveragePrice")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Broker")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("BRL");
+
+                    b.Property<long>("CurrentPrice")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("CurrentQuantity")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ExpectedYieldPct")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("LastPriceUpdate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly?>("MaturityDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Ticker")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Investments", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.InvestmentDividend", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<int>("InvestmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("LastDatePrior")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("LinkedTransactionId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("PaymentDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvestmentId");
+
+                    b.HasIndex("LinkedTransactionId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("InvestmentDividends", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.InvestmentPriceHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int>("InvestmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Price")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvestmentId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("InvestmentPriceHistories", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.InvestmentTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int>("InvestmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("LinkedTransactionId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Operation")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("OtherCosts")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric");
+
+                    b.Property<long>("TotalValue")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("UnitPrice")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvestmentId");
+
+                    b.HasIndex("LinkedTransactionId");
+
+                    b.ToTable("InvestmentTransactions");
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.RecurringTransaction", b =>
@@ -267,8 +540,8 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("timezone('America/Sao_Paulo', now())");
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -296,7 +569,7 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
@@ -327,11 +600,11 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("timezone('America/Sao_Paulo', now())");
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsRevoked")
                         .ValueGeneratedOnAdd()
@@ -365,8 +638,11 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("timezone('America/Sao_Paulo', now())");
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Emoji")
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsSystem")
                         .ValueGeneratedOnAdd()
@@ -379,7 +655,7 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
@@ -391,6 +667,38 @@ namespace FinanceControl.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SubCategories", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.Tag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.Transaction", b =>
@@ -409,21 +717,24 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("timezone('America/Sao_Paulo', now())");
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("DestinationAccountId")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("InstallmentNumber")
                         .HasColumnType("integer");
 
-                    b.Property<bool>("IsPaid")
-                        .HasColumnType("boolean");
-
                     b.Property<int?>("ParentTransactionId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasColumnType("text");
 
                     b.Property<string>("PaymentType")
                         .IsRequired()
@@ -447,7 +758,7 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
@@ -460,6 +771,8 @@ namespace FinanceControl.Data.Migrations
                     b.HasIndex("AccountId");
 
                     b.HasIndex("BudgetId");
+
+                    b.HasIndex("DestinationAccountId");
 
                     b.HasIndex("ParentTransactionId");
 
@@ -480,19 +793,31 @@ namespace FinanceControl.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Country")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("timezone('America/Sao_Paulo', now())");
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("FailedLoginAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("LockoutEnd")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -508,9 +833,21 @@ namespace FinanceControl.Data.Migrations
                     b.Property<DateTime?>("PasswordResetTokenExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("PreferredCurrency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("BRL");
+
+                    b.Property<string>("PreferredLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("pt-BR");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -524,6 +861,12 @@ namespace FinanceControl.Data.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AnalyticsConfig")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("[]");
 
                     b.Property<string>("CurrencyCode")
                         .IsRequired()
@@ -550,6 +893,21 @@ namespace FinanceControl.Data.Migrations
                     b.ToTable("UserPreferences", (string)null);
                 });
 
+            modelBuilder.Entity("TagTransaction", b =>
+                {
+                    b.Property<int>("TagsId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TransactionsId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("TagsId", "TransactionsId");
+
+                    b.HasIndex("TransactionsId");
+
+                    b.ToTable("TransactionTags", (string)null);
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.Account", b =>
                 {
                     b.HasOne("FinanceControl.Domain.Entities.User", null)
@@ -572,25 +930,6 @@ namespace FinanceControl.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("FinanceControl.Domain.Entities.AreaCategory", b =>
-                {
-                    b.HasOne("FinanceControl.Domain.Entities.Area", "Area")
-                        .WithMany("AreaCategories")
-                        .HasForeignKey("AreaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("FinanceControl.Domain.Entities.Category", "Category")
-                        .WithMany("AreaCategories")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Area");
-
-                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.Budget", b =>
@@ -636,6 +975,91 @@ namespace FinanceControl.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.Goal", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FinanceControl.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.Investment", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FinanceControl.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.InvestmentDividend", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.Investment", "Investment")
+                        .WithMany("Dividends")
+                        .HasForeignKey("InvestmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FinanceControl.Domain.Entities.Transaction", "LinkedTransaction")
+                        .WithMany()
+                        .HasForeignKey("LinkedTransactionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FinanceControl.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Investment");
+
+                    b.Navigation("LinkedTransaction");
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.InvestmentPriceHistory", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.Investment", "Investment")
+                        .WithMany("PriceHistory")
+                        .HasForeignKey("InvestmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Investment");
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.InvestmentTransaction", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.Investment", "Investment")
+                        .WithMany("Transactions")
+                        .HasForeignKey("InvestmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FinanceControl.Domain.Entities.Transaction", "LinkedTransaction")
+                        .WithMany()
+                        .HasForeignKey("LinkedTransactionId");
+
+                    b.Navigation("Investment");
+
+                    b.Navigation("LinkedTransaction");
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.RecurringTransaction", b =>
@@ -698,6 +1122,15 @@ namespace FinanceControl.Data.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.Tag", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.Transaction", b =>
                 {
                     b.HasOne("FinanceControl.Domain.Entities.Account", "Account")
@@ -710,6 +1143,11 @@ namespace FinanceControl.Data.Migrations
                         .WithMany("Transactions")
                         .HasForeignKey("BudgetId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FinanceControl.Domain.Entities.Account", "DestinationAccount")
+                        .WithMany("IncomingTransfers")
+                        .HasForeignKey("DestinationAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("FinanceControl.Domain.Entities.Transaction", "ParentTransaction")
                         .WithMany("Installments")
@@ -737,6 +1175,8 @@ namespace FinanceControl.Data.Migrations
 
                     b.Navigation("Budget");
 
+                    b.Navigation("DestinationAccount");
+
                     b.Navigation("ParentTransaction");
 
                     b.Navigation("RecurringTransaction");
@@ -755,8 +1195,25 @@ namespace FinanceControl.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TagTransaction", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FinanceControl.Domain.Entities.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("TransactionsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.Account", b =>
                 {
+                    b.Navigation("IncomingTransfers");
+
                     b.Navigation("RecurringTransactions");
 
                     b.Navigation("Transactions");
@@ -764,8 +1221,6 @@ namespace FinanceControl.Data.Migrations
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.Area", b =>
                 {
-                    b.Navigation("AreaCategories");
-
                     b.Navigation("BudgetSubcategoryAllocations");
                 });
 
@@ -780,9 +1235,16 @@ namespace FinanceControl.Data.Migrations
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.Category", b =>
                 {
-                    b.Navigation("AreaCategories");
-
                     b.Navigation("SubCategories");
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.Investment", b =>
+                {
+                    b.Navigation("Dividends");
+
+                    b.Navigation("PriceHistory");
+
+                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.RecurringTransaction", b =>

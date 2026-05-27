@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/app_locale.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../categories/data/models/category.dart';
@@ -323,6 +324,7 @@ class _DraftAreaCardState extends State<_DraftAreaCard> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final total = widget.area.totalAllocatedCents;
 
     return Padding(
@@ -353,7 +355,7 @@ class _DraftAreaCardState extends State<_DraftAreaCard> {
                           if (total > 0) ...[
                             const SizedBox(height: 2),
                             Text(
-                              '- ${formatCurrency(total)}',
+                              '- ${fmt.formatCurrency(total)}',
                               style: AppTextStyles.mono(t.error,
                                       fontSize: 14)
                                   .copyWith(fontWeight: FontWeight.w700),

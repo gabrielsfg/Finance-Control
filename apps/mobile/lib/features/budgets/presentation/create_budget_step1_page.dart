@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -10,12 +11,12 @@ import 'create_budget_state.dart';
 
 // ── Recurrence options ───────────────────────────────────────────────────────
 
-final _kRecurrenceOptions = [
-  ('Monthly', '📅'),
-  ('Weekly', '📆'),
-  ('Biweekly', '🗓️'),
-  ('Semiannually', '📊'),
-  ('Annually', '🗒️'),
+final _kRecurrenceOptions = <(String, IconData)>[
+  ('Monthly', LucideIcons.calendar),
+  ('Weekly', LucideIcons.calendarDays),
+  ('Biweekly', LucideIcons.calendarRange),
+  ('Semiannually', LucideIcons.calendarClock),
+  ('Annually', LucideIcons.calendarCheck),
 ];
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -143,11 +144,11 @@ class _CreateBudgetStep1PageState extends State<CreateBudgetStep1Page> {
                       ),
                       const SizedBox(height: 10),
                       ..._kRecurrenceOptions.map((option) {
-                        final (label, emoji) = option;
+                        final (label, icon) = option;
                         final isSelected = _recurrence == label;
                         return _RecurrenceTile(
                           label: label,
-                          emoji: emoji,
+                          icon: icon,
                           selected: isSelected,
                           onTap: () => setState(() => _recurrence = label),
                         );
@@ -188,13 +189,13 @@ class _CreateBudgetStep1PageState extends State<CreateBudgetStep1Page> {
 
 class _RecurrenceTile extends StatelessWidget {
   final String label;
-  final String emoji;
+  final IconData icon;
   final bool selected;
   final VoidCallback onTap;
 
   const _RecurrenceTile({
     required this.label,
-    required this.emoji,
+    required this.icon,
     required this.selected,
     required this.onTap,
   });
@@ -227,12 +228,10 @@ class _RecurrenceTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Text(
-              emoji,
-              style: TextStyle(
-                fontSize: 20,
-                color: selected ? t.primary : t.txtTertiary,
-              ),
+            Icon(
+              icon,
+              size: 20,
+              color: selected ? t.primary : t.txtTertiary,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -247,7 +246,7 @@ class _RecurrenceTile extends StatelessWidget {
               ),
             ),
             if (selected)
-              Text('✓', style: TextStyle(fontSize: 18, color: t.primary, fontWeight: FontWeight.w700)),
+              Icon(LucideIcons.check, size: 18, color: t.primary),
           ],
         ),
       ),

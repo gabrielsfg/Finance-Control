@@ -13,7 +13,7 @@ namespace FinanceControl.Domain.Interfaces.Service
     {
         Task<Result<IEnumerable<GetSubCategoryResponseDto>>> CreateSubCategoryAsync(CreateSubCategoryRequestDto requestDto, int userId);
         Task<IEnumerable<GetSubCategoryResponseDto>> GetAllSubCategoryAsync(int userId);
-        Task<GetSubCategoryResponseDto> GetSubCategoryByIdAsync(int id, int userId);
+        Task<GetSubCategoryResponseDto?> GetSubCategoryByIdAsync(int id, int userId);
         Task<Result<IEnumerable<GetSubCategoryResponseDto>>> UpdateSubCategoryAsync(UpdateSubCategoryRequestDto requestDto, int userId);
         Task<Result<IEnumerable<GetSubCategoryResponseDto>>> DeleteSubCategoryAsync(int Id, int userId);
     }

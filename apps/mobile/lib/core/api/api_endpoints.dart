@@ -7,11 +7,15 @@ abstract class ApiEndpoints {
   static const String login = '/api/user/login';
   static const String register = '/api/user/register';
   static const String refreshToken = '/api/user/refresh';
+  static const String logout = '/api/user/logout';
   static const String forgotPassword = '/api/user/forgot-password';
   static const String resetPassword = '/api/user/reset-password';
   static const String userProfile = '/api/user/profile';
+  static const String deleteAccount = '/api/user/me';
+  static const String resetData = '/api/user/me/reset-data';
   static const String userPreferences = '/api/user/preferences';
-  static const String userCurrencies = '/api/user/currencies';
+  static String currencies({String base = 'USD'}) => '/api/currencies?base=$base';
+  static String banks(String country) => '/api/banks?country=$country';
 
   // Main page
   static const String mainPageSummary = '/api/mainpage/summary';
@@ -34,9 +38,6 @@ abstract class ApiEndpoints {
   static String cancelRecurringTransaction(int recurringId) =>
       '/api/transaction/$recurringId/recurring/cancel';
 
-  // Categories (transaction picker — includes system categories)
-  static const String categories = '/api/categories';
-
   // Categories (user-owned — CRUD)
   static const String userCategories = '/api/category';
   static String userCategoryById(int id) => '/api/category/$id';
@@ -46,6 +47,37 @@ abstract class ApiEndpoints {
   static const String subcategories = '/api/SubCategory';
   static String subcategoryById(int id) => '/api/SubCategory/$id';
   static String deleteSubcategory(int id) => '/api/SubCategory/$id';
+
+  // Wishlist
+  static const String wishlist = '/api/wishlist';
+  static String wishlistById(int id) => '/api/wishlist/$id';
+  static String wishlistPrice(int id) => '/api/wishlist/$id/price';
+  static String wishlistPurchase(int id) => '/api/wishlist/$id/purchase';
+  static String wishlistPriceHistory(int id) => '/api/wishlist/$id/price-history';
+
+  // Analytics
+  static const String analyticsIncomeExpense = '/api/analytics/income-expense';
+  static const String analyticsBalanceEvolution =
+      '/api/analytics/balance-evolution';
+  static const String analyticsExpensesByCategory =
+      '/api/analytics/expenses-by-category';
+  static const String analyticsCategoryEvolution =
+      '/api/analytics/category-evolution';
+  static const String analyticsNetWorthEvolution =
+      '/api/analytics/net-worth-evolution';
+  static const String analyticsFutureCommitments =
+      '/api/analytics/future-commitments';
+  static const String analyticsSpendingHeatmap =
+      '/api/analytics/spending-heatmap';
+  static const String analyticsBudgetPace = '/api/analytics/budget-pace';
+  static const String analyticsProjectionBalance =
+      '/api/analytics/projection/balance';
+  static const String analyticsProjectionCategories =
+      '/api/analytics/projection/categories';
+  static const String analyticsProjectionNetWorth =
+      '/api/analytics/projection/net-worth';
+  static const String analyticsProjectionCommitmentsImpact =
+      '/api/analytics/projection/commitments-impact';
 
   // Budgets
   static const String budgets = '/api/budget';

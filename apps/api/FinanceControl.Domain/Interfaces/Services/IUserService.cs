@@ -2,6 +2,7 @@
 using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
+using LoginResult = FinanceControl.Shared.Dtos.Response.LoginResult;
 
 namespace FinanceControl.Domain.Interfaces.Service
 {
@@ -9,7 +10,7 @@ namespace FinanceControl.Domain.Interfaces.Service
     {
         Task<User?> RegisterUserAsync(CreateUserRequestDto requestDto);
 
-        Task<AuthResponseDto?> UserLoginAsync(UserLoginRequestDto requestDto);
+        Task<LoginResult> UserLoginAsync(UserLoginRequestDto requestDto);
 
         Task<AuthResponseDto?> RefreshTokenAsync(string refreshToken);
 
@@ -21,10 +22,14 @@ namespace FinanceControl.Domain.Interfaces.Service
 
         Task<UserPreferencesResponseDto?> UpdatePreferencesAsync(int userId, UpdateUserPreferencesRequestDto requestDto);
 
-        IReadOnlyList<CurrencyResponseDto> GetAvailableCurrencies();
-
-        Task<string?> ForgotPasswordAsync(string email);
+Task<string?> ForgotPasswordAsync(string email);
 
         Task<bool> ResetPasswordAsync(string token, string newPassword);
+
+        Task<bool> LogoutAsync(string refreshToken);
+
+        Task<bool> DeleteAccountAsync(int userId, string password);
+
+        Task<bool> ResetDataAsync(int userId, string password);
     }
 }

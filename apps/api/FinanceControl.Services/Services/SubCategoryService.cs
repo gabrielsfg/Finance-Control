@@ -32,6 +32,7 @@ namespace FinanceControl.Services.Services
             var subCategory = new SubCategory()
             {
                 Name = requestDto.Name,
+                Emoji = requestDto.Emoji,
                 CategoryId = requestDto.CategoryId,
                 UserId = userId
             };
@@ -51,8 +52,10 @@ namespace FinanceControl.Services.Services
                 {
                     Id = s.Id,
                     Name = s.Name,
+                    Emoji = s.Emoji,
                     CategoryId = s.CategoryId,
-                    CategoryName = s.Category.Name
+                    CategoryName = s.Category.Name,
+                    CategoryColor = s.Category.Color
                 }).ToListAsync();
 
             return subCategories;
@@ -66,8 +69,10 @@ namespace FinanceControl.Services.Services
                 {
                     Id = s.Id,
                     Name = s.Name,
+                    Emoji = s.Emoji,
                     CategoryId = s.CategoryId,
-                    CategoryName = s.Category.Name
+                    CategoryName = s.Category.Name,
+                    CategoryColor = s.Category.Color
                 })
                 .FirstOrDefaultAsync();
         }
@@ -89,6 +94,7 @@ namespace FinanceControl.Services.Services
                 return Result<IEnumerable<GetSubCategoryResponseDto>>.Failure("System subcategories cannot be modified.");
 
             subCategory.Name = requestDto.Name;
+            subCategory.Emoji = requestDto.Emoji;
             subCategory.CategoryId = requestDto.CategoryId;
 
             await _context.SaveChangesAsync();

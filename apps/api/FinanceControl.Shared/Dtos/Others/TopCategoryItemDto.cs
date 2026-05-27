@@ -9,6 +9,7 @@ namespace FinanceControl.Shared.Dtos.Others
     public class TopCategoryItemDto
     {
         public string CategoryName { get; set; }
+        public string? Color { get; set; }
         public int TotalSpent { get; set; }
     }
 }

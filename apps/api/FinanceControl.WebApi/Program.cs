@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Services.Extensions;
@@ -6,17 +7,29 @@ using FinanceControl.Services.Services;
 using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
+using FinanceControl.Workers;
+using FinanceControl.Services.Brapi;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
 var builder = WebApplication.CreateBuilder(args);
 
-//DI Services
-builder.Services.AddAplicationServices();
+// Validate JWT token key length at startup
+var jwtToken = builder.Configuration["AppSettings:Token"];
+if (string.IsNullOrWhiteSpace(jwtToken) || jwtToken.Length < 32)
+    throw new InvalidOperationException("AppSettings:Token must be at least 32 characters long.");
 
+//DI Services
+builder.Services.AddAplicationServices(builder.Configuration);
+builder.Services.AddHostedService<RecurringTransactionHostedService>();
+builder.Services.AddHostedService<BrapiPriceUpdateHostedService>();
+builder.Services.AddMemoryCache();
 
 //DI Repositories
 
@@ -66,7 +79,39 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
         };
     });
-builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly, includeInternalTypes: true); 
+builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly, includeInternalTypes: true);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("WebApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("general", opt =>
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(15);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+});
 
 var app = builder.Build();
 
@@ -81,9 +126,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("WebApp");
+
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
+app.MapControllers().RequireRateLimiting("general");
 
 app.Run();

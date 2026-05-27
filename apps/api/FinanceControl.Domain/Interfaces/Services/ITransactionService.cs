@@ -14,21 +14,18 @@ namespace FinanceControl.Domain.Interfaces.Services
     {
         Task<Result<CreateTransactionResponseDto>> CreateTransactionAsync(CreateTransactionRequestDto requestDto, int userId);
         Task<IEnumerable<GetTransactionResponseDto>> GetAllTransactionsAsync(int userId);
-        Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsByBudgetAsync(int budgetId, int userId);
-        Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsByAccountAsync(int accountId, int userId);
-        Task<Result<IEnumerable<GetTransactionResponseDto>>> GetAllTransactionsBySubCategoryAsync(int subCategoryId, int userId);
+        Task<GetTransactionsFilteredResponseDto> GetAllTransactionsFilteredAsync(GetTransactionsFilterRequestDto requestDto, int userId);
         Task<GetTransactionByIdResponseDto?> GetTransactionByIdAsync(int id, int userId);
-        Task<Result<IEnumerable<GetTransactionResponseDto>>> UpdateTransactionAsync(UpdateTransactionRequestDto requestDto, int id, int userId);
+        Task<Result<CreateTransactionResponseDto>> UpdateTransactionAsync(UpdateTransactionRequestDto requestDto, int id, int userId);
         Task<Result<IEnumerable<GetTransactionResponseDto>>> DeleteTransactionAsync(int id, int userId);
-        Task<Result<IEnumerable<GetTransactionResponseDto>>> UpdateRecurringTransactionAsync(UpdateRecurringTransactionRequestDto requestDto, int transactionId, int userId);
-        Task<Result<IEnumerable<GetTransactionResponseDto>>> CancelRecurringTransactionAsync(int transactionId, int userId);
 
         /// <summary>
         /// Main Page Endpoints
         /// </summary>
         Task<BalanceSummaryDto> GetSummaryBalanceAsync(MainPageSummaryRequestDto requestDto);
         Task<List<RecentTransactionDto>> GetRecentTransactionsAsync(MainPageSummaryRequestDto requestDto);
-        Task<BudgetSummaryDto> GetBudgetSummaryAsync(MainPageSummaryRequestDto requestDto);
+        Task<BudgetSummaryDto?> GetBudgetSummaryAsync(MainPageSummaryRequestDto requestDto);
         Task<List<TopCategoryItemDto>> GetTopCategoriesAsync(MainPageSummaryRequestDto requestDto);
+        Task<List<SpendingPredictionItemDto>> GetSpendingPredictionAsync(MainPageSummaryRequestDto requestDto);
     }
 }

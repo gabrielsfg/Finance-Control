@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/formatters.dart';
+import '../../../core/utils/app_locale.dart';
 import '../../accounts/providers/accounts_provider.dart';
 import '../../categories/providers/subcategories_provider.dart';
 import '../data/models/transaction_filter_state.dart';
@@ -273,6 +273,7 @@ class _PeriodSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -318,7 +319,7 @@ class _PeriodSelector extends StatelessWidget {
                         period == TransactionPeriod.custom &&
                         customFrom != null &&
                         customTo != null
-                    ? '${formatDate(customFrom!)} – ${formatDate(customTo!)}'
+                    ? '${fmt.formatDate(customFrom!)} – ${fmt.formatDate(customTo!)}'
                     : label,
                 style: AppTextStyles.body(
                   selected == period ? t.primary : t.txtSecondary,

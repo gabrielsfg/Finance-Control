@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/formatters.dart';
+import '../../../core/utils/app_locale.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/transaction_item.dart';
 import '../providers/transaction_filter_provider.dart';
@@ -265,6 +265,7 @@ class _SummaryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
 
     return Column(
       children: [
@@ -283,7 +284,7 @@ class _SummaryHeader extends StatelessWidget {
               Expanded(
                 child: _SummaryColumn(
                   label: 'Income',
-                  value: formatCurrency(income),
+                  value: fmt.formatCurrency(income),
                   color: t.success,
                 ),
               ),
@@ -291,7 +292,7 @@ class _SummaryHeader extends StatelessWidget {
               Expanded(
                 child: _SummaryColumn(
                   label: 'Expenses',
-                  value: formatCurrency(expense),
+                  value: fmt.formatCurrency(expense),
                   color: t.error,
                 ),
               ),
@@ -299,7 +300,7 @@ class _SummaryHeader extends StatelessWidget {
               Expanded(
                 child: _SummaryColumn(
                   label: 'Balance',
-                  value: formatCurrency(balance),
+                  value: fmt.formatCurrency(balance),
                   color: t.success,
                 ),
               ),
@@ -377,17 +378,18 @@ class _TransactionGroupSection extends StatelessWidget {
         date.day == yesterday.day;
   }
 
-  String _groupLabel() {
+  String _groupLabel(AppLocale fmt) {
     if (_isToday(group.date)) return 'TODAY';
     if (_isYesterday(group.date)) return 'YESTERDAY';
-    return formatDayHeader(group.date);
+    return fmt.formatDayHeader(group.date);
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final label = _groupLabel();
-    final dayStr = formatDayHeader(group.date);
+    final fmt = AppLocaleScope.of(context);
+    final label = _groupLabel(fmt);
+    final dayStr = fmt.formatDayHeader(group.date);
     final headerText = label == dayStr ? label : '$label — $dayStr';
 
     return Column(
@@ -430,10 +432,11 @@ class _TransactionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final isExpense = item.amountCents < 0;
     final amountColor = isExpense ? t.error : t.success;
     final sign = isExpense ? '-' : '+';
-    final amountStr = '$sign${formatCurrency(item.amountCents.abs())}';
+    final amountStr = '$sign${fmt.formatCurrency(item.amountCents.abs())}';
 
     return Column(
       children: [

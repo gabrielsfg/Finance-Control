@@ -80,14 +80,84 @@ namespace FinanceControl.Services.Services
 
         public async Task<IEnumerable<GetAllBudgetResponseDto>> GetAllBudgetAsync(int userId)
         {
-            var budgets = await _context.Budgets.Where(b => b.UserId == userId).Select(b => new GetAllBudgetResponseDto
-            {
-                Id = b.Id,
-                Name = b.Name,
-                Recurrence = b.Recurrence
-            }).ToListAsync();
+            var rawBudgets = await _context.Budgets
+                .Where(b => b.UserId == userId)
+                .ToListAsync();
 
-            return budgets;
+            var result = new List<GetAllBudgetResponseDto>();
+
+            foreach (var b in rawBudgets)
+            {
+                var (startDate, endDate) = ComputePeriod(b.StartDate, b.Recurrence);
+
+                var areas = await _context.Areas
+                    .Where(a => a.BudgetId == b.Id && a.UserId == userId)
+                    .Include(a => a.BudgetSubcategoryAllocations)
+                        .ThenInclude(al => al.SubCategory)
+                            .ThenInclude(sc => sc.Category)
+                    .ToListAsync();
+
+                var spentBySubCategory = await _context.Transactions
+                    .Where(t => t.BudgetId == b.Id && t.UserId == userId
+                        && t.TransactionDate >= startDate && t.TransactionDate < endDate)
+                    .GroupBy(t => new { t.SubCategoryId, t.Type })
+                    .Select(g => new { g.Key.SubCategoryId, g.Key.Type, Total = g.Sum(t => t.Value) })
+                    .ToListAsync();
+
+                var flatAllocations = areas
+                    .SelectMany(a => a.BudgetSubcategoryAllocations.Select(al =>
+                    {
+                        var matchingType = al.AllocationType == EnumAllocationType.Income
+                            ? EnumTransactionType.Income
+                            : EnumTransactionType.Expense;
+
+                        var spent = spentBySubCategory
+                            .Where(s => s.SubCategoryId == al.SubCategoryId && s.Type == matchingType)
+                            .Sum(s => s.Total);
+
+                        var pct = al.ExpectedValue > 0
+                            ? Math.Round((double)spent / al.ExpectedValue * 100, 2)
+                            : 0;
+
+                        return new BudgetAllocationFlatResponseDto
+                        {
+                            Id = al.Id,
+                            SubCategoryId = al.SubCategoryId,
+                            SubCategoryName = al.SubCategory.Name,
+                            SubCategoryEmoji = al.SubCategory.Emoji,
+                            CategoryName = al.SubCategory.Category.Name,
+                            CategoryColor = al.SubCategory.Category.Color,
+                            AreaName = a.Name,
+                            Allocated = al.ExpectedValue,
+                            Spent = spent,
+                            SpentPercentage = pct,
+                            AllocationType = al.AllocationType,
+                        };
+                    }))
+                    .ToList();
+
+                var totalAllocated = flatAllocations.Sum(al => al.Allocated);
+                var totalSpent = flatAllocations.Sum(al => al.Spent);
+                var totalPct = totalAllocated > 0
+                    ? Math.Round((double)totalSpent / totalAllocated * 100, 2)
+                    : 0;
+
+                result.Add(new GetAllBudgetResponseDto
+                {
+                    Id = b.Id,
+                    Name = b.Name,
+                    Recurrence = b.Recurrence,
+                    IsActive = b.IsActive,
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    TotalAllocated = totalAllocated,
+                    TotalSpent = totalSpent,
+                    SpentPercentage = totalPct,
+                    Allocations = flatAllocations,
+                });
+            }
+
+            return result;
         }
 
         public async Task<GetBudgetByIdResponseDto> GetBudgetByIdAsync(int id, int userId)
@@ -97,17 +167,7 @@ namespace FinanceControl.Services.Services
             if (budget == null)
                 return null;
 
-            var startDate = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, budget.StartDate);
-
-            var finishDate = budget.Recurrence switch
-            {
-                EnumBudgetRecurrence.Weekly => startDate.AddDays(7),
-                EnumBudgetRecurrence.Biweekly => startDate.AddDays(14),
-                EnumBudgetRecurrence.Monthly => startDate.AddMonths(1),
-                EnumBudgetRecurrence.Semiannually => startDate.AddMonths(6),
-                EnumBudgetRecurrence.Annually => startDate.AddYears(1),
-                _ => startDate
-            };
+            var (startDate, finishDate) = ComputePeriod(budget.StartDate, budget.Recurrence);
 
             return new GetBudgetByIdResponseDto
             {
@@ -119,24 +179,14 @@ namespace FinanceControl.Services.Services
             };
         }
 
-        public async Task<GetBudgetWithAreasResponseDto> GetBudgetWithAllocationsAsync(int id, int userId)
+        public async Task<GetBudgetWithAreasResponseDto> GetBudgetWithAllocationsAsync(int id, int userId, DateOnly? referenceDate = null)
         {
             var budget = await _context.Budgets.FirstOrDefaultAsync(b => b.Id == id && b.UserId == userId);
 
             if (budget == null)
                 return null;
 
-            var startDate = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, budget.StartDate);
-
-            var finishDate = budget.Recurrence switch
-            {
-                EnumBudgetRecurrence.Weekly => startDate.AddDays(7),
-                EnumBudgetRecurrence.Biweekly => startDate.AddDays(14),
-                EnumBudgetRecurrence.Monthly => startDate.AddMonths(1),
-                EnumBudgetRecurrence.Semiannually => startDate.AddMonths(6),
-                EnumBudgetRecurrence.Annually => startDate.AddYears(1),
-                _ => startDate
-            };
+            var (startDate, finishDate) = ComputePeriod(budget.StartDate, budget.Recurrence, referenceDate);
 
             var areas = await _context.Areas
                 .Where(a => a.BudgetId == id && a.UserId == userId)
@@ -178,6 +228,7 @@ namespace FinanceControl.Services.Services
                             Id = al.Id,
                             SubCategoryId = al.SubCategoryId,
                             SubCategoryName = al.SubCategory.Name,
+                            SubCategoryEmoji = al.SubCategory.Emoji,
                             ExpectedValue = al.ExpectedValue,
                             SpentValue = spent,
                             AllocationType = al.AllocationType
@@ -326,6 +377,42 @@ namespace FinanceControl.Services.Services
             return Result<IEnumerable<GetAllBudgetResponseDto>>.Success(budgets);
         }
 
+        public async Task<Result<IEnumerable<GetAllBudgetResponseDto>>> ActivateBudgetAsync(int id, int userId)
+        {
+            var budget = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId == userId && b.Id == id);
+            if (budget == null)
+                return Result<IEnumerable<GetAllBudgetResponseDto>>.Failure("Budget not found.");
+
+            var currentActive = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId == userId && b.IsActive && b.Id != id);
+            if (currentActive != null)
+                currentActive.IsActive = false;
+
+            budget.IsActive = true;
+            await _context.SaveChangesAsync();
+
+            var budgets = await GetAllBudgetAsync(userId);
+            return Result<IEnumerable<GetAllBudgetResponseDto>>.Success(budgets);
+        }
+
+        private static (DateOnly start, DateOnly finish) ComputePeriod(int startDay, EnumBudgetRecurrence recurrence, DateOnly? referenceDate = null)
+        {
+            var anchor = referenceDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+            var clampedDay = Math.Min(startDay, DateTime.DaysInMonth(anchor.Year, anchor.Month));
+            var start = new DateOnly(anchor.Year, anchor.Month, clampedDay);
+
+            var finish = recurrence switch
+            {
+                EnumBudgetRecurrence.Weekly => start.AddDays(7),
+                EnumBudgetRecurrence.Biweekly => start.AddDays(14),
+                EnumBudgetRecurrence.Monthly => start.AddMonths(1),
+                EnumBudgetRecurrence.Semiannually => start.AddMonths(6),
+                EnumBudgetRecurrence.Annually => start.AddYears(1),
+                _ => start.AddMonths(1),
+            };
+
+            return (start, finish);
+        }
+
         private async Task<GetBudgetWithAreasResponseDto> BuildBudgetWithAreasResponse(int budgetId, int userId)
         {
             var budget = await _context.Budgets.FirstAsync(b => b.Id == budgetId && b.UserId == userId);
@@ -336,17 +423,7 @@ namespace FinanceControl.Services.Services
                     .ThenInclude(al => al.SubCategory)
                 .ToListAsync();
 
-            var startDate = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, budget.StartDate);
-
-            var finishDate = budget.Recurrence switch
-            {
-                EnumBudgetRecurrence.Weekly => startDate.AddDays(7),
-                EnumBudgetRecurrence.Biweekly => startDate.AddDays(14),
-                EnumBudgetRecurrence.Monthly => startDate.AddMonths(1),
-                EnumBudgetRecurrence.Semiannually => startDate.AddMonths(6),
-                EnumBudgetRecurrence.Annually => startDate.AddYears(1),
-                _ => startDate
-            };
+            var (startDate, finishDate) = ComputePeriod(budget.StartDate, budget.Recurrence);
 
             return new GetBudgetWithAreasResponseDto
             {
@@ -365,6 +442,7 @@ namespace FinanceControl.Services.Services
                         Id = al.Id,
                         SubCategoryId = al.SubCategoryId,
                         SubCategoryName = al.SubCategory.Name,
+                        SubCategoryEmoji = al.SubCategory.Emoji,
                         ExpectedValue = al.ExpectedValue,
                         AllocationType = al.AllocationType
                     }).ToList()

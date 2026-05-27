@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/formatters.dart';
+import '../../../core/utils/app_locale.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/budget_models.dart';
 import '../providers/budget_provider.dart';
@@ -56,6 +56,7 @@ class _CreateBudgetStep4PageState
   Widget build(BuildContext context) {
     final s = CreateBudgetState.instance;
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final bottomPad = MediaQuery.viewPaddingOf(context).bottom;
 
     final totalIncomeCents =
@@ -153,7 +154,7 @@ class _CreateBudgetStep4PageState
                             _divider(t),
                             _SummaryRow(
                               label: 'Expected income',
-                              value: formatCurrency(totalIncomeCents),
+                              value: fmt.formatCurrency(totalIncomeCents),
                               valueStyle: AppTextStyles.mono(t.success,
                                       fontSize: 14)
                                   .copyWith(fontWeight: FontWeight.w700),
@@ -161,7 +162,7 @@ class _CreateBudgetStep4PageState
                             _divider(t),
                             _SummaryRow(
                               label: 'Expected expenses',
-                              value: '- ${formatCurrency(totalExpenseCents)}',
+                              value: '- ${fmt.formatCurrency(totalExpenseCents)}',
                               valueStyle: AppTextStyles.mono(t.error,
                                       fontSize: 14)
                                   .copyWith(fontWeight: FontWeight.w700),
@@ -170,7 +171,7 @@ class _CreateBudgetStep4PageState
                             _SummaryRow(
                               label: 'Balance',
                               value:
-                                  '${balanceCents < 0 ? '- ' : ''}${formatCurrency(balanceCents.abs())}',
+                                  '${balanceCents < 0 ? '- ' : ''}${fmt.formatCurrency(balanceCents.abs())}',
                               valueStyle: AppTextStyles.mono(
                                       balanceCents >= 0 ? t.success : t.error,
                                       fontSize: 14)
@@ -333,6 +334,7 @@ class _AreaSummaryCardState extends State<_AreaSummaryCard> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
     final area = widget.area;
     final isIncome = widget.allocationType == 'Income';
     final accentColor = isIncome ? t.success : t.error;
@@ -361,7 +363,7 @@ class _AreaSummaryCardState extends State<_AreaSummaryCard> {
                       ),
                     ),
                     Text(
-                      '$prefix${formatCurrency(area.totalAllocatedCents)}',
+                      '$prefix${fmt.formatCurrency(area.totalAllocatedCents)}',
                       style: AppTextStyles.mono(accentColor, fontSize: 14)
                           .copyWith(fontWeight: FontWeight.w700),
                     ),
@@ -414,7 +416,7 @@ class _AreaSummaryCardState extends State<_AreaSummaryCard> {
                             ),
                           ),
                           Text(
-                            '$prefix${formatCurrency(sub.allocatedCents)}',
+                            '$prefix${fmt.formatCurrency(sub.allocatedCents)}',
                             style: AppTextStyles.mono(accentColor, fontSize: 13)
                                 .copyWith(fontWeight: FontWeight.w700),
                           ),

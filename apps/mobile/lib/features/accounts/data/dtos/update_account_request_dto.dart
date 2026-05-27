@@ -5,18 +5,29 @@ part 'update_account_request_dto.g.dart';
 @JsonSerializable(createFactory: false)
 class UpdateAccountRequestDto {
   const UpdateAccountRequestDto({
+    required this.id,
     required this.name,
-    required this.currentBalance,
+    required this.type,
     required this.isDefaultAccount,
-    required this.excludeFromNetWorth,
     this.goalAmount,
+    this.billingDueDay,
+    this.creditLimit,
   });
 
+  final int id;
   final String name;
-  final int currentBalance;
+
+  /// "Checking" | "Savings" | "Credit" | "Cash"
+  final String type;
+
   final bool isDefaultAccount;
-  final bool excludeFromNetWorth;
   final int? goalAmount;
+
+  /// Only sent when type == "Credit".
+  final int? billingDueDay;
+
+  /// Only sent when type == "Credit". In cents.
+  final int? creditLimit;
 
   Map<String, dynamic> toJson() => _$UpdateAccountRequestDtoToJson(this);
 }

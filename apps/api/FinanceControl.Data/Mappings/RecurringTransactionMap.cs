@@ -27,12 +27,12 @@ namespace FinanceControl.Data.Mappings
             builder.Property(rt => rt.EndDate);
             builder.Property(rt => rt.IsActive).IsRequired();
             builder.Property(rt => rt.CreatedAt)
-                .HasColumnType("timestamp without time zone")
-                .HasDefaultValueSql("timezone('America/Sao_Paulo', now())")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now()")
                 .IsRequired()
                 .ValueGeneratedOnAdd();
             builder.Property(rt => rt.UpdatedAt)
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .ValueGeneratedOnAdd();
 
             builder.HasOne<User>()

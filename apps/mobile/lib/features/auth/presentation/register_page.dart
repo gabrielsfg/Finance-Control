@@ -34,6 +34,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   String? _passwordError;
   String? _confirmPasswordError;
   String? _globalError;
+  String _passwordValue = '';
 
   @override
   void dispose() {
@@ -42,6 +43,17 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  static String? _validatePasswordStrength(String password) {
+    if (password.length < 8) return 'Mínimo 8 caracteres';
+    if (!RegExp(r'[A-Z]').hasMatch(password)) return 'Inclua ao menos uma letra maiúscula';
+    if (!RegExp(r'[a-z]').hasMatch(password)) return 'Inclua ao menos uma letra minúscula';
+    if (!RegExp(r'[0-9]').hasMatch(password)) return 'Inclua ao menos um número';
+    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(password)) {
+      return 'Inclua ao menos um caractere especial';
+    }
+    return null;
   }
 
   bool _validate() {
@@ -66,8 +78,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     if (_passwordController.text.isEmpty) {
       passErr = 'Informe uma senha';
-    } else if (_passwordController.text.length < 8) {
-      passErr = 'Mínimo 8 caracteres';
+    } else {
+      passErr = _validatePasswordStrength(_passwordController.text);
     }
 
     if (_confirmPasswordController.text.isEmpty) {
@@ -119,9 +131,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       );
     } on DioException catch (e) {
       final status = e.response?.statusCode;
-      final message = status == 400
-          ? 'E-mail já cadastrado.'
-          : 'Não foi possível criar a conta. Tente novamente.';
+      final message = status == 429
+          ? 'Muitas tentativas. Aguarde alguns minutos.'
+          : status == 400
+              ? 'E-mail já cadastrado.'
+              : 'Não foi possível criar a conta. Tente novamente.';
       setState(() => _globalError = message);
     } catch (_) {
       setState(() => _globalError = 'Erro inesperado. Tente novamente.');
@@ -225,7 +239,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   obscureText: _obscurePassword,
                   errorText: _passwordError,
                   textInputAction: TextInputAction.next,
-                  onChanged: (_) => setState(() => _passwordError = null),
+                  onChanged: (v) => setState(() {
+                    _passwordError = null;
+                    _passwordValue = v;
+                  }),
                   rightIcon: GestureDetector(
                     onTap: () =>
                         setState(() => _obscurePassword = !_obscurePassword),
@@ -240,6 +257,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     ),
                   ),
                 ),
+                if (_passwordValue.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _PasswordStrengthIndicator(password: _passwordValue),
+                ],
                 const SizedBox(height: 14),
 
                 // ── Confirm password ───────────────────────────────────────
@@ -316,6 +337,65 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Password Strength Indicator ───────────────────────────────────────────────
+
+enum _PasswordStrength { weak, medium, strong }
+
+_PasswordStrength _calcStrength(String password) {
+  int score = 0;
+  if (password.length >= 8) score++;
+  if (RegExp(r'[A-Z]').hasMatch(password)) score++;
+  if (RegExp(r'[a-z]').hasMatch(password)) score++;
+  if (RegExp(r'[0-9]').hasMatch(password)) score++;
+  if (RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(password)) score++;
+  if (score <= 2) return _PasswordStrength.weak;
+  if (score <= 4) return _PasswordStrength.medium;
+  return _PasswordStrength.strong;
+}
+
+class _PasswordStrengthIndicator extends StatelessWidget {
+  const _PasswordStrengthIndicator({required this.password});
+
+  final String password;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    final strength = _calcStrength(password);
+
+    final (filledSegments, color, label) = switch (strength) {
+      _PasswordStrength.weak   => (1, t.error,                      'Fraca'),
+      _PasswordStrength.medium => (2, const Color(0xFFF59E0B),      'Média'),
+      _PasswordStrength.strong => (3, const Color(0xFF22C55E),      'Forte'),
+    };
+
+    return Row(
+      children: [
+        ...List.generate(3, (i) {
+          final filled = i < filledSegments;
+          return Expanded(
+            child: Container(
+              margin: EdgeInsets.only(right: i < 2 ? 4 : 0),
+              height: 4,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(2),
+                color: filled
+                    ? color
+                    : t.divider.withValues(alpha: t.isDark ? 0.3 : 0.5),
+              ),
+            ),
+          );
+        }),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: AppTextStyles.caption(color).copyWith(fontWeight: FontWeight.w600),
+        ),
+      ],
     );
   }
 }

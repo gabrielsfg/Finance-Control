@@ -1,11 +1,7 @@
+using FinanceControl.Shared.Dtos.Others;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
 using FinanceControl.Shared.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FinanceControl.Domain.Interfaces.Service
 {
@@ -16,5 +12,6 @@ namespace FinanceControl.Domain.Interfaces.Service
         Task<GetAccountByIdResponseDto> GetAccountByIdAsync(int id, int userId);
         Task<Result<IEnumerable<GetAccountItemResponseDto>>> UpdateAccountAsync(UpdateAccountRequestDto requestDto, int userId);
         Task<Result<IEnumerable<GetAccountItemResponseDto>>> DeleteAccountByIdAsync(int id, int userId);
+        Task<IEnumerable<BalanceHistoryItemDto>?> GetBalanceHistoryAsync(int accountId, int userId, int days = 30);
     }
 }

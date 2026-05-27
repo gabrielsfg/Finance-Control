@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [],
+    "deny": [
+      "Bash(git commit*)",
+      "Bash(git merge*)",
+      "Bash(git push*)",
+      "Bash(dotnet ef*)"
+    ]
+  }
+}
