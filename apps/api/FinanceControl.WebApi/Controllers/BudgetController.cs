@@ -41,11 +41,11 @@ namespace FinanceControl.WebApi.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllBudgetsAsync()
+        public async Task<IActionResult> GetAllBudgetsAsync([FromQuery] DateOnly? referenceDate = null)
         {
             var userId = GetUserId();
 
-            var result = await _budgetService.GetAllBudgetAsync(userId);
+            var result = await _budgetService.GetAllBudgetAsync(userId, referenceDate);
 
             return Ok(result);
         }

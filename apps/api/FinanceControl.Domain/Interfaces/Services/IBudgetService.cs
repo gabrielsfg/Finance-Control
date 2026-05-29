@@ -7,7 +7,7 @@ namespace FinanceControl.Domain.Interfaces.Service
     public interface IBudgetService
     {
         Task<Result<GetBudgetWithAreasResponseDto>> CreateBudgetAsync(CreateBudgetRequestDto requestDto, int userId);
-        Task<IEnumerable<GetAllBudgetResponseDto>> GetAllBudgetAsync(int userId);
+        Task<IEnumerable<GetAllBudgetResponseDto>> GetAllBudgetAsync(int userId, DateOnly? referenceDate = null);
         Task<GetBudgetByIdResponseDto> GetBudgetByIdAsync(int id, int userId);
         Task<GetBudgetWithAreasResponseDto> GetBudgetWithAllocationsAsync(int id, int userId, DateOnly? referenceDate = null);
         Task<Result<GetBudgetWithAreasResponseDto>> UpdateBudgetAsync(UpdateBudgetRequestDto requestDto, int userId);

@@ -53,5 +53,8 @@ export type Budget = {
   totalAllocated: number;
   totalSpent: number;
   spentPercentage: number;
+  totalIncome: number;
+  totalReceived: number;
+  available: number;
   allocations: BudgetAllocation[];
 };

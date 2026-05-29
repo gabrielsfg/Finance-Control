@@ -2,8 +2,10 @@ import { api } from "./axios";
 import type { Budget, CreateBudgetRequest, UpdateBudgetRequest } from "@/lib/types/budgets.types";
 
 export const budgetsApi = {
-  getAll: async (): Promise<Budget[]> => {
-    const res = await api.get<Budget[]>("/budget");
+  getAll: async (referenceDate?: string): Promise<Budget[]> => {
+    const res = await api.get<Budget[]>("/budget", {
+      params: referenceDate ? { referenceDate } : undefined,
+    });
     return res.data;
   },
 

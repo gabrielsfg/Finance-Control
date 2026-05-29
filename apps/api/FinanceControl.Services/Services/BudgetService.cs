@@ -78,7 +78,7 @@ namespace FinanceControl.Services.Services
             return Result<GetBudgetWithAreasResponseDto>.Success(await BuildBudgetWithAreasResponse(budget.Id, userId));
         }
 
-        public async Task<IEnumerable<GetAllBudgetResponseDto>> GetAllBudgetAsync(int userId)
+        public async Task<IEnumerable<GetAllBudgetResponseDto>> GetAllBudgetAsync(int userId, DateOnly? referenceDate = null)
         {
             var rawBudgets = await _context.Budgets
                 .Where(b => b.UserId == userId)
@@ -88,7 +88,7 @@ namespace FinanceControl.Services.Services
 
             foreach (var b in rawBudgets)
             {
-                var (startDate, endDate) = ComputePeriod(b.StartDate, b.Recurrence);
+                var (startDate, endDate) = ComputePeriod(b.StartDate, b.Recurrence, referenceDate);
 
                 var areas = await _context.Areas
                     .Where(a => a.BudgetId == b.Id && a.UserId == userId)
@@ -136,9 +136,15 @@ namespace FinanceControl.Services.Services
                     }))
                     .ToList();
 
-                var totalAllocated = flatAllocations.Sum(al => al.Allocated);
-                var totalSpent = flatAllocations.Sum(al => al.Spent);
-                var totalPct = totalAllocated > 0
+                var expenseAllocations = flatAllocations.Where(al => al.AllocationType == EnumAllocationType.Expense).ToList();
+                var incomeAllocations  = flatAllocations.Where(al => al.AllocationType == EnumAllocationType.Income).ToList();
+
+                var totalAllocated = expenseAllocations.Sum(al => al.Allocated);
+                var totalSpent     = expenseAllocations.Sum(al => al.Spent);
+                var totalIncome    = incomeAllocations.Sum(al => al.Allocated);
+                var totalReceived  = incomeAllocations.Sum(al => al.Spent);
+                var available      = totalAllocated - totalSpent;
+                var totalPct       = totalAllocated > 0
                     ? Math.Round((double)totalSpent / totalAllocated * 100, 2)
                     : 0;
 
@@ -153,6 +159,9 @@ namespace FinanceControl.Services.Services
                     TotalAllocated = totalAllocated,
                     TotalSpent = totalSpent,
                     SpentPercentage = totalPct,
+                    TotalIncome = totalIncome,
+                    TotalReceived = totalReceived,
+                    Available = available,
                     Allocations = flatAllocations,
                 });
             }

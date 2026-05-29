@@ -335,6 +335,7 @@ namespace FinanceControl.Services.Services
             var totalExpected = await context.BudgetSubcategoryAllocations
                 .Where(a => a.Budget.UserId == requestDto.UserId)
                 .WhereIf(requestDto.BudgetId.HasValue, a => a.BudgetId == requestDto.BudgetId)
+                .Where(a => a.AllocationType == EnumAllocationType.Expense)
                 .SumAsync(a => (int?)a.ExpectedValue) ?? 0;
 
             var totalSpent = await context.Transactions
@@ -351,6 +352,7 @@ namespace FinanceControl.Services.Services
             var topSubCategories = await context.BudgetSubcategoryAllocations
                 .Where(a => a.Budget.UserId == requestDto.UserId)
                 .WhereIf(requestDto.BudgetId.HasValue, a => a.BudgetId == requestDto.BudgetId)
+                .Where(a => a.AllocationType == EnumAllocationType.Expense)
                 .Select(a => new
                 {
                     SubCategoryName = a.SubCategory.Name,

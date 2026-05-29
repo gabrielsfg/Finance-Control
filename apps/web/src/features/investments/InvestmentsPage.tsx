@@ -12,11 +12,13 @@ import { RegisterDividendModal } from "@/features/investments/components/Registe
 import { InvestmentDetailModal } from "@/features/investments/components/InvestmentDetailModal";
 import { useInvestments } from "@/features/investments/hooks/useInvestments";
 import { useInvestmentVisibility } from "@/features/investments/hooks/useInvestmentVisibility";
+import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { usePageNova, usePageSearch, usePageFilter } from "@/lib/hooks/usePageHeader";
 import type { Investment } from "@/lib/types/investments.types";
 
 export function InvestmentsPage() {
   const { data, isLoading, isError } = useInvestments();
+  const { data: accounts = [] } = useAccounts();
   const { visibleTypes, allTypes, setVisibleTypes } = useInvestmentVisibility();
   const [showRegisterTx, setShowRegisterTx]         = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
@@ -67,11 +69,6 @@ export function InvestmentsPage() {
       </button>
     </div>
   );
-
-  const accountOptions = [
-    { id: 1, name: "Conta Corrente Nubank" },
-    { id: 2, name: "Conta XP Investimentos" },
-  ];
 
   if (isLoading) {
     return (
@@ -150,7 +147,7 @@ export function InvestmentsPage() {
       <RegisterTransactionModal
         open={showRegisterTx}
         onClose={() => setShowRegisterTx(false)}
-        accountOptions={accountOptions}
+        accountOptions={accounts}
       />
 
       {selectedInvestment && (
@@ -166,7 +163,7 @@ export function InvestmentsPage() {
         onClose={() => { setShowDividendModal(false); setDividendTarget(null); }}
         investmentId={dividendTarget?.id ?? 0}
         ticker={dividendTarget?.ticker ?? ""}
-        accountOptions={accountOptions}
+        accountOptions={accounts}
       />
     </div>
   );

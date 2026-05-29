@@ -2,10 +2,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { budgetsApi } from "@/lib/api/budgets";
 import type { Budget, CreateBudgetRequest, UpdateBudgetRequest } from "@/lib/types/budgets.types";
 
-export const useBudgets = () =>
+export const useBudgets = (referenceDate?: string) =>
   useQuery<Budget[]>({
-    queryKey: ["budgets"],
-    queryFn: budgetsApi.getAll,
+    queryKey: ["budgets", referenceDate ?? "current"],
+    queryFn: () => budgetsApi.getAll(referenceDate),
     staleTime: 60_000,
   });
 

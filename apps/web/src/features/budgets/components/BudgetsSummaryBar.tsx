@@ -15,7 +15,7 @@ export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props)
   const active = budgets.filter((b) => b.isActive);
   const totalAllocated = active.reduce((s, b) => s + b.totalAllocated, 0);
   const totalSpent     = active.reduce((s, b) => s + b.totalSpent,     0);
-  const remaining      = totalAllocated - totalSpent;
+  const available      = active.reduce((s, b) => s + b.available,      0);
   const pct            = totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0;
   const isOver         = totalSpent > totalAllocated;
 
@@ -30,10 +30,10 @@ export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props)
   const willExceed   = projected > totalAllocated && totalAllocated > 0;
 
   const kpis = [
-    { label: "Orçamento Total",   value: formatCurrency(totalAllocated / 100), color: "text-text" },
-    { label: "Gasto",             value: formatCurrency(totalSpent / 100),      color: isOver ? "text-red" : "text-text" },
-    { label: "Disponível",        value: formatCurrency(Math.abs(remaining) / 100), color: remaining < 0 ? "text-red" : "text-green" },
-    { label: "Dias Restantes",    value: String(daysLeft),                      color: "text-text" },
+    { label: "Orçamento Total",   value: formatCurrency(totalAllocated / 100),      color: "text-text" },
+    { label: "Gasto",             value: formatCurrency(totalSpent / 100),           color: isOver ? "text-red" : "text-text" },
+    { label: "Disponível",        value: formatCurrency(Math.abs(available) / 100),  color: available < 0 ? "text-red" : "text-green" },
+    { label: "Dias Restantes",    value: String(daysLeft),                           color: "text-text" },
   ];
 
   return (
@@ -61,17 +61,17 @@ export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props)
         </span>
         {willExceed && (
           <span className="text-orange text-[12px] font-medium">
-            No ritmo atual, você vai estourar o orçamento em ~{Math.round((remaining / dailyRate))} dias
+            No ritmo atual, você vai estourar o orçamento em ~{Math.round(((totalAllocated - totalSpent) / dailyRate))} dias
           </span>
         )}
-        {!willExceed && remaining >= 0 && (
+        {!willExceed && available >= 0 && (
           <span className="text-green text-[12px]">
-            Restam {formatCurrency(remaining / 100)}
+            Restam {formatCurrency(available / 100)}
           </span>
         )}
         {isOver && (
           <span className="text-red text-[12px] font-medium">
-            Estourado em {formatCurrency(Math.abs(remaining) / 100)}
+            Estourado em {formatCurrency(Math.abs(totalAllocated - totalSpent) / 100)}
           </span>
         )}
       </div>

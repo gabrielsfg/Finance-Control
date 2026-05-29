@@ -48,7 +48,6 @@ function computePeriod(startDate: string, recurrence: BudgetRecurrence, offset: 
 }
 
 export function BudgetsPage() {
-  const { data: budgets, isLoading, isError } = useBudgets();
   const [showCreate, setShowCreate] = useState(false);
   const [detailTarget, setDetailTarget] = useState<Budget | null>(null);
   const [editTarget, setEditTarget] = useState<Budget | null>(null);
@@ -56,12 +55,19 @@ export function BudgetsPage() {
 
   usePageNova("Novo orçamento", () => setShowCreate(true));
 
-  const activeBudget = budgets?.find((b) => b.isActive);
+  // Load without referenceDate first to get the active budget and its recurrence config.
+  const { data: baseBudgets, isLoading, isError } = useBudgets();
+  const activeBudget = baseBudgets?.find((b) => b.isActive);
 
+  // Derive the referenceDate for the selected offset period.
   const period = useMemo(() => {
     if (!activeBudget) return null;
     return computePeriod(activeBudget.startDate, activeBudget.recurrence, periodOffset);
   }, [activeBudget, periodOffset]);
+
+  // Fetch budgets for the selected period (skipped when offset === 0 — baseBudgets already covers it).
+  const { data: shiftedBudgets } = useBudgets(periodOffset !== 0 ? period?.referenceDate : undefined);
+  const budgets = periodOffset !== 0 ? shiftedBudgets ?? baseBudgets : baseBudgets;
 
   if (isLoading) {
     return (
@@ -96,21 +102,27 @@ export function BudgetsPage() {
           </div>
           {/* Period navigation — only shown when there's an active budget */}
           {period && (
-            <div className="border-border bg-surface flex items-center gap-1 rounded-xl border px-2 py-1.5">
-              <button
-                onClick={() => setPeriodOffset((o) => o - 1)}
-                className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2"
-              >
-                <ChevronLeft size={15} />
-              </button>
-              <span className="text-text min-w-[140px] text-center text-[13px] font-medium">{period.label}</span>
-              <button
-                onClick={() => setPeriodOffset((o) => o + 1)}
-                disabled={periodOffset >= 0}
-                className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2 disabled:opacity-30"
-              >
-                <ChevronRight size={15} />
-              </button>
+            <div className="flex items-center gap-2">
+              {periodOffset > 0 && (
+                <span className="bg-purple/15 text-purple rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+                  Futuro
+                </span>
+              )}
+              <div className="border-border bg-surface flex items-center gap-1 rounded-xl border px-2 py-1.5">
+                <button
+                  onClick={() => setPeriodOffset((o) => o - 1)}
+                  className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <span className="text-text min-w-[140px] text-center text-[13px] font-medium">{period.label}</span>
+                <button
+                  onClick={() => setPeriodOffset((o) => o + 1)}
+                  className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-surface2"
+                >
+                  <ChevronRight size={15} />
+                </button>
+              </div>
             </div>
           )}
         </div>

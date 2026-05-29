@@ -21,7 +21,7 @@ export const ActiveBudgetCard = ({ budget }: Props) => {
   if (!budget) {
     return (
       <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-        <SectionHeader title="Orçamentos Ativos" />
+        <SectionHeader title="Orçamento Ativo" />
         <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
           <div className="bg-surface2 mb-3 flex h-10 w-10 items-center justify-center rounded-[10px]">
             <Target size={18} className="text-text-muted" strokeWidth={1.5} />
@@ -41,7 +41,7 @@ export const ActiveBudgetCard = ({ budget }: Props) => {
   if (!budget.hasAllocations) {
     return (
       <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-        <SectionHeader title="Orçamentos Ativos" />
+        <SectionHeader title="Orçamento Ativo" />
         <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
           <div className="bg-orange/10 mb-3 flex h-10 w-10 items-center justify-center rounded-[10px]">
             <AlertCircle size={18} className="text-orange" strokeWidth={1.5} />
@@ -63,7 +63,7 @@ export const ActiveBudgetCard = ({ budget }: Props) => {
   return (
     <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
       <SectionHeader
-        title="Orçamentos Ativos"
+        title="Orçamento Ativo"
         action={() => router.push("/budgets")}
         actionLabel="Ver detalhes"
       />
