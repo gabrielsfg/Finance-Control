@@ -41,11 +41,11 @@ namespace FinanceControl.WebApi.Controllers
             if (validatonResult.ToActionResult() is { } errorResult)
                 return errorResult;
 
-            var user = await _userService.RegisterUserAsync(requestDto);
-            if (user is null)
-                return BadRequest("Email already existis.");
+            var authResponse = await _userService.RegisterUserAsync(requestDto);
+            if (authResponse is null)
+                return BadRequest("Email already exists.");
 
-            return Ok(user);
+            return Ok(authResponse);
         }
 
         [HttpPost("login")]

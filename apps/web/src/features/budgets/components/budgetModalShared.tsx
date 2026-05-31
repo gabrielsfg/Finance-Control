@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { ProgressBar } from "@/components/shared/ProgressBar";
 import { getCategoryColor } from "@/lib/config/categoryColors";
+import { includesNormalized } from "@/lib/utils";
 import type { BudgetRecurrence, AllocationType } from "@/lib/types/budgets.types";
 import type { SubCategoryItem } from "@/lib/types/transactions.types";
 
@@ -89,8 +90,8 @@ export function SubcategoryPicker({
   const available = subCategories.filter(
     (s) => !usedIds.has(s.id) &&
       (!search.trim() ||
-        s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.categoryName.toLowerCase().includes(search.toLowerCase())),
+        includesNormalized(s.name, search) ||
+        includesNormalized(s.categoryName, search)),
   );
 
   const groups = available.reduce<Record<string, SubCategoryItem[]>>((acc, s) => {

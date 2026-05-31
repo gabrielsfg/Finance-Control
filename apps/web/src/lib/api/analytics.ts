@@ -24,23 +24,23 @@ import type {
 } from "@/lib/types/analytics.types";
 
 export const analyticsApi = {
-  getSummary: async (startDate: string, finishDate: string): Promise<AnalyticsSummaryResponse> => {
+  getSummary: async (startDate: string, finishDate: string, tagIds?: number[]): Promise<AnalyticsSummaryResponse> => {
     const response = await api.get<AnalyticsSummaryResponse>("/analytics/summary", {
-      params: { startDate, finishDate },
+      params: { startDate, finishDate, ...(tagIds?.length ? { tagIds } : {}) },
     });
     return response.data;
   },
 
-  getIncomeExpense: async (startDate: string, finishDate: string): Promise<MonthlyData[]> => {
+  getIncomeExpense: async (startDate: string, finishDate: string, tagIds?: number[]): Promise<MonthlyData[]> => {
     const response = await api.get<MonthlyData[]>("/analytics/income-expense", {
-      params: { startDate, finishDate },
+      params: { startDate, finishDate, ...(tagIds?.length ? { tagIds } : {}) },
     });
     return response.data;
   },
 
-  getSpendingHeatmap: async (startDate: string, finishDate: string): Promise<DaySpend[]> => {
+  getSpendingHeatmap: async (startDate: string, finishDate: string, tagIds?: number[]): Promise<DaySpend[]> => {
     const response = await api.get<DaySpend[]>("/analytics/spending-heatmap", {
-      params: { startDate, finishDate },
+      params: { startDate, finishDate, ...(tagIds?.length ? { tagIds } : {}) },
     });
     return response.data;
   },
@@ -49,9 +49,10 @@ export const analyticsApi = {
     startDate: string,
     finishDate: string,
     categoryId: number,
+    tagIds?: number[],
   ): Promise<CategoryMonthlyData[]> => {
     const response = await api.get<CategoryMonthlyData[]>("/analytics/category-evolution", {
-      params: { startDate, finishDate, categoryId },
+      params: { startDate, finishDate, categoryId, ...(tagIds?.length ? { tagIds } : {}) },
     });
     return response.data;
   },

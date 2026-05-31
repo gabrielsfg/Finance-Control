@@ -18,6 +18,7 @@ import { usePageNova, usePageFilter, usePageSearch, usePageImport } from "@/lib/
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
+import { useTags } from "@/features/transactions/hooks/useTags";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { TransactionsFilter } from "@/features/transactions/types/filters.types";
 import type { TransactionItem } from "@/lib/types/transactions.types";
@@ -41,6 +42,7 @@ export function TransactionsPage() {
 
   const [filter, setFilter] = useState<TransactionsFilter>(() => initFilterFromParam(dateParam));
   const [filterDay, setFilterDay] = useState<string | null>(dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -56,6 +58,7 @@ export function TransactionsPage() {
   const { data: accountsRaw = [] } = useAccounts();
   const { data: subcatsRaw  = [] } = useSubCategories();
   const { data: budgetsRaw  = [] } = useBudgets();
+  const { data: tagsRaw     = [] } = useTags();
 
   const metaCategories = useMemo(() =>
     Array.from(
@@ -80,6 +83,9 @@ export function TransactionsPage() {
   const metaBudgets = useMemo(() =>
     budgetsRaw.map(b => ({ id: b.id, name: b.name })), [budgetsRaw]);
 
+  const metaTags = useMemo(() =>
+    tagsRaw.map(t => ({ id: t.id, name: t.name })), [tagsRaw]);
+
   function handleFilterChange(f: TransactionsFilter) {
     setFilter(f);
     setFilterDay(null);
@@ -92,7 +98,7 @@ export function TransactionsPage() {
     setDrawerOpen(true);
   });
   usePageImport(importFlow.open);
-  usePageSearch();
+  usePageSearch((q) => { setSearchQuery(q); setPage(1); }, "Buscar por descrição ou tag...");
   usePageFilter(
     <TransactionsFilters filter={filter} onChange={handleFilterChange} />
   );
@@ -123,14 +129,27 @@ export function TransactionsPage() {
   const totalItems = response?.page.totalItems ?? 0;
   const rowCount = response?.page.rowCount ?? 0;
 
+  const normalizeText = (s: string) =>
+    s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
   const visibleItems = useMemo(() => {
+    const needle = normalizeText(searchQuery.trim());
     return items.filter((t) => {
       if (filterDay && t.transactionDate !== filterDay) return false;
       if (filter.typeFilter === "Transfer" && t.recurringTransactionId === null && t.parentTransactionId === null) return false;
       if (filter.typeFilter !== "All" && filter.typeFilter !== "Transfer" && t.type !== filter.typeFilter) return false;
+      if (needle) {
+        const inDescription = t.description ? normalizeText(t.description).includes(needle) : false;
+        const inTags = t.tags ? t.tags.some((tag) => normalizeText(tag.name).includes(needle)) : false;
+        if (!inDescription && !inTags) return false;
+      }
+      if (filter.tagIds.length > 0) {
+        const txTagIds = t.tags.map(tag => tag.id);
+        if (!filter.tagIds.some(id => txTagIds.includes(id))) return false;
+      }
       return true;
     });
-  }, [items, filterDay, filter.typeFilter]);
+  }, [items, filterDay, filter.typeFilter, searchQuery, filter.tagIds]);
 
   type Chip = { id: string; label: string; color?: string; onRemove: () => void };
 
@@ -203,6 +222,18 @@ export function TransactionsPage() {
       });
     }
 
+    for (const id of filter.tagIds) {
+      const tag = metaTags.find(t => t.id === id);
+      if (tag) chips.push({
+        id: `tag-${id}`,
+        label: `#${tag.name}`,
+        onRemove: () => {
+          setFilter(f => ({ ...f, tagIds: f.tagIds.filter(x => x !== id) }));
+          setPage(1);
+        },
+      });
+    }
+
     if (filterDay) {
       const [y, m, d] = filterDay.split("-").map(Number);
       const label = new Date(y, m - 1, d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
@@ -214,7 +245,7 @@ export function TransactionsPage() {
     }
 
     return chips;
-  }, [filter, filterDay, metaCategories, metaSubcategories, metaAccounts, metaBudgets]);
+  }, [filter, filterDay, metaCategories, metaSubcategories, metaAccounts, metaBudgets, metaTags]);
 
   // ── Import steps that replace the page content ─────────────────────────────
   if (importFlow.step === "review") {

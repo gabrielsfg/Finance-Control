@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn, includesNormalized } from "@/lib/utils";
 import { useCreateTransaction } from "@/features/transactions/hooks/useTransactions";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
@@ -134,8 +134,8 @@ export const CreateTransactionModal = ({ open, onClose, defaultType = "Expense" 
   const groupedFiltered = subcategories
     .filter((s) =>
       !categorySearch.trim() ||
-      s.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
-      s.categoryName.toLowerCase().includes(categorySearch.toLowerCase()),
+      includesNormalized(s.name, categorySearch) ||
+      includesNormalized(s.categoryName, categorySearch),
     )
     .reduce<Record<string, SubCategoryItem[]>>((acc, s) => {
       (acc[s.categoryName] ??= []).push(s);

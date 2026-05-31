@@ -22,6 +22,21 @@ import { cn } from "@/lib/utils";
 import { useRegisterTransaction } from "@/features/investments/hooks/useInvestments";
 import type { AssetType, InvestmentOperation } from "@/lib/types/investments.types";
 
+const ASSET_TYPE_QUANTITY_DECIMALS: Record<AssetType, number> = {
+  Acao:              0,
+  Stock:             0,
+  BDR:               0,
+  FII:               0,
+  Reit:              0,
+  ETF:               0,
+  ETFInternacional:  0,
+  FundoInvestimento: 2,
+  TesouroDireto:     2,
+  RendaFixa:         2,
+  Outro:             2,
+  Cripto:            8,
+};
+
 const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   Acao:              "Ação",
   FundoInvestimento: "Fundo de Investimento",
@@ -213,6 +228,14 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
   const date      = watch("date") ?? "";
   const accountId = watch("accountId");
 
+  const quantityDecimals = ASSET_TYPE_QUANTITY_DECIMALS[assetType] ?? 0;
+  const quantityStep     = quantityDecimals === 0 ? "1" : `0.${"0".repeat(quantityDecimals - 1)}1`;
+  const quantityPlaceholder = quantityDecimals === 0 ? "0" : `0,${"0".repeat(quantityDecimals)}`;
+
+  useEffect(() => {
+    setValue("quantity", "");
+  }, [assetType, setValue]);
+
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       if (e.key === "Escape") handleClose();
@@ -360,9 +383,9 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
                 <input
                   {...register("quantity")}
                   type="number"
-                  step="0.000001"
+                  step={quantityStep}
                   min="0"
-                  placeholder="0"
+                  placeholder={quantityPlaceholder}
                   className={cn(INPUT_CLASS, errors.quantity && "border-red/60")}
                 />
               </FormField>

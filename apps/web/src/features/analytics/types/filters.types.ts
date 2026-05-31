@@ -27,6 +27,7 @@ export type AnalyticsFilter = {
   startDate: string;
   finishDate: string;
   // Expense-tab filters (empty array = all)
+  tagIds: number[];
   categoryIds: number[];
   accountIds: number[];
   transactionType: TransactionTypeFilter;

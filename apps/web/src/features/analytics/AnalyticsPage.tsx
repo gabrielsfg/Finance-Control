@@ -5,6 +5,7 @@ import { Loader2, X } from "lucide-react";
 import { usePageFilter } from "@/lib/hooks/usePageHeader";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
+import { useTags } from "@/features/transactions/hooks/useTags";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import { AnalyticsSummaryCards } from "@/features/analytics/expenses/components/AnalyticsSummaryCards";
 import { AnalyticsTrendChart } from "@/features/analytics/expenses/components/AnalyticsTrendChart";
@@ -80,8 +81,10 @@ export function AnalyticsPage() {
 
   const { data: accountsRaw = [] } = useAccounts();
   const { data: subcatsRaw  = [] } = useSubCategories();
+  const { data: tagsRaw     = [] } = useTags();
 
   const metaAccounts = useMemo(() => accountsRaw.map(a => ({ id: a.id, name: a.name })), [accountsRaw]);
+  const metaTags = useMemo(() => tagsRaw.map(t => ({ id: t.id, name: t.name })), [tagsRaw]);
   const metaCategories = useMemo(() =>
     Array.from(
       new Map(subcatsRaw.map(s => [s.categoryId, {
@@ -147,8 +150,19 @@ export function AnalyticsPage() {
       }
     }
 
+    if (filterMode === "expenses") {
+      for (const id of filter.tagIds) {
+        const tag = metaTags.find(t => t.id === id);
+        if (tag) chips.push({
+          id: `tag-${id}`,
+          label: `#${tag.name}`,
+          onRemove: () => setFilter(f => ({ ...f, tagIds: f.tagIds.filter(x => x !== id) })),
+        });
+      }
+    }
+
     return chips;
-  }, [filter, filterMode, metaCategories, metaAccounts]);
+  }, [filter, filterMode, metaCategories, metaAccounts, metaTags]);
 
   usePageFilter(
     <AnalyticsFilters filter={filter} onChange={setFilter} mode={filterMode} />,
@@ -168,13 +182,14 @@ export function AnalyticsPage() {
     setCalendarMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
 
-  const summary           = useAnalyticsSummary(start, finish);
-  const monthly           = useAnalyticsMonthly(start, finish);
+  const activeTagIds = filter.tagIds.length > 0 ? filter.tagIds : undefined;
+  const summary           = useAnalyticsSummary(start, finish, activeTagIds);
+  const monthly           = useAnalyticsMonthly(start, finish, activeTagIds);
   const [cmY, cmM] = calendarMonth.split("-").map(Number);
   const calendarEnd = new Date(cmY, cmM, 0).toISOString().slice(0, 10);
-  const heatmap           = useAnalyticsHeatmap(calendarMonthStart, calendarEnd);
+  const heatmap           = useAnalyticsHeatmap(calendarMonthStart, calendarEnd, activeTagIds);
   const categoryIds = summary.data?.categoryBreakdown.items.map((c) => c.categoryId) ?? [];
-  const catEvol           = useAnalyticsCategoryEvolution(start, finish, categoryIds);
+  const catEvol           = useAnalyticsCategoryEvolution(start, finish, categoryIds, activeTagIds);
   const netWorth          = useAnalyticsNetWorth(start, finish);
   const netWorthProjection      = useNetWorthProjection(24);
   const categoryProjection      = useCategoryProjection(3);

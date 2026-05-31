@@ -31,7 +31,7 @@ namespace FinanceControl.Services.Services
             _configuration = configuration;
         }
 
-        public async Task<User?> RegisterUserAsync(CreateUserRequestDto requestDto)
+        public async Task<AuthResponseDto?> RegisterUserAsync(CreateUserRequestDto requestDto)
         {
             requestDto.Email = requestDto.Email.ToLower();
 
@@ -53,7 +53,7 @@ namespace FinanceControl.Services.Services
 
             await SeedUserDataAsync(user.Id, user.PreferredLanguage);
 
-            return user;
+            return await CreateAuthResponseAsync(user);
         }
 
         public async Task<LoginResult> UserLoginAsync(UserLoginRequestDto requestDto)
@@ -351,19 +351,20 @@ namespace FinanceControl.Services.Services
             await _context.SaveChangesAsync();
 
             // Default categories and subcategories
-            foreach (var (categoryName, subcategoryNames) in UserSeedData.GetCategories(preferredLanguage))
+            foreach (var (categoryName, color, subs) in UserSeedData.GetCategories(preferredLanguage))
             {
-                var category = new Category { UserId = userId, Name = categoryName, IsSystem = false };
+                var category = new Category { UserId = userId, Name = categoryName, Color = color, IsSystem = false };
                 _context.Categories.Add(category);
                 await _context.SaveChangesAsync();
 
-                foreach (var subName in subcategoryNames)
+                foreach (var (subName, emoji) in subs)
                 {
                     _context.SubCategories.Add(new SubCategory
                     {
                         UserId = userId,
                         CategoryId = category.Id,
                         Name = subName,
+                        Emoji = emoji,
                         IsSystem = false
                     });
                 }

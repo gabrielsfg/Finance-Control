@@ -24,34 +24,34 @@ import type {
   CommitmentsImpactResponse,
 } from "@/lib/types/analytics.types";
 
-export const useAnalyticsSummary = (startDate: string, finishDate: string) =>
+export const useAnalyticsSummary = (startDate: string, finishDate: string, tagIds?: number[]) =>
   useQuery<AnalyticsSummaryResponse>({
-    queryKey: ["analytics", "summary", startDate, finishDate],
-    queryFn: () => analyticsApi.getSummary(startDate, finishDate),
+    queryKey: ["analytics", "summary", startDate, finishDate, tagIds],
+    queryFn: () => analyticsApi.getSummary(startDate, finishDate, tagIds),
     staleTime: 60_000,
   });
 
-export const useAnalyticsMonthly = (startDate: string, finishDate: string) =>
+export const useAnalyticsMonthly = (startDate: string, finishDate: string, tagIds?: number[]) =>
   useQuery<MonthlyData[]>({
-    queryKey: ["analytics", "monthly", startDate, finishDate],
-    queryFn: () => analyticsApi.getIncomeExpense(startDate, finishDate),
+    queryKey: ["analytics", "monthly", startDate, finishDate, tagIds],
+    queryFn: () => analyticsApi.getIncomeExpense(startDate, finishDate, tagIds),
     staleTime: 60_000,
   });
 
-export const useAnalyticsHeatmap = (startDate: string, finishDate: string) =>
+export const useAnalyticsHeatmap = (startDate: string, finishDate: string, tagIds?: number[]) =>
   useQuery<DaySpend[]>({
-    queryKey: ["analytics", "heatmap", startDate, finishDate],
-    queryFn: () => analyticsApi.getSpendingHeatmap(startDate, finishDate),
+    queryKey: ["analytics", "heatmap", startDate, finishDate, tagIds],
+    queryFn: () => analyticsApi.getSpendingHeatmap(startDate, finishDate, tagIds),
     staleTime: 60_000,
   });
 
-export const useAnalyticsCategoryEvolution = (startDate: string, finishDate: string, categoryIds: number[]) =>
+export const useAnalyticsCategoryEvolution = (startDate: string, finishDate: string, categoryIds: number[], tagIds?: number[]) =>
   useQuery<CategoryMonthlyData[]>({
-    queryKey: ["analytics", "category-evolution", startDate, finishDate, categoryIds],
+    queryKey: ["analytics", "category-evolution", startDate, finishDate, categoryIds, tagIds],
     queryFn: async () => {
       if (categoryIds.length === 0) return [];
       const results = await Promise.all(
-        categoryIds.map((id) => analyticsApi.getCategoryEvolution(startDate, finishDate, id))
+        categoryIds.map((id) => analyticsApi.getCategoryEvolution(startDate, finishDate, id, tagIds))
       );
       // merge arrays: each call returns points per month with {label, [categoryName]: value}
       // flatten into a unified timeline keyed by label

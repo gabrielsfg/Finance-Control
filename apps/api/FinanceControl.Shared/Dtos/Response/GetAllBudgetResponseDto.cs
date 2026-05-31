@@ -13,6 +13,9 @@ namespace FinanceControl.Shared.Dtos.Response
         public int TotalAllocated { get; set; }
         public int TotalSpent { get; set; }
         public double SpentPercentage { get; set; }
+        public int TotalIncome { get; set; }
+        public int TotalReceived { get; set; }
+        public int Available { get; set; }
         public List<BudgetAllocationFlatResponseDto> Allocations { get; set; } = [];
     }
 

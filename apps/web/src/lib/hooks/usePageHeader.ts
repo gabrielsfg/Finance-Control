@@ -32,11 +32,23 @@ export function usePageFilter(node: ReactNode) {
   }, []);
 }
 
-export function usePageSearch() {
+export function usePageSearch(): void;
+export function usePageSearch(onChange: (query: string) => void, placeholder?: string): void;
+export function usePageSearch(onChange?: (query: string) => void, placeholder?: string): void {
   const setShowSearch = useHeaderStore((s) => s.setShowSearch);
+  const setLocalSearch = useHeaderStore((s) => s.setLocalSearch);
+  const clearLocalSearch = useHeaderStore((s) => s.clearLocalSearch);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   useEffect(() => {
-    setShowSearch(true);
-    return () => setShowSearch(false);
+    if (onChangeRef.current) {
+      setLocalSearch((q) => onChangeRef.current!(q), placeholder);
+      return () => clearLocalSearch();
+    } else {
+      setShowSearch(true);
+      return () => setShowSearch(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

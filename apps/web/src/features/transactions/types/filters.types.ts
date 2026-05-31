@@ -15,6 +15,7 @@ export type TransactionsFilter = {
   customYear: number;
   startDate: string;
   finishDate: string;
+  tagIds: number[];
   budgetIds: number[];
   accountIds: number[];
   categoryIds: number[];

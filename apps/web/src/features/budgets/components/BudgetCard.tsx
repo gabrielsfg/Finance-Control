@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Star, Pencil, Trash2 } from "lucide-react";
+import { Star, Pencil, Trash2, ChevronDown } from "lucide-react";
 import { ProgressBar } from "@/components/shared/ProgressBar";
+import { BudgetAreaBreakdown } from "@/features/budgets/components/BudgetAreaBreakdown";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercentNeutral } from "@/lib/utils/formatNumber";
 import { cn } from "@/lib/utils";
@@ -38,14 +39,14 @@ function StatusBadge({ pct, isActive }: { pct: number; isActive: boolean }) {
 
 type Props = {
   budget: Budget;
-  onClick: () => void;
   onEdit: (budget: Budget) => void;
   inactive?: boolean;
 };
 
-export const BudgetCard = ({ budget, onClick, onEdit, inactive = false }: Props) => {
+export const BudgetCard = ({ budget, onEdit, inactive = false }: Props) => {
   const deleteBudget = useDeleteBudget();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const allocs = budget.allocations ?? [];
   const expenseAllocs = allocs.filter((a) => a.allocationType === "Expense");
@@ -78,12 +79,17 @@ export const BudgetCard = ({ budget, onClick, onEdit, inactive = false }: Props)
         inactive && "opacity-60",
       )}
     >
-      {/* Clickable body */}
-      <div className="cursor-pointer p-5" onClick={onClick}>
+      {/* Clickable body — toggles inline detail */}
+      <button
+        type="button"
+        className="block w-full cursor-pointer p-5 text-left"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+      >
         {/* Header */}
         <div className="mb-4 flex items-start gap-2">
           {budget.isActive && (
-            <Star size={13} className="fill-yellow text-yellow mt-0.5 shrink-0" title="Orçamento ativo" />
+            <Star size={13} className="fill-yellow text-yellow mt-0.5 shrink-0" />
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -94,12 +100,19 @@ export const BudgetCard = ({ budget, onClick, onEdit, inactive = false }: Props)
               {RECURRENCE_LABELS[budget.recurrence] ?? budget.recurrence}
             </p>
           </div>
+          <ChevronDown
+            size={18}
+            className={cn(
+              "text-text-muted mt-0.5 shrink-0 transition-transform duration-200",
+              expanded && "rotate-180",
+            )}
+          />
         </div>
 
         {/* Totals */}
-        <div className="mb-3 flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-6">
           {hasExpense && (
-            <div>
+            <div className="flex-1">
               <div className="mb-1.5 flex items-end justify-between">
                 <div>
                   <p className="font-money font-600 text-text text-[20px]">
@@ -122,7 +135,7 @@ export const BudgetCard = ({ budget, onClick, onEdit, inactive = false }: Props)
             </div>
           )}
           {hasIncome && (
-            <div>
+            <div className="flex-1">
               <div className="mb-1.5 flex items-end justify-between">
                 <div>
                   <p className="font-money font-600 text-text text-[20px]">
@@ -145,10 +158,18 @@ export const BudgetCard = ({ budget, onClick, onEdit, inactive = false }: Props)
 
         <div className="mt-4">
           <span className="text-text-muted text-[12px]">
-            {areaCount} área{areaCount !== 1 ? "s" : ""} · {(budget.allocations ?? []).length} subcategoria{(budget.allocations ?? []).length !== 1 ? "s" : ""}
+            {areaCount} área{areaCount !== 1 ? "s" : ""} · {allocs.length} subcategoria{allocs.length !== 1 ? "s" : ""}
           </span>
         </div>
-      </div>
+      </button>
+
+      {/* Inline detail — areas & subcategories */}
+      {expanded && allocs.length > 0 && (
+        <div className="border-border border-t px-5 py-5">
+          <p className="text-text-sub mb-3 text-[12px] font-semibold uppercase tracking-[0.06em]">Áreas</p>
+          <BudgetAreaBreakdown allocations={allocs} />
+        </div>
+      )}
 
       {/* Action bar */}
       <div

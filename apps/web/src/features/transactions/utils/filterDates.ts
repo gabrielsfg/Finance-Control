@@ -45,6 +45,7 @@ export function defaultTxFilter(): TransactionsFilter {
     customYear: today.getFullYear(),
     startDate: isoDate(new Date(today.getFullYear(), today.getMonth(), 1)),
     finishDate: isoDate(today),
+    tagIds: [],
     budgetIds: [],
     accountIds: [],
     categoryIds: [],
