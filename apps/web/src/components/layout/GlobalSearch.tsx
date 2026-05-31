@@ -23,6 +23,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useHeaderStore } from "@/lib/stores/headerStore";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { TransactionItem } from "@/lib/types/transactions.types";
@@ -247,6 +248,15 @@ export const GlobalSearch = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
+  const onSearchChange = useHeaderStore((s) => s.onSearchChange);
+  const searchPlaceholder = useHeaderStore((s) => s.searchPlaceholder);
+  const isLocalSearch = !!onSearchChange;
+
+  // Reset query when switching between local and global search modes
+  useEffect(() => {
+    setQuery("");
+    setOpen(false);
+  }, [isLocalSearch]);
 
   const prefetchSearchData = useCallback(() => {
     if (!qc.getQueryData(["accounts"]))
@@ -259,7 +269,7 @@ export const GlobalSearch = () => {
       qc.prefetchQuery({ queryKey: ["transactions"], queryFn: transactionsApi.getAll, staleTime: 60_000 });
   }, [qc]);
 
-  const sections = useGlobalSearch(query);
+  const sections = useGlobalSearch(isLocalSearch ? "" : query);
   const allResults = sections.flatMap((s) => s.results);
 
   // Reset active index when results change
@@ -324,7 +334,7 @@ export const GlobalSearch = () => {
     }
   };
 
-  const showDropdown = open && query.trim().length >= 2;
+  const showDropdown = !isLocalSearch && open && query.trim().length >= 2;
 
   // Scroll active item into view
   useEffect(() => {
@@ -348,12 +358,22 @@ export const GlobalSearch = () => {
           type="text"
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
+            const v = e.target.value;
+            setQuery(v);
+            if (isLocalSearch) {
+              onSearchChange!(v);
+            } else {
+              setOpen(true);
+            }
           }}
-          onFocus={() => { prefetchSearchData(); setOpen(true); }}
+          onFocus={() => {
+            if (!isLocalSearch) {
+              prefetchSearchData();
+              setOpen(true);
+            }
+          }}
           onKeyDown={handleKeyDown}
-          placeholder="Buscar páginas, transações, investimentos..."
+          placeholder={isLocalSearch ? (searchPlaceholder ?? "Buscar...") : "Buscar páginas, transações, investimentos..."}
           className="text-text placeholder:text-text-muted flex-1 bg-transparent font-sans text-[14px] focus:outline-none"
         />
         <kbd className="border-border text-text-muted hidden rounded border px-1 py-0.5 font-mono text-[10px] sm:inline-flex items-center gap-0.5">

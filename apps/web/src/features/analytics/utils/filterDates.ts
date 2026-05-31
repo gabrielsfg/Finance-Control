@@ -49,6 +49,7 @@ export function defaultFilter(): AnalyticsFilter {
     customYear: today.getFullYear(),
     startDate: isoDate(new Date(today.getFullYear(), today.getMonth() - 5, 1)),
     finishDate: isoDate(today),
+    tagIds: [],
     categoryIds: [],
     accountIds: [],
     transactionType: "all",

@@ -30,6 +30,7 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
                 .WhereIf(requestDto.AccountIds.Count > 0,    t => requestDto.AccountIds.Contains(t.AccountId))
                 .WhereIf(requestDto.CategoryIds.Count > 0,   t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.TagIds.Count > 0,        t => t.Tags.Any(tag => requestDto.TagIds.Contains(tag.Id)))
                 .WhereIf(requestDto.PaymentType.HasValue,    t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
                 .Select(g => new
@@ -78,6 +79,7 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.TransactionDate >= lastMonthStart && t.TransactionDate <= lastMonthEnd)
                 .WhereIf(requestDto.AccountIds.Count > 0, t => requestDto.AccountIds.Contains(t.AccountId))
                 .WhereIf(requestDto.CategoryIds.Count > 0, t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.TagIds.Count > 0, t => t.Tags.Any(tag => requestDto.TagIds.Contains(tag.Id)))
                 .WhereIf(requestDto.PaymentType.HasValue, t => t.PaymentType == requestDto.PaymentType)
                 .Select(t => new
                 {
@@ -94,6 +96,7 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.TransactionDate >= prevMonthStart && t.TransactionDate <= prevMonthEnd)
                 .WhereIf(requestDto.AccountIds.Count > 0, t => requestDto.AccountIds.Contains(t.AccountId))
                 .WhereIf(requestDto.CategoryIds.Count > 0, t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.TagIds.Count > 0, t => t.Tags.Any(tag => requestDto.TagIds.Contains(tag.Id)))
                 .WhereIf(requestDto.PaymentType.HasValue, t => t.PaymentType == requestDto.PaymentType)
                 .Select(t => new
                 {
@@ -155,6 +158,7 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
                 .WhereIf(requestDto.AccountIds.Count > 0,    t => requestDto.AccountIds.Contains(t.AccountId))
                 .WhereIf(requestDto.CategoryIds.Count > 0,   t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.TagIds.Count > 0,        t => t.Tags.Any(tag => requestDto.TagIds.Contains(tag.Id)))
                 .WhereIf(requestDto.TransactionType.HasValue, t => t.Type == requestDto.TransactionType)
                 .WhereIf(requestDto.PaymentType.HasValue,    t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
@@ -179,6 +183,7 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.TransactionDate < requestDto.StartDate)
                 .WhereIf(requestDto.AccountIds.Count > 0,    t => requestDto.AccountIds.Contains(t.AccountId))
                 .WhereIf(requestDto.CategoryIds.Count > 0,   t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.TagIds.Count > 0,        t => t.Tags.Any(tag => requestDto.TagIds.Contains(tag.Id)))
                 .WhereIf(requestDto.TransactionType.HasValue, t => t.Type == requestDto.TransactionType)
                 .WhereIf(requestDto.PaymentType.HasValue,    t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(_ => 1)
@@ -197,6 +202,7 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
                 .WhereIf(requestDto.AccountIds.Count > 0,    t => requestDto.AccountIds.Contains(t.AccountId))
                 .WhereIf(requestDto.CategoryIds.Count > 0,   t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.TagIds.Count > 0,        t => t.Tags.Any(tag => requestDto.TagIds.Contains(tag.Id)))
                 .WhereIf(requestDto.TransactionType.HasValue, t => t.Type == requestDto.TransactionType)
                 .WhereIf(requestDto.PaymentType.HasValue,    t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(t => t.TransactionDate)
@@ -229,6 +235,7 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.SubCategory.CategoryId == categoryId)
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
                 .WhereIf(requestDto.AccountIds.Count > 0,  t => requestDto.AccountIds.Contains(t.AccountId))
+                .WhereIf(requestDto.TagIds.Count > 0,      t => t.Tags.Any(tag => requestDto.TagIds.Contains(tag.Id)))
                 .WhereIf(requestDto.PaymentType.HasValue, t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
                 .Select(g => new CategoryEvolutionItemDto
@@ -675,6 +682,7 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
                 .WhereIf(requestDto.AccountIds.Count > 0,  t => requestDto.AccountIds.Contains(t.AccountId))
                 .WhereIf(requestDto.CategoryIds.Count > 0, t => requestDto.CategoryIds.Contains(t.SubCategory.CategoryId))
+                .WhereIf(requestDto.TagIds.Count > 0,      t => t.Tags.Any(tag => requestDto.TagIds.Contains(tag.Id)))
                 .WhereIf(requestDto.PaymentType.HasValue, t => t.PaymentType == requestDto.PaymentType)
                 .GroupBy(t => t.TransactionDate)
                 .Select(g => new

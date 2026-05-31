@@ -26,10 +26,11 @@ namespace FinanceControl.WebApi.Controllers
             [FromQuery] DateOnly finishDate,
             [FromQuery] List<int>? accountIds,
             [FromQuery] List<int>? categoryIds,
+            [FromQuery] List<int>? tagIds,
             [FromQuery] EnumTransactionType? transactionType,
             [FromQuery] EnumPaymentType? paymentType)
         {
-            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, transactionType, paymentType);
+            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, tagIds, transactionType, paymentType);
             var result = await _analyticsService.GetSummaryAsync(filter);
             return Ok(result);
         }
@@ -40,10 +41,11 @@ namespace FinanceControl.WebApi.Controllers
             [FromQuery] DateOnly finishDate,
             [FromQuery] List<int>? accountIds,
             [FromQuery] List<int>? categoryIds,
+            [FromQuery] List<int>? tagIds,
             [FromQuery] EnumTransactionType? transactionType,
             [FromQuery] EnumPaymentType? paymentType)
         {
-            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, transactionType, paymentType);
+            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, tagIds, transactionType, paymentType);
             var result = await _analyticsService.GetIncomeExpenseAsync(filter);
             return Ok(result);
         }
@@ -54,10 +56,11 @@ namespace FinanceControl.WebApi.Controllers
             [FromQuery] DateOnly finishDate,
             [FromQuery] List<int>? accountIds,
             [FromQuery] List<int>? categoryIds,
+            [FromQuery] List<int>? tagIds,
             [FromQuery] EnumTransactionType? transactionType,
             [FromQuery] EnumPaymentType? paymentType)
         {
-            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, transactionType, paymentType);
+            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, tagIds, transactionType, paymentType);
             var result = await _analyticsService.GetBalanceEvolutionAsync(filter);
             return Ok(result);
         }
@@ -68,12 +71,13 @@ namespace FinanceControl.WebApi.Controllers
             [FromQuery] DateOnly finishDate,
             [FromQuery] int categoryId,
             [FromQuery] List<int>? accountIds,
+            [FromQuery] List<int>? tagIds,
             [FromQuery] EnumPaymentType? paymentType)
         {
             var categoryValidation = this.ValidatePositiveId(categoryId, "categoryId");
             if (categoryValidation is not null) return categoryValidation;
 
-            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds: null, transactionType: null, paymentType);
+            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds: null, tagIds, transactionType: null, paymentType);
             var result = await _analyticsService.GetCategoryEvolutionAsync(filter, categoryId);
             return Ok(result);
         }
@@ -83,7 +87,7 @@ namespace FinanceControl.WebApi.Controllers
             [FromQuery] DateOnly startDate,
             [FromQuery] DateOnly finishDate)
         {
-            var filter = BuildFilter(startDate, finishDate, accountIds: null, categoryIds: null, transactionType: null, paymentType: null);
+            var filter = BuildFilter(startDate, finishDate, accountIds: null, categoryIds: null, tagIds: null, transactionType: null, paymentType: null);
             var result = await _analyticsService.GetNetWorthEvolutionAsync(filter);
             return Ok(result);
         }
@@ -104,10 +108,11 @@ namespace FinanceControl.WebApi.Controllers
             [FromQuery] DateOnly finishDate,
             [FromQuery] List<int>? accountIds,
             [FromQuery] List<int>? categoryIds,
+            [FromQuery] List<int>? tagIds,
             [FromQuery] EnumTransactionType? transactionType,
             [FromQuery] EnumPaymentType? paymentType)
         {
-            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, transactionType, paymentType);
+            var filter = BuildFilter(startDate, finishDate, accountIds, categoryIds, tagIds, transactionType, paymentType);
             var result = await _analyticsService.GetSpendingHeatmapAsync(filter);
             return Ok(result);
         }
@@ -266,6 +271,7 @@ namespace FinanceControl.WebApi.Controllers
             DateOnly finishDate,
             List<int>? accountIds,
             List<int>? categoryIds,
+            List<int>? tagIds,
             EnumTransactionType? transactionType,
             EnumPaymentType? paymentType) =>
             new()
@@ -274,6 +280,7 @@ namespace FinanceControl.WebApi.Controllers
                 FinishDate      = finishDate,
                 AccountIds      = accountIds ?? [],
                 CategoryIds     = categoryIds ?? [],
+                TagIds          = tagIds ?? [],
                 TransactionType = transactionType,
                 PaymentType     = paymentType,
                 UserId          = GetUserId()

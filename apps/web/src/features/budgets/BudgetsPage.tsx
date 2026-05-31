@@ -9,7 +9,6 @@ import { BudgetCard } from "@/features/budgets/components/BudgetCard";
 import { BudgetsSummaryBar } from "@/features/budgets/components/BudgetsSummaryBar";
 import { CreateBudgetModal } from "@/features/budgets/components/CreateBudgetModal";
 import { EditBudgetModal } from "@/features/budgets/components/EditBudgetModal";
-import { BudgetDetailDrawer } from "@/features/budgets/components/BudgetDetailDrawer";
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
 import { usePageNova } from "@/lib/hooks/usePageHeader";
 import type { Budget, BudgetRecurrence } from "@/lib/types/budgets.types";
@@ -49,7 +48,6 @@ function computePeriod(startDate: string, recurrence: BudgetRecurrence, offset: 
 
 export function BudgetsPage() {
   const [showCreate, setShowCreate] = useState(false);
-  const [detailTarget, setDetailTarget] = useState<Budget | null>(null);
   const [editTarget, setEditTarget] = useState<Budget | null>(null);
   const [periodOffset, setPeriodOffset] = useState(0);
 
@@ -137,9 +135,9 @@ export function BudgetsPage() {
 
             {/* Active budgets */}
             {active.length > 0 && (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="flex flex-col gap-4">
                 {active.map((budget) => (
-                  <BudgetCard key={budget.id} budget={budget} onClick={() => setDetailTarget(budget)} onEdit={setEditTarget} />
+                  <BudgetCard key={budget.id} budget={budget} onEdit={setEditTarget} />
                 ))}
               </div>
             )}
@@ -150,9 +148,9 @@ export function BudgetsPage() {
                 <p className="text-text-muted mb-3 text-[12px] font-medium uppercase tracking-[0.06em]">
                   Orçamentos Inativos
                 </p>
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="flex flex-col gap-4">
                   {inactive.map((budget) => (
-                    <BudgetCard key={budget.id} budget={budget} onClick={() => setDetailTarget(budget)} onEdit={setEditTarget} inactive />
+                    <BudgetCard key={budget.id} budget={budget} onEdit={setEditTarget} inactive />
                   ))}
                 </div>
               </div>
@@ -176,11 +174,6 @@ export function BudgetsPage() {
       </div>
 
       <CreateBudgetModal open={showCreate} onClose={() => setShowCreate(false)} />
-      <BudgetDetailDrawer
-        budget={detailTarget}
-        onClose={() => setDetailTarget(null)}
-        onEdit={(b) => { setDetailTarget(null); setEditTarget(b); }}
-      />
       <EditBudgetModal budget={editTarget} onClose={() => setEditTarget(null)} />
     </>
   );

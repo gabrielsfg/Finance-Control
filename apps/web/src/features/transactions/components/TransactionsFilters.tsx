@@ -3,18 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import {
   SlidersHorizontal, ChevronRight, Check,
-  CalendarDays, Tag, Wallet, BookOpen, ListFilter, ArrowUpDown, DollarSign,
+  CalendarDays, Tag, Hash, Wallet, BookOpen, ListFilter, ArrowUpDown, DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
+import { useTags } from "@/features/transactions/hooks/useTags";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { TransactionsFilter, TxDatePreset, TxSortField, TxSortOrder } from "../types/filters.types";
 import { activeTxDateLabel, availableTxYears, defaultTxFilter } from "../utils/filterDates";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Section = "date" | "categories" | "type" | "accounts" | "budgets" | "sort";
+type Section = "date" | "categories" | "type" | "accounts" | "budgets" | "tags" | "sort";
 
 const DATE_PRESETS: { id: TxDatePreset; label: string }[] = [
   { id: "current-month",  label: "Mês atual" },
@@ -44,6 +45,7 @@ export function getActiveFilterTags(
     subcategories: { id: number; name: string; color: string }[];
     accounts: { id: number; name: string }[];
     budgets: { id: number; name: string }[];
+    tags: { id: number; name: string }[];
     filterDay?: string | null;
   }
 ): FilterTag[] {
@@ -76,6 +78,11 @@ export function getActiveFilterTags(
   for (const id of filter.budgetIds) {
     const bud = meta.budgets.find(b => b.id === id);
     if (bud) tags.push({ id: `bud-${id}`, label: bud.name });
+  }
+
+  for (const id of filter.tagIds) {
+    const tag = meta.tags.find(t => t.id === id);
+    if (tag) tags.push({ id: `tag-${id}`, label: `#${tag.name}` });
   }
 
   if (meta.filterDay) {
@@ -296,7 +303,7 @@ const SORT_OPTIONS: { field: TxSortField; order: TxSortOrder; label: string; ico
 ];
 
 function SectionContent({
-  section, draft, setDraft, accounts, categories, subcategories, budgets,
+  section, draft, setDraft, accounts, categories, subcategories, budgets, tags,
 }: {
   section: Section;
   draft: TransactionsFilter;
@@ -305,10 +312,11 @@ function SectionContent({
   categories: { id: number; name: string; color: string }[];
   subcategories: { id: number; name: string; categoryId: number; color: string; emoji?: string | null }[];
   budgets: { id: number; name: string }[];
+  tags: { id: number; name: string }[];
 }) {
   const years = availableTxYears();
 
-  function toggleId(key: keyof Pick<TransactionsFilter, "budgetIds" | "accountIds" | "categoryIds" | "subCategoryIds">, id: number) {
+  function toggleId(key: keyof Pick<TransactionsFilter, "tagIds" | "budgetIds" | "accountIds" | "categoryIds" | "subCategoryIds">, id: number) {
     const cur = draft[key];
     setDraft(d => ({ ...d, [key]: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] }));
   }
@@ -481,6 +489,24 @@ function SectionContent({
     );
   }
 
+  if (section === "tags") {
+    return (
+      <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 340 }}>
+        {tags.length === 0
+          ? <p className="text-text-muted py-4 text-center text-[14px]">Nenhuma tag criada</p>
+          : tags.map(tag => (
+            <CheckRow
+              key={tag.id}
+              checked={draft.tagIds.includes(tag.id)}
+              onClick={() => toggleId("tagIds", tag.id)}
+              label={`#${tag.name}`}
+            />
+          ))
+        }
+      </div>
+    );
+  }
+
   if (section === "sort") {
     return (
       <div className="flex flex-col gap-1">
@@ -522,6 +548,7 @@ const FILTER_SECTIONS: { id: Section; label: string; icon: React.ElementType }[]
   { id: "categories", label: "Categoria",  icon: Tag },
   { id: "accounts",   label: "Contas",     icon: Wallet },
   { id: "budgets",    label: "Orçamentos", icon: BookOpen },
+  { id: "tags",       label: "Tags",       icon: Hash },
 ];
 
 const SORT_SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
@@ -536,6 +563,7 @@ function countActive(filter: TransactionsFilter): number {
   if (filter.subCategoryIds.length > 0) n++;
   if (filter.accountIds.length > 0) n++;
   if (filter.budgetIds.length > 0) n++;
+  if (filter.tagIds.length > 0) n++;
   return n;
 }
 
@@ -554,6 +582,7 @@ export function TransactionsFilters({ filter, onChange }: Props) {
   const { data: accountsRaw = [] } = useAccounts();
   const { data: subcatsRaw  = [] } = useSubCategories();
   const { data: budgetsRaw  = [] } = useBudgets();
+  const { data: tagsRaw     = [] } = useTags();
 
   const accounts = accountsRaw.map(a => ({ id: a.id, name: a.name }));
   const categories = Array.from(
@@ -573,6 +602,7 @@ export function TransactionsFilters({ filter, onChange }: Props) {
   })).sort((a, b) => a.name.localeCompare(b.name));
 
   const budgets = budgetsRaw.map(b => ({ id: b.id, name: b.name }));
+  const tags = tagsRaw.map(t => ({ id: t.id, name: t.name })).sort((a, b) => a.name.localeCompare(b.name));
 
   // sync draft when filter changes externally
   useEffect(() => { setDraft(filter); }, [filter]);
@@ -636,6 +666,7 @@ export function TransactionsFilters({ filter, onChange }: Props) {
               if (id === "categories")  badge = draft.categoryIds.length + draft.subCategoryIds.length;
               if (id === "accounts")    badge = draft.accountIds.length;
               if (id === "budgets")     badge = draft.budgetIds.length;
+              if (id === "tags")        badge = draft.tagIds.length;
               if (id === "date" && draft.preset !== "current-month") badge = 1;
               if (id === "type" && draft.typeFilter !== "All") badge = 1;
 
@@ -723,6 +754,7 @@ export function TransactionsFilters({ filter, onChange }: Props) {
               categories={categories}
               subcategories={subcategories}
               budgets={budgets}
+              tags={tags}
             />
           </div>
         </div>

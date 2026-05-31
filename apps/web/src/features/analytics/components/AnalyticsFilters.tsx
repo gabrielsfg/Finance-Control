@@ -3,17 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import {
   SlidersHorizontal, ChevronRight, Check,
-  CalendarDays, Tag, Wallet, BarChart2, ArrowUpDown,
+  CalendarDays, Tag, Hash, Wallet, BarChart2, ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
+import { useTags } from "@/features/transactions/hooks/useTags";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { AnalyticsFilter, AssetClassFilter, DatePreset, TransactionTypeFilter } from "../types/filters.types";
 import { availableYears, defaultFilter } from "../utils/filterDates";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Section = "date" | "type" | "categories" | "accounts" | "assetclass";
+type Section = "date" | "type" | "categories" | "accounts" | "assetclass" | "tags";
 
 const DATE_PRESETS: { id: DatePreset; label: string }[] = [
   { id: "current-month",  label: "Mês atual" },
@@ -220,7 +221,7 @@ function CheckRow({ checked, onClick, label, color }: { checked: boolean; onClic
 
 // ── Section content ───────────────────────────────────────────────────────────
 function SectionContent({
-  section, draft, setDraft, mode, accounts, categories,
+  section, draft, setDraft, mode, accounts, categories, tags,
 }: {
   section: Section;
   draft: AnalyticsFilter;
@@ -228,6 +229,7 @@ function SectionContent({
   mode: Props["mode"];
   accounts: { id: number; name: string }[];
   categories: { id: number; name: string; color: string }[];
+  tags: { id: number; name: string }[];
 }) {
   const years = availableYears();
 
@@ -345,6 +347,27 @@ function SectionContent({
     );
   }
 
+  if (section === "tags" && mode === "expenses") {
+    return (
+      <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 300 }}>
+        {tags.length === 0
+          ? <p className="text-text-muted py-4 text-center text-[13px]">Nenhuma tag criada</p>
+          : tags.map(tag => (
+            <CheckRow
+              key={tag.id}
+              checked={draft.tagIds.includes(tag.id)}
+              onClick={() => {
+                const cur = draft.tagIds;
+                setDraft(d => ({ ...d, tagIds: cur.includes(tag.id) ? cur.filter(x => x !== tag.id) : [...cur, tag.id] }));
+              }}
+              label={`#${tag.name}`}
+            />
+          ))
+        }
+      </div>
+    );
+  }
+
   return <p className="text-text-muted text-[13px]">Sem opções para este modo.</p>;
 }
 
@@ -356,6 +379,7 @@ function getSections(mode: Props["mode"]): { id: Section; label: string; icon: R
     { id: "type",       label: "Tipo",       icon: ArrowUpDown },
     { id: "categories", label: "Categorias", icon: Tag },
     { id: "accounts",   label: "Contas",     icon: Wallet },
+    { id: "tags",       label: "Tags",       icon: Hash },
   ];
   if (mode === "investments") return [
     ...base,
@@ -372,6 +396,7 @@ function countActive(filter: AnalyticsFilter, mode: Props["mode"]): number {
     if (filter.categoryIds.length > 0) n++;
     if (filter.accountIds.length > 0) n++;
     if (filter.transactionType !== "all") n++;
+    if (filter.tagIds.length > 0) n++;
   }
   if (mode === "investments") {
     if (filter.accountIds.length > 0) n++;
@@ -395,8 +420,10 @@ export function AnalyticsFilters({ filter, onChange, mode }: Props) {
 
   const { data: accountsRaw = [] } = useAccounts();
   const { data: subcatsRaw  = [] } = useSubCategories();
+  const { data: tagsRaw     = [] } = useTags();
 
   const accounts   = accountsRaw.map(a => ({ id: a.id, name: a.name }));
+  const tags = tagsRaw.map(t => ({ id: t.id, name: t.name })).sort((a, b) => a.name.localeCompare(b.name));
   const categories = Array.from(
     new Map(subcatsRaw.map(s => [s.categoryId, {
       id: s.categoryId,
@@ -456,6 +483,7 @@ export function AnalyticsFilters({ filter, onChange, mode }: Props) {
               if (id === "date" && draft.preset !== "last-6-months") badge = 1;
               if (id === "categories") badge = draft.categoryIds.length;
               if (id === "accounts")   badge = draft.accountIds.length;
+              if (id === "tags")       badge = draft.tagIds.length;
               if (id === "type" && draft.transactionType !== "all") badge = 1;
               if (id === "assetclass" && draft.assetClass !== "all") badge = 1;
 
@@ -503,6 +531,7 @@ export function AnalyticsFilters({ filter, onChange, mode }: Props) {
               mode={mode}
               accounts={accounts}
               categories={categories}
+              tags={tags}
             />
           </div>
         </div>
