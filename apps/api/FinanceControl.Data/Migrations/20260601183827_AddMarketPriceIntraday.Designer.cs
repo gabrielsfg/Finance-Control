@@ -3,6 +3,7 @@ using System;
 using FinanceControl.Data.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinanceControl.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260601183827_AddMarketPriceIntraday")]
+    partial class AddMarketPriceIntraday
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -146,9 +149,6 @@ namespace FinanceControl.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "IsActive")
-                        .HasDatabaseName("IX_Budgets_UserId_IsActive");
-
                     b.ToTable("Budgets", (string)null);
                 });
 
@@ -192,12 +192,6 @@ namespace FinanceControl.Data.Migrations
                     b.HasIndex("BudgetId");
 
                     b.HasIndex("SubCategoryId");
-
-                    b.HasIndex("SubCategoryId", "BudgetId")
-                        .HasDatabaseName("IX_BudgetSubcategoryAllocations_SubCategoryId_BudgetId");
-
-                    b.HasIndex("BudgetId", "AllocationType")
-                        .HasDatabaseName("IX_BudgetSubcategoryAllocations_BudgetId_AllocationType");
 
                     b.ToTable("BudgetSubcategoryAllocations", (string)null);
                 });
@@ -425,9 +419,6 @@ namespace FinanceControl.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "PaymentDate")
-                        .HasDatabaseName("IX_InvestmentDividends_UserId_PaymentDate");
-
                     b.ToTable("InvestmentDividends", (string)null);
                 });
 
@@ -477,9 +468,6 @@ namespace FinanceControl.Data.Migrations
                     b.HasIndex("InvestmentId");
 
                     b.HasIndex("LinkedTransactionId");
-
-                    b.HasIndex("UserId", "Date", "Operation")
-                        .HasDatabaseName("IX_InvestmentTransactions_UserId_Date_Operation");
 
                     b.ToTable("InvestmentTransactions");
                 });
@@ -669,9 +657,6 @@ namespace FinanceControl.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("IsActive", "EndDate")
-                        .HasDatabaseName("IX_RecurringTransactions_IsActive_EndDate");
-
                     b.ToTable("RecurringTransactions", (string)null);
                 });
 
@@ -783,9 +768,6 @@ namespace FinanceControl.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "Name")
-                        .HasDatabaseName("IX_Tags_UserId_Name");
-
                     b.ToTable("Tags", (string)null);
                 });
 
@@ -869,15 +851,6 @@ namespace FinanceControl.Data.Migrations
                     b.HasIndex("SubCategoryId");
 
                     b.HasIndex("UserId");
-
-                    b.HasIndex("UserId", "TransactionDate")
-                        .HasDatabaseName("IX_Transactions_UserId_TransactionDate");
-
-                    b.HasIndex("UserId", "Type", "TransactionDate")
-                        .HasDatabaseName("IX_Transactions_UserId_Type_TransactionDate");
-
-                    b.HasIndex("UserId", "PaymentType", "TransactionDate")
-                        .HasDatabaseName("IX_Transactions_UserId_PaymentType_TransactionDate");
 
                     b.ToTable("Transactions", (string)null);
                 });

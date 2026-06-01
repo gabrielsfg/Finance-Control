@@ -51,6 +51,58 @@ namespace FinanceControl.Services.Brapi
             _httpClientFactory = httpClientFactory;
         }
 
+        // Called by the intraday worker every 15 minutes during market hours.
+        // Updates CurrentPrice + writes one MarketPriceIntraday tick per asset.
+        // Does NOT sync the asset universe or write daily history.
+        public async Task RunIntradayAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("BrapiIntradayJob started at {Time} UTC", DateTime.UtcNow);
+
+            var status = new BrapiJobStatusDto
+            {
+                IsRunning = true,
+                StartedAt = DateTime.UtcNow,
+                LastRunAt = DateTime.UtcNow,
+            };
+
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            var allAssets = await context.MarketAssets
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+            var quoteGroup = allAssets.Where(a => QuoteAssetTypes.Contains(a.AssetType)).ToList();
+            var cryptoGroup = allAssets.Where(a => a.AssetType == EnumAssetType.Cripto).ToList();
+
+            var semaphore = new SemaphoreSlim(_settings.MaxParallelBatches);
+
+            var quoteTasks = quoteGroup.Chunk(_settings.BatchSize).Select(batch =>
+                ProcessWithSemaphoreAsync(semaphore, async () =>
+                {
+                    await using var batchScope = _scopeFactory.CreateAsyncScope();
+                    var batchCtx = batchScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    await ProcessQuoteBatchAsync(batchCtx, batch, status, cancellationToken, writeIntraday: true);
+                }, cancellationToken));
+
+            var cryptoTasks = cryptoGroup.Chunk(_settings.BatchSize).Select(batch =>
+                ProcessWithSemaphoreAsync(semaphore, async () =>
+                {
+                    await using var batchScope = _scopeFactory.CreateAsyncScope();
+                    var batchCtx = batchScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    await ProcessCryptoBatchAsync(batchCtx, batch, status, cancellationToken, writeIntraday: true);
+                }, cancellationToken));
+
+            await Task.WhenAll(quoteTasks.Concat(cryptoTasks));
+
+            status.IsRunning = false;
+            status.FinishedAt = DateTime.UtcNow;
+
+            _logger.LogInformation(
+                "BrapiIntradayJob finished in {Elapsed:mm\\:ss}. Assets updated: {Assets}, errors: {Errors}",
+                status.FinishedAt - status.StartedAt, status.AssetsUpdated, status.ErrorCount);
+        }
+
         public async Task RunAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("BrapiPriceUpdateJob started at {Time} UTC", DateTime.UtcNow);
@@ -275,7 +327,8 @@ namespace FinanceControl.Services.Brapi
             ApplicationDbContext context,
             MarketAsset[] batch,
             BrapiJobStatusDto status,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool writeIntraday = false)
         {
             var tickers = string.Join(",", batch.Select(a => a.Ticker));
             var isFirstRun = await HasAnyFirstRunAsync(context, batch, cancellationToken);
@@ -315,8 +368,11 @@ namespace FinanceControl.Services.Brapi
                 if (result.LogoUrl is not null) asset.LogoUrl = result.LogoUrl;
                 asset.Currency = result.Currency ?? "BRL";
 
-                // One price-history row per asset per day
+                // One price-history row per asset per day (closing job only)
                 await UpsertPriceHistoryAsync(context, asset, result.HistoricalDataPrice, today, isFirstRun, cancellationToken);
+
+                if (writeIntraday)
+                    await InsertIntradayTickAsync(context, asset, cancellationToken);
 
                 // Dividends are per-user — insert one per owner of this asset
                 if (result.DividendsData?.CashDividends is not null)
@@ -342,7 +398,8 @@ namespace FinanceControl.Services.Brapi
             ApplicationDbContext context,
             MarketAsset[] batch,
             BrapiJobStatusDto status,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool writeIntraday = false)
         {
             var coins = string.Join(",", batch.Select(a => a.Ticker));
             var isFirstRun = await HasAnyFirstRunAsync(context, batch, cancellationToken);
@@ -384,10 +441,37 @@ namespace FinanceControl.Services.Brapi
 
                 await UpsertPriceHistoryAsync(context, asset, coin.HistoricalDataPrice, today, isFirstRun, cancellationToken);
 
+                if (writeIntraday)
+                    await InsertIntradayTickAsync(context, asset, cancellationToken);
+
                 status.AssetsUpdated++;
             }
 
             await context.SaveChangesAsync(cancellationToken);
+        }
+
+        private static async Task InsertIntradayTickAsync(
+            ApplicationDbContext context,
+            MarketAsset asset,
+            CancellationToken cancellationToken)
+        {
+            // Truncate timestamp to the nearest 15-min slot for idempotency.
+            var now = DateTime.UtcNow;
+            var slot = new DateTime(now.Year, now.Month, now.Day, now.Hour,
+                now.Minute / 15 * 15, 0, DateTimeKind.Utc);
+
+            var exists = await context.MarketPriceIntradays
+                .AnyAsync(h => h.MarketAssetId == asset.Id && h.Timestamp == slot, cancellationToken);
+
+            if (!exists)
+            {
+                context.MarketPriceIntradays.Add(new MarketPriceIntraday
+                {
+                    MarketAssetId = asset.Id,
+                    Timestamp = slot,
+                    Price = asset.CurrentPrice,
+                });
+            }
         }
 
         private static async Task UpsertPriceHistoryAsync(

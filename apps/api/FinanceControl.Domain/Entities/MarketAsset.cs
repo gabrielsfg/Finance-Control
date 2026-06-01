@@ -16,6 +16,7 @@ namespace FinanceControl.Domain.Entities
         public string Currency { get; set; } = "BRL";
 
         public ICollection<MarketPriceHistory> PriceHistory { get; set; } = [];
+        public ICollection<MarketPriceIntraday> PriceIntraday { get; set; } = [];
         public ICollection<Investment> Investments { get; set; } = [];
     }
 }

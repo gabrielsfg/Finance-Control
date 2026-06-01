@@ -29,6 +29,8 @@ if (string.IsNullOrWhiteSpace(jwtToken) || jwtToken.Length < 32)
 builder.Services.AddAplicationServices(builder.Configuration);
 builder.Services.AddHostedService<RecurringTransactionHostedService>();
 builder.Services.AddHostedService<BrapiPriceUpdateHostedService>();
+builder.Services.AddHostedService<BrapiIntradayHostedService>();
+builder.Services.AddHostedService<BrapiCleanupHostedService>();
 builder.Services.AddMemoryCache();
 
 //DI Repositories

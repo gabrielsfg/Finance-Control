@@ -31,6 +31,7 @@ namespace FinanceControl.Services.Extensions
 
             services.Configure<BrapiSettings>(configuration.GetSection("BrapiSettings"));
             services.AddSingleton<BrapiPriceUpdateJobService>();
+            services.AddSingleton<BrapiCleanupJobService>();
 
             return services;
         }

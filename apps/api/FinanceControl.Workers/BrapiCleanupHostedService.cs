@@ -4,16 +4,22 @@ using Microsoft.Extensions.Logging;
 
 namespace FinanceControl.Workers
 {
-    public class BrapiPriceUpdateHostedService : IHostedService, IDisposable
+    // Runs once daily at 09:30 UTC (06:30 BRT), 30 minutes before market open.
+    // Deletes MarketPriceIntraday rows older than 7 days.
+    public class BrapiCleanupHostedService : IHostedService, IDisposable
     {
-        private readonly BrapiPriceUpdateJobService _jobService;
-        private readonly ILogger<BrapiPriceUpdateHostedService> _logger;
+        private readonly BrapiCleanupJobService _jobService;
+        private readonly ILogger<BrapiCleanupHostedService> _logger;
         private Timer? _timer;
         private CancellationTokenSource? _cts;
 
-        public BrapiPriceUpdateHostedService(
-            BrapiPriceUpdateJobService jobService,
-            ILogger<BrapiPriceUpdateHostedService> logger)
+        // 09:30 UTC = 06:30 BRT, 30 min before B3 pre-opening at 09:45 BRT (12:45 UTC)
+        private const int TargetHourUtc = 9;
+        private const int TargetMinuteUtc = 30;
+
+        public BrapiCleanupHostedService(
+            BrapiCleanupJobService jobService,
+            ILogger<BrapiCleanupHostedService> logger)
         {
             _jobService = jobService;
             _logger = logger;
@@ -23,9 +29,9 @@ namespace FinanceControl.Workers
         {
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            var initialDelay = ComputeDelayUntilNext19hUtc();
+            var initialDelay = ComputeDelayUntilNextTarget();
             _logger.LogInformation(
-                "BrapiPriceUpdateHostedService scheduled. First run in {Delay:hh\\:mm\\:ss}.",
+                "BrapiCleanupHostedService scheduled. First run in {Delay:hh\\:mm\\:ss}.",
                 initialDelay);
 
             _timer = new Timer(OnTimerTick, null, initialDelay, TimeSpan.FromDays(1));
@@ -35,7 +41,7 @@ namespace FinanceControl.Workers
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("BrapiPriceUpdateHostedService stopping.");
+            _logger.LogInformation("BrapiCleanupHostedService stopping.");
             _cts?.Cancel();
             _timer?.Change(Timeout.Infinite, Timeout.Infinite);
             return Task.CompletedTask;
@@ -61,17 +67,15 @@ namespace FinanceControl.Workers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in BrapiPriceUpdateHostedService.");
+                _logger.LogError(ex, "Unhandled exception in BrapiCleanupHostedService.");
             }
         }
 
-        // 19:00 UTC = 16:00 BRT, after market close + after-market (B3 closes 18:00 BRT = 21:00 UTC,
-        // but after-market ends 18:00 BRT). Using 19:00 UTC ensures last price is the official close.
-        private static TimeSpan ComputeDelayUntilNext19hUtc()
+        private static TimeSpan ComputeDelayUntilNextTarget()
         {
             var now = DateTime.UtcNow;
-            var todayAt19h = now.Date.AddHours(19);
-            var target = now < todayAt19h ? todayAt19h : todayAt19h.AddDays(1);
+            var todayTarget = now.Date.AddHours(TargetHourUtc).AddMinutes(TargetMinuteUtc);
+            var target = now < todayTarget ? todayTarget : todayTarget.AddDays(1);
             return target - now;
         }
 
