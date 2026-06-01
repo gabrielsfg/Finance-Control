@@ -9,9 +9,23 @@ export interface AssetRate {
   rateSource: string;
 }
 
+export interface AvailableBenchmark {
+  ticker: string;
+  name: string;
+  assetType: string;
+  earliestDate: string; // YYYY-MM-DD
+  latestDate: string;   // YYYY-MM-DD
+  monthsAvailable: number;
+}
+
 export const simulationApi = {
   getBenchmarkRates: async (): Promise<BenchmarkRates> => {
     const { data } = await api.get<BenchmarkRates>("/simulation/benchmark-rates");
+    return data;
+  },
+
+  getAvailableBenchmarks: async (): Promise<AvailableBenchmark[]> => {
+    const { data } = await api.get<AvailableBenchmark[]>("/simulation/available-benchmarks");
     return data;
   },
 

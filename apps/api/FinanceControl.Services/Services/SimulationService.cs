@@ -1,6 +1,8 @@
+using FinanceControl.Data.Data;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Brapi;
 using FinanceControl.Shared.Dtos.Response.Simulation;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using System.Globalization;
@@ -13,6 +15,7 @@ namespace FinanceControl.Services.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IMemoryCache _cache;
         private readonly BrapiSettings _brapiSettings;
+        private readonly ApplicationDbContext _context;
 
         // BACEN SGS series codes
         private const int SgsCdi = 4391;        // CDI monthly rate
@@ -41,11 +44,43 @@ namespace FinanceControl.Services.Services
             ["SP500_BRL"] = 18.0m,
         };
 
-        public SimulationService(IHttpClientFactory httpClientFactory, IMemoryCache cache, IOptions<BrapiSettings> brapiSettings)
+        public SimulationService(
+            IHttpClientFactory httpClientFactory,
+            IMemoryCache cache,
+            IOptions<BrapiSettings> brapiSettings,
+            ApplicationDbContext context)
         {
             _httpClientFactory = httpClientFactory;
             _cache = cache;
             _brapiSettings = brapiSettings.Value;
+            _context = context;
+        }
+
+        public async Task<List<AvailableBenchmarkDto>> GetAvailableBenchmarksAsync()
+        {
+            const string cacheKey = "simulation_available_benchmarks";
+            if (_cache.TryGetValue(cacheKey, out List<AvailableBenchmarkDto>? cached) && cached is not null)
+                return cached;
+
+            // Join MarketAsset with MarketPriceHistory to find assets that actually have
+            // historical price data in the DB, and return the usable date range.
+            var results = await _context.MarketAssets
+                .Where(a => a.PriceHistory.Any())
+                .Select(a => new AvailableBenchmarkDto
+                {
+                    Ticker           = a.Ticker,
+                    Name             = a.Name,
+                    AssetType        = a.AssetType.ToString(),
+                    EarliestDate     = a.PriceHistory.Min(h => h.Date),
+                    LatestDate       = a.PriceHistory.Max(h => h.Date),
+                    MonthsAvailable  = a.PriceHistory.Select(h => new { h.Date.Year, h.Date.Month }).Distinct().Count(),
+                })
+                .OrderByDescending(a => a.MonthsAvailable)
+                .ThenBy(a => a.Ticker)
+                .ToListAsync();
+
+            _cache.Set(cacheKey, results, TimeSpan.FromHours(6));
+            return results;
         }
 
         public async Task<BenchmarkRatesDto> GetBenchmarkRatesAsync()
@@ -89,9 +124,13 @@ namespace FinanceControl.Services.Services
             long initialAmount)
         {
             var monthly = await GetMonthlyReturnsForBenchmarkAsync(benchmark, startDate, endDate);
+            bool isFixedBenchmark = benchmark is "CDI" or "SELIC" or "IPCA+6" or "IPCA+5" or "IPCA+4"
+                                               or "IBOVESPA" or "IFIX" or "SP500_BRL";
             bool isEquityBenchmark = benchmark is "IBOVESPA" or "IFIX" or "SP500_BRL";
+            bool isDbTicker = !isFixedBenchmark;
             bool brapiDataEmpty = isEquityBenchmark && monthly.Count == 0;
-            bool isPartial = !isEquityBenchmark && monthly.Count == 0;
+            // For DB tickers, no fallback — missing months use 0% return (data gaps).
+            bool isPartial = !isEquityBenchmark && !isDbTicker && monthly.Count == 0;
 
             var points = new List<HistoricalSimulationPointDto>();
             long value    = initialAmount;
@@ -104,7 +143,9 @@ namespace FinanceControl.Services.Services
                 value    += monthlyContribution;
 
                 var key = $"{cursor.Year:D4}-{cursor.Month:D2}";
-                var monthReturnPct = monthly.TryGetValue(key, out var r) ? r : GetFallbackMonthly(benchmark);
+                var monthReturnPct = monthly.TryGetValue(key, out var r) ? r
+                    : isDbTicker ? 0m
+                    : GetFallbackMonthly(benchmark);
 
                 value = (long)Math.Round(value * (1 + (double)monthReturnPct / 100));
 
@@ -154,6 +195,7 @@ namespace FinanceControl.Services.Services
 
         // Returns the appropriate monthly series for the requested benchmark.
         // CDI/SELIC/IPCA+X: BACEN (free, long history). Equity indices: Brapi Pro.
+        // Any other value is treated as a DB ticker (MarketPriceHistory).
         private async Task<Dictionary<string, decimal>> GetMonthlyReturnsForBenchmarkAsync(
             string benchmark, DateOnly from, DateOnly to)
         {
@@ -166,8 +208,62 @@ namespace FinanceControl.Services.Services
                 "IPCA+4"   => await BuildIpcaPlusAsync(from, to, 4m),
                 "IBOVESPA" or "IFIX" or "SP500_BRL"
                            => await GetMonthlyReturnsFromBrapiAsync(benchmark, from, to),
-                _          => [],
+                _          => await GetMonthlyReturnsFromDbAsync(benchmark, from, to),
             };
+        }
+
+        // Reads daily prices from MarketPriceHistory and derives month-end-to-month-end returns.
+        private async Task<Dictionary<string, decimal>> GetMonthlyReturnsFromDbAsync(
+            string ticker, DateOnly from, DateOnly to)
+        {
+            var asset = await _context.MarketAssets
+                .Where(a => a.Ticker == ticker)
+                .Select(a => new { a.Id })
+                .FirstOrDefaultAsync();
+
+            if (asset is null) return [];
+
+            // Fetch a window slightly before 'from' so we have a prior-month close for the first return.
+            var windowStart = from.AddMonths(-2);
+
+            var prices = await _context.MarketPriceHistories
+                .Where(h => h.MarketAssetId == asset.Id && h.Date >= windowStart && h.Date <= to)
+                .OrderBy(h => h.Date)
+                .Select(h => new { h.Date, h.Price })
+                .ToListAsync();
+
+            if (prices.Count < 2) return [];
+
+            // For each month in [from, to], find the last available price in that month
+            // and compute the return vs the last available price of the previous month.
+            var byMonth = prices
+                .GroupBy(p => (p.Date.Year, p.Date.Month))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(p => p.Date).First().Price);
+
+            var returns = new Dictionary<string, decimal>();
+            DateOnly cursor = new(from.Year, from.Month, 1);
+            var prev = cursor.AddMonths(-1);
+
+            while (cursor <= new DateOnly(to.Year, to.Month, 1))
+            {
+                var prevKey  = (prev.Year, prev.Month);
+                var currKey  = (cursor.Year, cursor.Month);
+
+                if (byMonth.TryGetValue(prevKey, out var prevPrice) &&
+                    byMonth.TryGetValue(currKey, out var currPrice) &&
+                    prevPrice > 0)
+                {
+                    var key = $"{cursor.Year:D4}-{cursor.Month:D2}";
+                    returns[key] = Math.Round(((decimal)currPrice / prevPrice - 1) * 100, 6);
+                }
+
+                prev   = cursor;
+                cursor = cursor.AddMonths(1);
+            }
+
+            return returns;
         }
 
         public async Task<List<AssetRateDto>> GetAssetRatesAsync(IEnumerable<string> tickers)

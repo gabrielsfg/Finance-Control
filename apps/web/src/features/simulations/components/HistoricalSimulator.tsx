@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip,
   CartesianGrid, ReferenceLine,
@@ -8,15 +8,35 @@ import {
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
-import { AlertCircle, TrendingUp, TrendingDown, Info, Check, ChevronDown, ChevronLeft, Play, ChevronRight } from "lucide-react";
-import { useHistoricalSimulation } from "../hooks/useSimulation";
+import { AlertCircle, Info, Check, ChevronDown, ChevronLeft, Play, ChevronRight, Search } from "lucide-react";
+import { useHistoricalSimulation, useAvailableBenchmarks } from "../hooks/useSimulation";
 import type { Benchmark, HistoricalSimulationPoint } from "@/lib/types/simulation";
 import { BENCHMARK_LABELS } from "@/lib/types/simulation";
+import type { AvailableBenchmark } from "@/lib/api/simulation";
 
 const inputCls = "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-green/60 transition-colors";
 
-const BENCHMARKS: Benchmark[] = ["CDI", "SELIC", "IPCA+6", "IPCA+5", "IPCA+4", "IBOVESPA", "IFIX", "SP500_BRL"];
+const FIXED_BENCHMARKS: Benchmark[] = ["CDI", "SELIC", "IPCA+6", "IPCA+5", "IPCA+4", "IBOVESPA", "IFIX", "SP500_BRL"];
 const STUB_BENCHMARKS = new Set<Benchmark>(["IBOVESPA", "IFIX", "SP500_BRL"]);
+
+// A unified benchmark option — either a fixed string or a DB ticker
+type BenchmarkOption =
+  | { kind: 'fixed'; value: Benchmark }
+  | { kind: 'ticker'; value: string; meta: AvailableBenchmark };
+
+function benchmarkId(opt: BenchmarkOption): string {
+  return opt.value;
+}
+
+function benchmarkLabel(opt: BenchmarkOption): string {
+  if (opt.kind === 'fixed') return BENCHMARK_LABELS[opt.value as Benchmark];
+  return `${opt.meta.ticker} — ${opt.meta.name}`;
+}
+
+// Parse "YYYY-MM-DD" to "YYYY-MM"
+function dateOnlyToYearMonth(d: string): string {
+  return d.slice(0, 7);
+}
 
 const PERIODS = [
   { label: "6m",   months: 6   },
@@ -43,75 +63,154 @@ function todayDateOnly(): string {
 
 const MONTH_NAMES_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-// Picker de mês/ano no estilo do CalendarRangePicker de transações
+// Calendário de range de meses: 1ª seleção = início, 2ª = fim
+// Clicar no rótulo do ano abre um grid para escolher o ano diretamente
 function MonthRangePicker({
-  value,
-  onChange,
+  start,
+  end,
+  onChangeStart,
+  onChangeEnd,
+  minYearMonth,
+  maxYearMonth,
 }: {
-  value: string;         // YYYY-MM ou ""
-  onChange: (v: string) => void;
+  start: string;              // YYYY-MM ou ""
+  end: string;                // YYYY-MM ou ""
+  onChangeStart: (v: string) => void;
+  onChangeEnd: (v: string) => void;
+  minYearMonth?: string;
+  maxYearMonth?: string;
 }) {
   const today = new Date();
-  const maxYear  = today.getFullYear();
-  const maxMonth = today.getMonth(); // exclusive: último mês selecionável é maxMonth-1
+  const defaultMaxYear  = today.getFullYear();
+  const defaultMaxMonth = today.getMonth(); // 0-indexed, mês atual inclusive (backend clamp)
+
+  const maxYear  = maxYearMonth ? parseInt(maxYearMonth.slice(0, 4)) : defaultMaxYear;
+  const maxMonth = maxYearMonth ? parseInt(maxYearMonth.slice(5, 7)) - 1 : defaultMaxMonth;
+  const minYear  = minYearMonth ? parseInt(minYearMonth.slice(0, 4)) : 1994;
+  const minMonth = minYearMonth ? parseInt(minYearMonth.slice(5, 7)) - 1 : 0;
 
   const [viewYear, setViewYear] = useState(() => {
-    if (value) return parseInt(value.slice(0, 4));
+    if (start) return parseInt(start.slice(0, 4));
+    if (end)   return parseInt(end.slice(0, 4));
     return maxYear;
   });
+  const [yearPickerOpen, setYearPickerOpen] = useState(false);
 
-  const selYear  = value ? parseInt(value.slice(0, 4)) : null;
-  const selMonth = value ? parseInt(value.slice(5, 7)) - 1 : null;
+  // picking: null = nenhum, 'start' = escolhendo início, 'end' = escolhendo fim
+  // Se nada selecionado, próximo clique é o início; depois o fim
+  const [picking, setPicking] = useState<'start' | 'end'>('start');
 
-  function isFuture(yr: number, mo: number) {
-    return yr > maxYear || (yr === maxYear && mo >= maxMonth);
+  const ym = (yr: number, mo: number) => `${yr}-${String(mo + 1).padStart(2, "0")}`;
+
+  function isOutOfRange(yr: number, mo: number) {
+    return yr < minYear || (yr === minYear && mo < minMonth)
+        || yr > maxYear || (yr === maxYear && mo > maxMonth);
   }
 
-  function handleClick(yr: number, mo: number) {
-    if (isFuture(yr, mo)) return;
-    const mm = String(mo + 1).padStart(2, "0");
-    onChange(`${yr}-${mm}`);
+  function isInRange(yr: number, mo: number) {
+    if (!start || !end) return false;
+    const v = ym(yr, mo);
+    return v > start && v < end;
   }
 
-  const label = value
-    ? `${MONTH_NAMES_SHORT[parseInt(value.slice(5, 7)) - 1]} / ${value.slice(0, 4)}`
-    : "Selecione o mês inicial";
+  function isStart(yr: number, mo: number) { return !!start && ym(yr, mo) === start; }
+  function isEnd  (yr: number, mo: number) { return !!end   && ym(yr, mo) === end;   }
+
+  function handleMonthClick(yr: number, mo: number) {
+    if (isOutOfRange(yr, mo)) return;
+    const v = ym(yr, mo);
+    if (picking === 'start') {
+      onChangeStart(v);
+      // se o fim atual ficou antes do novo início, limpa
+      if (end && v > end) onChangeEnd('');
+      setPicking('end');
+    } else {
+      if (v < start) {
+        // clicou antes do início — troca os papéis
+        onChangeStart(v);
+        onChangeEnd(start);
+        setPicking('start');
+      } else {
+        onChangeEnd(v);
+        setPicking('start');
+      }
+    }
+  }
+
+  // Anos disponíveis para o year picker (em grupos de 4 colunas)
+  const years: number[] = [];
+  for (let y = minYear; y <= maxYear; y++) years.push(y);
+
+  const fmtYM = (v: string) =>
+    v ? `${MONTH_NAMES_SHORT[parseInt(v.slice(5, 7)) - 1]}/${v.slice(0, 4)}` : '—';
 
   return (
     <div className="select-none">
-      {/* Year nav */}
-      <div className="mb-3 flex items-center justify-between">
+      {/* Header: setas de ano + rótulo clicável */}
+      <div className="mb-2 flex items-center justify-between gap-1">
         <button
-          onClick={() => setViewYear((y) => y - 1)}
-          className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface2"
+          onClick={() => setViewYear((y) => Math.max(y - 1, minYear))}
+          disabled={viewYear <= minYear}
+          className="text-text-muted hover:text-text flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface2 disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <ChevronRight size={14} className="rotate-180" />
+          <ChevronRight size={13} className="rotate-180" />
         </button>
-        <span className="text-text text-[13px] font-semibold">{viewYear}</span>
+
+        <button
+          onClick={() => setYearPickerOpen((o) => !o)}
+          className="flex items-center gap-1 rounded-lg px-2 py-1 text-[13px] font-semibold text-text hover:bg-surface2 transition-colors"
+        >
+          {viewYear}
+          <ChevronDown size={12} className={cn("text-text-muted transition-transform", yearPickerOpen && "rotate-180")} />
+        </button>
+
         <button
           onClick={() => setViewYear((y) => Math.min(y + 1, maxYear))}
           disabled={viewYear >= maxYear}
-          className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface2 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="text-text-muted hover:text-text flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface2 disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <ChevronRight size={14} />
+          <ChevronRight size={13} />
         </button>
       </div>
 
-      {/* Month grid 3×4 */}
-      <div className="grid grid-cols-3 gap-1.5">
-        {MONTH_NAMES_SHORT.map((name, mo) => {
-          const isSelected = selYear === viewYear && selMonth === mo;
-          const disabled   = isFuture(viewYear, mo);
+      {/* Year picker grid */}
+      {yearPickerOpen && (
+        <div className="mb-2 grid grid-cols-4 gap-1 rounded-xl border border-border bg-surface p-2">
+          {years.map((y) => (
+            <button
+              key={y}
+              onClick={() => { setViewYear(y); setYearPickerOpen(false); }}
+              className={cn(
+                "rounded-md py-1 text-[11px] font-medium transition-colors",
+                y === viewYear
+                  ? "bg-green text-black font-bold"
+                  : "text-text-sub hover:bg-surface2 hover:text-text",
+              )}
+            >
+              {y}
+            </button>
+          ))}
+        </div>
+      )}
 
+      {/* Month grid */}
+      <div className="grid grid-cols-3 gap-1">
+        {MONTH_NAMES_SHORT.map((name, mo) => {
+          const disabled  = isOutOfRange(viewYear, mo);
+          const selStart  = isStart(viewYear, mo);
+          const selEnd    = isEnd(viewYear, mo);
+          const inRange   = isInRange(viewYear, mo);
           return (
             <button
               key={mo}
-              onClick={() => handleClick(viewYear, mo)}
+              onClick={() => handleMonthClick(viewYear, mo)}
               disabled={disabled}
               className={cn(
-                "rounded-lg py-2 text-[12px] font-medium transition-all",
-                isSelected
+                "rounded-md py-2 text-[12px] font-medium transition-all",
+                selStart || selEnd
                   ? "bg-green text-black font-bold shadow-sm"
+                  : inRange
+                  ? "bg-green/15 text-green"
                   : disabled
                   ? "text-text-muted opacity-30 cursor-not-allowed"
                   : "text-text-sub hover:bg-surface2 hover:text-text",
@@ -123,38 +222,86 @@ function MonthRangePicker({
         })}
       </div>
 
-      {/* Label de confirmação */}
-      <div className={cn(
-        "mt-3 rounded-lg px-3 py-2 text-center text-[12px] transition-all",
-        value
-          ? "bg-green/10 text-green font-medium"
-          : "bg-surface2 text-text-muted",
-      )}>
-        {label}
-        {value && <span className="text-text-muted font-normal"> → hoje</span>}
+      {/* Range summary */}
+      <div className="mt-3 flex items-center justify-between rounded-lg bg-surface2/60 px-3 py-2 text-[11px]">
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="text-text-muted">Início</span>
+          <span
+            className={cn("font-medium cursor-pointer hover:text-green transition-colors",
+              picking === 'start' ? "text-green" : "text-text")}
+            onClick={() => setPicking('start')}
+          >
+            {fmtYM(start)}
+          </span>
+        </div>
+        <ChevronRight size={12} className="text-text-muted" />
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="text-text-muted">Fim</span>
+          <span
+            className={cn("font-medium cursor-pointer hover:text-green transition-colors",
+              picking === 'end' ? "text-green" : "text-text")}
+            onClick={() => setPicking('end')}
+          >
+            {fmtYM(end)}
+          </span>
+        </div>
       </div>
+
+      {/* Hint */}
+      <p className="mt-1.5 text-center text-[10px] text-text-muted">
+        {picking === 'start' ? 'Selecione o mês inicial' : 'Agora selecione o mês final'}
+      </p>
     </div>
   );
 }
 
-// Dropdown customizado para benchmark
+// Dropdown customizado para benchmark — mostra fixos + tickers dinâmicos do banco
 const BenchmarkSelect = ({
-  value,
-  onChange,
+  selected,
+  onSelect,
+  options,
+  loading,
 }: {
-  value: Benchmark;
-  onChange: (v: Benchmark) => void;
+  selected: BenchmarkOption;
+  onSelect: (opt: BenchmarkOption) => void;
+  options: BenchmarkOption[];
+  loading: boolean;
 }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen]   = useState(false);
+  const [query, setQuery] = useState('');
+  const ref               = useRef<HTMLDivElement>(null);
+  const inputRef          = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery('');
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 50);
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return options;
+    const q = query.toLowerCase();
+    return options.filter(o =>
+      o.value.toLowerCase().includes(q) ||
+      (o.kind === 'ticker' && o.meta.name.toLowerCase().includes(q)) ||
+      (o.kind === 'fixed' && BENCHMARK_LABELS[o.value as Benchmark].toLowerCase().includes(q))
+    );
+  }, [options, query]);
+
+  const fixedOpts   = filtered.filter(o => o.kind === 'fixed');
+  const tickerOpts  = filtered.filter(o => o.kind === 'ticker');
+
+  const selectedLabel = benchmarkLabel(selected);
+  const isStub = selected.kind === 'fixed' && STUB_BENCHMARKS.has(selected.value as Benchmark);
 
   return (
     <div ref={ref} className="relative">
@@ -162,25 +309,83 @@ const BenchmarkSelect = ({
         onClick={() => setOpen((v) => !v)}
         className="border-border bg-surface2 text-text flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-[13px] transition-colors hover:border-green/40"
       >
-        <span>{BENCHMARK_LABELS[value]}{STUB_BENCHMARKS.has(value) ? " *" : ""}</span>
+        <span className="truncate">{selectedLabel}{isStub ? " *" : ""}</span>
         <ChevronDown size={14} className={cn("text-text-muted transition-transform shrink-0", open && "rotate-180")} />
       </button>
+
       {open && (
-        <div className="border-border bg-surface absolute left-0 top-10 z-50 flex flex-col gap-px rounded-xl border p-1.5 shadow-lg w-full">
-          {BENCHMARKS.map((b) => (
-            <button
-              key={b}
-              onClick={() => { onChange(b); setOpen(false); }}
-              className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-surface2"
-            >
-              <span className={cn("text-text-sub", value === b && "text-text")}>
-                {BENCHMARK_LABELS[b]}{STUB_BENCHMARKS.has(b) ? " *" : ""}
-              </span>
-              {value === b && <Check size={12} className="text-green shrink-0" />}
-            </button>
-          ))}
-          {[...STUB_BENCHMARKS].some((b) => BENCHMARKS.includes(b)) && (
-            <p className="px-2.5 pt-1 pb-0.5 text-[10px] text-text-muted">* dados estimados, integração em breve</p>
+        <div className="border-border bg-surface absolute left-0 top-10 z-50 rounded-xl border shadow-lg w-full" style={{ minWidth: 280 }}>
+          {/* Search input */}
+          <div className="border-b border-border px-2 py-2 flex items-center gap-2">
+            <Search size={12} className="text-text-muted shrink-0" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Buscar benchmark ou ticker..."
+              className="bg-transparent text-[12px] text-text placeholder:text-text-muted outline-none flex-1 min-w-0"
+            />
+          </div>
+
+          <div className="max-h-60 overflow-y-auto p-1.5 flex flex-col gap-px">
+            {/* Fixed benchmarks section */}
+            {fixedOpts.length > 0 && (
+              <>
+                <p className="px-2.5 py-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">Índices de referência</p>
+                {fixedOpts.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { onSelect(opt); setOpen(false); setQuery(''); }}
+                    className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-surface2"
+                  >
+                    <span className={cn("text-text-sub", benchmarkId(selected) === opt.value && "text-text")}>
+                      {BENCHMARK_LABELS[opt.value as Benchmark]}
+                      {STUB_BENCHMARKS.has(opt.value as Benchmark) ? " *" : ""}
+                    </span>
+                    {benchmarkId(selected) === opt.value && <Check size={12} className="text-green shrink-0" />}
+                  </button>
+                ))}
+              </>
+            )}
+
+            {/* DB ticker section */}
+            {tickerOpts.length > 0 && (
+              <>
+                <p className="px-2.5 py-1 mt-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                  Ativos com histórico na base
+                  {loading && <span className="ml-1 normal-case font-normal">(carregando...)</span>}
+                </p>
+                {tickerOpts.map(opt => {
+                  const m = (opt as Extract<BenchmarkOption, { kind: 'ticker' }>).meta;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => { onSelect(opt); setOpen(false); setQuery(''); }}
+                      className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-surface2"
+                    >
+                      <div className="flex flex-col min-w-0">
+                        <span className={cn("text-text-sub truncate", benchmarkId(selected) === opt.value && "text-text")}>
+                          <span className="font-medium">{m.ticker}</span>
+                          {m.name ? <span className="text-text-muted"> — {m.name}</span> : null}
+                        </span>
+                        <span className="text-[10px] text-text-muted">
+                          {m.monthsAvailable} meses · desde {m.earliestDate.slice(0, 7)}
+                        </span>
+                      </div>
+                      {benchmarkId(selected) === opt.value && <Check size={12} className="text-green shrink-0" />}
+                    </button>
+                  );
+                })}
+              </>
+            )}
+
+            {filtered.length === 0 && (
+              <p className="px-2.5 py-3 text-[12px] text-text-muted text-center">Nenhum resultado</p>
+            )}
+          </div>
+
+          {fixedOpts.some(o => STUB_BENCHMARKS.has(o.value as Benchmark)) && (
+            <p className="border-t border-border px-2.5 py-1.5 text-[10px] text-text-muted">* dados estimados</p>
           )}
         </div>
       )}
@@ -206,16 +411,47 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export const HistoricalSimulator = () => {
-  const [benchmark, setBenchmark]           = useState<Benchmark>("CDI");
-  const [initialAmount, setInitialAmount]   = useState("1000");
-  const [monthlyContrib, setMonthlyContrib] = useState("500");
-  const [selectedPeriod, setSelectedPeriod] = useState(12);
-  const [customStart, setCustomStart]       = useState("");
-  const [useCustom, setUseCustom]           = useState(false);
-  const [tablePage, setTablePage]           = useState(1);
-  const [tablePageSize, setTablePageSize]   = useState(20);
-  const [pageSizeOpen, setPageSizeOpen]     = useState(false);
-  const pageSizeRef                         = useRef<HTMLDivElement>(null);
+  const defaultBenchmark: BenchmarkOption = { kind: 'fixed', value: 'CDI' };
+
+  const [selectedBenchmark, setSelectedBenchmark] = useState<BenchmarkOption>(defaultBenchmark);
+  const [initialAmount, setInitialAmount]         = useState("1000");
+  const [monthlyContrib, setMonthlyContrib]        = useState("500");
+  const [selectedPeriod, setSelectedPeriod]        = useState(12);
+  const [useCustom, setUseCustom]                  = useState(false);
+  const [customStart, setCustomStart]              = useState("");
+  const [customEnd, setCustomEnd]                  = useState("");
+  const [tablePage, setTablePage]                  = useState(1);
+  const [tablePageSize, setTablePageSize]          = useState(20);
+  const [pageSizeOpen, setPageSizeOpen]             = useState(false);
+  const pageSizeRef                                = useRef<HTMLDivElement>(null);
+
+  const { data: availableBenchmarks, isLoading: loadingBenchmarks } = useAvailableBenchmarks();
+
+  // Build unified options list: fixed first, then DB tickers
+  const benchmarkOptions = useMemo<BenchmarkOption[]>(() => {
+    const fixed: BenchmarkOption[] = FIXED_BENCHMARKS.map(b => ({ kind: 'fixed', value: b }));
+    const tickers: BenchmarkOption[] = (availableBenchmarks ?? []).map(m => ({
+      kind: 'ticker',
+      value: m.ticker,
+      meta: m,
+    }));
+    return [...fixed, ...tickers];
+  }, [availableBenchmarks]);
+
+  // For DB ticker benchmarks, the allowed date range comes from what's in the DB
+  const tickerMeta   = selectedBenchmark.kind === 'ticker' ? selectedBenchmark.meta : null;
+  const minYearMonth = tickerMeta ? dateOnlyToYearMonth(tickerMeta.earliestDate) : undefined;
+  const maxYearMonth = tickerMeta ? dateOnlyToYearMonth(tickerMeta.latestDate)   : undefined;
+
+  // When switching to a ticker benchmark: force custom mode and seed dates from available range
+  const handleSelectBenchmark = useCallback((opt: BenchmarkOption) => {
+    setSelectedBenchmark(opt);
+    if (opt.kind === 'ticker') {
+      setUseCustom(true);
+      setCustomStart(dateOnlyToYearMonth(opt.meta.earliestDate));
+      setCustomEnd(dateOnlyToYearMonth(opt.meta.latestDate));
+    }
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -227,24 +463,34 @@ export const HistoricalSimulator = () => {
 
   const { mutate, data, isPending, isError } = useHistoricalSimulation();
 
+  // Compute effective start/end dates
+  const today = new Date();
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`;
+
   const startDate = useCustom && customStart
     ? toDateOnly(customStart)
     : toDateOnly(monthsAgo(selectedPeriod));
+
+  const endDate = useCustom && customEnd
+    ? toDateOnly(customEnd)
+    : todayDateOnly();
 
   const handleSimulate = useCallback(() => {
     const initialCents = Math.round(parseFloat(initialAmount.replace(",", ".")) * 100) || 0;
     const monthlyCents = Math.round(parseFloat(monthlyContrib.replace(",", ".")) * 100) || 0;
     setTablePage(1);
     mutate({
-      benchmark,
+      benchmark: selectedBenchmark.value,
       startDate,
-      endDate: todayDateOnly(),
+      endDate,
       initialAmount: initialCents,
       monthlyContribution: monthlyCents,
     });
-  }, [benchmark, startDate, initialAmount, monthlyContrib, mutate]);
+  }, [selectedBenchmark, startDate, endDate, initialAmount, monthlyContrib, mutate]);
 
-  const isStub    = STUB_BENCHMARKS.has(benchmark);
+  const isStub     = selectedBenchmark.kind === 'fixed' && STUB_BENCHMARKS.has(selectedBenchmark.value as Benchmark);
+  const isDbTicker = selectedBenchmark.kind === 'ticker';
   const gain      = data ? data.finalValue - data.totalInvested : 0;
   const isPositive = gain >= 0;
   const rawPoints  = data?.points ?? [];
@@ -307,11 +553,22 @@ export const HistoricalSimulator = () => {
               {/* Benchmark */}
               <div>
                 <label className="text-text-muted mb-1.5 block text-[12px]">Benchmark</label>
-                <BenchmarkSelect value={benchmark} onChange={setBenchmark} />
+                <BenchmarkSelect
+                  selected={selectedBenchmark}
+                  onSelect={handleSelectBenchmark}
+                  options={benchmarkOptions}
+                  loading={loadingBenchmarks}
+                />
                 {isStub && (
                   <p className="text-text-muted mt-1.5 flex items-center gap-1 text-[11px]">
                     <Info size={11} className="text-orange/70 shrink-0" />
                     Dados históricos reais em breve. Usando média estimada.
+                  </p>
+                )}
+                {isDbTicker && tickerMeta && (
+                  <p className="text-text-muted mt-1.5 flex items-center gap-1 text-[11px]">
+                    <Info size={11} className="text-green/70 shrink-0" />
+                    {tickerMeta.monthsAvailable} meses disponíveis · {tickerMeta.earliestDate.slice(0, 7)} → {tickerMeta.latestDate.slice(0, 7)}
                   </p>
                 )}
               </div>
@@ -331,17 +588,33 @@ export const HistoricalSimulator = () => {
                 <div className="mb-1.5 flex items-center justify-between">
                   <label className="text-text-muted text-[12px]">Período</label>
                   <button
-                    onClick={() => setUseCustom((p) => !p)}
+                    onClick={() => {
+                      if (useCustom) {
+                        setUseCustom(false);
+                        setCustomStart("");
+                        setCustomEnd("");
+                      } else {
+                        setUseCustom(true);
+                        // seed com o período pré-definido atual
+                        setCustomStart(monthsAgo(selectedPeriod));
+                        setCustomEnd(lastMonthStr);
+                      }
+                    }}
                     className="text-blue text-[11px] hover:underline"
                   >
                     {useCustom ? "Pré-definido" : "Personalizar"}
                   </button>
                 </div>
+
                 {useCustom ? (
                   <div className="rounded-xl border border-border bg-surface2/50 p-3">
                     <MonthRangePicker
-                      value={customStart}
-                      onChange={setCustomStart}
+                      start={customStart}
+                      end={customEnd}
+                      onChangeStart={(v) => { setCustomStart(v); if (customEnd && v > customEnd) setCustomEnd(""); }}
+                      onChangeEnd={setCustomEnd}
+                      minYearMonth={minYearMonth}
+                      maxYearMonth={maxYearMonth}
                     />
                   </div>
                 ) : (
@@ -397,14 +670,14 @@ export const HistoricalSimulator = () => {
                 borderColor: "color-mix(in srgb, var(--blue) 30%, transparent)",
               }}
             >
-              <div className="text-[11px] font-semibold tracking-widest mb-3" style={{ color: "var(--blue)" }}>
-                TAXA CDI ATUAL
+              <div className="text-[11px] font-semibold tracking-widest mb-3 truncate" style={{ color: "var(--blue)" }}>
+                {benchmarkLabel(selectedBenchmark).toUpperCase()}
               </div>
 
               <p className="font-money text-[32px] font-bold text-text leading-none">
                 {formatCurrency(data.finalValue / 100)}
               </p>
-              <p className="text-text-muted text-[12px] mt-1.5">patrimônio final · {BENCHMARK_LABELS[benchmark]}</p>
+              <p className="text-text-muted text-[12px] mt-1.5">patrimônio final · {benchmarkLabel(selectedBenchmark)}</p>
 
               <div className="mt-4 flex flex-col gap-2.5">
                 {[
@@ -441,7 +714,7 @@ export const HistoricalSimulator = () => {
           <div className="border-border bg-surface rounded-xl border p-5 flex flex-col">
             <SectionHeader
               title="Histórico de Patrimônio"
-              subtitle={`E se eu tivesse investido em ${BENCHMARK_LABELS[benchmark]}?`}
+              subtitle={`E se eu tivesse investido em ${benchmarkLabel(selectedBenchmark)}?`}
             />
 
             {data && chartData.length > 0 ? (

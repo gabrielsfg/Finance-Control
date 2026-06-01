@@ -39,6 +39,13 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("available-benchmarks")]
+        public async Task<IActionResult> GetAvailableBenchmarksAsync()
+        {
+            var result = await _simulationService.GetAvailableBenchmarksAsync();
+            return Ok(result);
+        }
+
         [HttpGet("historical")]
         public async Task<IActionResult> GetHistoricalSimulationAsync(
             [FromQuery] string benchmark,
@@ -47,10 +54,11 @@ namespace FinanceControl.WebApi.Controllers
             [FromQuery] long monthlyContribution,
             [FromQuery] long initialAmount = 0)
         {
-            var validBenchmarks = new HashSet<string>
+            var fixedBenchmarks = new HashSet<string>
                 { "CDI", "SELIC", "IPCA+6", "IPCA+5", "IPCA+4", "IBOVESPA", "IFIX", "SP500_BRL" };
 
-            if (!validBenchmarks.Contains(benchmark))
+            // Allow any non-empty ticker string (DB-backed dynamic benchmarks) in addition to the fixed set.
+            if (string.IsNullOrWhiteSpace(benchmark) || (!fixedBenchmarks.Contains(benchmark) && benchmark.Length > 20))
                 return BadRequest(new { error = "Benchmark inválido." });
 
             if (startDate >= endDate)

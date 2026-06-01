@@ -39,6 +39,9 @@ namespace FinanceControl.Data.Mappings
                 .WithMany()
                 .HasForeignKey(d => d.LinkedTransactionId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            builder.HasIndex(d => new { d.UserId, d.PaymentDate })
+                .HasDatabaseName("IX_InvestmentDividends_UserId_PaymentDate");
         }
     }
 }

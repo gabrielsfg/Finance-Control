@@ -43,6 +43,11 @@ namespace FinanceControl.Data.Mappings
                 .WithMany(sc => sc.BudgetSubcategoryAllocations)
                 .HasForeignKey(bsa => bsa.SubCategoryId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasIndex(bsa => new { bsa.SubCategoryId, bsa.BudgetId })
+                .HasDatabaseName("IX_BudgetSubcategoryAllocations_SubCategoryId_BudgetId");
+            builder.HasIndex(bsa => new { bsa.BudgetId, bsa.AllocationType })
+                .HasDatabaseName("IX_BudgetSubcategoryAllocations_BudgetId_AllocationType");
         }
     }
 }

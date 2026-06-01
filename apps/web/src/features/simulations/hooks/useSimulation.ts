@@ -1,6 +1,14 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { simulationApi } from "@/lib/api/simulation";
 
+export const useAvailableBenchmarks = () =>
+  useQuery({
+    queryKey: ["simulation", "available-benchmarks"],
+    queryFn: simulationApi.getAvailableBenchmarks,
+    staleTime: 6 * 60 * 60 * 1000, // 6h — same as backend cache
+    retry: 1,
+  });
+
 export const useBenchmarkRates = () =>
   useQuery({
     queryKey: ["simulation", "benchmark-rates"],

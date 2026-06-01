@@ -12,5 +12,6 @@ namespace FinanceControl.Domain.Interfaces.Services
             long monthlyContribution,
             long initialAmount);
         Task<List<AssetRateDto>> GetAssetRatesAsync(IEnumerable<string> tickers);
+        Task<List<AvailableBenchmarkDto>> GetAvailableBenchmarksAsync();
     }
 }

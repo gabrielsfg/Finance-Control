@@ -71,6 +71,13 @@ namespace FinanceControl.Data.Mappings
                 .WithMany(t => t.Installments)
                 .HasForeignKey(t => t.ParentTransactionId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasIndex(t => new { t.UserId, t.TransactionDate })
+                .HasDatabaseName("IX_Transactions_UserId_TransactionDate");
+            builder.HasIndex(t => new { t.UserId, t.Type, t.TransactionDate })
+                .HasDatabaseName("IX_Transactions_UserId_Type_TransactionDate");
+            builder.HasIndex(t => new { t.UserId, t.PaymentType, t.TransactionDate })
+                .HasDatabaseName("IX_Transactions_UserId_PaymentType_TransactionDate");
         }
     }
 }

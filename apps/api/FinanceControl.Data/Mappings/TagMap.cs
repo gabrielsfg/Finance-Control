@@ -28,6 +28,9 @@ namespace FinanceControl.Data.Mappings
             builder.HasMany(t => t.Transactions)
                 .WithMany(t => t.Tags)
                 .UsingEntity(j => j.ToTable("TransactionTags"));
+
+            builder.HasIndex(t => new { t.UserId, t.Name })
+                .HasDatabaseName("IX_Tags_UserId_Name");
         }
     }
 }
