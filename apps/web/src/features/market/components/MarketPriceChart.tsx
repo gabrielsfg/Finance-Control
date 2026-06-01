@@ -53,10 +53,11 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
     );
   }
 
-  const first = data[0]?.price ?? 0;
-  const last  = data[data.length - 1]?.price ?? 0;
-  const isUp  = last >= first;
-  const color = isUp ? "var(--green)" : "var(--red)";
+  const first   = data[0]?.price ?? 0;
+  const last    = data[data.length - 1]?.price ?? 0;
+  const isUp    = last >= first;
+  const color   = isUp ? "var(--green)" : "var(--red)";
+  const changePct = first > 0 ? ((last - first) / first) * 100 : null;
 
   const tickInterval = Math.max(1, Math.floor(data.length / 6));
 
@@ -65,7 +66,21 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="font-display font-700 text-text text-[16px] tracking-tight">Histórico de Preço</h3>
-          <p className="text-text-muted mt-0.5 text-[12px]">{ticker} — {period}</p>
+          <div className="mt-0.5 flex items-center gap-2">
+            <p className="text-text-muted text-[12px]">{ticker} — {period}</p>
+            {changePct !== null && (
+              <span
+                className="rounded-md px-1.5 py-0.5 text-[11px] font-medium font-mono"
+                style={{
+                  color,
+                  backgroundColor: isUp ? "color-mix(in srgb, var(--green) 12%, transparent)"
+                                        : "color-mix(in srgb, var(--red) 12%, transparent)",
+                }}
+              >
+                {isUp ? "+" : ""}{changePct.toFixed(2)}%
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-1">
           {PERIODS.map(({ label }) => (

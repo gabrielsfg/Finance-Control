@@ -8,7 +8,8 @@ import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2, Info, Search, ChevronDown, Check, Trophy, BarChart2 } from "lucide-react";
-import { useBenchmarkRates } from "../hooks/useSimulation";
+import { useBenchmarkRates, useAssetRates } from "../hooks/useSimulation";
+import type { AssetRate } from "@/lib/api/simulation";
 import { simulateMonthly, aggregateAnnual } from "../utils/taxCalc";
 import type {
   AssetCategory, SimulationScenario,
@@ -38,6 +39,43 @@ function uid() {
   return `s${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
 }
 
+// All Brapi-queryable tickers across preset assets (ticker or brapiTicker).
+// Collected once so the hook query key is stable.
+const ALL_PRESET_BRAPI_TICKERS = [
+  ...new Set(
+    PRESET_ASSETS
+      .map((a) => a.brapiTicker ?? a.ticker)
+      .filter((t): t is string => !!t)
+  ),
+];
+
+// Resolves the effective annual rate for a preset given live Brapi data.
+function resolveRate(
+  asset: PresetAsset,
+  assetRateMap: Map<string, AssetRate>,
+  bacenRates?: { cdiAnnual: number; selicAnnual: number },
+): { rate: number; isStub: boolean; rateSource: string } {
+  // BACEN-driven presets always use live rates
+  if (bacenRates) {
+    if (asset.id === "cdi_100")       return { rate: bacenRates.cdiAnnual,                                    isStub: false, rateSource: "BACEN (dinâmico)" };
+    if (asset.id === "cdi_110")       return { rate: Math.round(bacenRates.cdiAnnual * 1.1 * 100) / 100,      isStub: false, rateSource: "CDI × 1,1 (BACEN)" };
+    if (asset.id === "lci_95")        return { rate: Math.round(bacenRates.cdiAnnual * 0.95 * 100) / 100,     isStub: false, rateSource: "CDI × 0,95 (BACEN)" };
+    if (asset.id === "tesouro_selic") return { rate: bacenRates.selicAnnual,                                   isStub: false, rateSource: "BACEN (dinâmico)" };
+    if (asset.id === "poupanca")      return { rate: Math.round(bacenRates.selicAnnual * 0.7 * 100) / 100,    isStub: false, rateSource: "Regra legal (SELIC atual)" };
+  }
+
+  // Brapi CAGR: try brapiTicker first, then ticker
+  const brapiKey = asset.brapiTicker ?? asset.ticker;
+  if (brapiKey) {
+    const real = assetRateMap.get(brapiKey);
+    if (real?.isReal) {
+      return { rate: real.annualReturnPct, isStub: false, rateSource: real.rateSource };
+    }
+  }
+
+  return { rate: asset.annualRate, isStub: asset.isStub, rateSource: asset.rateSource };
+}
+
 const DEFAULT_SCENARIOS: SimulationScenario[] = [
   { id: "s1", label: "CDB 100% CDI",   annualRate: 10.5, assetCategory: "renda_fixa_bancaria", color: SCENARIO_COLORS[0], presetId: "cdi_100",          isStub: false, rateSource: "BACEN (dinâmico)" },
   { id: "s2", label: "Tesouro IPCA+",  annualRate: 8.5,  assetCategory: "tesouro_direto",       color: SCENARIO_COLORS[1], presetId: "tesouro_ipca_2029", isStub: true  },
@@ -49,10 +87,12 @@ function AssetPicker({
   onSelect,
   onClose,
   rates,
+  assetRateMap,
 }: {
   onSelect: (asset: PresetAsset) => void;
   onClose: () => void;
   rates?: { cdiAnnual: number; selicAnnual: number };
+  assetRateMap: Map<string, AssetRate>;
 }) {
   const [search, setSearch]           = useState("");
   const [activeGroup, setActiveGroup] = useState<PresetAssetGroup | "all">("all");
@@ -65,16 +105,6 @@ function AssetPicker({
       return matchGroup && matchSearch;
     });
   }, [search, activeGroup]);
-
-  function effectiveRate(asset: PresetAsset): number {
-    if (!rates) return asset.annualRate;
-    if (asset.id === "cdi_100")       return rates.cdiAnnual;
-    if (asset.id === "cdi_110")       return Math.round(rates.cdiAnnual * 1.1 * 100) / 100;
-    if (asset.id === "lci_95")        return Math.round(rates.cdiAnnual * 0.95 * 100) / 100;
-    if (asset.id === "tesouro_selic") return rates.selicAnnual;
-    if (asset.id === "poupanca")      return Math.round(rates.selicAnnual * 0.7 * 100) / 100;
-    return asset.annualRate;
-  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
@@ -129,11 +159,11 @@ function AssetPicker({
           ) : (
             <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
               {filtered.map((asset) => {
-                const rate = effectiveRate(asset);
+                const resolved = resolveRate(asset, assetRateMap, rates);
                 return (
                   <button
                     key={asset.id}
-                    onClick={() => { onSelect({ ...asset, annualRate: rate }); onClose(); }}
+                    onClick={() => { onSelect({ ...asset, annualRate: resolved.rate, isStub: resolved.isStub, rateSource: resolved.rateSource }); onClose(); }}
                     className="text-left rounded-xl border border-border bg-surface2/50 hover:bg-surface2 hover:border-green/30 p-3 transition-all"
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
@@ -144,14 +174,14 @@ function AssetPicker({
                         )}
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="font-money text-[14px] text-green font-600">{rate.toFixed(2)}%</span>
+                        <span className="font-money text-[14px] text-green font-600">{resolved.rate.toFixed(2)}%</span>
                         <span className="text-text-muted text-[10px] block">a.a.</span>
                       </div>
                     </div>
                     <p className="text-text-muted text-[11px] leading-snug">{asset.description}</p>
                     <div className="mt-1.5 flex items-center gap-1">
-                      {asset.isStub && <span className="text-[10px] bg-orange/10 text-orange rounded px-1.5 py-0.5">estimado</span>}
-                      <span className="text-[10px] text-text-muted">{asset.rateSource}</span>
+                      {resolved.isStub && <span className="text-[10px] bg-orange/10 text-orange rounded px-1.5 py-0.5">estimado</span>}
+                      <span className="text-[10px] text-text-muted">{resolved.rateSource}</span>
                     </div>
                   </button>
                 );
@@ -238,23 +268,29 @@ export const ScenarioComparator = () => {
   const [showAfterTax, setShowAfterTax]     = useState(false);
   const [pickerFor, setPickerFor]           = useState<string | null>(null);
 
-  const { data: rates } = useBenchmarkRates();
+  const { data: rates }      = useBenchmarkRates();
+  const { data: assetRates } = useAssetRates(ALL_PRESET_BRAPI_TICKERS);
+
+  // Map brapiTicker/ticker → AssetRate for O(1) lookup
+  const assetRateMap = useMemo<Map<string, AssetRate>>(() => {
+    const map = new Map<string, AssetRate>();
+    for (const r of assetRates ?? []) map.set(r.ticker, r);
+    return map;
+  }, [assetRates]);
 
   const totalMonths = customMonths ? (parseInt(customMonths) || 0) : presetMonths;
   const initial     = parseFloat(initialAmount.replace(",", ".")) * 100 || 0;
   const monthly     = parseFloat(monthlyContrib.replace(",", ".")) * 100 || 0;
 
   const liveScenarios = useMemo(() => {
-    if (!rates) return scenarios;
     return scenarios.map((s) => {
-      if (s.presetId === "cdi_100")       return { ...s, annualRate: rates.cdiAnnual };
-      if (s.presetId === "cdi_110")       return { ...s, annualRate: Math.round(rates.cdiAnnual * 1.1 * 100) / 100 };
-      if (s.presetId === "lci_95")        return { ...s, annualRate: Math.round(rates.cdiAnnual * 0.95 * 100) / 100 };
-      if (s.presetId === "tesouro_selic") return { ...s, annualRate: rates.selicAnnual };
-      if (s.presetId === "poupanca")      return { ...s, annualRate: Math.round(rates.selicAnnual * 0.7 * 100) / 100 };
-      return s;
+      if (!s.presetId) return s;
+      const preset = PRESET_ASSETS.find((a) => a.id === s.presetId);
+      if (!preset) return s;
+      const resolved = resolveRate(preset, assetRateMap, rates ?? undefined);
+      return { ...s, annualRate: resolved.rate, isStub: resolved.isStub, rateSource: resolved.rateSource };
     });
-  }, [scenarios, rates]);
+  }, [scenarios, rates, assetRateMap]);
 
   // Auto-aggregate: monthly for <36 months, annual otherwise
   const useAnnual = totalMonths >= 36;
@@ -313,6 +349,7 @@ export const ScenarioComparator = () => {
 
   const handlePickerSelect = (asset: PresetAsset) => {
     if (!pickerFor) return;
+    // asset.annualRate/isStub/rateSource are already resolved by AssetPicker via resolveRate
     updateScenario(pickerFor, {
       label:         asset.label,
       annualRate:    asset.annualRate,
@@ -332,6 +369,7 @@ export const ScenarioComparator = () => {
       {pickerFor && (
         <AssetPicker
           rates={rates ? { cdiAnnual: rates.cdiAnnual, selicAnnual: rates.selicAnnual } : undefined}
+          assetRateMap={assetRateMap}
           onSelect={handlePickerSelect}
           onClose={() => setPickerFor(null)}
         />

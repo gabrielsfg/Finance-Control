@@ -10,23 +10,12 @@ namespace FinanceControl.Data.Mappings
         {
             builder.ToTable("Investments");
             builder.HasKey(i => i.Id);
-            builder.Property(i => i.Ticker).IsRequired();
-            builder.Property(i => i.Name).IsRequired();
-            builder.Property(i => i.AssetType)
-                .HasConversion<string>()
-                .IsRequired();
+            builder.Property(i => i.MarketAssetId).IsRequired();
             builder.Property(i => i.Broker);
             builder.Property(i => i.CurrentQuantity).IsRequired();
             builder.Property(i => i.AveragePrice).IsRequired();
-            builder.Property(i => i.CurrentPrice).IsRequired();
-            builder.Property(i => i.LastPriceUpdate)
-                .HasColumnType("timestamp with time zone");
             builder.Property(i => i.MaturityDate);
             builder.Property(i => i.ExpectedYieldPct);
-            builder.Property(i => i.LogoUrl).HasColumnType("text");
-            builder.Property(i => i.Currency)
-                .IsRequired()
-                .HasDefaultValue("BRL");
             builder.Property(i => i.CreatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("now()")
@@ -36,10 +25,18 @@ namespace FinanceControl.Data.Mappings
                 .HasColumnType("timestamp with time zone")
                 .ValueGeneratedOnAdd();
 
+            // One position per user per asset.
+            builder.HasIndex(i => new { i.UserId, i.MarketAssetId }).IsUnique();
+
             builder.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(i => i.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(i => i.MarketAsset)
+                .WithMany(a => a.Investments)
+                .HasForeignKey(i => i.MarketAssetId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(i => i.Account)
                 .WithMany()

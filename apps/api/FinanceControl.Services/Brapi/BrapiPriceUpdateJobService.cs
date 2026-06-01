@@ -21,7 +21,15 @@ namespace FinanceControl.Services.Brapi
         [
             EnumAssetType.Acao, EnumAssetType.FII, EnumAssetType.BDR,
             EnumAssetType.ETF, EnumAssetType.Stock, EnumAssetType.Reit,
-            EnumAssetType.ETFInternacional,
+            EnumAssetType.ETFInternacional, EnumAssetType.FundoInvestimento,
+            EnumAssetType.Index,
+        ];
+
+        // Benchmark indices to track for simulations (not present in /quote/list stocks)
+        private static readonly (string Ticker, string Name)[] BenchmarkIndices =
+        [
+            ("^BVSP", "Ibovespa"),
+            ("IFIX", "Índice de Fundos Imobiliários"),
         ];
 
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -47,25 +55,44 @@ namespace FinanceControl.Services.Brapi
         {
             _logger.LogInformation("BrapiPriceUpdateJob started at {Time} UTC", DateTime.UtcNow);
 
-            var status = new BrapiJobStatusDto { LastRunAt = DateTime.UtcNow };
+            var status = new BrapiJobStatusDto
+            {
+                IsRunning = true,
+                StartedAt = DateTime.UtcNow,
+                LastRunAt = DateTime.UtcNow,
+            };
+            LastStatus = status;
 
             await using var scope = _scopeFactory.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-            var allInvestments = await context.Investments
+            // Discover/refresh the full asset universe so every asset exists in our DB,
+            // ready for search/buy/simulate without per-request Brapi calls.
+            try
+            {
+                await SyncAssetUniverseAsync(context, status, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Asset universe sync failed.");
+                lock (status.Errors)
+                {
+                    status.ErrorCount++;
+                    status.Errors.Add($"Universe sync: {ex.Message}");
+                }
+            }
+
+            // Market assets are global and already unique per ticker — no grouping needed.
+            var allAssets = await context.MarketAssets
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
 
-            var quoteGroup = allInvestments
-                .Where(i => QuoteAssetTypes.Contains(i.AssetType))
-                .GroupBy(i => i.Ticker)
-                .Select(g => g.First())
+            var quoteGroup = allAssets
+                .Where(a => QuoteAssetTypes.Contains(a.AssetType))
                 .ToList();
 
-            var cryptoGroup = allInvestments
-                .Where(i => i.AssetType == EnumAssetType.Cripto)
-                .GroupBy(i => i.Ticker)
-                .Select(g => g.First())
+            var cryptoGroup = allAssets
+                .Where(a => a.AssetType == EnumAssetType.Cripto)
                 .ToList();
 
             var semaphore = new SemaphoreSlim(_settings.MaxParallelBatches);
@@ -73,19 +100,32 @@ namespace FinanceControl.Services.Brapi
             var quoteBatches = quoteGroup.Chunk(_settings.BatchSize).ToList();
             var cryptoBatches = cryptoGroup.Chunk(_settings.BatchSize).ToList();
 
+            // Each batch gets its own scope+context — DbContext is not thread-safe.
             var quoteTasks = quoteBatches.Select(batch =>
-                ProcessWithSemaphoreAsync(semaphore, () => ProcessQuoteBatchAsync(context, batch, status, cancellationToken), cancellationToken));
+                ProcessWithSemaphoreAsync(semaphore, async () =>
+                {
+                    await using var batchScope = _scopeFactory.CreateAsyncScope();
+                    var batchCtx = batchScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    await ProcessQuoteBatchAsync(batchCtx, batch, status, cancellationToken);
+                }, cancellationToken));
 
             var cryptoTasks = cryptoBatches.Select(batch =>
-                ProcessWithSemaphoreAsync(semaphore, () => ProcessCryptoBatchAsync(context, batch, status, cancellationToken), cancellationToken));
+                ProcessWithSemaphoreAsync(semaphore, async () =>
+                {
+                    await using var batchScope = _scopeFactory.CreateAsyncScope();
+                    var batchCtx = batchScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    await ProcessCryptoBatchAsync(batchCtx, batch, status, cancellationToken);
+                }, cancellationToken));
 
             await Task.WhenAll(quoteTasks.Concat(cryptoTasks));
 
+            status.IsRunning   = false;
+            status.FinishedAt  = DateTime.UtcNow;
             LastStatus = status;
 
             _logger.LogInformation(
-                "BrapiPriceUpdateJob finished. Assets updated: {Assets}, dividends inserted: {Dividends}, errors: {Errors}",
-                status.AssetsUpdated, status.DividendsInserted, status.ErrorCount);
+                "BrapiPriceUpdateJob finished in {Elapsed:mm\\:ss}. Assets updated: {Assets}, dividends inserted: {Dividends}, errors: {Errors}",
+                status.FinishedAt - status.StartedAt, status.AssetsUpdated, status.DividendsInserted, status.ErrorCount);
         }
 
         private async Task ProcessWithSemaphoreAsync(SemaphoreSlim semaphore, Func<Task> action, CancellationToken cancellationToken)
@@ -101,15 +141,145 @@ namespace FinanceControl.Services.Brapi
             }
         }
 
-        private async Task ProcessQuoteBatchAsync(
+        // Discovers the full B3 asset universe from /api/quote/list and upserts each as a
+        // MarketAsset (name, type, logo, current price). Cheap metadata pass — full price
+        // history is then backfilled by the batch logic. Also seeds benchmark indices.
+        private async Task SyncAssetUniverseAsync(
             ApplicationDbContext context,
-            Investment[] batch,
             BrapiJobStatusDto status,
             CancellationToken cancellationToken)
         {
-            var tickers = string.Join(",", batch.Select(i => i.Ticker));
+            var existing = await context.MarketAssets.ToDictionaryAsync(a => a.Ticker, cancellationToken);
+            var discovered = 0;
+
+            const int limit = 200;
+            var page = 1;
+            while (page <= 2000) // safety bound
+            {
+                var url = $"https://brapi.dev/api/quote/list?limit={limit}&page={page}&token={_settings.Token}";
+                var resp = await FetchWithRetryAsync<BrapiAssetListResponse>(url, cancellationToken);
+                if (resp?.Stocks is null || resp.Stocks.Count == 0) break;
+
+                foreach (var item in resp.Stocks)
+                {
+                    if (string.IsNullOrWhiteSpace(item.Stock)) continue;
+                    var ticker = item.Stock.ToUpperInvariant();
+                    var type = MapAssetType(item.SubType, item.Type);
+                    var price = item.Close.HasValue ? (long)Math.Round(item.Close.Value * 100) : 0;
+
+                    if (existing.TryGetValue(ticker, out var asset))
+                    {
+                        if (!string.IsNullOrWhiteSpace(item.Name)) asset.Name = item.Name;
+                        asset.AssetType = type;
+                        if (!string.IsNullOrWhiteSpace(item.Logo)) asset.LogoUrl = item.Logo;
+                        if (price > 0) asset.CurrentPrice = price;
+                    }
+                    else
+                    {
+                        asset = new MarketAsset
+                        {
+                            Ticker = ticker,
+                            Name = string.IsNullOrWhiteSpace(item.Name) ? ticker : item.Name,
+                            AssetType = type,
+                            CurrentPrice = price,
+                            LogoUrl = item.Logo,
+                            Currency = "BRL",
+                        };
+                        context.MarketAssets.Add(asset);
+                        existing[ticker] = asset;
+                        discovered++;
+                    }
+                }
+
+                if (!resp.HasNextPage) break;
+                page++;
+            }
+
+            // Seed benchmark indices (not present in /quote/list stocks)
+            foreach (var (ticker, name) in BenchmarkIndices)
+            {
+                if (existing.ContainsKey(ticker)) continue;
+                context.MarketAssets.Add(new MarketAsset
+                {
+                    Ticker = ticker,
+                    Name = name,
+                    AssetType = EnumAssetType.Index,
+                    CurrentPrice = 0,
+                    Currency = "BRL",
+                });
+                discovered++;
+            }
+
+            // Discover crypto coins from /api/v2/crypto/available
+            try
+            {
+                var cryptoUrl = $"https://brapi.dev/api/v2/crypto/available?token={_settings.Token}";
+                var cryptoResp = await FetchWithRetryAsync<BrapiCryptoAvailableResponse>(cryptoUrl, cancellationToken);
+                if (cryptoResp?.Coins is not null)
+                {
+                    foreach (var coin in cryptoResp.Coins)
+                    {
+                        if (string.IsNullOrWhiteSpace(coin)) continue;
+                        var ticker = coin.ToUpperInvariant();
+                        if (existing.ContainsKey(ticker)) continue;
+
+                        context.MarketAssets.Add(new MarketAsset
+                        {
+                            Ticker = ticker,
+                            Name = ticker,
+                            AssetType = EnumAssetType.Cripto,
+                            CurrentPrice = 0,
+                            Currency = "USD",
+                        });
+                        existing[ticker] = null!; // mark as added to avoid duplicates in loop
+                        discovered++;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Crypto universe discovery failed — continuing without it.");
+            }
+
+            await context.SaveChangesAsync(cancellationToken);
+            status.AssetsDiscovered = discovered;
+            _logger.LogInformation("Asset universe synced. New assets: {New}, total tracked: {Total}", discovered, existing.Count);
+        }
+
+        // Maps Brapi's subType (granular) / type (coarse) to our EnumAssetType.
+        private static EnumAssetType MapAssetType(string? subType, string? type)
+        {
+            switch ((subType ?? string.Empty).ToLowerInvariant())
+            {
+                case "fii":      return EnumAssetType.FII;
+                case "etf":      return EnumAssetType.ETF;
+                case "bdr":      return EnumAssetType.BDR;
+                case "unit":     return EnumAssetType.Acao;
+                case "stock":    return EnumAssetType.Acao;
+                case "fi-infra":
+                case "fi-agro":
+                case "fip":
+                case "fidc":     return EnumAssetType.FundoInvestimento;
+            }
+
+            return (type ?? string.Empty).ToLowerInvariant() switch
+            {
+                "fund"  => EnumAssetType.FundoInvestimento,
+                "bdr"   => EnumAssetType.BDR,
+                "stock" => EnumAssetType.Acao,
+                _       => EnumAssetType.Outro,
+            };
+        }
+
+        private async Task ProcessQuoteBatchAsync(
+            ApplicationDbContext context,
+            MarketAsset[] batch,
+            BrapiJobStatusDto status,
+            CancellationToken cancellationToken)
+        {
+            var tickers = string.Join(",", batch.Select(a => a.Ticker));
             var isFirstRun = await HasAnyFirstRunAsync(context, batch, cancellationToken);
-            var rangeParam = isFirstRun ? "&range=1y&interval=1d" : string.Empty;
+            var rangeParam = isFirstRun ? $"&range={_settings.BackfillRange}&interval=1d" : string.Empty;
             var url = $"https://brapi.dev/api/quote/{tickers}?dividends=true{rangeParam}&token={_settings.Token}";
 
             BrapiQuoteResponse? response = null;
@@ -136,31 +306,32 @@ namespace FinanceControl.Services.Brapi
             {
                 if (result.RegularMarketPrice is null) continue;
 
-                var price = (long)Math.Round(result.RegularMarketPrice.Value * 100);
+                var asset = await FindAssetBySymbolAsync(context, result.Symbol, cancellationToken);
+                if (asset is null) continue;
 
-                var investments = await context.Investments
-                    .Where(i => i.Ticker == result.Symbol)
-                    .ToListAsync(cancellationToken);
+                // One update to the shared market asset
+                asset.CurrentPrice = (long)Math.Round(result.RegularMarketPrice.Value * 100);
+                asset.LastPriceUpdate = DateTime.UtcNow;
+                if (result.LogoUrl is not null) asset.LogoUrl = result.LogoUrl;
+                asset.Currency = result.Currency ?? "BRL";
 
-                foreach (var inv in investments)
-                {
-                    inv.CurrentPrice = price;
-                    inv.LastPriceUpdate = DateTime.UtcNow;
-                    if (result.LogoUrl is not null) inv.LogoUrl = result.LogoUrl;
-                    inv.Currency = result.Currency ?? "BRL";
-                }
+                // One price-history row per asset per day
+                await UpsertPriceHistoryAsync(context, asset, result.HistoricalDataPrice, today, isFirstRun, cancellationToken);
 
-                await UpsertPriceHistoryAsync(context, investments, result.HistoricalDataPrice, today, isFirstRun, cancellationToken);
-
+                // Dividends are per-user — insert one per owner of this asset
                 if (result.DividendsData?.CashDividends is not null)
                 {
-                    foreach (var inv in investments)
+                    var owners = await context.Investments
+                        .Where(i => i.MarketAssetId == asset.Id)
+                        .ToListAsync(cancellationToken);
+
+                    foreach (var inv in owners)
                         await InsertNewDividendsAsync(context, inv, result.DividendsData.CashDividends, cancellationToken, status);
                 }
 
                 lock (status.Errors)
                 {
-                    status.AssetsUpdated += investments.Count;
+                    status.AssetsUpdated++;
                 }
             }
 
@@ -169,13 +340,13 @@ namespace FinanceControl.Services.Brapi
 
         private async Task ProcessCryptoBatchAsync(
             ApplicationDbContext context,
-            Investment[] batch,
+            MarketAsset[] batch,
             BrapiJobStatusDto status,
             CancellationToken cancellationToken)
         {
-            var coins = string.Join(",", batch.Select(i => i.Ticker));
+            var coins = string.Join(",", batch.Select(a => a.Ticker));
             var isFirstRun = await HasAnyFirstRunAsync(context, batch, cancellationToken);
-            var rangeParam = isFirstRun ? "&range=1y&interval=1d" : string.Empty;
+            var rangeParam = isFirstRun ? $"&range={_settings.BackfillRange}&interval=1d" : string.Empty;
             var url = $"https://brapi.dev/api/v2/crypto?coin={coins}{rangeParam}&token={_settings.Token}";
 
             BrapiCryptoResponse? response = null;
@@ -202,23 +373,18 @@ namespace FinanceControl.Services.Brapi
             {
                 if (coin.RegularMarketPrice is null) continue;
 
-                var price = (long)Math.Round(coin.RegularMarketPrice.Value * 100);
+                var asset = await context.MarketAssets
+                    .FirstOrDefaultAsync(a => a.Ticker == coin.Coin, cancellationToken);
+                if (asset is null) continue;
 
-                var investments = await context.Investments
-                    .Where(i => i.Ticker == coin.Coin)
-                    .ToListAsync(cancellationToken);
+                asset.CurrentPrice = (long)Math.Round(coin.RegularMarketPrice.Value * 100);
+                asset.LastPriceUpdate = DateTime.UtcNow;
+                if (coin.CoinImageUrl is not null) asset.LogoUrl = coin.CoinImageUrl;
+                asset.Currency = coin.Currency ?? "BRL";
 
-                foreach (var inv in investments)
-                {
-                    inv.CurrentPrice = price;
-                    inv.LastPriceUpdate = DateTime.UtcNow;
-                    if (coin.CoinImageUrl is not null) inv.LogoUrl = coin.CoinImageUrl;
-                    inv.Currency = coin.Currency ?? "BRL";
-                }
+                await UpsertPriceHistoryAsync(context, asset, coin.HistoricalDataPrice, today, isFirstRun, cancellationToken);
 
-                await UpsertPriceHistoryAsync(context, investments, coin.HistoricalDataPrice, today, isFirstRun, cancellationToken);
-
-                status.AssetsUpdated += investments.Count;
+                status.AssetsUpdated++;
             }
 
             await context.SaveChangesAsync(cancellationToken);
@@ -226,49 +392,46 @@ namespace FinanceControl.Services.Brapi
 
         private static async Task UpsertPriceHistoryAsync(
             ApplicationDbContext context,
-            List<Investment> investments,
+            MarketAsset asset,
             List<BrapiHistoricalPrice>? historicalData,
             DateOnly today,
             bool isFirstRun,
             CancellationToken cancellationToken)
         {
-            foreach (var inv in investments)
+            if (isFirstRun && historicalData is not null)
             {
-                if (isFirstRun && historicalData is not null)
+                var existingDates = await context.MarketPriceHistories
+                    .Where(h => h.MarketAssetId == asset.Id)
+                    .Select(h => h.Date)
+                    .ToHashSetAsync(cancellationToken);
+
+                foreach (var point in historicalData)
                 {
-                    var existingDates = await context.InvestmentPriceHistories
-                        .Where(h => h.InvestmentId == inv.Id)
-                        .Select(h => h.Date)
-                        .ToHashSetAsync(cancellationToken);
+                    if (point.Close is null) continue;
+                    var date = DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(point.Date).UtcDateTime);
+                    if (existingDates.Contains(date)) continue;
 
-                    foreach (var point in historicalData)
+                    context.MarketPriceHistories.Add(new MarketPriceHistory
                     {
-                        if (point.Close is null) continue;
-                        var date = DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(point.Date).UtcDateTime);
-                        if (existingDates.Contains(date)) continue;
-
-                        context.InvestmentPriceHistories.Add(new InvestmentPriceHistory
-                        {
-                            InvestmentId = inv.Id,
-                            Date = date,
-                            Price = (long)Math.Round(point.Close.Value * 100),
-                        });
-                    }
+                        MarketAssetId = asset.Id,
+                        Date = date,
+                        Price = (long)Math.Round(point.Close.Value * 100),
+                    });
                 }
-                else
-                {
-                    var exists = await context.InvestmentPriceHistories
-                        .AnyAsync(h => h.InvestmentId == inv.Id && h.Date == today, cancellationToken);
+            }
+            else
+            {
+                var exists = await context.MarketPriceHistories
+                    .AnyAsync(h => h.MarketAssetId == asset.Id && h.Date == today, cancellationToken);
 
-                    if (!exists)
+                if (!exists)
+                {
+                    context.MarketPriceHistories.Add(new MarketPriceHistory
                     {
-                        context.InvestmentPriceHistories.Add(new InvestmentPriceHistory
-                        {
-                            InvestmentId = inv.Id,
-                            Date = today,
-                            Price = inv.CurrentPrice,
-                        });
-                    }
+                        MarketAssetId = asset.Id,
+                        Date = today,
+                        Price = asset.CurrentPrice,
+                    });
                 }
             }
         }
@@ -336,15 +499,33 @@ namespace FinanceControl.Services.Brapi
             return JsonSerializer.Deserialize<T>(json, JsonOptions);
         }
 
+        // Brapi sometimes returns symbols with a ".SA" suffix (e.g. IFIX → IFIX.SA).
+        // Match on the exact symbol first, then on the suffix-stripped form.
+        private static async Task<MarketAsset?> FindAssetBySymbolAsync(
+            ApplicationDbContext context, string symbol, CancellationToken cancellationToken)
+        {
+            var asset = await context.MarketAssets
+                .FirstOrDefaultAsync(a => a.Ticker == symbol, cancellationToken);
+
+            if (asset is null && symbol.EndsWith(".SA", StringComparison.OrdinalIgnoreCase))
+            {
+                var stripped = symbol[..^3];
+                asset = await context.MarketAssets
+                    .FirstOrDefaultAsync(a => a.Ticker == stripped, cancellationToken);
+            }
+
+            return asset;
+        }
+
         private static async Task<bool> HasAnyFirstRunAsync(
             ApplicationDbContext context,
-            Investment[] batch,
+            MarketAsset[] batch,
             CancellationToken cancellationToken)
         {
-            var ids = batch.Select(i => i.Id).ToList();
-            var idsWithHistory = await context.InvestmentPriceHistories
-                .Where(h => ids.Contains(h.InvestmentId))
-                .Select(h => h.InvestmentId)
+            var ids = batch.Select(a => a.Id).ToList();
+            var idsWithHistory = await context.MarketPriceHistories
+                .Where(h => ids.Contains(h.MarketAssetId))
+                .Select(h => h.MarketAssetId)
                 .Distinct()
                 .ToListAsync(cancellationToken);
 

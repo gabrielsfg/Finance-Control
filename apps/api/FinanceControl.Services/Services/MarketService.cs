@@ -1,15 +1,25 @@
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Interfaces.Services;
+using FinanceControl.Services.Brapi;
 using FinanceControl.Shared.Dtos.Response.Investment;
 using FinanceControl.Shared.Dtos.Response.Market;
 using FinanceControl.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace FinanceControl.Services.Services
 {
     public class MarketService : IMarketService
     {
         private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly BrapiSettings _brapiSettings;
+        private readonly IMemoryCache _cache;
+
+        private const string BrapiModules =
+            "summaryProfile,defaultKeyStatistics,financialData,balanceSheetHistory";
 
         private static readonly Dictionary<EnumAssetType, string> AssetTypeLabels = new()
         {
@@ -24,12 +34,94 @@ namespace FinanceControl.Services.Services
             { EnumAssetType.ETFInternacional,  "ETF Internacional" },
             { EnumAssetType.TesouroDireto,     "Tesouro Direto" },
             { EnumAssetType.RendaFixa,         "Renda Fixa" },
+            { EnumAssetType.Index,             "Índice" },
             { EnumAssetType.Outro,             "Outro" },
         };
 
-        public MarketService(IDbContextFactory<ApplicationDbContext> contextFactory)
+        public MarketService(
+            IDbContextFactory<ApplicationDbContext> contextFactory,
+            IHttpClientFactory httpClientFactory,
+            IOptions<BrapiSettings> brapiSettings,
+            IMemoryCache cache)
         {
             _contextFactory = contextFactory;
+            _httpClientFactory = httpClientFactory;
+            _brapiSettings = brapiSettings.Value;
+            _cache = cache;
+        }
+
+        public async Task<List<MarketAssetDto>> ListAsync(string? assetType, string sort, int limit)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            // For change_desc/change_asc we need previous close, so fetch a larger pool to
+            // filter down to assets that actually have two history points.
+            // For other sorts, just take directly from the DB.
+            var needsHistory = sort is "change_desc" or "change_asc";
+            var poolSize = needsHistory ? limit * 5 : limit;
+
+            var q = context.MarketAssets.Where(a => a.CurrentPrice > 0);
+
+            if (!string.IsNullOrWhiteSpace(assetType) &&
+                Enum.TryParse<EnumAssetType>(assetType, out var parsedType))
+                q = q.Where(a => a.AssetType == parsedType);
+
+            // Pull a pool ordered by price desc (good proxy for relevance / liquidity)
+            var assets = await q
+                .OrderByDescending(a => a.CurrentPrice)
+                .Take(poolSize)
+                .ToListAsync();
+
+            var assetIds = assets.Select(a => a.Id).ToList();
+
+            var previousCloses = await context.MarketPriceHistories
+                .Where(h => assetIds.Contains(h.MarketAssetId))
+                .GroupBy(h => h.MarketAssetId)
+                .Select(g => new
+                {
+                    MarketAssetId = g.Key,
+                    PreviousClose = g.OrderByDescending(h => h.Date).Skip(1).Select(h => (long?)h.Price).FirstOrDefault(),
+                })
+                .ToListAsync();
+
+            var prevCloseMap = previousCloses.ToDictionary(x => x.MarketAssetId, x => x.PreviousClose);
+
+            var result = assets.Select(a =>
+            {
+                var prev = prevCloseMap.GetValueOrDefault(a.Id);
+                var dayChangePct = prev.HasValue && prev.Value > 0
+                    ? Math.Round((decimal)(a.CurrentPrice - prev.Value) / prev.Value * 100, 2)
+                    : (decimal?)null;
+
+                return new MarketAssetDto
+                {
+                    Id              = a.Id,
+                    Ticker          = a.Ticker,
+                    Name            = a.Name,
+                    AssetType       = a.AssetType,
+                    AssetClass      = AssetTypeLabels.GetValueOrDefault(a.AssetType, "Outro"),
+                    LogoUrl         = a.LogoUrl,
+                    Currency        = a.Currency,
+                    CurrentPrice    = a.CurrentPrice,
+                    LastPriceUpdate = a.LastPriceUpdate,
+                    PreviousClose   = prev,
+                    DayChangePct    = dayChangePct,
+                };
+            });
+
+            var sorted = sort switch
+            {
+                "change_desc" => result.Where(a => a.DayChangePct.HasValue)
+                                       .OrderByDescending(a => a.DayChangePct)
+                                       .Take(limit),
+                "change_asc"  => result.Where(a => a.DayChangePct.HasValue)
+                                       .OrderBy(a => a.DayChangePct)
+                                       .Take(limit),
+                "price_desc"  => result.OrderByDescending(a => a.CurrentPrice).Take(limit),
+                _             => result.Take(limit),
+            };
+
+            return sorted.ToList();
         }
 
         public async Task<List<MarketAssetDto>> SearchAsync(string query)
@@ -38,34 +130,32 @@ namespace FinanceControl.Services.Services
 
             var q = query.Trim().ToUpperInvariant();
 
-            var assets = await context.Investments
-                .Where(i =>
-                    i.Ticker.ToUpper().Contains(q) ||
-                    i.Name.ToUpper().Contains(q))
-                .GroupBy(i => i.Ticker)
-                .Select(g => g.OrderByDescending(i => i.LastPriceUpdate).First())
-                .OrderBy(i => i.Ticker)
+            var assets = await context.MarketAssets
+                .Where(a =>
+                    a.Ticker.ToUpper().Contains(q) ||
+                    a.Name.ToUpper().Contains(q))
+                .OrderBy(a => a.Ticker)
                 .Take(20)
                 .ToListAsync();
 
-            var tickers = assets.Select(a => a.Ticker).ToList();
+            var assetIds = assets.Select(a => a.Id).ToList();
 
-            // Fetch previous close for each ticker to compute day change %
-            var previousCloses = await context.InvestmentPriceHistories
-                .Where(h => tickers.Contains(h.Investment.Ticker))
-                .GroupBy(h => h.Investment.Ticker)
+            // Fetch previous close for each asset to compute day change %
+            var previousCloses = await context.MarketPriceHistories
+                .Where(h => assetIds.Contains(h.MarketAssetId))
+                .GroupBy(h => h.MarketAssetId)
                 .Select(g => new
                 {
-                    Ticker = g.Key,
+                    MarketAssetId = g.Key,
                     PreviousClose = g.OrderByDescending(h => h.Date).Skip(1).Select(h => (long?)h.Price).FirstOrDefault(),
                 })
                 .ToListAsync();
 
-            var prevCloseMap = previousCloses.ToDictionary(x => x.Ticker, x => x.PreviousClose);
+            var prevCloseMap = previousCloses.ToDictionary(x => x.MarketAssetId, x => x.PreviousClose);
 
             return assets.Select(a =>
             {
-                var prev = prevCloseMap.GetValueOrDefault(a.Ticker);
+                var prev = prevCloseMap.GetValueOrDefault(a.Id);
                 var dayChangePct = prev.HasValue && prev.Value > 0
                     ? Math.Round((decimal)(a.CurrentPrice - prev.Value) / prev.Value * 100, 2)
                     : (decimal?)null;
@@ -93,14 +183,12 @@ namespace FinanceControl.Services.Services
 
             var t = ticker.Trim().ToUpperInvariant();
 
-            var asset = await context.Investments
-                .Where(i => i.Ticker == t)
-                .OrderByDescending(i => i.LastPriceUpdate)
-                .FirstOrDefaultAsync()
+            var asset = await context.MarketAssets
+                .FirstOrDefaultAsync(a => a.Ticker == t)
                 ?? throw new KeyNotFoundException($"Ticker {ticker} not found.");
 
-            var history = await context.InvestmentPriceHistories
-                .Where(h => h.InvestmentId == asset.Id)
+            var history = await context.MarketPriceHistories
+                .Where(h => h.MarketAssetId == asset.Id)
                 .OrderBy(h => h.Date)
                 .Select(h => new InvestmentPriceHistoryDto
                 {
@@ -129,6 +217,147 @@ namespace FinanceControl.Services.Services
                 DayChangePct    = dayChangePct,
                 PriceHistory    = history,
             };
+        }
+
+        public async Task<FundamentalsDto> GetFundamentalsAsync(string ticker)
+        {
+            var t = ticker.Trim().ToUpperInvariant();
+            var cacheKey = $"fundamentals_{t}";
+
+            if (_cache.TryGetValue(cacheKey, out FundamentalsDto? cached) && cached is not null)
+                return cached;
+
+            if (string.IsNullOrEmpty(_brapiSettings.Token))
+                throw new InvalidOperationException("Brapi token not configured.");
+
+            using var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(15);
+
+            var url = $"https://brapi.dev/api/quote/{t}?modules={BrapiModules}&dividends=true&token={_brapiSettings.Token}";
+            var json = await client.GetStringAsync(url);
+            var doc = JsonDocument.Parse(json);
+
+            if (!doc.RootElement.TryGetProperty("results", out var results) || results.GetArrayLength() == 0)
+                throw new KeyNotFoundException($"No fundamentals data found for ticker {t}.");
+
+            var r = results[0];
+
+            var dto = new FundamentalsDto { Ticker = t, FetchedAt = DateTime.UtcNow };
+
+            var hasStats = r.TryGetProperty("defaultKeyStatistics", out var stats);
+            var hasFin   = r.TryGetProperty("financialData", out var fin);
+
+            // Top-level quote fields (returned regardless of modules)
+            dto.CompanyName      = GetString(r, "longName");
+            dto.PriceToEarnings  = GetDecimal(r, "priceEarnings") ?? (hasStats ? GetDecimal(stats, "trailingPE") : null);
+            dto.EarningsPerShare = GetDecimal(r, "earningsPerShare") ?? (hasStats ? GetDecimal(stats, "trailingEps") : null);
+            dto.MarketCap        = GetLong(r, "marketCap");
+
+            // summaryProfile
+            if (r.TryGetProperty("summaryProfile", out var profile))
+            {
+                dto.Sector            = GetString(profile, "sector");
+                dto.Industry          = GetString(profile, "industry");
+                dto.Website           = GetString(profile, "website");
+                dto.BusinessSummary   = GetString(profile, "longBusinessSummary");
+                dto.FullTimeEmployees = GetInt(profile, "fullTimeEmployees");
+                dto.AdministratorName = GetString(profile, "administratorName");
+            }
+
+            // defaultKeyStatistics
+            if (hasStats)
+            {
+                dto.PriceToBook       = GetDecimal(stats, "priceToBook");
+                dto.DividendYield     = GetDecimal(stats, "dividendYield");
+                dto.Beta              = GetDecimal(stats, "beta");
+                dto.EnterpriseValue   = GetDecimal(stats, "enterpriseValue");
+                dto.AnnualNetIncome   = GetDecimal(stats, "netIncomeToCommon");
+                dto.BookValue         = GetDecimal(stats, "bookValue");
+                dto.SharesOutstanding = GetLong(stats, "sharesOutstanding");
+            }
+
+            // financialData (ROE/ROA live here, not in defaultKeyStatistics)
+            if (hasFin)
+            {
+                dto.Ebitda           = GetDecimal(fin, "ebitda");
+                dto.TotalRevenue     = GetDecimal(fin, "totalRevenue");
+                dto.GrossMargin      = GetDecimal(fin, "grossMargins");
+                dto.EbitdaMargin     = GetDecimal(fin, "ebitdaMargins");
+                dto.OperatingMargin  = GetDecimal(fin, "operatingMargins");
+                dto.ProfitMargin     = GetDecimal(fin, "profitMargins");
+                dto.ReturnOnEquity   = GetDecimal(fin, "returnOnEquity");
+                dto.ReturnOnAssets   = GetDecimal(fin, "returnOnAssets");
+                dto.DebtToEquity     = GetDecimal(fin, "debtToEquity");
+                dto.TotalCash        = GetDecimal(fin, "totalCash");
+                dto.TotalDebt        = GetDecimal(fin, "totalDebt");
+                dto.FreeCashflow     = GetDecimal(fin, "freeCashflow");
+                // DRE (TTM) sourced from financialData
+                dto.AnnualRevenue     = GetDecimal(fin, "totalRevenue");
+                dto.AnnualGrossProfit = GetDecimal(fin, "grossProfits");
+            }
+
+            // balanceSheetHistory is a flat array of yearly statements (most recent first)
+            if (r.TryGetProperty("balanceSheetHistory", out var bsArr) &&
+                bsArr.ValueKind == JsonValueKind.Array &&
+                bsArr.GetArrayLength() > 0)
+            {
+                var bs = bsArr[0];
+                dto.TotalAssets            = GetDecimal(bs, "totalAssets");
+                dto.TotalLiabilities       = GetDecimal(bs, "totalLiab");
+                // brapi often returns totalStockholderEquity null but fills shareholdersEquity
+                dto.TotalStockholderEquity = GetDecimal(bs, "totalStockholderEquity") ?? GetDecimal(bs, "shareholdersEquity");
+                dto.Cash                   = GetDecimal(bs, "cash");
+                dto.LongTermDebt           = GetDecimal(bs, "longTermDebt") ?? GetDecimal(bs, "longTermLoansAndFinancing");
+            }
+
+            // dividendsData — recent dividends/yields (especially relevant for FIIs)
+            if (r.TryGetProperty("dividendsData", out var divData) &&
+                divData.TryGetProperty("cashDividends", out var cashDivs) &&
+                cashDivs.ValueKind == JsonValueKind.Array)
+            {
+                dto.RecentDividends = cashDivs.EnumerateArray()
+                    .Take(12)
+                    .Select(d => new FundamentalDividendDto
+                    {
+                        PaymentDate = TryParseDate(GetString(d, "paymentDate")),
+                        Rate        = GetDecimal(d, "rate") ?? 0,
+                        Label       = GetString(d, "label") ?? string.Empty,
+                    })
+                    .ToList();
+            }
+
+            _cache.Set(cacheKey, dto, TimeSpan.FromHours(6));
+            return dto;
+        }
+
+        private static DateOnly? TryParseDate(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            return DateTimeOffset.TryParse(value, out var dto) ? DateOnly.FromDateTime(dto.UtcDateTime) : null;
+        }
+
+        private static string? GetString(JsonElement el, string key) =>
+            el.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+        private static decimal? GetDecimal(JsonElement el, string key)
+        {
+            if (!el.TryGetProperty(key, out var v)) return null;
+            if (v.ValueKind == JsonValueKind.Number && v.TryGetDecimal(out var d)) return d;
+            return null;
+        }
+
+        private static long? GetLong(JsonElement el, string key)
+        {
+            if (!el.TryGetProperty(key, out var v)) return null;
+            if (v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var l)) return l;
+            return null;
+        }
+
+        private static int? GetInt(JsonElement el, string key)
+        {
+            if (!el.TryGetProperty(key, out var v)) return null;
+            if (v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i)) return i;
+            return null;
         }
     }
 }

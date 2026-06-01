@@ -5,7 +5,8 @@ namespace FinanceControl.Services.Brapi
     internal record BrapiQuoteResponse(
         [property: JsonPropertyName("results")] List<BrapiQuoteResult> Results,
         [property: JsonPropertyName("requestedAt")] DateTime RequestedAt,
-        [property: JsonPropertyName("took")] string Took
+        // "took" alternates between string and int depending on payload size — use JsonElement to accept both.
+        [property: JsonPropertyName("took")] System.Text.Json.JsonElement? Took = null
     );
 
     internal record BrapiQuoteResult(

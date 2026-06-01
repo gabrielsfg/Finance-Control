@@ -5,7 +5,7 @@ namespace FinanceControl.Services.Brapi
     internal record BrapiCryptoResponse(
         [property: JsonPropertyName("coins")] List<BrapiCryptoCoin> Coins,
         [property: JsonPropertyName("requestedAt")] DateTime RequestedAt,
-        [property: JsonPropertyName("took")] string Took
+        [property: JsonPropertyName("took")] System.Text.Json.JsonElement? Took = null
     );
 
     internal record BrapiCryptoCoin(

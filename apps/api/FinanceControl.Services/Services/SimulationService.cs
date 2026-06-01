@@ -1,7 +1,10 @@
 using FinanceControl.Domain.Interfaces.Services;
+using FinanceControl.Services.Brapi;
 using FinanceControl.Shared.Dtos.Response.Simulation;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using System.Globalization;
+using System.Text.Json;
 
 namespace FinanceControl.Services.Services
 {
@@ -9,30 +12,40 @@ namespace FinanceControl.Services.Services
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IMemoryCache _cache;
+        private readonly BrapiSettings _brapiSettings;
 
         // BACEN SGS series codes
         private const int SgsCdi = 4391;        // CDI monthly rate
         private const int SgsSelic = 4390;      // SELIC monthly rate
         private const int SgsIpca = 433;        // IPCA monthly rate
 
-        // Historical annual averages used when BACEN data is unavailable (fallback)
-        // These represent long-run Brazilian market estimates
+        // Brapi symbols for equity index benchmarks.
+        // ^BVSP: confirmed in brapi docs. IFIX/IVVB11: to be validated with a live Pro response.
+        private static readonly Dictionary<string, string> BrapiIndexSymbols = new()
+        {
+            ["IBOVESPA"]  = "^BVSP",
+            ["IFIX"]      = "IFIX",    // unconfirmed — validate with Pro account JSON
+            ["SP500_BRL"] = "IVVB11",  // proxy ETF in BRL; native S&P500 not confirmed available
+        };
+
+        // Fallback annual rates used when Brapi data is unavailable for a benchmark.
         private static readonly Dictionary<string, decimal> FallbackAnnualReturns = new()
         {
             ["CDI"]       = 10.5m,
             ["SELIC"]     = 10.75m,
-            ["IPCA+6"]    = 10.5m,  // approx IPCA (~4.5%) + 6% real
+            ["IPCA+6"]    = 10.5m,
             ["IPCA+5"]    = 9.5m,
             ["IPCA+4"]    = 8.5m,
-            ["IBOVESPA"]  = 13.0m,  // long-run Ibovespa nominal avg (future: real API)
-            ["IFIX"]      = 11.0m,  // FII index estimate (future: real API)
-            ["SP500_BRL"] = 18.0m,  // S&P500 in BRL estimate (future: real API)
+            ["IBOVESPA"]  = 13.0m,
+            ["IFIX"]      = 11.0m,
+            ["SP500_BRL"] = 18.0m,
         };
 
-        public SimulationService(IHttpClientFactory httpClientFactory, IMemoryCache cache)
+        public SimulationService(IHttpClientFactory httpClientFactory, IMemoryCache cache, IOptions<BrapiSettings> brapiSettings)
         {
             _httpClientFactory = httpClientFactory;
             _cache = cache;
+            _brapiSettings = brapiSettings.Value;
         }
 
         public async Task<BenchmarkRatesDto> GetBenchmarkRatesAsync()
@@ -76,7 +89,9 @@ namespace FinanceControl.Services.Services
             long initialAmount)
         {
             var monthly = await GetMonthlyReturnsForBenchmarkAsync(benchmark, startDate, endDate);
-            bool isPartial = monthly.Count == 0;
+            bool isEquityBenchmark = benchmark is "IBOVESPA" or "IFIX" or "SP500_BRL";
+            bool brapiDataEmpty = isEquityBenchmark && monthly.Count == 0;
+            bool isPartial = !isEquityBenchmark && monthly.Count == 0;
 
             var points = new List<HistoricalSimulationPointDto>();
             long value    = initialAmount;
@@ -120,7 +135,7 @@ namespace FinanceControl.Services.Services
                     (decimal)(Math.Pow(ratio, 12.0 / months) - 1) * 100, 2);
             }
 
-            string? note = GetDataNote(benchmark, isPartial);
+            string? note = GetDataNote(benchmark, isPartial, brapiDataEmpty);
 
             return new HistoricalSimulationDto
             {
@@ -132,28 +147,201 @@ namespace FinanceControl.Services.Services
                 TotalReturnPct       = totalReturnPct,
                 AnnualizedReturnPct  = annualizedReturnPct,
                 Points               = points,
-                IsPartialData        = isPartial || IsStubBenchmark(benchmark),
+                IsPartialData        = isPartial || IsStubBenchmark(benchmark, brapiDataEmpty),
                 DataNote             = note,
             };
         }
 
         // Returns the appropriate monthly series for the requested benchmark.
-        // CDI and SELIC come from BACEN with real data.
-        // IPCA+X is BACEN IPCA + fixed real spread.
-        // Equity indices (Ibovespa, IFIX, S&P500) use historical averages until a market data API is integrated.
+        // CDI/SELIC/IPCA+X: BACEN (free, long history). Equity indices: Brapi Pro.
         private async Task<Dictionary<string, decimal>> GetMonthlyReturnsForBenchmarkAsync(
             string benchmark, DateOnly from, DateOnly to)
         {
             return benchmark switch
             {
-                "CDI"       => await FetchBacenMonthlyDecimalAsync(SgsCdi, from, to),
-                "SELIC"     => await FetchBacenMonthlyDecimalAsync(SgsSelic, from, to),
-                "IPCA+6"    => await BuildIpcaPlusAsync(from, to, 6m),
-                "IPCA+5"    => await BuildIpcaPlusAsync(from, to, 5m),
-                "IPCA+4"    => await BuildIpcaPlusAsync(from, to, 4m),
-                // Equity stubs: return empty so the caller uses fallback monthly rate
-                _           => [],
+                "CDI"      => await FetchBacenMonthlyDecimalAsync(SgsCdi, from, to),
+                "SELIC"    => await FetchBacenMonthlyDecimalAsync(SgsSelic, from, to),
+                "IPCA+6"   => await BuildIpcaPlusAsync(from, to, 6m),
+                "IPCA+5"   => await BuildIpcaPlusAsync(from, to, 5m),
+                "IPCA+4"   => await BuildIpcaPlusAsync(from, to, 4m),
+                "IBOVESPA" or "IFIX" or "SP500_BRL"
+                           => await GetMonthlyReturnsFromBrapiAsync(benchmark, from, to),
+                _          => [],
             };
+        }
+
+        public async Task<List<AssetRateDto>> GetAssetRatesAsync(IEnumerable<string> tickers)
+        {
+            var results = new List<AssetRateDto>();
+
+            foreach (var ticker in tickers)
+            {
+                var rate = await GetCagrForTickerAsync(ticker);
+                results.Add(rate);
+            }
+
+            return results;
+        }
+
+        // Fetches up to 10 years of monthly closing prices for a ticker and computes
+        // the annualised CAGR (price return only, dividends not included).
+        private async Task<AssetRateDto> GetCagrForTickerAsync(string ticker)
+        {
+            if (string.IsNullOrEmpty(_brapiSettings.Token))
+                return new AssetRateDto { Ticker = ticker, IsReal = false, RateSource = "Sem token Brapi" };
+
+            var cacheKey = $"brapi_cagr_{ticker}";
+            if (_cache.TryGetValue(cacheKey, out AssetRateDto? cached) && cached is not null)
+                return cached;
+
+            try
+            {
+                using var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(10);
+
+                var url = $"https://brapi.dev/api/quote/{Uri.EscapeDataString(ticker)}?range=10y&interval=1mo&token={_brapiSettings.Token}";
+                var json = await client.GetStringAsync(url);
+                var doc = JsonDocument.Parse(json);
+
+                if (!doc.RootElement.TryGetProperty("results", out var results) ||
+                    results.GetArrayLength() == 0)
+                    return new AssetRateDto { Ticker = ticker, IsReal = false, RateSource = "Sem dados Brapi" };
+
+                var firstResult = results[0];
+                if (!firstResult.TryGetProperty("historicalDataPrice", out var history))
+                    return new AssetRateDto { Ticker = ticker, IsReal = false, RateSource = "Sem histórico Brapi" };
+
+                var points = new List<(DateOnly Date, decimal Close)>();
+                foreach (var point in history.EnumerateArray())
+                {
+                    if (!point.TryGetProperty("date", out var dateProp)) continue;
+                    if (!point.TryGetProperty("close", out var closeProp)) continue;
+                    if (closeProp.ValueKind == JsonValueKind.Null) continue;
+
+                    var date = DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(dateProp.GetInt64()).UtcDateTime);
+                    points.Add((date, closeProp.GetDecimal()));
+                }
+
+                if (points.Count < 2)
+                    return new AssetRateDto { Ticker = ticker, IsReal = false, RateSource = "Dados insuficientes" };
+
+                points.Sort((a, b) => a.Date.CompareTo(b.Date));
+
+                var first = points[0];
+                var last  = points[^1];
+
+                if (first.Close <= 0)
+                    return new AssetRateDto { Ticker = ticker, IsReal = false, RateSource = "Preço inicial inválido" };
+
+                var years = (last.Date.Year - first.Date.Year) + (last.Date.Month - first.Date.Month) / 12.0;
+                if (years <= 0)
+                    return new AssetRateDto { Ticker = ticker, IsReal = false, RateSource = "Período inválido" };
+
+                var cagr = (Math.Pow((double)(last.Close / first.Close), 1.0 / years) - 1) * 100;
+
+                var dto = new AssetRateDto
+                {
+                    Ticker          = ticker,
+                    AnnualReturnPct = Math.Round(cagr, 2),
+                    YearsOfData     = (int)Math.Floor(years),
+                    IsReal          = true,
+                    RateSource      = $"CAGR {(int)Math.Floor(years)}a (Brapi, somente preço)",
+                };
+
+                _cache.Set(cacheKey, dto, TimeSpan.FromHours(12));
+                return dto;
+            }
+            catch
+            {
+                return new AssetRateDto { Ticker = ticker, IsReal = false, RateSource = "Erro ao buscar Brapi" };
+            }
+        }
+
+        // Fetches monthly closing prices from Brapi for an equity index benchmark and
+        // converts them to a month-by-month return series. Uses interval=1mo so each
+        // data point is already one calendar month — no aggregation needed.
+        private async Task<Dictionary<string, decimal>> GetMonthlyReturnsFromBrapiAsync(
+            string benchmark, DateOnly from, DateOnly to)
+        {
+            if (!BrapiIndexSymbols.TryGetValue(benchmark, out var symbol))
+                return [];
+
+            if (string.IsNullOrEmpty(_brapiSettings.Token))
+                return [];
+
+            // Determine the range parameter that covers from→to.
+            var months = (to.Year - from.Year) * 12 + (to.Month - from.Month);
+            var range = months switch
+            {
+                <= 1   => "1mo",
+                <= 3   => "3mo",
+                <= 6   => "6mo",
+                <= 12  => "1y",
+                <= 24  => "2y",
+                <= 60  => "5y",
+                <= 120 => "10y",
+                _      => "max",
+            };
+
+            var cacheKey = $"brapi_index_{symbol}_{range}";
+            if (_cache.TryGetValue(cacheKey, out Dictionary<string, decimal>? cached) && cached is not null)
+                return cached;
+
+            try
+            {
+                using var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(10);
+
+                // Encode symbol — index tickers like ^BVSP contain reserved chars
+                var url = $"https://brapi.dev/api/quote/{Uri.EscapeDataString(symbol)}?range={range}&interval=1mo&token={_brapiSettings.Token}";
+                var json = await client.GetStringAsync(url);
+                var doc = JsonDocument.Parse(json);
+
+                if (!doc.RootElement.TryGetProperty("results", out var results) ||
+                    results.GetArrayLength() == 0)
+                    return [];
+
+                var firstResult = results[0];
+                if (!firstResult.TryGetProperty("historicalDataPrice", out var history))
+                    return [];
+
+                // Build list of (date, close) sorted ascending.
+                var points = new List<(DateOnly Date, decimal Close)>();
+                foreach (var point in history.EnumerateArray())
+                {
+                    if (!point.TryGetProperty("date", out var dateProp)) continue;
+                    if (!point.TryGetProperty("close", out var closeProp)) continue;
+                    if (closeProp.ValueKind == JsonValueKind.Null) continue;
+
+                    var unixSeconds = dateProp.GetInt64();
+                    var date = DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime);
+                    var close = closeProp.GetDecimal();
+                    points.Add((date, close));
+                }
+
+                points.Sort((a, b) => a.Date.CompareTo(b.Date));
+
+                // Filter to the requested date range.
+                points = points.Where(p => p.Date >= from && p.Date <= to).ToList();
+
+                // Derive month-over-month return % from consecutive closing prices.
+                var returns = new Dictionary<string, decimal>();
+                for (int i = 1; i < points.Count; i++)
+                {
+                    var prev = points[i - 1].Close;
+                    if (prev == 0) continue;
+                    var curr = points[i].Close;
+                    var key = $"{points[i].Date.Year:D4}-{points[i].Date.Month:D2}";
+                    returns[key] = Math.Round((curr / prev - 1) * 100, 6);
+                }
+
+                _cache.Set(cacheKey, returns, TimeSpan.FromHours(12));
+                return returns;
+            }
+            catch
+            {
+                return [];
+            }
         }
 
         // Converts annual real spread to monthly and adds to IPCA monthly series
@@ -174,16 +362,16 @@ namespace FinanceControl.Services.Services
             return Math.Round((decimal)(Math.Pow(1 + (double)annual / 100, 1.0 / 12) - 1) * 100, 6);
         }
 
-        private static bool IsStubBenchmark(string benchmark) =>
-            benchmark is "IBOVESPA" or "IFIX" or "SP500_BRL";
+        private static bool IsStubBenchmark(string benchmark, bool brapiDataEmpty) =>
+            benchmark is "IBOVESPA" or "IFIX" or "SP500_BRL" && brapiDataEmpty;
 
-        private static string? GetDataNote(string benchmark, bool noData) => benchmark switch
+        private static string? GetDataNote(string benchmark, bool noData, bool brapiDataEmpty) => benchmark switch
         {
-            "IBOVESPA"  => "Dados simulados com base na média histórica do Ibovespa. A integração com dados reais será implementada em breve.",
-            "IFIX"      => "Dados simulados com base na média histórica do IFIX. A integração com dados reais será implementada em breve.",
-            "SP500_BRL" => "Dados simulados com base na média histórica do S&P 500 convertida para BRL. A integração com dados reais será implementada em breve.",
+            "IBOVESPA" when brapiDataEmpty  => "Dados simulados com base na média histórica do Ibovespa. Ative o plano Pro da Brapi para dados reais.",
+            "IFIX"     when brapiDataEmpty  => "Dados simulados com base na média histórica do IFIX. Ative o plano Pro da Brapi para dados reais.",
+            "SP500_BRL" when brapiDataEmpty => "Dados simulados com base na média histórica do S&P 500 em BRL. Ative o plano Pro da Brapi para dados reais.",
             _ when noData => "Não foi possível obter dados históricos reais. Usando estimativa baseada em média histórica.",
-            _           => null,
+            _             => null,
         };
 
         // Fetches BACEN SGS monthly series and returns values as double (for backward compat)

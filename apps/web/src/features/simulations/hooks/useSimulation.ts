@@ -13,3 +13,15 @@ export const useHistoricalSimulation = () =>
   useMutation({
     mutationFn: simulationApi.getHistoricalSimulation,
   });
+
+// Fetches real CAGR data from Brapi for all preset assets that have a ticker.
+// Results are cached for 12h (matches backend cache). Falls back gracefully when
+// the Pro token is not configured — isReal=false items keep the stub rate.
+export const useAssetRates = (tickers: string[]) =>
+  useQuery({
+    queryKey: ["simulation", "asset-rates", tickers.slice().sort().join(",")],
+    queryFn: () => simulationApi.getAssetRates(tickers),
+    staleTime: 12 * 60 * 60 * 1000, // 12h
+    retry: 1,
+    enabled: tickers.length > 0,
+  });

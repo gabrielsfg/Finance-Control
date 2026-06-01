@@ -8,5 +8,6 @@ namespace FinanceControl.Services.Brapi
         public int TimeoutSeconds { get; set; } = 30;
         public int RetryDelayMinutes { get; set; } = 3;
         public int TargetHourUtc { get; set; } = 22;
+    public string BackfillRange { get; set; } = "max";
     }
 }

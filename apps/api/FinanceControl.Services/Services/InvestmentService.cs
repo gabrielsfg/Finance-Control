@@ -55,8 +55,9 @@ namespace FinanceControl.Services.Services
             await using var context = _contextFactory.CreateDbContext();
 
             var investments = await context.Investments
+                .Include(i => i.MarketAsset)
                 .Where(i => i.UserId == userId && i.CurrentQuantity > 0)
-                .OrderBy(i => i.Ticker)
+                .OrderBy(i => i.MarketAsset.Ticker)
                 .ToListAsync();
 
             return BuildPortfolio(investments);
@@ -67,6 +68,7 @@ namespace FinanceControl.Services.Services
             await using var context = _contextFactory.CreateDbContext();
 
             var investment = await context.Investments
+                .Include(i => i.MarketAsset)
                 .FirstOrDefaultAsync(i => i.Id == id && i.UserId == userId)
                 ?? throw new KeyNotFoundException($"Investment {id} not found.");
 
@@ -78,15 +80,15 @@ namespace FinanceControl.Services.Services
             await using var context = _contextFactory.CreateDbContext();
 
             return await context.InvestmentTransactions
-                .Include(t => t.Investment)
+                .Include(t => t.Investment).ThenInclude(i => i.MarketAsset)
                 .Where(t => t.InvestmentId == investmentId && t.UserId == userId)
                 .OrderByDescending(t => t.Date)
                 .Select(t => new InvestmentTransactionDto
                 {
                     Id           = t.Id,
                     InvestmentId = t.InvestmentId,
-                    Ticker       = t.Investment.Ticker,
-                    Name         = t.Investment.Name,
+                    Ticker       = t.Investment.MarketAsset.Ticker,
+                    Name         = t.Investment.MarketAsset.Name,
                     Operation    = t.Operation,
                     Date         = t.Date,
                     Quantity     = t.Quantity,
@@ -102,14 +104,14 @@ namespace FinanceControl.Services.Services
             await using var context = _contextFactory.CreateDbContext();
 
             return await context.InvestmentDividends
-                .Include(d => d.Investment)
+                .Include(d => d.Investment).ThenInclude(i => i.MarketAsset)
                 .Where(d => d.InvestmentId == investmentId && d.UserId == userId)
                 .OrderByDescending(d => d.PaymentDate)
                 .Select(d => new InvestmentDividendDto
                 {
                     Id            = d.Id,
                     InvestmentId  = d.InvestmentId,
-                    Ticker        = d.Investment.Ticker,
+                    Ticker        = d.Investment.MarketAsset.Ticker,
                     PaymentDate   = d.PaymentDate,
                     LastDatePrior = d.LastDatePrior,
                     Amount        = d.Amount,
@@ -122,14 +124,16 @@ namespace FinanceControl.Services.Services
         {
             await using var context = _contextFactory.CreateDbContext();
 
-            var exists = await context.Investments
-                .AnyAsync(i => i.Id == investmentId && i.UserId == userId);
+            var marketAssetId = await context.Investments
+                .Where(i => i.Id == investmentId && i.UserId == userId)
+                .Select(i => (int?)i.MarketAssetId)
+                .FirstOrDefaultAsync();
 
-            if (!exists)
+            if (marketAssetId is null)
                 throw new KeyNotFoundException($"Investment {investmentId} not found.");
 
-            return await context.InvestmentPriceHistories
-                .Where(h => h.InvestmentId == investmentId)
+            return await context.MarketPriceHistories
+                .Where(h => h.MarketAssetId == marketAssetId.Value)
                 .OrderBy(h => h.Date)
                 .Select(h => new InvestmentPriceHistoryDto
                 {
@@ -144,10 +148,34 @@ namespace FinanceControl.Services.Services
             await using var context = _contextFactory.CreateDbContext();
 
             var totalValue = (long)Math.Round(dto.Quantity * dto.UnitPrice) + dto.OtherCosts;
+            var ticker = dto.Ticker.ToUpperInvariant();
 
-            // Find existing position for this ticker or create a new one
+            // Find or create the GLOBAL market asset (shared across all users)
+            var asset = await context.MarketAssets
+                .FirstOrDefaultAsync(a => a.Ticker == ticker);
+
+            if (asset is null)
+            {
+                asset = new MarketAsset
+                {
+                    Ticker       = ticker,
+                    Name         = dto.Name,
+                    AssetType    = dto.AssetType,
+                    CurrentPrice = dto.UnitPrice,
+                };
+                context.MarketAssets.Add(asset);
+                await context.SaveChangesAsync();
+            }
+            else if (asset.LastPriceUpdate is null)
+            {
+                // No market price yet (job never ran for it) — use the latest trade price as a best guess.
+                asset.CurrentPrice = dto.UnitPrice;
+            }
+
+            // Find the user's existing position for this asset or create a new one
             var investment = await context.Investments
-                .FirstOrDefaultAsync(i => i.UserId == userId && i.Ticker == dto.Ticker.ToUpperInvariant());
+                .Include(i => i.MarketAsset)
+                .FirstOrDefaultAsync(i => i.UserId == userId && i.MarketAssetId == asset.Id);
 
             if (investment is null)
             {
@@ -157,14 +185,12 @@ namespace FinanceControl.Services.Services
                 investment = new Investment
                 {
                     UserId          = userId,
-                    Ticker          = dto.Ticker.ToUpperInvariant(),
-                    Name            = dto.Name,
-                    AssetType       = dto.AssetType,
+                    MarketAssetId   = asset.Id,
                     Broker          = dto.Broker,
                     CurrentQuantity = 0,
                     AveragePrice    = 0,
-                    CurrentPrice    = dto.UnitPrice,
                     AccountId       = dto.AccountId,
+                    MarketAsset     = asset,
                 };
                 context.Investments.Add(investment);
                 await context.SaveChangesAsync();
@@ -180,8 +206,8 @@ namespace FinanceControl.Services.Services
                                     ? EnumTransactionType.Expense
                                     : EnumTransactionType.Income,
                 Description   = dto.Operation == EnumInvestmentOperation.Buy
-                                    ? $"Compra: {investment.Ticker}"
-                                    : $"Venda: {investment.Ticker}",
+                                    ? $"Compra: {asset.Ticker}"
+                                    : $"Venda: {asset.Ticker}",
                 TransactionDate = dto.Date,
                 PaymentType   = EnumPaymentType.OneTime,
                 SubCategoryId = await GetInvestmentSubCategoryIdAsync(context, userId),
@@ -214,7 +240,6 @@ namespace FinanceControl.Services.Services
                 var newTotalQty = investment.CurrentQuantity + dto.Quantity;
                 investment.AveragePrice    = newTotalQty > 0 ? (long)Math.Round(newTotalCost / newTotalQty) : 0;
                 investment.CurrentQuantity = newTotalQty;
-                investment.CurrentPrice    = dto.UnitPrice;
             }
             else
             {
@@ -286,6 +311,7 @@ namespace FinanceControl.Services.Services
             await using var context = _contextFactory.CreateDbContext();
 
             var investment = await context.Investments
+                .Include(i => i.MarketAsset)
                 .FirstOrDefaultAsync(i => i.Id == dto.InvestmentId && i.UserId == userId)
                 ?? throw new KeyNotFoundException($"Investment {dto.InvestmentId} not found.");
 
@@ -298,7 +324,7 @@ namespace FinanceControl.Services.Services
                 AccountId       = dto.AccountId,
                 Value           = (int)Math.Min(dto.Amount, int.MaxValue),
                 Type            = EnumTransactionType.Income,
-                Description     = $"Dividendo: {investment.Ticker}",
+                Description     = $"Dividendo: {investment.MarketAsset.Ticker}",
                 TransactionDate = transactionDate,
                 PaymentType     = EnumPaymentType.OneTime,
                 SubCategoryId   = await GetDividendSubCategoryIdAsync(context, userId),
@@ -327,11 +353,13 @@ namespace FinanceControl.Services.Services
             await using var context = _contextFactory.CreateDbContext();
 
             var investment = await context.Investments
+                .Include(i => i.MarketAsset)
                 .FirstOrDefaultAsync(i => i.Id == investmentId && i.UserId == userId)
                 ?? throw new KeyNotFoundException($"Investment {investmentId} not found.");
 
-            investment.CurrentPrice    = dto.CurrentPrice;
-            investment.LastPriceUpdate = DateTime.UtcNow;
+            // Manual price update applies to the shared market asset.
+            investment.MarketAsset.CurrentPrice    = dto.CurrentPrice;
+            investment.MarketAsset.LastPriceUpdate = DateTime.UtcNow;
 
             await context.SaveChangesAsync();
 
@@ -342,7 +370,8 @@ namespace FinanceControl.Services.Services
 
         private static InvestmentDto MapToDto(Investment i)
         {
-            var currentValue  = (long)Math.Round(i.CurrentQuantity * i.CurrentPrice);
+            var asset         = i.MarketAsset;
+            var currentValue  = (long)Math.Round(i.CurrentQuantity * asset.CurrentPrice);
             var totalInvested = (long)Math.Round(i.CurrentQuantity * i.AveragePrice);
             var totalReturn   = currentValue - totalInvested;
             var returnPct     = totalInvested > 0
@@ -352,24 +381,24 @@ namespace FinanceControl.Services.Services
             return new InvestmentDto
             {
                 Id                = i.Id,
-                Ticker            = i.Ticker,
-                Name              = i.Name,
-                AssetType         = i.AssetType,
-                AssetClass        = AssetTypeLabels.GetValueOrDefault(i.AssetType, "Outro"),
+                Ticker            = asset.Ticker,
+                Name              = asset.Name,
+                AssetType         = asset.AssetType,
+                AssetClass        = AssetTypeLabels.GetValueOrDefault(asset.AssetType, "Outro"),
                 Broker            = i.Broker,
                 CurrentQuantity   = i.CurrentQuantity,
                 AveragePrice      = i.AveragePrice,
-                CurrentPrice      = i.CurrentPrice,
+                CurrentPrice      = asset.CurrentPrice,
                 CurrentValue      = currentValue,
                 TotalInvested     = totalInvested,
                 TotalReturn       = totalReturn,
                 TotalReturnPercent = returnPct,
-                LastPriceUpdate   = i.LastPriceUpdate,
+                LastPriceUpdate   = asset.LastPriceUpdate,
                 MaturityDate      = i.MaturityDate,
                 ExpectedYieldPct  = i.ExpectedYieldPct,
                 AccountId         = i.AccountId,
-                LogoUrl           = i.LogoUrl,
-                Currency          = i.Currency,
+                LogoUrl           = asset.LogoUrl,
+                Currency          = asset.Currency,
             };
         }
 
@@ -417,8 +446,9 @@ namespace FinanceControl.Services.Services
         private static async Task<InvestmentPortfolioDto> BuildPortfolioFromDbAsync(ApplicationDbContext context, int userId)
         {
             var investments = await context.Investments
+                .Include(i => i.MarketAsset)
                 .Where(i => i.UserId == userId && i.CurrentQuantity > 0)
-                .OrderBy(i => i.Ticker)
+                .OrderBy(i => i.MarketAsset.Ticker)
                 .ToListAsync();
 
             return BuildPortfolio(investments);

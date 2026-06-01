@@ -1019,7 +1019,7 @@ namespace FinanceControl.Services.Services
                 .Select(it => new
                 {
                     it.Date,
-                    AssetType = it.Investment.AssetType,
+                    AssetType = it.Investment.MarketAsset.AssetType,
                     SignedValue = it.Operation == EnumInvestmentOperation.Buy ? it.TotalValue : -it.TotalValue
                 })
                 .ToListAsync();
@@ -1291,11 +1291,12 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
 
             // Current portfolio value per investment (to distribute across months proportionally — simplified: use current prices)
-            var investments = await context.Investments
+            var investmentValues = await context.Investments
                 .Where(i => i.UserId == userId)
+                .Select(i => new { i.CurrentQuantity, i.MarketAsset.CurrentPrice })
                 .ToListAsync();
 
-            var totalCurrentValue = investments.Sum(i => (long)Math.Round(i.CurrentQuantity * i.CurrentPrice));
+            var totalCurrentValue = investmentValues.Sum(i => (long)Math.Round(i.CurrentQuantity * i.CurrentPrice));
 
             // Build month-by-month series
             var months = new List<(int Year, int Month)>();
@@ -1359,7 +1360,7 @@ namespace FinanceControl.Services.Services
 
             var transactions = await context.InvestmentTransactions
                 .Where(t => t.UserId == userId && t.Date >= startDate && t.Date <= finishDate)
-                .Include(t => t.Investment)
+                .Include(t => t.Investment).ThenInclude(i => i.MarketAsset)
                 .OrderByDescending(t => t.Date)
                 .ToListAsync();
 
@@ -1376,9 +1377,9 @@ namespace FinanceControl.Services.Services
             {
                 Id         = t.Id,
                 Date       = t.Date.ToString("yyyy-MM-dd"),
-                Ticker     = t.Investment.Ticker,
-                Name       = t.Investment.Name,
-                AssetClass = assetTypeLabels.GetValueOrDefault(t.Investment.AssetType, "Outro"),
+                Ticker     = t.Investment.MarketAsset.Ticker,
+                Name       = t.Investment.MarketAsset.Name,
+                AssetClass = assetTypeLabels.GetValueOrDefault(t.Investment.MarketAsset.AssetType, "Outro"),
                 Operation  = t.Operation == EnumInvestmentOperation.Buy ? "buy" : "sell",
                 Quantity   = t.Quantity,
                 UnitPrice  = t.UnitPrice,
@@ -1440,7 +1441,10 @@ namespace FinanceControl.Services.Services
                 var netFlow = invested - sold;
                 var cdiForPeriod = await FetchCdiAsync(from, to);
                 // Return estimate: dividends + (current value proportional to net flow)
-                var investments = await context.Investments.Where(i => i.UserId == userId).ToListAsync();
+                var investments = await context.Investments
+                    .Where(i => i.UserId == userId)
+                    .Select(i => new { i.CurrentQuantity, i.MarketAsset.CurrentPrice, i.AveragePrice })
+                    .ToListAsync();
                 var currentValue = investments.Sum(i => (long)Math.Round(i.CurrentQuantity * i.CurrentPrice));
                 var totalInvested = investments.Sum(i => (long)Math.Round(i.CurrentQuantity * i.AveragePrice));
                 var totalReturn = currentValue - totalInvested;

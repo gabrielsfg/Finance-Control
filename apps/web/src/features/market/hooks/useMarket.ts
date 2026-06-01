@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { marketApi } from "@/lib/api/market";
-import type { MarketAsset, MarketAssetDetail } from "@/lib/types/market.types";
+import type { MarketAsset, MarketAssetDetail, Fundamentals } from "@/lib/types/market.types";
+
+export const useMarketList = (params: { type?: string; sort?: string; limit?: number }) =>
+  useQuery<MarketAsset[]>({
+    queryKey: ["market", "list", params.type ?? "all", params.sort ?? "change_desc", params.limit ?? 20],
+    queryFn: () => marketApi.list(params),
+    staleTime: 5 * 60_000,
+  });
 
 export const useMarketSearch = (q: string) =>
   useQuery<MarketAsset[]>({
@@ -16,4 +23,13 @@ export const useMarketAssetDetail = (ticker: string) =>
     queryFn: () => marketApi.getDetail(ticker),
     enabled: ticker.length > 0,
     staleTime: 60_000,
+  });
+
+export const useFundamentals = (ticker: string | null) =>
+  useQuery<Fundamentals>({
+    queryKey: ["market", "fundamentals", ticker],
+    queryFn: () => marketApi.getFundamentals(ticker!),
+    enabled: !!ticker,
+    staleTime: 6 * 60 * 60 * 1000, // 6h — matches backend cache
+    retry: 1,
   });

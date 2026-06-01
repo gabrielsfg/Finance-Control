@@ -82,7 +82,7 @@ namespace FinanceControl.Services.Services
 
             var allInvestments = await context.Investments
                 .Where(i => i.UserId == userId && i.CurrentQuantity > 0)
-                .Select(i => new { i.AssetType, i.Ticker, i.CurrentQuantity, i.CurrentPrice })
+                .Select(i => new { i.MarketAsset.AssetType, i.MarketAsset.Ticker, i.CurrentQuantity, i.MarketAsset.CurrentPrice })
                 .ToListAsync();
 
             var updatedGoals = new List<Goal>();
@@ -451,19 +451,19 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.UserId == userId);
 
             if (goal.TargetTicker is not null)
-                query = query.Where(t => t.Investment.Ticker == goal.TargetTicker);
+                query = query.Where(t => t.Investment.MarketAsset.Ticker == goal.TargetTicker);
             else if (goal.TargetAssetType.HasValue)
-                query = query.Where(t => t.Investment.AssetType == goal.TargetAssetType.Value);
+                query = query.Where(t => t.Investment.MarketAsset.AssetType == goal.TargetAssetType.Value);
 
             var txs = await query
-                .Include(t => t.Investment)
+                .Include(t => t.Investment).ThenInclude(i => i.MarketAsset)
                 .OrderByDescending(t => t.Date)
                 .Select(t => new InvestmentTransactionDto
                 {
                     Id           = t.Id,
                     InvestmentId = t.InvestmentId,
-                    Ticker       = t.Investment.Ticker,
-                    Name         = t.Investment.Name,
+                    Ticker       = t.Investment.MarketAsset.Ticker,
+                    Name         = t.Investment.MarketAsset.Name,
                     Operation    = t.Operation,
                     Date         = t.Date,
                     Quantity     = t.Quantity,
@@ -526,11 +526,11 @@ namespace FinanceControl.Services.Services
             ApplicationDbContext context, int userId, EnumAssetType? assetType, string? ticker)
         {
             var query = context.Investments.Where(i => i.UserId == userId && i.CurrentQuantity > 0);
-            if (ticker is not null)          query = query.Where(i => i.Ticker == ticker);
-            else if (assetType.HasValue)     query = query.Where(i => i.AssetType == assetType.Value);
+            if (ticker is not null)          query = query.Where(i => i.MarketAsset.Ticker == ticker);
+            else if (assetType.HasValue)     query = query.Where(i => i.MarketAsset.AssetType == assetType.Value);
 
             var investments = await query
-                .Select(i => new { i.CurrentQuantity, i.CurrentPrice })
+                .Select(i => new { i.CurrentQuantity, i.MarketAsset.CurrentPrice })
                 .ToListAsync();
 
             return (long)investments.Sum(i => Math.Round(i.CurrentQuantity * i.CurrentPrice));

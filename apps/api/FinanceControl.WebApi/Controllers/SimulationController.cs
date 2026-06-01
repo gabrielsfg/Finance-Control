@@ -24,6 +24,21 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("asset-rates")]
+        public async Task<IActionResult> GetAssetRatesAsync([FromQuery] string tickers)
+        {
+            if (string.IsNullOrWhiteSpace(tickers))
+                return BadRequest(new { error = "O parâmetro 'tickers' é obrigatório." });
+
+            var tickerList = tickers
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Take(30)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            var result = await _simulationService.GetAssetRatesAsync(tickerList);
+            return Ok(result);
+        }
+
         [HttpGet("historical")]
         public async Task<IActionResult> GetHistoricalSimulationAsync(
             [FromQuery] string benchmark,
