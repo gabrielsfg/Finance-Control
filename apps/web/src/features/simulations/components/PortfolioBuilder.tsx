@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { ChevronDown, Check, Search, Plus, Trash2, Scale, AlertCircle } from "lucide-react";
+import { ChevronDown, Check, Search, Plus, Trash2, Scale, AlertCircle, History } from "lucide-react";
 import { cn, matchesSearch, assetTypeKeywords } from "@/lib/utils";
 import type { AvailableBenchmark } from "@/lib/api/simulation";
 import type { AssetCategory, PortfolioAsset } from "@/lib/types/simulation";
@@ -209,12 +209,14 @@ export function PortfolioBuilder({
   mode,
   availableBenchmarks,
   loadingBenchmarks,
+  suggestedPeriod,
 }: {
   assets: PortfolioAsset[];
   onChange: (assets: PortfolioAsset[]) => void;
   mode: "backtest" | "projection";
   availableBenchmarks: AvailableBenchmark[];
   loadingBenchmarks: boolean;
+  suggestedPeriod?: string | null;
 }) {
   const options = useMemo<AssetOption[]>(() => {
     const fixed: AssetOption[] = FIXED_BENCHMARKS.map(b => ({ ticker: b, name: BENCHMARK_LABELS[b], fixed: true }));
@@ -289,16 +291,27 @@ export function PortfolioBuilder({
           )}
 
           {mode === "projection" && (
-            <input
-              className={cn(inputCls, "text-right tabular-nums")}
-              value={a.annualRatePct ?? ""}
-              onChange={(e) => {
-                const v = e.target.value.replace(",", ".");
-                update(a.id, { annualRatePct: v === "" ? undefined : parseFloat(v) });
-              }}
-              placeholder="12"
-              inputMode="decimal"
-            />
+            <div className="relative">
+              <input
+                className={cn(inputCls, "text-right tabular-nums pr-3")}
+                value={a.annualRatePct ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value.replace(",", ".");
+                  update(a.id, { annualRatePct: v === "" ? undefined : parseFloat(v) });
+                }}
+                placeholder="12"
+                inputMode="decimal"
+              />
+              {suggestedPeriod && a.annualRatePct !== undefined && (
+                <div
+                  className="pointer-events-none absolute -top-2 -right-1 flex items-center gap-0.5 rounded-full bg-blue/15 px-1.5 py-0.5"
+                  title={`Taxa sugerida com base no histórico de ${suggestedPeriod}`}
+                >
+                  <History size={9} className="text-blue" />
+                  <span className="text-[9px] font-semibold text-blue">{suggestedPeriod}</span>
+                </div>
+              )}
+            </div>
           )}
 
           <input

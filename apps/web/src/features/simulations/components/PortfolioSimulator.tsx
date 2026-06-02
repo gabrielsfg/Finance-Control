@@ -8,7 +8,7 @@ import { SectionHeader } from "@/components/shared/SectionHeader";
 import { TabChips } from "@/components/shared/TabChips";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
-import { AlertCircle, Info, Play } from "lucide-react";
+import { AlertCircle, Info, Play, Sparkles } from "lucide-react";
 import { usePortfolioBacktest, useAvailableBenchmarks } from "../hooks/useSimulation";
 import { simulateMonthly } from "../utils/taxCalc";
 import type { PortfolioAsset } from "@/lib/types/simulation";
@@ -91,6 +91,7 @@ export const PortfolioSimulator = () => {
   const [assets, setAssets]               = useState<PortfolioAsset[]>(defaultAssets);
   const [initialAmount, setInitialAmount] = useState("10000");
   const [monthlyContrib, setMonthlyContrib] = useState("500");
+  const [suggestedPeriodLabel, setSuggestedPeriodLabel] = useState<string | null>(null);
 
   const { data: availableBenchmarks = [], isLoading: loadingBenchmarks } = useAvailableBenchmarks();
 
@@ -99,9 +100,15 @@ export const PortfolioSimulator = () => {
   const allHaveTicker = assets.every(a => !!a.ticker);
   const canRun = weightOk && allHaveTicker && assets.length >= MIN_ASSETS;
 
+  const handleAssetsChange = useCallback((next: PortfolioAsset[]) => {
+    setAssets(next);
+    // Clear suggestion badge when user edits assets manually
+    setSuggestedPeriodLabel(null);
+  }, []);
+
   return (
     <div className="flex flex-col gap-4">
-      <TabChips items={SUB_TABS} value={subTab} onChange={setSubTab} size="sm" />
+      <TabChips items={SUB_TABS} value={subTab} onChange={(v) => { setSubTab(v); setSuggestedPeriodLabel(null); }} size="sm" />
 
       {/* Montagem da carteira — compartilhada entre sub-abas */}
       <div className="border-border bg-surface rounded-xl border p-5">
@@ -114,10 +121,11 @@ export const PortfolioSimulator = () => {
         <div className="mt-4">
           <PortfolioBuilder
             assets={assets}
-            onChange={setAssets}
+            onChange={handleAssetsChange}
             mode={subTab}
             availableBenchmarks={availableBenchmarks}
             loadingBenchmarks={loadingBenchmarks}
+            suggestedPeriod={subTab === "projection" ? suggestedPeriodLabel : null}
           />
         </div>
       </div>
@@ -134,11 +142,14 @@ export const PortfolioSimulator = () => {
       ) : (
         <PortfolioProjection
           assets={assets}
+          onAssetsChange={(next) => { setAssets(next); }}
           initialAmount={initialAmount}
           monthlyContrib={monthlyContrib}
           setInitialAmount={setInitialAmount}
           setMonthlyContrib={setMonthlyContrib}
           canRun={canRun}
+          suggestedPeriodLabel={suggestedPeriodLabel}
+          onSuggestedPeriodChange={setSuggestedPeriodLabel}
         />
       )}
     </div>
@@ -427,21 +438,69 @@ function PortfolioBacktestTable({ points }: { points: { label: string; month: nu
   );
 }
 
+const SUGGESTION_PERIODS = [
+  { label: "1 ano",   months: 12  },
+  { label: "2 anos",  months: 24  },
+  { label: "5 anos",  months: 60  },
+  { label: "10 anos", months: 120 },
+] as const;
+
+type SuggestionPeriod = typeof SUGGESTION_PERIODS[number]["label"];
+
 // ---------------------------------------------------------------------------
 // Sub-aba 2 — Projeção futura (100% frontend, via simulateMonthly por ativo)
 // ---------------------------------------------------------------------------
 function PortfolioProjection({
-  assets, initialAmount, monthlyContrib, setInitialAmount, setMonthlyContrib, canRun,
+  assets, onAssetsChange, initialAmount, monthlyContrib, setInitialAmount, setMonthlyContrib, canRun,
+  suggestedPeriodLabel, onSuggestedPeriodChange,
 }: {
   assets: PortfolioAsset[];
+  onAssetsChange: (assets: PortfolioAsset[]) => void;
   initialAmount: string;
   monthlyContrib: string;
   setInitialAmount: (v: string) => void;
   setMonthlyContrib: (v: string) => void;
   canRun: boolean;
+  suggestedPeriodLabel: string | null;
+  onSuggestedPeriodChange: (label: string | null) => void;
 }) {
   const [presetMonths, setPresetMonths] = useState(120);
   const [customMonths, setCustomMonths] = useState("");
+  const [suggestionPeriod, setSuggestionPeriod] = useState<SuggestionPeriod>("5 anos");
+  const { mutate: runBacktest, isPending: isSuggesting } = usePortfolioBacktest();
+
+  const handleSuggestRates = useCallback(() => {
+    if (!canRun) return;
+    const sp = SUGGESTION_PERIODS.find(p => p.label === suggestionPeriod)!;
+    const initialCents = Math.round(parseFloat(initialAmount.replace(",", ".")) * 100) || 0;
+    const monthlyCents = Math.round(parseFloat(monthlyContrib.replace(",", ".")) * 100) || 0;
+    runBacktest(
+      {
+        assets: assets.map(a => ({ ticker: a.ticker, weightPct: a.weightPct })),
+        startDate: toDateOnly(monthsAgo(sp.months)),
+        endDate: toDateOnly(monthsAgo(1)),
+        initialAmount: initialCents,
+        monthlyContribution: monthlyCents,
+      },
+      {
+        onSuccess: (data) => {
+          const rateMap = new Map(data.assetReturns.map(r => [r.ticker.toUpperCase(), r.totalReturnPct]));
+          const months = sp.months;
+          onAssetsChange(
+            assets.map(a => {
+              const totalPct = rateMap.get(a.ticker.toUpperCase());
+              if (totalPct === undefined) return a;
+              // Convert cumulative total return to annualised CAGR
+              const years = months / 12;
+              const cagr = (Math.pow(1 + totalPct / 100, 1 / years) - 1) * 100;
+              return { ...a, annualRatePct: Math.round(cagr * 100) / 100 };
+            }),
+          );
+          onSuggestedPeriodChange(suggestionPeriod);
+        },
+      },
+    );
+  }, [canRun, suggestionPeriod, assets, initialAmount, monthlyContrib, onAssetsChange, onSuggestedPeriodChange, runBacktest]);
 
   const totalMonths = customMonths ? (parseInt(customMonths) || 0) : presetMonths;
   const useAnnual = totalMonths >= 36;
@@ -540,6 +599,55 @@ function PortfolioProjection({
                 ))}
               </div>
               <input className={cn(inputCls, "mt-2")} value={customMonths} onChange={(e) => setCustomMonths(e.target.value)} placeholder="Ou digite os meses (ex: 84)" inputMode="numeric" />
+            </div>
+
+            {/* Sugestão de taxa via histórico */}
+            <div className="rounded-lg border border-blue/20 bg-blue/5 p-3 flex flex-col gap-2.5">
+              <div className="flex items-center gap-1.5">
+                <Sparkles size={12} className="text-blue shrink-0" />
+                <span className="text-[12px] font-medium text-blue">Sugerir taxas pelo histórico</span>
+              </div>
+              <p className="text-[11px] text-text-muted leading-relaxed">
+                Roda o backtest da carteira atual e preenche o CAGR real de cada ativo como taxa de projeção.
+              </p>
+              <div>
+                <p className="text-[10px] text-text-muted mb-1.5 font-medium uppercase tracking-wider">Período de referência</p>
+                <div className="flex gap-1">
+                  {SUGGESTION_PERIODS.map((p) => (
+                    <button
+                      key={p.label}
+                      onClick={() => setSuggestionPeriod(p.label)}
+                      className={cn(
+                        "flex-1 rounded-lg border px-1 py-1 text-[10px] font-medium transition-colors whitespace-nowrap",
+                        suggestionPeriod === p.label
+                          ? "bg-blue/15 text-blue border-blue/30"
+                          : "text-text-muted border-border hover:text-text",
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={handleSuggestRates}
+                disabled={isSuggesting || !canRun}
+                title={!canRun ? "Verifique os ativos e pesos (soma 100%)" : undefined}
+                className={cn(
+                  "flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[12px] font-medium transition-colors",
+                  isSuggesting || !canRun
+                    ? "bg-blue/10 text-blue/40 cursor-not-allowed"
+                    : "bg-blue/15 text-blue hover:bg-blue/25",
+                )}
+              >
+                <Sparkles size={12} className={isSuggesting ? "animate-pulse" : ""} />
+                {isSuggesting ? "Buscando histórico..." : "Sugerir taxas"}
+              </button>
+              {suggestedPeriodLabel && !isSuggesting && (
+                <p className="text-[10px] text-blue/70 text-center">
+                  Taxas baseadas em {suggestedPeriodLabel} de histórico. Edite manualmente se preferir.
+                </p>
+              )}
             </div>
           </div>
         </div>
