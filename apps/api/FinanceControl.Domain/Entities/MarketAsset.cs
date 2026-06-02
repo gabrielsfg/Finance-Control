@@ -11,6 +11,7 @@ namespace FinanceControl.Domain.Entities
         public string Name { get; set; } = string.Empty;
         public EnumAssetType AssetType { get; set; }
         public long CurrentPrice { get; set; }
+        public long? PreviousClose { get; set; }
         public DateTime? LastPriceUpdate { get; set; }
         public string? LogoUrl { get; set; }
         public string Currency { get; set; } = "BRL";

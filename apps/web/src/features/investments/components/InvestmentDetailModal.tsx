@@ -7,6 +7,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { SectionHeader } from "@/components/shared/SectionHeader";
@@ -47,8 +49,9 @@ type Props = {
 };
 
 export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
-  const [subTab, setSubTab]               = useState<SubTab>("transactions");
+  const [subTab, setSubTab]                     = useState<SubTab>("transactions");
   const [showFundamentals, setShowFundamentals] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId]   = useState<number | null>(null);
   const transactions = useInvestmentTransactions(investment.id);
   const dividends    = useInvestmentDividends(investment.id);
   const deleteOp     = useDeleteTransaction();
@@ -56,11 +59,12 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
   const isPositive = investment.totalReturn >= 0;
   const hasFundamentals = FUNDAMENTAL_TYPES.has(investment.assetType);
 
-  const handleDelete = async (txId: number) => {
+  const handleConfirmDelete = async () => {
+    if (confirmDeleteId === null) return;
     try {
-      await deleteOp.mutateAsync(txId);
-    } catch {
-      // error handled silently — could add toast here
+      await deleteOp.mutateAsync(confirmDeleteId);
+    } finally {
+      setConfirmDeleteId(null);
     }
   };
 
@@ -152,7 +156,7 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
                     {isBuy ? "+" : "-"}{formatCurrency(tx.totalValue / 100)}
                   </p>
                   <button
-                    onClick={() => handleDelete(tx.id)}
+                    onClick={() => setConfirmDeleteId(tx.id)}
                     disabled={deleteOp.isPending}
                     title="Excluir operação"
                     className="text-text-muted hover:text-red ml-1 transition-colors"
@@ -214,6 +218,29 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
         assetName={investment.name}
         onClose={() => setShowFundamentals(false)}
       />
+
+      <Dialog open={confirmDeleteId !== null} onOpenChange={(o) => !o && setConfirmDeleteId(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-[16px]">Excluir operação</DialogTitle>
+            <DialogDescription className="text-text-sub text-[14px]">
+              Tem certeza que deseja excluir essa operação? Essa ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteOp.isPending}
+            >
+              {deleteOp.isPending ? <Loader2 size={14} className="animate-spin" /> : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

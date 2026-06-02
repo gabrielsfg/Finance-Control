@@ -363,7 +363,9 @@ namespace FinanceControl.Services.Brapi
                 if (asset is null) continue;
 
                 // One update to the shared market asset
-                asset.CurrentPrice = (long)Math.Round(result.RegularMarketPrice.Value * 100);
+                var newPrice = (long)Math.Round(result.RegularMarketPrice.Value * 100);
+                asset.PreviousClose = asset.CurrentPrice > 0 ? asset.CurrentPrice : null;
+                asset.CurrentPrice = newPrice;
                 asset.LastPriceUpdate = DateTime.UtcNow;
                 if (result.LogoUrl is not null) asset.LogoUrl = result.LogoUrl;
                 asset.Currency = result.Currency ?? "BRL";
@@ -434,7 +436,9 @@ namespace FinanceControl.Services.Brapi
                     .FirstOrDefaultAsync(a => a.Ticker == coin.Coin, cancellationToken);
                 if (asset is null) continue;
 
-                asset.CurrentPrice = (long)Math.Round(coin.RegularMarketPrice.Value * 100);
+                var newCoinPrice = (long)Math.Round(coin.RegularMarketPrice.Value * 100);
+                asset.PreviousClose = asset.CurrentPrice > 0 ? asset.CurrentPrice : null;
+                asset.CurrentPrice = newCoinPrice;
                 asset.LastPriceUpdate = DateTime.UtcNow;
                 if (coin.CoinImageUrl is not null) asset.LogoUrl = coin.CoinImageUrl;
                 asset.Currency = coin.Currency ?? "BRL";

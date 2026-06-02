@@ -378,27 +378,40 @@ namespace FinanceControl.Services.Services
                 ? Math.Round((decimal)totalReturn / totalInvested * 100, 2)
                 : 0m;
 
+            // Day change: currentPrice vs previousClose (per-unit), scaled to position size
+            long dayChangeAbs = 0;
+            decimal dayChangePct = 0m;
+            if (asset.PreviousClose is { } prevClose && prevClose > 0)
+            {
+                var unitChange = asset.CurrentPrice - prevClose;
+                dayChangeAbs = (long)Math.Round(i.CurrentQuantity * unitChange);
+                dayChangePct = Math.Round((decimal)unitChange / prevClose * 100, 2);
+            }
+
             return new InvestmentDto
             {
-                Id                = i.Id,
-                Ticker            = asset.Ticker,
-                Name              = asset.Name,
-                AssetType         = asset.AssetType,
-                AssetClass        = AssetTypeLabels.GetValueOrDefault(asset.AssetType, "Outro"),
-                Broker            = i.Broker,
-                CurrentQuantity   = i.CurrentQuantity,
-                AveragePrice      = i.AveragePrice,
-                CurrentPrice      = asset.CurrentPrice,
-                CurrentValue      = currentValue,
-                TotalInvested     = totalInvested,
-                TotalReturn       = totalReturn,
+                Id                 = i.Id,
+                Ticker             = asset.Ticker,
+                Name               = asset.Name,
+                AssetType          = asset.AssetType,
+                AssetClass         = AssetTypeLabels.GetValueOrDefault(asset.AssetType, "Outro"),
+                Broker             = i.Broker,
+                CurrentQuantity    = i.CurrentQuantity,
+                AveragePrice       = i.AveragePrice,
+                CurrentPrice       = asset.CurrentPrice,
+                CurrentValue       = currentValue,
+                TotalInvested      = totalInvested,
+                TotalReturn        = totalReturn,
                 TotalReturnPercent = returnPct,
-                LastPriceUpdate   = asset.LastPriceUpdate,
-                MaturityDate      = i.MaturityDate,
-                ExpectedYieldPct  = i.ExpectedYieldPct,
-                AccountId         = i.AccountId,
-                LogoUrl           = asset.LogoUrl,
-                Currency          = asset.Currency,
+                PreviousClose      = asset.PreviousClose,
+                DayChangeAbs       = dayChangeAbs,
+                DayChangePct       = dayChangePct,
+                LastPriceUpdate    = asset.LastPriceUpdate,
+                MaturityDate       = i.MaturityDate,
+                ExpectedYieldPct   = i.ExpectedYieldPct,
+                AccountId          = i.AccountId,
+                LogoUrl            = asset.LogoUrl,
+                Currency           = asset.Currency,
             };
         }
 
