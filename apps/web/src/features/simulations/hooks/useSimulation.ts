@@ -22,6 +22,11 @@ export const useHistoricalSimulation = () =>
     mutationFn: simulationApi.getHistoricalSimulation,
   });
 
+export const usePortfolioBacktest = () =>
+  useMutation({
+    mutationFn: simulationApi.portfolioBacktest,
+  });
+
 // Fetches real CAGR data from Brapi for all preset assets that have a ticker.
 // Results are cached for 12h (matches backend cache). Falls back gracefully when
 // the Pro token is not configured — isReal=false items keep the stub rate.

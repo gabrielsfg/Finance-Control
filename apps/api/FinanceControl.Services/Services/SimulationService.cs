@@ -1,6 +1,7 @@
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Brapi;
+using FinanceControl.Shared.Dtos.Request.Simulation;
 using FinanceControl.Shared.Dtos.Response.Simulation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -190,6 +191,174 @@ namespace FinanceControl.Services.Services
                 Points               = points,
                 IsPartialData        = isPartial || IsStubBenchmark(benchmark, brapiDataEmpty),
                 DataNote             = note,
+            };
+        }
+
+        // Simulates the historical performance of a multi-asset portfolio.
+        // For each asset we fetch the same monthly-return series used by the single-benchmark
+        // simulation, then apply the user-defined weights month by month (implicit monthly
+        // rebalancing). The simulated range is reduced to the months for which EVERY asset
+        // has data, so the portfolio return is always well defined.
+        public async Task<PortfolioBacktestDto> GetPortfolioBacktestAsync(
+            IReadOnlyList<PortfolioAssetInputDto> assets,
+            DateOnly startDate,
+            DateOnly endDate,
+            long monthlyContribution,
+            long initialAmount)
+        {
+            // Fetch the monthly-return series for each distinct ticker.
+            var seriesByTicker = new Dictionary<string, Dictionary<string, decimal>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var asset in assets)
+            {
+                if (seriesByTicker.ContainsKey(asset.Ticker)) continue;
+                seriesByTicker[asset.Ticker] = await GetMonthlyReturnsForBenchmarkAsync(asset.Ticker, startDate, endDate);
+            }
+
+            // Build the list of month keys requested by the caller.
+            var requestedKeys = new HashSet<string>();
+            var cursor = new DateOnly(startDate.Year, startDate.Month, 1);
+            var endMonth = new DateOnly(endDate.Year, endDate.Month, 1);
+            while (cursor <= endMonth)
+            {
+                requestedKeys.Add($"{cursor.Year:D4}-{cursor.Month:D2}");
+                cursor = cursor.AddMonths(1);
+            }
+
+            // Fixed benchmarks (CDI/SELIC/IPCA+X and equity indices) fall back to the historical
+            // average for any month without real data — same behaviour as the single-asset simulator.
+            // This keeps the benchmark fully covered so the simulated range is driven by DB tickers only.
+            static bool IsFixedBenchmark(string t) => t is "CDI" or "SELIC" or "IPCA+6" or "IPCA+5" or "IPCA+4"
+                                                          or "IBOVESPA" or "IFIX" or "SP500_BRL";
+            var stubbedTickers = new List<string>();
+            foreach (var ticker in seriesByTicker.Keys.ToList())
+            {
+                if (!IsFixedBenchmark(ticker)) continue;
+                var series = seriesByTicker[ticker];
+                bool wasEmpty = series.Count == 0;
+                var fallback = GetFallbackMonthly(ticker);
+                foreach (var key in requestedKeys)
+                    if (!series.ContainsKey(key)) series[key] = fallback;
+                if (wasEmpty && ticker is "IBOVESPA" or "IFIX" or "SP500_BRL")
+                    stubbedTickers.Add(ticker);
+            }
+
+            // Months with data for EVERY asset, intersected with the requested range.
+            HashSet<string>? common = null;
+            foreach (var ticker in seriesByTicker.Keys)
+            {
+                var months = seriesByTicker[ticker].Keys.ToHashSet();
+                common = common is null ? new HashSet<string>(months) : common.Intersect(months).ToHashSet();
+            }
+            common ??= [];
+            common.IntersectWith(requestedKeys);
+
+            var orderedKeys = common.OrderBy(k => k, StringComparer.Ordinal).ToList();
+
+            if (orderedKeys.Count == 0)
+            {
+                return new PortfolioBacktestDto
+                {
+                    Points              = [],
+                    AssetReturns        = assets.Select(a => new PortfolioAssetReturnDto { Ticker = a.Ticker, TotalReturnPct = 0m }).ToList(),
+                    TotalInvested       = initialAmount,
+                    FinalValue          = initialAmount,
+                    AnnualizedReturnPct = 0m,
+                    EffectiveStartDate  = startDate.ToString("yyyy-MM-dd"),
+                    EffectiveEndDate    = endDate.ToString("yyyy-MM-dd"),
+                    IsPartialData       = true,
+                    DataNote            = "Não há período em comum com dados históricos para todos os ativos selecionados. Ajuste o período ou os ativos da carteira.",
+                };
+            }
+
+            // Per-asset cumulative growth factor (geometric, over the effective months).
+            var assetFactors = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            foreach (var ticker in seriesByTicker.Keys)
+            {
+                decimal factor = 1m;
+                foreach (var key in orderedKeys)
+                    factor *= 1 + (seriesByTicker[ticker].TryGetValue(key, out var v) ? v : 0m) / 100;
+                assetFactors[ticker] = factor;
+            }
+
+            var ptBr = new CultureInfo("pt-BR");
+            var points = new List<PortfolioBacktestPointDto>();
+            long value    = initialAmount;
+            long invested = initialAmount;
+            decimal portfolioFactor = 1m;
+
+            foreach (var key in orderedKeys)
+            {
+                invested += monthlyContribution;
+                value    += monthlyContribution;
+
+                // Weighted return of the portfolio for this month.
+                decimal weightedReturn = 0m;
+                foreach (var asset in assets)
+                {
+                    var r = seriesByTicker[asset.Ticker].TryGetValue(key, out var v) ? v : 0m;
+                    weightedReturn += (decimal)(asset.WeightPct / 100.0) * r;
+                }
+
+                value = (long)Math.Round(value * (1 + (double)weightedReturn / 100));
+                portfolioFactor *= 1 + weightedReturn / 100;
+
+                var year  = int.Parse(key[..4]);
+                var month = int.Parse(key[5..7]);
+                var label = new DateOnly(year, month, 1).ToString("MMM/yy", ptBr);
+
+                points.Add(new PortfolioBacktestPointDto
+                {
+                    Label            = label,
+                    Month            = month,
+                    Year             = year,
+                    Invested         = invested,
+                    Value            = value,
+                    MonthlyReturnPct = Math.Round(weightedReturn, 4),
+                });
+            }
+
+            int monthCount = points.Count;
+            decimal annualizedReturnPct = monthCount > 0
+                ? Math.Round((decimal)(Math.Pow((double)portfolioFactor, 12.0 / monthCount) - 1) * 100, 2)
+                : 0m;
+
+            // Per-asset total return over the effective period (deduplicated by ticker order in request).
+            var seenTickers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var assetReturns = new List<PortfolioAssetReturnDto>();
+            foreach (var asset in assets)
+            {
+                if (!seenTickers.Add(asset.Ticker)) continue;
+                assetReturns.Add(new PortfolioAssetReturnDto
+                {
+                    Ticker         = asset.Ticker,
+                    TotalReturnPct = Math.Round((assetFactors[asset.Ticker] - 1) * 100, 2),
+                });
+            }
+
+            var effectiveStart = orderedKeys[0];
+            var effectiveEnd   = orderedKeys[^1];
+            bool isReducedRange = monthCount < requestedKeys.Count;
+
+            string? note = null;
+            if (stubbedTickers.Count > 0)
+                note = $"Dados estimados (média histórica) para: {string.Join(", ", stubbedTickers)}. Ative o plano Pro da Brapi para dados reais.";
+            if (isReducedRange)
+            {
+                var rangeNote = $"Período reduzido para {effectiveStart} → {effectiveEnd} ({monthCount} meses), o intervalo com cobertura de dados para todos os ativos.";
+                note = note is null ? rangeNote : $"{note} {rangeNote}";
+            }
+
+            return new PortfolioBacktestDto
+            {
+                Points              = points,
+                AssetReturns        = assetReturns,
+                TotalInvested       = invested,
+                FinalValue          = value,
+                AnnualizedReturnPct = annualizedReturnPct,
+                EffectiveStartDate  = $"{effectiveStart}-01",
+                EffectiveEndDate    = $"{effectiveEnd}-01",
+                IsPartialData       = isReducedRange || stubbedTickers.Count > 0,
+                DataNote            = note,
             };
         }
 

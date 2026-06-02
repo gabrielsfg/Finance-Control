@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercentNeutral } from "@/lib/utils/formatNumber";
-import { cn } from "@/lib/utils";
+import { cn, matchesSearch, assetTypeKeywords } from "@/lib/utils";
 import type { AssetType, Investment, InvestmentPortfolio } from "@/lib/types/investments.types";
 
 const ASSET_CLASSES: { assetClass: string; types: AssetType[] }[] = [
@@ -286,11 +286,10 @@ function ClassCard({
 export const InvestmentsTable = ({ portfolio, search, visibleTypes, onSelectInvestment }: Props) => {
   const { investments, currentValue: portfolioValue } = portfolio;
 
-  const q = search.trim().toLowerCase();
-  const filteredIds = q
+  const filteredIds = search.trim()
     ? new Set(
         investments
-          .filter((inv) => inv.name.toLowerCase().includes(q) || inv.ticker.toLowerCase().includes(q))
+          .filter((inv) => matchesSearch(search, inv.name, inv.ticker, assetTypeKeywords(inv.assetType)))
           .map((inv) => inv.id)
       )
     : null;

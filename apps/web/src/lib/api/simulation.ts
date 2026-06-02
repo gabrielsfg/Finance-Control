@@ -1,5 +1,10 @@
 import { api } from "./axios";
-import type { BenchmarkRates, HistoricalSimulation } from "@/lib/types/simulation";
+import type {
+  BenchmarkRates,
+  HistoricalSimulation,
+  PortfolioBacktestRequest,
+  PortfolioBacktestResult,
+} from "@/lib/types/simulation";
 
 export interface AssetRate {
   ticker: string;
@@ -51,6 +56,11 @@ export const simulationApi = {
     const { data } = await api.get<AssetRate>("/simulation/asset-rate", {
       params: { ticker, period },
     });
+    return data;
+  },
+
+  portfolioBacktest: async (req: PortfolioBacktestRequest): Promise<PortfolioBacktestResult> => {
+    const { data } = await api.post<PortfolioBacktestResult>("/simulation/portfolio/backtest", req);
     return data;
   },
 };

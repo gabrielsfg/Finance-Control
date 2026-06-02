@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
-import { cn } from "@/lib/utils";
+import { cn, matchesSearch } from "@/lib/utils";
 import { Plus, Trash2, Info, Search, ChevronDown, Check, Trophy, BarChart2 } from "lucide-react";
 import { useBenchmarkRates, useAssetRates } from "../hooks/useSimulation";
 import type { AssetRate } from "@/lib/api/simulation";
@@ -98,10 +98,16 @@ function AssetPicker({
   const [activeGroup, setActiveGroup] = useState<PresetAssetGroup | "all">("all");
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
     return PRESET_ASSETS.filter((a) => {
       const matchGroup  = activeGroup === "all" || a.group === activeGroup;
-      const matchSearch = !q || a.label.toLowerCase().includes(q) || (a.ticker?.toLowerCase().includes(q) ?? false) || a.description.toLowerCase().includes(q);
+      const matchSearch = matchesSearch(
+        search,
+        a.label,
+        a.ticker,
+        a.description,
+        ASSET_CATEGORY_LABELS[a.assetCategory],
+        PRESET_ASSET_GROUPS[a.group],
+      );
       return matchGroup && matchSearch;
     });
   }, [search, activeGroup]);

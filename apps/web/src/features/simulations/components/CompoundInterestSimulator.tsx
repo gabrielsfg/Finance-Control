@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
-import { cn } from "@/lib/utils";
+import { cn, matchesSearch, assetTypeKeywords } from "@/lib/utils";
 import { Info, ChevronDown, ChevronUp, Check, Search, TrendingUp } from "lucide-react";
 import { simulateMonthly, aggregateAnnual } from "../utils/taxCalc";
 import type { AssetCategory } from "@/lib/types/simulation";
@@ -106,10 +106,7 @@ const TickerReferenceSelect = ({
   }, [open]);
 
   const filtered = query.trim()
-    ? options.filter(o =>
-        o.ticker.toLowerCase().includes(query.toLowerCase()) ||
-        o.name.toLowerCase().includes(query.toLowerCase())
-      )
+    ? options.filter(o => matchesSearch(query, o.ticker, o.name, assetTypeKeywords(o.assetType)))
     : options;
 
   const selectedMeta = options.find(o => o.ticker === selected);

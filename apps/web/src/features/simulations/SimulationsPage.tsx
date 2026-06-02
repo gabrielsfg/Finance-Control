@@ -7,13 +7,15 @@ import { GoalProjection }            from "@/features/simulations/components/Goa
 import { HistoricalSimulator }       from "@/features/simulations/components/HistoricalSimulator";
 import { ScenarioComparator }        from "@/features/simulations/components/ScenarioComparator";
 import { RetirementSimulator }       from "@/features/simulations/components/RetirementSimulator";
+import { PortfolioSimulator }        from "@/features/simulations/components/PortfolioSimulator";
 
-type Tab = "compound" | "retirement" | "historical" | "goal" | "compare";
+type Tab = "compound" | "retirement" | "historical" | "goal" | "compare" | "portfolio";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "compound",   label: "Juros Compostos"     },
   { id: "retirement", label: "Aposentadoria"        },
   { id: "historical", label: "Simulação Histórica" },
+  { id: "portfolio",  label: "Carteira"            },
   { id: "goal",       label: "Projeção de Meta"    },
   { id: "compare",    label: "Comparar Cenários"   },
 ];
@@ -34,6 +36,7 @@ export function SimulationsPage() {
         {activeTab === "compound"   && <CompoundInterestSimulator />}
         {activeTab === "retirement" && <RetirementSimulator />}
         {activeTab === "historical" && <HistoricalSimulator />}
+        {activeTab === "portfolio"  && <PortfolioSimulator />}
         {activeTab === "goal"       && <GoalProjection />}
         {activeTab === "compare"    && <ScenarioComparator />}
       </div>

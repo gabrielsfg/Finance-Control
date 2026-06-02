@@ -1,4 +1,5 @@
 using FinanceControl.Domain.Interfaces.Services;
+using FinanceControl.Shared.Dtos.Request.Simulation;
 using FinanceControl.WebApi.Controllers.Base;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -90,6 +91,40 @@ namespace FinanceControl.WebApi.Controllers
 
             var result = await _simulationService.GetHistoricalSimulationAsync(
                 benchmark, startDate, endDate, monthlyContribution, initialAmount);
+
+            return Ok(result);
+        }
+
+        [HttpPost("portfolio/backtest")]
+        public async Task<IActionResult> GetPortfolioBacktestAsync([FromBody] PortfolioBacktestRequestDto request)
+        {
+            if (request is null || request.Assets is null || request.Assets.Count < 2)
+                return BadRequest(new { error = "A carteira deve ter pelo menos 2 ativos." });
+
+            if (request.Assets.Count > 10)
+                return BadRequest(new { error = "A carteira pode ter no máximo 10 ativos." });
+
+            if (request.Assets.Any(a => string.IsNullOrWhiteSpace(a.Ticker) || a.Ticker.Length > 20))
+                return BadRequest(new { error = "Ticker inválido em um dos ativos." });
+
+            if (request.Assets.Any(a => a.WeightPct <= 0 || a.WeightPct > 100))
+                return BadRequest(new { error = "O peso de cada ativo deve estar entre 0 e 100%." });
+
+            var totalWeight = request.Assets.Sum(a => a.WeightPct);
+            if (Math.Abs(totalWeight - 100.0) > 0.5)
+                return BadRequest(new { error = "A soma dos pesos deve ser 100%." });
+
+            if (request.StartDate >= request.EndDate)
+                return BadRequest(new { error = "A data inicial deve ser anterior à data final." });
+
+            if (request.MonthlyContribution < 0 || request.InitialAmount < 0)
+                return BadRequest(new { error = "Valores não podem ser negativos." });
+
+            var maxRange = DateOnly.FromDateTime(DateTime.UtcNow);
+            var endDate = request.EndDate > maxRange ? maxRange : request.EndDate;
+
+            var result = await _simulationService.GetPortfolioBacktestAsync(
+                request.Assets, request.StartDate, endDate, request.MonthlyContribution, request.InitialAmount);
 
             return Ok(result);
         }

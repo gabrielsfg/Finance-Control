@@ -19,6 +19,19 @@ export const BENCHMARK_LABELS: Record<Benchmark, string> = {
   SP500_BRL: "S&P 500 (BRL)",
 };
 
+// Search synonyms per fixed benchmark — lets the user filter by typing the
+// asset type/category name (e.g. "renda fixa", "ações", "fii", "internacional").
+export const BENCHMARK_SEARCH_KEYWORDS: Record<Benchmark, string> = {
+  CDI:       "cdi renda fixa cdb pos fixado di juros",
+  SELIC:     "selic renda fixa tesouro juros pos fixado",
+  "IPCA+6":  "ipca renda fixa tesouro inflacao indexado",
+  "IPCA+5":  "ipca renda fixa tesouro inflacao indexado",
+  "IPCA+4":  "ipca renda fixa tesouro inflacao indexado",
+  IBOVESPA:  "ibovespa ibov acoes bolsa indice renda variavel b3",
+  IFIX:      "ifix fii fundos imobiliarios imovel indice",
+  SP500_BRL: "sp500 s&p 500 internacional acoes exterior eua indice ivvb11",
+};
+
 export type AssetCategory =
   | "renda_fixa_bancaria"
   | "tesouro_direto"
@@ -399,3 +412,49 @@ export const GRANULARITY_LABELS: Record<ChartGranularity, string> = {
   monthly: "Mensal",
   annual:  "Anual",
 };
+
+// ---------------------------------------------------------------------------
+// Portfolio Simulator — backtest histórico + projeção futura de carteira
+// ---------------------------------------------------------------------------
+export interface PortfolioAsset {
+  id: string;              // chave local estável da linha
+  ticker: string;          // ticker/benchmark (ex: PETR4, CDI, IBOVESPA)
+  name: string;            // nome exibido
+  weightPct: number;       // 0–100, soma = 100
+  annualRatePct?: number;  // só na projeção; undefined = usar histórico
+  category: AssetCategory;  // para cálculo de imposto na projeção
+}
+
+export interface PortfolioBacktestRequest {
+  assets: { ticker: string; weightPct: number }[];
+  startDate: string;  // YYYY-MM-DD
+  endDate: string;    // YYYY-MM-DD
+  monthlyContribution: number; // centavos
+  initialAmount: number;       // centavos
+}
+
+export interface PortfolioBacktestPoint {
+  label: string;
+  month: number;
+  year: number;
+  invested: number;        // centavos
+  value: number;           // centavos
+  monthlyReturnPct: number;
+}
+
+export interface PortfolioAssetReturn {
+  ticker: string;
+  totalReturnPct: number;
+}
+
+export interface PortfolioBacktestResult {
+  points: PortfolioBacktestPoint[];
+  assetReturns: PortfolioAssetReturn[];
+  totalInvested: number;   // centavos
+  finalValue: number;      // centavos
+  annualizedReturnPct: number;
+  effectiveStartDate: string;
+  effectiveEndDate: string;
+  isPartialData: boolean;
+  dataNote: string | null;
+}
