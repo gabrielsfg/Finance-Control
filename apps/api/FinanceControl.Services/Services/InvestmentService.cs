@@ -60,7 +60,10 @@ namespace FinanceControl.Services.Services
                 .OrderBy(i => i.MarketAsset.Ticker)
                 .ToListAsync();
 
-            return BuildPortfolio(investments);
+            var assetIds = investments.Select(i => i.MarketAssetId).ToList();
+            var prevCloseMap = await LoadPrevCloseMapAsync(context, assetIds);
+
+            return BuildPortfolio(investments, prevCloseMap);
         }
 
         public async Task<InvestmentDto> GetByIdAsync(int id, int userId)
@@ -72,7 +75,14 @@ namespace FinanceControl.Services.Services
                 .FirstOrDefaultAsync(i => i.Id == id && i.UserId == userId)
                 ?? throw new KeyNotFoundException($"Investment {id} not found.");
 
-            return MapToDto(investment);
+            var prevClose = await context.MarketPriceHistories
+                .Where(h => h.MarketAssetId == investment.MarketAssetId)
+                .OrderByDescending(h => h.Date)
+                .Skip(1)
+                .Select(h => (long?)h.Price)
+                .FirstOrDefaultAsync();
+
+            return MapToDto(investment, prevClose);
         }
 
         public async Task<List<InvestmentTransactionDto>> GetTransactionsAsync(int investmentId, int userId)
@@ -368,7 +378,7 @@ namespace FinanceControl.Services.Services
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
-        private static InvestmentDto MapToDto(Investment i)
+        private static InvestmentDto MapToDto(Investment i, long? previousClose)
         {
             var asset         = i.MarketAsset;
             var currentValue  = (long)Math.Round(i.CurrentQuantity * asset.CurrentPrice);
@@ -378,10 +388,9 @@ namespace FinanceControl.Services.Services
                 ? Math.Round((decimal)totalReturn / totalInvested * 100, 2)
                 : 0m;
 
-            // Day change: currentPrice vs previousClose (per-unit), scaled to position size
             long dayChangeAbs = 0;
             decimal dayChangePct = 0m;
-            if (asset.PreviousClose is { } prevClose && prevClose > 0)
+            if (previousClose is { } prevClose && prevClose > 0)
             {
                 var unitChange = asset.CurrentPrice - prevClose;
                 dayChangeAbs = (long)Math.Round(i.CurrentQuantity * unitChange);
@@ -403,7 +412,7 @@ namespace FinanceControl.Services.Services
                 TotalInvested      = totalInvested,
                 TotalReturn        = totalReturn,
                 TotalReturnPercent = returnPct,
-                PreviousClose      = asset.PreviousClose,
+                PreviousClose      = previousClose,
                 DayChangeAbs       = dayChangeAbs,
                 DayChangePct       = dayChangePct,
                 LastPriceUpdate    = asset.LastPriceUpdate,
@@ -415,9 +424,9 @@ namespace FinanceControl.Services.Services
             };
         }
 
-        private static InvestmentPortfolioDto BuildPortfolio(List<Investment> investments)
+        private static InvestmentPortfolioDto BuildPortfolio(List<Investment> investments, Dictionary<int, long?> prevCloseMap)
         {
-            var dtos = investments.Select(MapToDto).ToList();
+            var dtos = investments.Select(i => MapToDto(i, prevCloseMap.GetValueOrDefault(i.MarketAssetId))).ToList();
 
             var totalCurrentValue  = dtos.Sum(d => d.CurrentValue);
             var totalInvested      = dtos.Sum(d => d.TotalInvested);
@@ -464,7 +473,25 @@ namespace FinanceControl.Services.Services
                 .OrderBy(i => i.MarketAsset.Ticker)
                 .ToListAsync();
 
-            return BuildPortfolio(investments);
+            var assetIds = investments.Select(i => i.MarketAssetId).ToList();
+            var prevCloseMap = await LoadPrevCloseMapAsync(context, assetIds);
+
+            return BuildPortfolio(investments, prevCloseMap);
+        }
+
+        private static async Task<Dictionary<int, long?>> LoadPrevCloseMapAsync(ApplicationDbContext context, List<int> assetIds)
+        {
+            var result = await context.MarketPriceHistories
+                .Where(h => assetIds.Contains(h.MarketAssetId))
+                .GroupBy(h => h.MarketAssetId)
+                .Select(g => new
+                {
+                    MarketAssetId = g.Key,
+                    PreviousClose = g.OrderByDescending(h => h.Date).Skip(1).Select(h => (long?)h.Price).FirstOrDefault(),
+                })
+                .ToListAsync();
+
+            return result.ToDictionary(x => x.MarketAssetId, x => x.PreviousClose);
         }
 
         // Resolves the SubCategoryId for investment-related subcategories.

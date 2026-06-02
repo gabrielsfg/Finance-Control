@@ -364,7 +364,6 @@ namespace FinanceControl.Services.Brapi
 
                 // One update to the shared market asset
                 var newPrice = (long)Math.Round(result.RegularMarketPrice.Value * 100);
-                asset.PreviousClose = asset.CurrentPrice > 0 ? asset.CurrentPrice : null;
                 asset.CurrentPrice = newPrice;
                 asset.LastPriceUpdate = DateTime.UtcNow;
                 if (result.LogoUrl is not null) asset.LogoUrl = result.LogoUrl;
@@ -437,7 +436,6 @@ namespace FinanceControl.Services.Brapi
                 if (asset is null) continue;
 
                 var newCoinPrice = (long)Math.Round(coin.RegularMarketPrice.Value * 100);
-                asset.PreviousClose = asset.CurrentPrice > 0 ? asset.CurrentPrice : null;
                 asset.CurrentPrice = newCoinPrice;
                 asset.LastPriceUpdate = DateTime.UtcNow;
                 if (coin.CoinImageUrl is not null) asset.LogoUrl = coin.CoinImageUrl;

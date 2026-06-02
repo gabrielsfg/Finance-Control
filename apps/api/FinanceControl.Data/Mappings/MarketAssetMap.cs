@@ -16,7 +16,6 @@ namespace FinanceControl.Data.Mappings
                 .HasConversion<string>()
                 .IsRequired();
             builder.Property(a => a.CurrentPrice).IsRequired();
-            builder.Property(a => a.PreviousClose);
             builder.Property(a => a.LastPriceUpdate)
                 .HasColumnType("timestamp with time zone");
             builder.Property(a => a.LogoUrl).HasColumnType("text");
