@@ -39,6 +39,23 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("asset-rate")]
+        public async Task<IActionResult> GetAssetRateForPeriodAsync([FromQuery] string ticker, [FromQuery] string period)
+        {
+            if (string.IsNullOrWhiteSpace(ticker) || ticker.Length > 20)
+                return BadRequest(new { error = "Ticker inválido." });
+
+            var validPeriods = new HashSet<string> { "7D", "30D", "1A", "2A", "5A", "10A", "15A" };
+            if (!validPeriods.Contains(period))
+                return BadRequest(new { error = "Período inválido. Use: 7D, 30D, 1A, 2A, 5A, 10A ou 15A." });
+
+            var result = await _simulationService.GetAssetRateForPeriodAsync(ticker, period);
+            if (result is null)
+                return BadRequest(new { error = "Período inválido." });
+
+            return Ok(result);
+        }
+
         [HttpGet("available-benchmarks")]
         public async Task<IActionResult> GetAvailableBenchmarksAsync()
         {

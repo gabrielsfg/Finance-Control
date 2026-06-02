@@ -33,3 +33,12 @@ export const useAssetRates = (tickers: string[]) =>
     retry: 1,
     enabled: tickers.length > 0,
   });
+
+export const useAssetRateForPeriod = (ticker: string | null, period: string | null) =>
+  useQuery({
+    queryKey: ["simulation", "asset-rate", ticker, period],
+    queryFn: () => simulationApi.getAssetRateForPeriod(ticker!, period!),
+    staleTime: 12 * 60 * 60 * 1000, // 12h
+    retry: 1,
+    enabled: !!ticker && !!period,
+  });

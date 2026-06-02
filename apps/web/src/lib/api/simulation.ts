@@ -46,4 +46,11 @@ export const simulationApi = {
     });
     return data;
   },
+
+  getAssetRateForPeriod: async (ticker: string, period: string): Promise<AssetRate> => {
+    const { data } = await api.get<AssetRate>("/simulation/asset-rate", {
+      params: { ticker, period },
+    });
+    return data;
+  },
 };

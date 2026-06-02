@@ -373,7 +373,14 @@ namespace FinanceControl.Services.Services
 
             await context.SaveChangesAsync();
 
-            return MapToDto(investment);
+            var prevClose = await context.MarketPriceHistories
+                .Where(h => h.MarketAssetId == investment.MarketAssetId)
+                .OrderByDescending(h => h.Date)
+                .Skip(1)
+                .Select(h => (long?)h.Price)
+                .FirstOrDefaultAsync();
+
+            return MapToDto(investment, prevClose);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────

@@ -279,6 +279,57 @@ namespace FinanceControl.Services.Services
             return results;
         }
 
+        public async Task<AssetRateDto?> GetAssetRateForPeriodAsync(string ticker, string period)
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var from = period switch
+            {
+                "7D"  => today.AddDays(-7),
+                "30D" => today.AddDays(-30),
+                "1A"  => today.AddYears(-1),
+                "2A"  => today.AddYears(-2),
+                "5A"  => today.AddYears(-5),
+                "10A" => today.AddYears(-10),
+                "15A" => today.AddYears(-15),
+                _     => (DateOnly?)null,
+            };
+
+            if (from is null)
+                return null;
+
+            var history = await _context.MarketPriceHistories
+                .Where(h => h.MarketAsset.Ticker == ticker.ToUpper() && h.Date >= from)
+                .OrderBy(h => h.Date)
+                .Select(h => new { h.Date, h.Price })
+                .ToListAsync();
+
+            if (history.Count < 2)
+                return new AssetRateDto { Ticker = ticker.ToUpper(), IsReal = false, RateSource = "Dados insuficientes no período" };
+
+            var first = history[0];
+            var last  = history[^1];
+
+            if (first.Price <= 0)
+                return new AssetRateDto { Ticker = ticker.ToUpper(), IsReal = false, RateSource = "Preço inicial inválido" };
+
+            var days  = (last.Date.DayNumber - first.Date.DayNumber);
+            var years = days / 365.25;
+
+            if (years <= 0)
+                return new AssetRateDto { Ticker = ticker.ToUpper(), IsReal = false, RateSource = "Período inválido" };
+
+            var cagr = (Math.Pow((double)last.Price / first.Price, 1.0 / years) - 1) * 100;
+
+            return new AssetRateDto
+            {
+                Ticker          = ticker.ToUpper(),
+                AnnualReturnPct = Math.Round(cagr, 2),
+                YearsOfData     = (int)Math.Floor(years),
+                IsReal          = true,
+                RateSource      = $"CAGR {period} (histórico local, somente preço)",
+            };
+        }
+
         // Fetches up to 10 years of monthly closing prices for a ticker and computes
         // the annualised CAGR (price return only, dividends not included).
         private async Task<AssetRateDto> GetCagrForTickerAsync(string ticker)

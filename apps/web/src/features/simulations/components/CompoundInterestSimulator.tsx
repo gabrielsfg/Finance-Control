@@ -7,10 +7,12 @@ import {
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
-import { Info, ChevronDown, ChevronUp, Check } from "lucide-react";
+import { Info, ChevronDown, ChevronUp, Check, Search, TrendingUp } from "lucide-react";
 import { simulateMonthly, aggregateAnnual } from "../utils/taxCalc";
 import type { AssetCategory } from "@/lib/types/simulation";
 import { ASSET_CATEGORY_LABELS } from "@/lib/types/simulation";
+import { useAvailableBenchmarks, useAssetRateForPeriod } from "../hooks/useSimulation";
+import type { AvailableBenchmark } from "@/lib/api/simulation";
 
 const inputCls = "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-green/60 transition-colors";
 
@@ -63,6 +65,112 @@ const AssetCategorySelect = ({
               {value === k && <Check size={12} className="text-green shrink-0" />}
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const RATE_PERIODS = ["7D", "30D", "1A", "2A", "5A", "10A", "15A"] as const;
+type RatePeriod = typeof RATE_PERIODS[number];
+
+const TickerReferenceSelect = ({
+  selected,
+  onSelect,
+  options,
+  loading,
+}: {
+  selected: string | null;
+  onSelect: (ticker: string | null) => void;
+  options: AvailableBenchmark[];
+  loading: boolean;
+}) => {
+  const [open, setOpen]   = useState(false);
+  const [query, setQuery] = useState('');
+  const ref               = useRef<HTMLDivElement>(null);
+  const inputRef          = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery('');
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 50);
+  }, [open]);
+
+  const filtered = query.trim()
+    ? options.filter(o =>
+        o.ticker.toLowerCase().includes(query.toLowerCase()) ||
+        o.name.toLowerCase().includes(query.toLowerCase())
+      )
+    : options;
+
+  const selectedMeta = options.find(o => o.ticker === selected);
+  const label = selectedMeta
+    ? `${selectedMeta.ticker} — ${selectedMeta.name}`
+    : 'Selecionar ativo (opcional)';
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="border-border bg-surface2 text-text flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-[13px] transition-colors hover:border-green/40"
+      >
+        <span className={cn("truncate", !selected && "text-text-muted")}>{label}</span>
+        <ChevronDown size={14} className={cn("text-text-muted transition-transform shrink-0", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="border-border bg-surface absolute left-0 top-10 z-50 rounded-xl border shadow-lg w-full" style={{ minWidth: 260 }}>
+          <div className="border-b border-border px-2 py-2 flex items-center gap-2">
+            <Search size={12} className="text-text-muted shrink-0" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Buscar ticker ou nome..."
+              className="bg-transparent text-[12px] text-text placeholder:text-text-muted outline-none flex-1 min-w-0"
+            />
+          </div>
+          <div className="max-h-52 overflow-y-auto p-1.5 flex flex-col gap-px">
+            {selected && (
+              <button
+                onClick={() => { onSelect(null); setOpen(false); setQuery(''); }}
+                className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[12px] text-text-muted hover:bg-surface2 transition-colors"
+              >
+                Limpar seleção
+              </button>
+            )}
+            {loading && (
+              <p className="px-2.5 py-2 text-[12px] text-text-muted text-center">Carregando...</p>
+            )}
+            {!loading && filtered.length === 0 && (
+              <p className="px-2.5 py-3 text-[12px] text-text-muted text-center">Nenhum ativo com histórico</p>
+            )}
+            {filtered.map(opt => (
+              <button
+                key={opt.ticker}
+                onClick={() => { onSelect(opt.ticker); setOpen(false); setQuery(''); }}
+                className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-surface2"
+              >
+                <div className="flex flex-col min-w-0">
+                  <span className={cn("text-[13px] text-text-sub truncate", selected === opt.ticker && "text-text")}>
+                    <span className="font-medium">{opt.ticker}</span>
+                    {opt.name ? <span className="text-text-muted"> — {opt.name}</span> : null}
+                  </span>
+                  <span className="text-[10px] text-text-muted">{opt.monthsAvailable} meses de histórico</span>
+                </div>
+                {selected === opt.ticker && <Check size={12} className="text-green shrink-0" />}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -126,6 +234,11 @@ export const CompoundInterestSimulator = () => {
   const [showBreakdown, setShowBreakdown]   = useState(false);
   const [breakdownPage, setBreakdownPage]   = useState(0);
   const [activeBenchmarks, setActiveBenchmarks] = useState<Set<BenchmarkId>>(new Set(["cdi"]));
+  const [refTicker, setRefTicker]           = useState<string | null>(null);
+  const [refPeriod, setRefPeriod]           = useState<RatePeriod>("1A");
+
+  const { data: availableBenchmarks = [], isLoading: loadingBenchmarks } = useAvailableBenchmarks();
+  const { data: refRate, isFetching: loadingRefRate } = useAssetRateForPeriod(refTicker, refPeriod);
 
   const totalMonths = customMonths ? (parseInt(customMonths) || 0) : presetMonths;
 
@@ -210,6 +323,57 @@ export const CompoundInterestSimulator = () => {
               <input className={inputCls} value={annualRate} onChange={(e) => setAnnualRate(e.target.value)} placeholder="12" />
             </div>
 
+            {/* Ticker reference card */}
+            <div className="border-border bg-surface2/50 rounded-xl border p-3 flex flex-col gap-2.5">
+              <p className="text-text-muted flex items-center gap-1.5 text-[11px] font-medium">
+                <TrendingUp size={11} className="text-green/70" />
+                Referência histórica (opcional)
+              </p>
+              <TickerReferenceSelect
+                selected={refTicker}
+                onSelect={setRefTicker}
+                options={availableBenchmarks}
+                loading={loadingBenchmarks}
+              />
+              {refTicker && (
+                <>
+                  <div className="flex gap-1">
+                    {RATE_PERIODS.map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setRefPeriod(p)}
+                        className={cn(
+                          "flex-1 rounded-md border px-1 py-0.5 text-[10px] font-medium transition-colors",
+                          refPeriod === p
+                            ? "bg-green/15 text-green border-green/30"
+                            : "text-text-muted border-border hover:text-text"
+                        )}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="border-border/60 rounded-lg border bg-surface px-3 py-2.5 min-h-[52px] flex items-center">
+                    {loadingRefRate ? (
+                      <p className="text-[12px] text-text-muted">Calculando...</p>
+                    ) : refRate?.isReal ? (
+                      <div className="flex flex-col gap-0.5 w-full">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-text-muted text-[11px]">{refRate.ticker} · {refPeriod}</span>
+                          <span className={cn("font-money text-[15px] font-semibold", refRate.annualReturnPct >= 0 ? "text-green" : "text-red")}>
+                            {refRate.annualReturnPct > 0 ? '+' : ''}{refRate.annualReturnPct.toFixed(2)}% a.a.
+                          </span>
+                        </div>
+                        <p className="text-text-muted text-[10px]">somente variação de preço · sem dividendos</p>
+                      </div>
+                    ) : refRate ? (
+                      <p className="text-[12px] text-text-muted">{refRate.rateSource}</p>
+                    ) : null}
+                  </div>
+                </>
+              )}
+            </div>
+
             {/* Period presets */}
             <div>
               <label className="text-text-muted mb-1.5 block text-[12px]">Período</label>
@@ -239,7 +403,15 @@ export const CompoundInterestSimulator = () => {
 
             {/* Asset type */}
             <div>
-              <label className="text-text-muted mb-1.5 block text-[12px]">Tipo de ativo</label>
+              <label className="text-text-muted mb-1.5 flex items-center gap-1 text-[12px]">
+                Tipo de ativo
+                <span
+                  title="Define apenas as regras de tributação (IR, IOF, come-cotas). Não afeta o cálculo bruto."
+                  className="text-text-muted cursor-default"
+                >
+                  <Info size={11} className="text-blue/60" />
+                </span>
+              </label>
               <AssetCategorySelect value={assetCategory} onChange={setAssetCategory} />
               <p className="text-text-muted mt-1.5 flex items-start gap-1 text-[11px] leading-relaxed">
                 <Info size={11} className="mt-0.5 shrink-0 text-blue/70" />
@@ -278,7 +450,7 @@ export const CompoundInterestSimulator = () => {
 
 
           <div className="flex-1" style={{ minHeight: 260 }}>
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={mergedChartPoints} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="cis_gradTotal" x1="0" y1="0" x2="0" y2="1">
