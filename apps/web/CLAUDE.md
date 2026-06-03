@@ -146,6 +146,35 @@ h-9 rounded-lg border px-3 text-[13px] outline-none focus:border-green/60
 - `authStore` — `accessToken`, `refreshToken`, `user`, `isAuthenticated`; persiste como `controle-auth`
 - `uiStore` — `sidebarCollapsed`, `theme`; persiste como `controle-ui`
 
+## Padrões de UI compartilhados (filtros, seletores, botões)
+
+> **Leia esta tabela ANTES de criar qualquer filtro, seletor ou data picker.**
+> Regra de ouro: **importe o componente compartilhado, não recrie**. Nunca use
+> `<input type="date">` nativo nem invente um one-off para um controle que já existe.
+> Se um padrão se repetir e ainda não tiver componente em `components/shared/`,
+> **extraia para lá** (e adicione nesta tabela) em vez de copiar.
+
+| Controle | Componente / referência canônica | Quando usar |
+|---|---|---|
+| **Range de datas** (início → fim) | `components/shared/DateRangePicker` | 1 calendário único; clica início depois fim, com hover preview. Props opcionais `minDate`/`maxDate` limitam a janela. É presentational — você embala no seu popover/painel e controla abrir/fechar (ex.: `MarketPriceChart`, `TransactionsFilters`). |
+| **Range de meses** (mês/ano início → fim) | `components/shared/MonthRangePicker` | Filtro por intervalo de meses (ex.: simulações histórico). Grid de meses + seletor de ano. |
+| **Data única** | `components/shared/DatePickerField` | Campo único de data em formulários (popover com calendário, `allowClear` opcional). |
+| **Categoria → subcategoria (dropdown)** | `components/shared/CategorySelectContent` | Dentro de um `<Select>`: agrupa subcategorias sob o cabeçalho da categoria. Cabeçalho mostra a **cor** da categoria (dot); cada sub mostra o **emoji** (ou dot esmaecido da cor como fallback). Sempre seleciona por `subCategoryId`. |
+| **Categoria → subcategoria (multi-seleção / checkbox)** | `CheckRow` em `features/recurrences/components/RecurrencesFilters.tsx` | Filtros com checkboxes de categoria + subcategoria. Mesma regra de cor/emoji; subs com `indent`. Marcar/desmarcar categoria propaga para suas subs. |
+| **Seletor de opção genérico** (pill dropdown) | `components/shared/PillSelect` | Seletor compacto não-categoria/não-data (ex.: período de gráfico, ordenação). Borda verde quando o valor não é o default. |
+| **Abas / chips** | `components/shared/TabChips` | Alternância entre modos/visões (sub-tabs). Suporta `size="sm" \| "md"`. |
+| **Filtro multi-seção (popover "Filtros")** | `features/recurrences/components/RecurrencesFilters.tsx` ou `features/transactions/components/TransactionsFilters.tsx` | Popover com nav lateral de seções (Tipo, Categoria, Contas…), badges de contagem, "Limpar tudo" / "Aplicar". Botão trigger com badge de filtros ativos. |
+| **Filtro multi-seleção simples** (lista com check) | `features/investments/components/InvestmentTypeFilter.tsx` | Dropdown de checkboxes para mostrar/ocultar itens, com contador no trigger e "Mostrar todos". |
+| **Barra de busca** | `features/transactions/components/TransactionsFilterBar.tsx` | Input pill arredondado com ícone `Search`; `focus-within:border-green/60`. |
+| **Botão** | `components/ui/button` | Variantes shadcn. Não estilizar `<button>` cru para ações primárias. |
+| **Totalizador / resumo** | `components/shared/StatCard` | Toda linha de KPI/summary (ver `feedback_statcard_pattern`). |
+
+### Regras transversais
+- **Cor de categoria**: sempre via `getCategoryColor(color, name)` de `@/lib/config/categoryColors` (faz fallback determinístico por nome). Categoria → dot colorido; subcategoria → emoji (fallback: dot esmaecido da cor da categoria).
+- **Drawer, não modal**, para criar/editar/detalhe (ver `feedback_ui_patterns`).
+- **Números coloridos** (verde/vermelho) não levam sinal `+`/`-`.
+- **Datas em ISO** `YYYY-MM-DD` (dia) ou `YYYY-MM` (mês) no estado e nas props dos pickers; formatação pt-BR só na exibição.
+
 ## Auth flow
 - Tokens em localStorage; interceptor Axios injeta `Authorization: Bearer`
 - 401 → tenta refresh via `POST /user/refresh` → retry → falha: limpa e redireciona `/login`

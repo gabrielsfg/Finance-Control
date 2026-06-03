@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
+import { X } from "lucide-react";
+import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import type { PricePoint } from "@/lib/types/market.types";
@@ -25,10 +27,6 @@ const PRESETS: { label: PresetPeriod; days: number }[] = [
   { label: "15A", days: 3780 },
 ];
 
-function toDateOnly(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
@@ -47,7 +45,21 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
   const [period, setPeriod] = useState<Period>("1M");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo]     = useState("");
-  const [customError, setCustomError] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const toggleRef   = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!showCalendar) return;
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (calendarRef.current?.contains(target)) return;
+      if (toggleRef.current?.contains(target)) return;
+      setShowCalendar(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showCalendar]);
 
   const minDate = history.length > 0 ? history[0].date : "";
   const maxDate = history.length > 0 ? history[history.length - 1].date : "";
@@ -83,23 +95,6 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
         return { date: label, fullDate: p.date, price: p.price };
       });
   }, [history, period, customFrom, customTo, minDate, maxDate]);
-
-  function handleCustomApply() {
-    if (!customFrom || !customTo) {
-      setCustomError("Informe as duas datas.");
-      return;
-    }
-    if (customFrom > customTo) {
-      setCustomError("Data inicial deve ser anterior à final.");
-      return;
-    }
-    if (customFrom < minDate || customTo > maxDate) {
-      setCustomError(`Período disponível: ${minDate} até ${maxDate}.`);
-      return;
-    }
-    setCustomError(null);
-    setPeriod("custom");
-  }
 
   if (history.length === 0) {
     return (
@@ -166,7 +161,8 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
 
           {/* Custom period toggle */}
           <button
-            onClick={() => setPeriod("custom")}
+            ref={toggleRef}
+            onClick={() => { setPeriod("custom"); setShowCalendar((v) => period === "custom" ? !v : true); }}
             className={cn(
               "h-7 rounded-lg px-2.5 text-[11px] font-medium transition-colors",
               period === "custom"
@@ -179,42 +175,28 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
         </div>
 
         {/* Custom date picker */}
-        {period === "custom" && (
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="flex flex-col gap-1">
-              <label className="text-text-muted text-[11px]">De</label>
-              <input
-                type="date"
-                value={customFrom}
-                min={minDate}
-                max={customTo || maxDate}
-                onChange={(e) => { setCustomFrom(e.target.value); setCustomError(null); }}
-                className="h-8 rounded-lg border border-border bg-surface2 px-2.5 text-[12px] text-text outline-none focus:border-green/60 [color-scheme:dark]"
-              />
+        {period === "custom" && showCalendar && (
+          <div ref={calendarRef} className="border-border bg-surface2/40 w-full max-w-[300px] rounded-xl border p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-text text-[12px] font-medium">Período personalizado</span>
+              <button
+                onClick={() => setShowCalendar(false)}
+                aria-label="Fechar calendário"
+                className="text-text-muted hover:text-text flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-surface2"
+              >
+                <X size={14} />
+              </button>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-text-muted text-[11px]">Até</label>
-              <input
-                type="date"
-                value={customTo}
-                min={customFrom || minDate}
-                max={maxDate}
-                onChange={(e) => { setCustomTo(e.target.value); setCustomError(null); }}
-                className="h-8 rounded-lg border border-border bg-surface2 px-2.5 text-[12px] text-text outline-none focus:border-green/60 [color-scheme:dark]"
-              />
-            </div>
-            <button
-              onClick={handleCustomApply}
-              className="h-8 rounded-lg bg-green/15 px-3 text-[12px] font-medium text-green transition-colors hover:bg-green/25"
-            >
-              Aplicar
-            </button>
-            {customError && (
-              <p className="text-[11px] text-red self-end pb-0.5">{customError}</p>
-            )}
+            <DateRangePicker
+              startDate={customFrom}
+              finishDate={customTo}
+              minDate={minDate}
+              maxDate={maxDate}
+              onChange={(start, finish) => { setCustomFrom(start); setCustomTo(finish); }}
+            />
             {minDate && maxDate && (
-              <p className="text-[11px] text-text-muted self-end pb-0.5">
-                Disponível: {minDate.slice(0,4)} – {maxDate.slice(0,4)}
+              <p className="text-text-muted mt-2 text-center text-[11px]">
+                Disponível: {minDate.slice(0, 4)} – {maxDate.slice(0, 4)}
               </p>
             )}
           </div>

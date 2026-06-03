@@ -24,14 +24,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { getCategoryColor } from "@/lib/config/categoryColors";
+import { CategorySelectContent } from "@/components/shared/CategorySelectContent";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useUpdateRecurring } from "../hooks/useRecurrences";
 import { DatePickerField } from "@/components/shared/DatePickerField";
 import { useUpdateTransaction } from "@/features/transactions/hooks/useTransactions";
 import type { AccountItem } from "@/lib/types/accounts.types";
-import type { SubCategoryItem } from "@/lib/types/transactions.types";
 import type {
   RecurringItem,
   InstallmentItem,
@@ -95,48 +94,6 @@ function AccountSelectContent({ accounts }: { accounts: AccountItem[] }) {
             </div>
           </div>
         </SelectItem>
-      ))}
-    </SelectContent>
-  );
-}
-
-function CategorySelectContent({ subcategories }: { subcategories: SubCategoryItem[] }) {
-  const grouped = subcategories.reduce<Record<string, { id: number; name: string; emoji: string | null; color: string; catColor: string; catId: number }[]>>(
-    (acc, sub) => {
-      const catColor = getCategoryColor(sub.categoryColor, sub.categoryName);
-      if (!acc[sub.categoryName]) acc[sub.categoryName] = [];
-      acc[sub.categoryName].push({ id: sub.id, name: sub.name, emoji: sub.emoji, color: catColor, catColor, catId: sub.categoryId });
-      return acc;
-    },
-    {},
-  );
-
-  return (
-    <SelectContent className="max-h-72" {...DROPDOWN_PROPS}>
-      {Object.entries(grouped).map(([catName, subs], groupIdx) => (
-        <div key={catName}>
-          {groupIdx > 0 && <div className="border-border mx-2 my-1 border-t" />}
-          <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
-            <span
-              className="h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: subs[0].catColor }}
-            />
-            <span className="text-text-sub text-[11px] font-semibold uppercase tracking-wider">
-              {catName}
-            </span>
-          </div>
-          {subs.map((s) => (
-            <SelectItem key={s.id} value={String(s.id)} className="pl-6">
-              <div className="flex items-center gap-2.5 py-0.5">
-                {s.emoji
-                  ? <span className="text-[14px] leading-none shrink-0">{s.emoji}</span>
-                  : <span className="h-2 w-2 shrink-0 rounded-full opacity-70" style={{ backgroundColor: s.color }} />
-                }
-                <span className="text-[14px]">{s.name}</span>
-              </div>
-            </SelectItem>
-          ))}
-        </div>
       ))}
     </SelectContent>
   );

@@ -54,3 +54,7 @@ Thumbs.db
 Finance-Control-Api/
 Finance-Control-App/
 FinanceControlFilesDocumentation/
+
+# Documents & implementation plans (local only, not merged to main)
+docs/
+implementation-plans/

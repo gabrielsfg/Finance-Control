@@ -13,7 +13,7 @@ import { usePortfolioBacktest, useAvailableBenchmarks } from "../hooks/useSimula
 import { simulateMonthly } from "../utils/taxCalc";
 import type { PortfolioAsset } from "@/lib/types/simulation";
 import { PortfolioBuilder, PORTFOLIO_COLORS, makeEmptyAsset, MIN_ASSETS } from "./PortfolioBuilder";
-import { MonthRangePicker } from "./MonthRangePicker";
+import { MonthRangePicker } from "@/components/shared/MonthRangePicker";
 
 const inputCls = "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-green/60 transition-colors";
 

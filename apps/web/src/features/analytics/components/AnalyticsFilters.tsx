@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  SlidersHorizontal, ChevronRight, Check,
+  SlidersHorizontal, Check,
   CalendarDays, Tag, Hash, Wallet, BarChart2, ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useTags } from "@/features/transactions/hooks/useTags";
@@ -42,148 +43,6 @@ const ASSET_CLASSES: { id: AssetClassFilter; label: string }[] = [
   { id: "Cripto",         label: "Cripto" },
 ];
 
-const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const WEEK_DAYS   = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
-// ── Calendar range picker ─────────────────────────────────────────────────────
-function CalendarRangePicker({
-  startDate, finishDate, onChange,
-}: {
-  startDate: string;
-  finishDate: string;
-  onChange: (start: string, finish: string) => void;
-}) {
-  const today = new Date();
-  const [viewYear,  setViewYear]  = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [hovered,   setHovered]   = useState<string | null>(null);
-  const [picking,   setPicking]   = useState<"start" | "end">("start");
-
-  const parseDate = (s: string) => s ? new Date(s + "T00:00:00") : null;
-  const isoStr    = (d: Date)   => d.toISOString().slice(0, 10);
-
-  const selStart = parseDate(startDate);
-  const selEnd   = parseDate(finishDate);
-  const hovDate  = hovered ? parseDate(hovered) : null;
-
-  function prevMonth() {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
-    else setViewMonth(m => m - 1);
-  }
-  function nextMonth() {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
-    else setViewMonth(m => m + 1);
-  }
-
-  function handleDayClick(dateStr: string) {
-    const clicked = parseDate(dateStr)!;
-    if (picking === "start" || !selStart) {
-      onChange(dateStr, "");
-      setPicking("end");
-    } else {
-      if (clicked < selStart) onChange(dateStr, startDate);
-      else onChange(startDate, dateStr);
-      setPicking("start");
-    }
-  }
-
-  function isInRange(dateStr: string) {
-    const d      = parseDate(dateStr)!;
-    const anchor = selStart;
-    const tip    = hovDate ?? selEnd;
-    if (!anchor || !tip) return false;
-    const lo = anchor < tip ? anchor : tip;
-    const hi = anchor < tip ? tip : anchor;
-    return d > lo && d < hi;
-  }
-
-  const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const cells: (string | null)[] = Array(firstDay).fill(null);
-  for (let d = 1; d <= daysInMonth; d++) {
-    const m = String(viewMonth + 1).padStart(2, "0");
-    const day = String(d).padStart(2, "0");
-    cells.push(`${viewYear}-${m}-${day}`);
-  }
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const rangeLabel = startDate && finishDate
-    ? `${startDate.split("-").reverse().join("/")} → ${finishDate.split("-").reverse().join("/")}`
-    : startDate
-    ? `A partir de ${startDate.split("-").reverse().join("/")}`
-    : "Selecione o período";
-
-  return (
-    <div className="select-none">
-      <div className="mb-3 flex items-center justify-between">
-        <button onClick={prevMonth} className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface3">
-          <ChevronRight size={14} className="rotate-180" />
-        </button>
-        <span className="text-text text-[13px] font-semibold">
-          {MONTH_NAMES[viewMonth]} {viewYear}
-        </span>
-        <button onClick={nextMonth} className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface3">
-          <ChevronRight size={14} />
-        </button>
-      </div>
-
-      <div className="mb-1 grid grid-cols-7">
-        {WEEK_DAYS.map(d => (
-          <div key={d} className="text-text-muted py-1 text-center text-[10px] font-medium">{d}</div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7">
-        {cells.map((dateStr, i) => {
-          if (!dateStr) return <div key={`empty-${i}`} />;
-          const inRange = isInRange(dateStr);
-          const isS     = dateStr === startDate;
-          const isE     = dateStr === finishDate;
-          const edge    = isS || isE;
-          const isToday = dateStr === isoStr(today);
-
-          return (
-            <div
-              key={dateStr}
-              className={cn("relative flex items-center justify-center py-0.5",
-                inRange && "bg-green/10",
-                isS && finishDate && "rounded-l-full bg-green/10",
-                isE && startDate  && "rounded-r-full bg-green/10",
-              )}
-              onMouseEnter={() => setHovered(dateStr)}
-              onMouseLeave={() => setHovered(null)}
-            >
-              <button
-                onClick={() => handleDayClick(dateStr)}
-                className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-full text-[12px] transition-all",
-                  edge
-                    ? "bg-green text-black font-bold"
-                    : inRange
-                    ? "text-green font-medium"
-                    : isToday
-                    ? "border-border border text-text font-semibold"
-                    : "text-text-sub hover:bg-surface3 hover:text-text",
-                )}
-              >
-                {parseInt(dateStr.slice(8))}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className={cn(
-        "mt-3 rounded-lg px-3 py-2 text-center text-[12px] transition-all",
-        startDate && finishDate
-          ? "bg-green/10 text-green font-medium"
-          : "bg-surface3 text-text-muted",
-      )}>
-        {rangeLabel}
-      </div>
-    </div>
-  );
-}
 
 // ── Preset pill ───────────────────────────────────────────────────────────────
 function PresetPill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -262,7 +121,7 @@ function SectionContent({
         </div>
         <div>
           <p className="text-text-muted mb-2 text-[11px] font-medium uppercase tracking-wide">Período personalizado</p>
-          <CalendarRangePicker
+          <DateRangePicker
             startDate={draft.preset === "custom-range" ? draft.startDate : ""}
             finishDate={draft.preset === "custom-range" ? draft.finishDate : ""}
             onChange={(start, finish) =>
