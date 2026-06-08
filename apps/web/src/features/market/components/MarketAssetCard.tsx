@@ -17,6 +17,7 @@ const ASSET_TYPE_COLORS: Record<string, string> = {
   ETFInternacional:  "#7C6FE0",
   TesouroDireto:     "#00C98D",
   RendaFixa:         "#4A9EFF",
+  Moeda:             "#14B8A6",
   Outro:             "#8A95A3",
 };
 

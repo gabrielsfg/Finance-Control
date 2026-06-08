@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { marketApi } from "@/lib/api/market";
-import type { MarketAsset, MarketAssetDetail, Fundamentals } from "@/lib/types/market.types";
+import type { MarketAsset, MarketAssetDetail, Fundamentals, FiiIndicators, MacroIndicator } from "@/lib/types/market.types";
 
 export const useMarketList = (params: { type?: string; sort?: string; limit?: number }) =>
   useQuery<MarketAsset[]>({
@@ -30,6 +30,23 @@ export const useFundamentals = (ticker: string | null) =>
     queryKey: ["market", "fundamentals", ticker],
     queryFn: () => marketApi.getFundamentals(ticker!),
     enabled: !!ticker,
+    staleTime: 6 * 60 * 60 * 1000, // 6h — matches backend cache
+    retry: 1,
+  });
+
+export const useFiiIndicators = (ticker: string | null) =>
+  useQuery<FiiIndicators>({
+    queryKey: ["market", "fii", ticker],
+    queryFn: () => marketApi.getFiiIndicators(ticker!),
+    enabled: !!ticker,
+    staleTime: 6 * 60 * 60 * 1000, // 6h — matches backend cache
+    retry: 1,
+  });
+
+export const useMacroIndicators = () =>
+  useQuery<MacroIndicator[]>({
+    queryKey: ["market", "macro"],
+    queryFn: marketApi.getMacro,
     staleTime: 6 * 60 * 60 * 1000, // 6h — matches backend cache
     retry: 1,
   });

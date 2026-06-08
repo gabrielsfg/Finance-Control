@@ -10,7 +10,7 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
     {
         public string Label { get; set; } = "";
         public DateOnly Date { get; set; }
-        public int NetWorthAtDate { get; set; }
+        public long NetWorthAtDate { get; set; }
         public string Type { get; set; } = "";
     }
 
@@ -18,6 +18,6 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
     {
         public int Year { get; set; }
         public int Month { get; set; }
-        public int NetWorth { get; set; }
+        public long NetWorth { get; set; }
     }
 }

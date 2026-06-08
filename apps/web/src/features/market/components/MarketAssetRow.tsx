@@ -1,0 +1,131 @@
+"use client";
+
+import Link from "next/link";
+import { TrendingUp, TrendingDown } from "lucide-react";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { cn } from "@/lib/utils";
+import type { MarketAsset } from "@/lib/types/market.types";
+import {
+  assetColor,
+  formatBigMoney,
+  formatYieldFraction,
+  formatRatio,
+} from "@/features/market/lib/marketDisplay";
+
+export type RowMetric = "change" | "price" | "dy" | "marketcap" | "pl" | "pvp" | "revenue";
+
+function AssetLogo({ asset, size = 36 }: { asset: MarketAsset; size?: number }) {
+  if (asset.logoUrl) {
+    return (
+      <img
+        src={asset.logoUrl}
+        alt={asset.ticker}
+        style={{ height: size, width: size }}
+        className="shrink-0 rounded-[10px] bg-white/5 object-contain"
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = "none";
+        }}
+      />
+    );
+  }
+  return (
+    <div
+      style={{ height: size, width: size, backgroundColor: assetColor(asset.assetType) }}
+      className="flex shrink-0 items-center justify-center rounded-[10px] text-[10px] font-bold text-white"
+    >
+      {asset.ticker.slice(0, 2)}
+    </div>
+  );
+}
+
+function ChangePill({ pct }: { pct: number | null }) {
+  if (pct == null) return <span className="text-text-muted text-[11px]">—</span>;
+  const up = pct >= 0;
+  return (
+    <span className={cn("flex items-center gap-0.5 font-mono text-[11px] font-medium", up ? "text-green" : "text-red")}>
+      {up ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+      {up ? "+" : ""}{pct.toFixed(2)}%
+    </span>
+  );
+}
+
+function MetricValue({ asset, metric }: { asset: MarketAsset; metric: RowMetric }) {
+  const price = (
+    <span className="font-money text-text text-[13px]">{formatCurrency(asset.currentPrice / 100)}</span>
+  );
+
+  switch (metric) {
+    case "dy":
+      return (
+        <div className="flex flex-col items-end gap-0.5">
+          <span className="text-green font-mono text-[13px] font-semibold">{formatYieldFraction(asset.dividendYield)}</span>
+          {price}
+        </div>
+      );
+    case "marketcap":
+      return (
+        <div className="flex flex-col items-end gap-0.5">
+          <span className="font-money text-text text-[13px] font-semibold">{formatBigMoney(asset.marketCap)}</span>
+          {price}
+        </div>
+      );
+    case "revenue":
+      return (
+        <div className="flex flex-col items-end gap-0.5">
+          <span className="font-money text-text text-[13px] font-semibold">{formatBigMoney(asset.totalRevenue)}</span>
+          {price}
+        </div>
+      );
+    case "pl":
+      return (
+        <div className="flex flex-col items-end gap-0.5">
+          <span className="font-mono text-text text-[13px] font-semibold">{formatRatio(asset.priceToEarnings)}</span>
+          {price}
+        </div>
+      );
+    case "pvp":
+      return (
+        <div className="flex flex-col items-end gap-0.5">
+          <span className="font-mono text-text text-[13px] font-semibold">{formatRatio(asset.priceToBook)}</span>
+          {price}
+        </div>
+      );
+    case "price":
+      return <div className="flex flex-col items-end gap-0.5">{price}</div>;
+    case "change":
+    default:
+      return (
+        <div className="flex flex-col items-end gap-0.5">
+          {price}
+          <ChangePill pct={asset.dayChangePct} />
+        </div>
+      );
+  }
+}
+
+type Props = {
+  asset: MarketAsset;
+  metric?: RowMetric;
+  rank?: number;
+};
+
+export function MarketAssetRow({ asset, metric = "change", rank }: Props) {
+  return (
+    <Link
+      href={`/market/${encodeURIComponent(asset.ticker)}`}
+      className="border-border bg-surface2 hover:bg-surface hover:border-border/80 flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors"
+    >
+      {rank != null && (
+        <span className="text-text-muted w-4 shrink-0 text-center font-mono text-[12px]">{rank}</span>
+      )}
+      <AssetLogo asset={asset} />
+      <div className="min-w-0 flex-1">
+        <p className="text-text truncate text-[13px] font-semibold">{asset.ticker}</p>
+        <p className="text-text-muted truncate text-[11px]">{asset.name}</p>
+      </div>
+      <div className="shrink-0">
+        <MetricValue asset={asset} metric={metric} />
+      </div>
+    </Link>
+  );
+}

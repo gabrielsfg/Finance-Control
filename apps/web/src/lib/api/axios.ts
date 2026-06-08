@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearPersistedQueryCache } from "@/lib/queryClient";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api",
@@ -42,6 +43,7 @@ api.interceptors.response.use(
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         document.cookie = "accessToken=; path=/; max-age=0; SameSite=Lax";
+        clearPersistedQueryCache();
         window.location.href = "/login";
       }
     }

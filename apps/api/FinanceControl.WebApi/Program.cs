@@ -28,6 +28,7 @@ if (string.IsNullOrWhiteSpace(jwtToken) || jwtToken.Length < 32)
 //DI Services
 builder.Services.AddAplicationServices(builder.Configuration);
 builder.Services.AddHostedService<RecurringTransactionHostedService>();
+builder.Services.AddHostedService<RefreshTokenCleanupHostedService>();
 builder.Services.AddHostedService<BrapiPriceUpdateHostedService>();
 builder.Services.AddHostedService<BrapiIntradayHostedService>();
 builder.Services.AddHostedService<BrapiCleanupHostedService>();
@@ -38,8 +39,18 @@ builder.Services.AddMemoryCache();
 //Add migration services.
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-        ), ServiceLifetime.Scoped);
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsql =>
+        {
+            // Neon suspends the compute endpoint after inactivity, so the first query
+            // following a cold start can fail with a transient connection error. Retry
+            // transparently instead of surfacing the failure to the user.
+            npgsql.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorCodesToAdd: null);
+            npgsql.CommandTimeout(30);
+        }), ServiceLifetime.Scoped);
 
 // Add services to the container.
 builder.Services.AddControllers()

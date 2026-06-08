@@ -44,36 +44,47 @@ namespace FinanceControl.Services.Services
                 resolvedBudgetId = activeBudget.Id;
             }
 
-            await using var dbTransaction = await _context.Database.BeginTransactionAsync();
-            try
+            // The retrying execution strategy (EnableRetryOnFailure) may re-run this whole
+            // delegate, so the transactional write lives inside it while the response is
+            // built afterwards from the committed ids — re-running a read would be wasteful
+            // and re-running committed writes would duplicate rows.
+            var strategy = _context.Database.CreateExecutionStrategy();
+            var createdIds = await strategy.ExecuteAsync(async () =>
             {
-                var createdTransactions = requestDto.PaymentType switch
+                await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    EnumPaymentType.OneTime => await CreateOneTimeAsync(requestDto, userId, resolvedBudgetId),
-                    EnumPaymentType.Installment => await CreateInstallmentsAsync(requestDto, userId, resolvedBudgetId),
-                    EnumPaymentType.Recurring => await CreateRecurringAsync(requestDto, userId, resolvedBudgetId),
-                    _ => null
-                };
+                    var createdTransactions = requestDto.PaymentType switch
+                    {
+                        EnumPaymentType.OneTime => await CreateOneTimeAsync(requestDto, userId, resolvedBudgetId),
+                        EnumPaymentType.Installment => await CreateInstallmentsAsync(requestDto, userId, resolvedBudgetId),
+                        EnumPaymentType.Recurring => await CreateRecurringAsync(requestDto, userId, resolvedBudgetId),
+                        _ => null
+                    };
 
-                if (createdTransactions is null || createdTransactions.Count == 0)
-                    return Result<CreateTransactionResponseDto>.Failure("Invalid payment type.");
+                    if (createdTransactions is null || createdTransactions.Count == 0)
+                        return null;
 
-                await _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync();
 
-                await AssociateTagsAsync(createdTransactions, requestDto.Tags, userId);
+                    await AssociateTagsAsync(createdTransactions, requestDto.Tags, userId);
 
-                await dbTransaction.CommitAsync();
+                    await dbTransaction.CommitAsync();
 
-                var transactionIds = createdTransactions.Select(t => t.Id).ToList();
-                var response = await BuildCreateResponseAsync(transactionIds);
+                    return createdTransactions.Select(t => t.Id).ToList();
+                }
+                catch
+                {
+                    await dbTransaction.RollbackAsync();
+                    throw;
+                }
+            });
 
-                return Result<CreateTransactionResponseDto>.Success(response);
-            }
-            catch
-            {
-                await dbTransaction.RollbackAsync();
-                throw;
-            }
+            if (createdIds is null || createdIds.Count == 0)
+                return Result<CreateTransactionResponseDto>.Failure("Invalid payment type.");
+
+            var response = await BuildCreateResponseAsync(createdIds);
+            return Result<CreateTransactionResponseDto>.Success(response);
         }
 
         public async Task<IEnumerable<GetTransactionResponseDto>> GetAllTransactionsAsync(int userId)

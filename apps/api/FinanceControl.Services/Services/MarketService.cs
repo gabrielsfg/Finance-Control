@@ -1,4 +1,5 @@
 using FinanceControl.Data.Data;
+using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Brapi;
 using FinanceControl.Shared.Dtos.Response.Investment;
@@ -21,6 +22,9 @@ namespace FinanceControl.Services.Services
         private const string BrapiModules =
             "summaryProfile,defaultKeyStatistics,financialData,balanceSheetHistory";
 
+        // Curated macro series shown in the market indicators strip, in display order.
+        private static readonly string[] MacroSlugs = ["selic", "cdi", "ipca12m", "igpm"];
+
         private static readonly Dictionary<EnumAssetType, string> AssetTypeLabels = new()
         {
             { EnumAssetType.Acao,              "Ação" },
@@ -35,6 +39,7 @@ namespace FinanceControl.Services.Services
             { EnumAssetType.TesouroDireto,     "Tesouro Direto" },
             { EnumAssetType.RendaFixa,         "Renda Fixa" },
             { EnumAssetType.Index,             "Índice" },
+            { EnumAssetType.Moeda,             "Moeda" },
             { EnumAssetType.Outro,             "Outro" },
         };
 
@@ -50,27 +55,65 @@ namespace FinanceControl.Services.Services
             _cache = cache;
         }
 
+        private static readonly HashSet<string> FundamentalSorts =
+            ["dy_desc", "pl_asc", "pvp_asc", "marketcap_desc", "revenue_desc", "roe_desc"];
+
         public async Task<List<MarketAssetDto>> ListAsync(string? assetType, string sort, int limit)
         {
             await using var context = _contextFactory.CreateDbContext();
 
-            // For change_desc/change_asc we need previous close, so fetch a larger pool to
-            // filter down to assets that actually have two history points.
-            // For other sorts, just take directly from the DB.
-            var needsHistory = sort is "change_desc" or "change_asc";
-            var poolSize = needsHistory ? limit * 5 : limit;
-
-            var q = context.MarketAssets.Where(a => a.CurrentPrice > 0);
-
+            EnumAssetType? parsedType = null;
             if (!string.IsNullOrWhiteSpace(assetType) &&
-                Enum.TryParse<EnumAssetType>(assetType, out var parsedType))
-                q = q.Where(a => a.AssetType == parsedType);
+                Enum.TryParse<EnumAssetType>(assetType, out var pt))
+                parsedType = pt;
 
-            // Pull a pool ordered by price desc (good proxy for relevance / liquidity)
-            var assets = await q
-                .OrderByDescending(a => a.CurrentPrice)
-                .Take(poolSize)
-                .ToListAsync();
+            var isFundamentalSort = FundamentalSorts.Contains(sort);
+
+            List<MarketAsset> assets;
+
+            if (isFundamentalSort)
+            {
+                // Rank by a stored fundamental metric — order/limit in the DB via the join.
+                var fq = context.MarketAssets
+                    .Where(a => a.CurrentPrice > 0 && a.Fundamentals != null);
+                if (parsedType.HasValue)
+                    fq = fq.Where(a => a.AssetType == parsedType.Value);
+
+                var ordered = sort switch
+                {
+                    "dy_desc"        => fq.Where(a => a.Fundamentals!.DividendYield != null)
+                                          .OrderByDescending(a => a.Fundamentals!.DividendYield),
+                    "pl_asc"         => fq.Where(a => a.Fundamentals!.PriceToEarnings != null && a.Fundamentals!.PriceToEarnings > 0)
+                                          .OrderBy(a => a.Fundamentals!.PriceToEarnings),
+                    "pvp_asc"        => fq.Where(a => a.Fundamentals!.PriceToBook != null && a.Fundamentals!.PriceToBook > 0)
+                                          .OrderBy(a => a.Fundamentals!.PriceToBook),
+                    "marketcap_desc" => fq.Where(a => a.Fundamentals!.MarketCap != null)
+                                          .OrderByDescending(a => a.Fundamentals!.MarketCap),
+                    "revenue_desc"   => fq.Where(a => a.Fundamentals!.TotalRevenue != null)
+                                          .OrderByDescending(a => a.Fundamentals!.TotalRevenue),
+                    _                => fq.Where(a => a.Fundamentals!.ReturnOnEquity != null)
+                                          .OrderByDescending(a => a.Fundamentals!.ReturnOnEquity),
+                };
+
+                assets = await ordered.Include(a => a.Fundamentals).Take(limit).ToListAsync();
+            }
+            else
+            {
+                // For change_desc/change_asc we need previous close, so fetch a larger pool to
+                // filter down to assets that actually have two history points.
+                var needsHistory = sort is "change_desc" or "change_asc";
+                var poolSize = needsHistory ? limit * 5 : limit;
+
+                var q = context.MarketAssets.Where(a => a.CurrentPrice > 0);
+                if (parsedType.HasValue)
+                    q = q.Where(a => a.AssetType == parsedType.Value);
+
+                // Pull a pool ordered by price desc (good proxy for relevance / liquidity)
+                assets = await q
+                    .OrderByDescending(a => a.CurrentPrice)
+                    .Take(poolSize)
+                    .ToListAsync();
+            }
 
             var assetIds = assets.Select(a => a.Id).ToList();
 
@@ -93,6 +136,8 @@ namespace FinanceControl.Services.Services
                     ? Math.Round((decimal)(a.CurrentPrice - prev.Value) / prev.Value * 100, 2)
                     : (decimal?)null;
 
+                var f = a.Fundamentals;
+
                 return new MarketAssetDto
                 {
                     Id              = a.Id,
@@ -106,6 +151,12 @@ namespace FinanceControl.Services.Services
                     LastPriceUpdate = a.LastPriceUpdate,
                     PreviousClose   = prev,
                     DayChangePct    = dayChangePct,
+                    DividendYield   = f?.DividendYield,
+                    PriceToEarnings = f?.PriceToEarnings,
+                    PriceToBook     = f?.PriceToBook,
+                    ReturnOnEquity  = f?.ReturnOnEquity,
+                    MarketCap       = f?.MarketCap,
+                    TotalRevenue    = f?.TotalRevenue,
                 };
             });
 
@@ -118,6 +169,7 @@ namespace FinanceControl.Services.Services
                                        .OrderBy(a => a.DayChangePct)
                                        .Take(limit),
                 "price_desc"  => result.OrderByDescending(a => a.CurrentPrice).Take(limit),
+                _ when isFundamentalSort => result, // already ordered + limited by the DB
                 _             => result.Take(limit),
             };
 
@@ -328,6 +380,94 @@ namespace FinanceControl.Services.Services
 
             _cache.Set(cacheKey, dto, TimeSpan.FromHours(6));
             return dto;
+        }
+
+        public async Task<FiiIndicatorsDto> GetFiiIndicatorsAsync(string ticker)
+        {
+            var t = ticker.Trim().ToUpperInvariant();
+            var cacheKey = $"fii_indicators_{t}";
+
+            if (_cache.TryGetValue(cacheKey, out FiiIndicatorsDto? cached) && cached is not null)
+                return cached;
+
+            if (string.IsNullOrEmpty(_brapiSettings.Token))
+                throw new InvalidOperationException("Brapi token not configured.");
+
+            using var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(15);
+
+            var url = $"https://brapi.dev/api/v2/fii/list?symbols={t}&token={_brapiSettings.Token}";
+            var json = await client.GetStringAsync(url);
+
+            var resp = JsonSerializer.Deserialize<BrapiFiiListResponse>(json);
+            var fii = resp?.Fiis?.FirstOrDefault();
+            if (fii is null)
+                throw new KeyNotFoundException($"No FII data found for ticker {t}.");
+
+            var dto = new FiiIndicatorsDto
+            {
+                Ticker            = t,
+                Name              = fii.Name,
+                SegmentType       = fii.SegmentType,
+                Segment           = fii.SegmentoAtuacao,
+                ManagementType    = fii.TipoGestao,
+                Mandate           = fii.Mandate,
+                AdministratorName = fii.AdministratorName,
+                Price             = fii.Price,
+                NavPerShare       = fii.NavPerShare,
+                PriceToNav        = fii.PriceToNav,
+                DividendYield12m  = fii.DividendYield12m,
+                TotalInvestors    = fii.TotalInvestors,
+                FetchedAt         = DateTime.UtcNow,
+            };
+
+            _cache.Set(cacheKey, dto, TimeSpan.FromHours(6));
+            return dto;
+        }
+
+        public async Task<List<MacroIndicatorDto>> GetMacroIndicatorsAsync()
+        {
+            const string cacheKey = "market_macro_indicators";
+            if (_cache.TryGetValue(cacheKey, out List<MacroIndicatorDto>? cached) && cached is not null)
+                return cached;
+
+            if (string.IsNullOrEmpty(_brapiSettings.Token))
+                throw new InvalidOperationException("Brapi token not configured.");
+
+            using var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(15);
+
+            var symbols = string.Join(",", MacroSlugs);
+            var url = $"https://brapi.dev/api/v2/macro?symbols={symbols}&sortOrder=desc&limit=2&token={_brapiSettings.Token}";
+            var json = await client.GetStringAsync(url);
+
+            var resp = JsonSerializer.Deserialize<BrapiMacroResponse>(json);
+            var bySlug = (resp?.Results ?? [])
+                .Where(r => !string.IsNullOrWhiteSpace(r.Series?.Slug))
+                .GroupBy(r => r.Series!.Slug!, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+            var indicators = new List<MacroIndicatorDto>();
+            foreach (var slug in MacroSlugs)
+            {
+                if (!bySlug.TryGetValue(slug, out var r) || r.Observations is null || r.Observations.Count == 0)
+                    continue;
+
+                // sortOrder=desc → observations[0] is the most recent.
+                var obs = r.Observations;
+                indicators.Add(new MacroIndicatorDto
+                {
+                    Slug          = slug,
+                    Name          = r.Series?.Name ?? slug,
+                    Unit          = r.Series?.Unit,
+                    Value         = obs[0].Value,
+                    Date          = obs[0].Date,
+                    PreviousValue = obs.Count > 1 ? obs[1].Value : null,
+                });
+            }
+
+            _cache.Set(cacheKey, indicators, TimeSpan.FromHours(6));
+            return indicators;
         }
 
         private static DateOnly? TryParseDate(string? value)

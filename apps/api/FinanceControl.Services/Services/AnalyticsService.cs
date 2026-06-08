@@ -252,23 +252,44 @@ namespace FinanceControl.Services.Services
         {
             await using var context = _contextFactory.CreateDbContext();
 
-            // Fetch all transactions up to the end of the period, grouped by account and month
-            var allTransactions = await context.Transactions
-                .Where(t => t.UserId == requestDto.UserId)
-                .Where(t => t.TransactionDate <= requestDto.FinishDate)
-                .Select(t => new
+            var startMonth = new DateOnly(requestDto.StartDate.Year, requestDto.StartDate.Month, 1);
+
+            // Account display names, resolved once.
+            var nameById = await context.Accounts
+                .Where(a => a.UserId == requestDto.UserId)
+                .Select(a => new { a.Id, a.Name })
+                .ToDictionaryAsync(a => a.Id, a => a.Name);
+
+            // Opening balance per account: net of everything before the first month shown.
+            var opening = await context.Transactions
+                .Where(t => t.UserId == requestDto.UserId && t.TransactionDate < startMonth)
+                .GroupBy(t => t.AccountId)
+                .Select(g => new
                 {
-                    t.AccountId,
-                    AccountName = t.Account.Name,
-                    t.TransactionDate.Year,
-                    t.TransactionDate.Month,
-                    Net = t.Type == EnumTransactionType.Income ? t.Value : -t.Value
+                    AccountId = g.Key,
+                    Net = (g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (long?)t.Value) ?? 0L)
+                        - (g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (long?)t.Value) ?? 0L)
                 })
                 .ToListAsync();
 
-            // Build cumulative account balances month by month within the requested range
+            // Monthly net movement per account within the range — aggregated in the database
+            // instead of pulling every transaction row into memory.
+            var monthlyByAccount = await context.Transactions
+                .Where(t => t.UserId == requestDto.UserId
+                    && t.TransactionDate >= startMonth && t.TransactionDate <= requestDto.FinishDate)
+                .GroupBy(t => new { t.AccountId, t.TransactionDate.Year, t.TransactionDate.Month })
+                .Select(g => new
+                {
+                    g.Key.AccountId,
+                    g.Key.Year,
+                    g.Key.Month,
+                    Net = (g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (long?)t.Value) ?? 0L)
+                        - (g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (long?)t.Value) ?? 0L)
+                })
+                .ToListAsync();
+
             var months = new List<(int Year, int Month)>();
-            var cursor = new DateOnly(requestDto.StartDate.Year, requestDto.StartDate.Month, 1);
+            var cursor = startMonth;
             var end = new DateOnly(requestDto.FinishDate.Year, requestDto.FinishDate.Month, 1);
             while (cursor <= end)
             {
@@ -276,18 +297,23 @@ namespace FinanceControl.Services.Services
                 cursor = cursor.AddMonths(1);
             }
 
-            // Cumulative net per account up to each month
+            // Carry each account's balance forward across months (cumulative), seeded with the opening.
+            var runningByAccount = new Dictionary<int, long>();
+            foreach (var o in opening)
+                runningByAccount[o.AccountId] = o.Net;
+
             var result = new List<NetWorthEvolutionItemDto>();
             foreach (var (year, month) in months)
             {
-                var snapshot = allTransactions
-                    .Where(t => t.Year < year || (t.Year == year && t.Month <= month))
-                    .GroupBy(t => new { t.AccountId, t.AccountName })
-                    .Select(g => new AccountBalanceItemDto
+                foreach (var m in monthlyByAccount.Where(x => x.Year == year && x.Month == month))
+                    runningByAccount[m.AccountId] = runningByAccount.GetValueOrDefault(m.AccountId) + m.Net;
+
+                var snapshot = runningByAccount
+                    .Select(kv => new AccountBalanceItemDto
                     {
-                        AccountId = g.Key.AccountId,
-                        AccountName = g.Key.AccountName,
-                        Balance = g.Sum(t => t.Net)
+                        AccountId = kv.Key,
+                        AccountName = nameById.GetValueOrDefault(kv.Key, string.Empty),
+                        Balance = kv.Value
                     })
                     .OrderBy(a => a.AccountName)
                     .ToList();
@@ -508,16 +534,31 @@ namespace FinanceControl.Services.Services
             // Get all transactions to build monthly net worth history (last 12 months)
             var historyStart = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
 
-            var allTransactions = await context.Transactions
-                .Where(t => t.UserId == userId)
-                .Where(t => t.TransactionDate <= today)
-                .Select(t => new
+            // Net worth accumulated before the window = opening balance for the first month.
+            var openingAgg = await context.Transactions
+                .Where(t => t.UserId == userId && t.TransactionDate < historyStart)
+                .GroupBy(_ => 1)
+                .Select(g => new
                 {
-                    t.TransactionDate.Year,
-                    t.TransactionDate.Month,
-                    Net = t.Type == EnumTransactionType.Income ? t.Value : -t.Value
+                    Income = g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (long?)t.Value) ?? 0L,
+                    Expense = g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (long?)t.Value) ?? 0L
+                })
+                .FirstOrDefaultAsync();
+            var openingBalance = openingAgg is null ? 0L : openingAgg.Income - openingAgg.Expense;
+
+            // Monthly net movement within the window, aggregated in the database.
+            var monthlyNet = await context.Transactions
+                .Where(t => t.UserId == userId && t.TransactionDate >= historyStart && t.TransactionDate <= today)
+                .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    Net = (g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (long?)t.Value) ?? 0L)
+                        - (g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (long?)t.Value) ?? 0L)
                 })
                 .ToListAsync();
+            var netByMonth = monthlyNet.ToDictionary(x => (x.Year, x.Month), x => x.Net);
 
             // Build cumulative net worth per month
             var historical = new List<NetWorthProjectionPointDto>();
@@ -530,12 +571,11 @@ namespace FinanceControl.Services.Services
                 cursor = cursor.AddMonths(1);
             }
 
+            var running = openingBalance;
             foreach (var (year, month) in months)
             {
-                var nw = allTransactions
-                    .Where(t => t.Year < year || (t.Year == year && t.Month <= month))
-                    .Sum(t => t.Net);
-                historical.Add(new NetWorthProjectionPointDto { Year = year, Month = month, NetWorth = nw });
+                running += netByMonth.GetValueOrDefault((year, month), 0L);
+                historical.Add(new NetWorthProjectionPointDto { Year = year, Month = month, NetWorth = running });
             }
 
             var currentNetWorth = historical.LastOrDefault()?.NetWorth ?? 0;
@@ -560,7 +600,7 @@ namespace FinanceControl.Services.Services
 
             for (var i = 1; i <= projectionMonths; i++)
             {
-                projNw += (int)Math.Round(monthlyAvgGrowth);
+                projNw += (long)Math.Round(monthlyAvgGrowth);
                 projected.Add(new NetWorthProjectionPointDto { Year = projCursor.Year, Month = projCursor.Month, NetWorth = projNw });
 
                 if (monthlyAvgGrowth < 0 && monthsUntilZero is null && projNw <= 0)
@@ -855,22 +895,31 @@ namespace FinanceControl.Services.Services
 
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-            // All transactions up to today to build timeline
-            var allTransactions = await context.Transactions
+            // Earliest transaction date sets where the timeline starts (scalar query).
+            var firstDate = await context.Transactions
                 .Where(t => t.UserId == userId && t.TransactionDate <= today)
-                .Select(t => new
-                {
-                    t.TransactionDate,
-                    Net = t.Type == EnumTransactionType.Income ? t.Value : -t.Value
-                })
                 .OrderBy(t => t.TransactionDate)
-                .ToListAsync();
+                .Select(t => (DateOnly?)t.TransactionDate)
+                .FirstOrDefaultAsync();
 
-            if (allTransactions.Count == 0)
+            if (firstDate is null)
                 return new FinancialMilestonesDto();
 
-            var firstDate   = allTransactions.First().TransactionDate;
-            var historyStart = new DateOnly(firstDate.Year, firstDate.Month, 1);
+            var historyStart = new DateOnly(firstDate.Value.Year, firstDate.Value.Month, 1);
+
+            // Monthly net movement aggregated in the database.
+            var monthlyNet = await context.Transactions
+                .Where(t => t.UserId == userId && t.TransactionDate <= today)
+                .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    Net = (g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (long?)t.Value) ?? 0L)
+                        - (g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (long?)t.Value) ?? 0L)
+                })
+                .ToListAsync();
+            var netByMonth = monthlyNet.ToDictionary(x => (x.Year, x.Month), x => x.Net);
 
             // Build monthly net-worth timeline from the very first transaction
             var timelineMos = new List<(int Year, int Month)>();
@@ -882,25 +931,29 @@ namespace FinanceControl.Services.Services
             }
 
             var timeline = new List<NetWorthTimelinePointDto>();
+            var running = 0L;
             foreach (var (year, month) in timelineMos)
             {
-                var nw = allTransactions
-                    .Where(t => t.TransactionDate.Year < year || (t.TransactionDate.Year == year && t.TransactionDate.Month <= month))
-                    .Sum(t => t.Net);
-                timeline.Add(new NetWorthTimelinePointDto { Year = year, Month = month, NetWorth = nw });
+                running += netByMonth.GetValueOrDefault((year, month), 0L);
+                timeline.Add(new NetWorthTimelinePointDto { Year = year, Month = month, NetWorth = running });
             }
 
             var milestones = new List<FinancialMilestoneDto>();
 
             // Milestone: first income transaction
-            var firstIncome = allTransactions.FirstOrDefault(t => t.Net > 0);
-            if (firstIncome is not null)
+            var firstIncomeDate = await context.Transactions
+                .Where(t => t.UserId == userId && t.Type == EnumTransactionType.Income && t.TransactionDate <= today)
+                .OrderBy(t => t.TransactionDate)
+                .Select(t => (DateOnly?)t.TransactionDate)
+                .FirstOrDefaultAsync();
+
+            if (firstIncomeDate is not null)
             {
                 milestones.Add(new FinancialMilestoneDto
                 {
                     Label          = "Início da jornada",
-                    Date           = firstIncome.TransactionDate,
-                    NetWorthAtDate = timeline.FirstOrDefault(t => t.Year == firstIncome.TransactionDate.Year && t.Month == firstIncome.TransactionDate.Month)?.NetWorth ?? 0,
+                    Date           = firstIncomeDate.Value,
+                    NetWorthAtDate = timeline.FirstOrDefault(t => t.Year == firstIncomeDate.Value.Year && t.Month == firstIncomeDate.Value.Month)?.NetWorth ?? 0,
                     Type           = "journey_start"
                 });
             }
@@ -1138,15 +1191,30 @@ namespace FinanceControl.Services.Services
             var today         = DateOnly.FromDateTime(DateTime.UtcNow);
             var historyStart  = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
 
-            var allTransactions = await context.Transactions
-                .Where(t => t.UserId == userId && t.TransactionDate <= today)
-                .Select(t => new
+            // Opening balance before the window + monthly net aggregated in the database.
+            var openingAgg = await context.Transactions
+                .Where(t => t.UserId == userId && t.TransactionDate < historyStart)
+                .GroupBy(_ => 1)
+                .Select(g => new
                 {
-                    t.TransactionDate.Year,
-                    t.TransactionDate.Month,
-                    Net = t.Type == EnumTransactionType.Income ? t.Value : -t.Value
+                    Income = g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (long?)t.Value) ?? 0L,
+                    Expense = g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (long?)t.Value) ?? 0L
+                })
+                .FirstOrDefaultAsync();
+            var openingBalance = openingAgg is null ? 0L : openingAgg.Income - openingAgg.Expense;
+
+            var monthlyNet = await context.Transactions
+                .Where(t => t.UserId == userId && t.TransactionDate >= historyStart && t.TransactionDate <= today)
+                .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    Net = (g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (long?)t.Value) ?? 0L)
+                        - (g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (long?)t.Value) ?? 0L)
                 })
                 .ToListAsync();
+            var netByMonth = monthlyNet.ToDictionary(x => (x.Year, x.Month), x => x.Net);
 
             // Build monthly nominal net worth for the 12-month window
             var months = new List<(int Year, int Month)>();
@@ -1157,13 +1225,12 @@ namespace FinanceControl.Services.Services
                 cursor = cursor.AddMonths(1);
             }
 
-            var nominalByMonth = new List<(int Year, int Month, int NominalNetWorth)>();
+            var nominalByMonth = new List<(int Year, int Month, long NominalNetWorth)>();
+            var running = openingBalance;
             foreach (var (year, month) in months)
             {
-                var nw = allTransactions
-                    .Where(t => t.Year < year || (t.Year == year && t.Month <= month))
-                    .Sum(t => t.Net);
-                nominalByMonth.Add((year, month, nw));
+                running += netByMonth.GetValueOrDefault((year, month), 0L);
+                nominalByMonth.Add((year, month, running));
             }
 
             // Fetch IPCA from BACEN SGS (series 433) for the history window
@@ -1185,7 +1252,7 @@ namespace FinanceControl.Services.Services
                 }
 
                 var deflator  = 1.0 + accInflation;
-                var realValue = deflator > 0 ? (int)Math.Round(nominal / deflator) : nominal;
+                var realValue = deflator > 0 ? (long)Math.Round(nominal / deflator) : nominal;
 
                 points.Add(new RealNetWorthPointDto
                 {

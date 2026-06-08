@@ -16,7 +16,12 @@ namespace FinanceControl.Services.Brapi
         [property: JsonPropertyName("regularMarketPrice")] decimal? RegularMarketPrice,
         [property: JsonPropertyName("regularMarketTime")] DateTime? RegularMarketTime,
         [property: JsonPropertyName("dividendsData")] BrapiDividendsData? DividendsData,
-        [property: JsonPropertyName("historicalDataPrice")] List<BrapiHistoricalPrice>? HistoricalDataPrice
+        [property: JsonPropertyName("historicalDataPrice")] List<BrapiHistoricalPrice>? HistoricalDataPrice,
+        // Populated only when the request asks for &modules=defaultKeyStatistics,financialData.
+        [property: JsonPropertyName("marketCap")] long? MarketCap = null,
+        [property: JsonPropertyName("priceEarnings")] decimal? PriceEarnings = null,
+        [property: JsonPropertyName("defaultKeyStatistics")] System.Text.Json.JsonElement? DefaultKeyStatistics = null,
+        [property: JsonPropertyName("financialData")] System.Text.Json.JsonElement? FinancialData = null
     );
 
     internal record BrapiDividendsData(

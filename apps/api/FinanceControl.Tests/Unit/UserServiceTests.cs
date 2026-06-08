@@ -33,6 +33,14 @@ namespace FinanceControl.Tests.Unit
             return user;
         }
 
+        // Mirrors UserService.HashToken: reset/refresh tokens are stored hashed, so tests
+        // must seed the hash of the raw token they then pass to the service.
+        private static string HashToken(string token)
+        {
+            var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
+            return Convert.ToHexString(hash);
+        }
+
         [Fact]
         public async Task UserLogin_WrongPassword_IncreasesFailedAttempts()
         {
@@ -99,7 +107,7 @@ namespace FinanceControl.Tests.Unit
         {
             using var context = DbContextHelper.CreateInMemory();
             var user = SeedUserWithPassword(context, "u@test.com", "OldPass@1");
-            user.PasswordResetToken = "valid-token";
+            user.PasswordResetToken = HashToken("valid-token");
             user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddHours(1);
             await context.SaveChangesAsync();
 
@@ -121,7 +129,7 @@ namespace FinanceControl.Tests.Unit
         {
             using var context = DbContextHelper.CreateInMemory();
             var user = SeedUserWithPassword(context, "u@test.com", "OldPass@1");
-            user.PasswordResetToken = "expired-token";
+            user.PasswordResetToken = HashToken("expired-token");
             user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddHours(-1); // expired
             await context.SaveChangesAsync();
 

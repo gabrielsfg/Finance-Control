@@ -14,6 +14,7 @@ namespace FinanceControl.Shared.Enums
         TesouroDireto,
         RendaFixa,
         Index,
+        Moeda,
         Outro
     }
 }

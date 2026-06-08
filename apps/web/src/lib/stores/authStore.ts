@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authApi } from "@/lib/api/auth";
+import { clearPersistedQueryCache } from "@/lib/queryClient";
 import type { AuthUser } from "@/lib/types/auth.types";
 
 type AuthState = {
@@ -22,6 +23,8 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       login: (accessToken, refreshToken) => {
+        // Drop any cache left by a previous account before the new one loads.
+        clearPersistedQueryCache();
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
         // 7-day cookie so the middleware never loses auth between sessions
@@ -41,6 +44,7 @@ export const useAuthStore = create<AuthState>()(
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         document.cookie = "accessToken=; path=/; max-age=0; SameSite=Lax";
+        clearPersistedQueryCache();
         set({ accessToken: null, refreshToken: null, user: null, isAuthenticated: false });
       },
 

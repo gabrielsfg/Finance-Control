@@ -360,6 +360,12 @@ namespace FinanceControl.Data.Migrations
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AccountId");
@@ -526,6 +532,58 @@ namespace FinanceControl.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("MarketAssets", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.MarketAssetFundamentals", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<decimal?>("DividendYield")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("FetchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MarketAssetId")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("MarketCap")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal?>("NetIncome")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PriceToBook")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PriceToEarnings")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ReturnOnEquity")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TotalRevenue")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MarketAssetId")
+                        .IsUnique();
+
+                    b.ToTable("MarketAssetFundamentals", (string)null);
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.MarketPriceHistory", b =>
@@ -697,6 +755,9 @@ namespace FinanceControl.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Token")
+                        .IsUnique();
+
                     b.HasIndex("UserId");
 
                     b.ToTable("RefreshTokens", (string)null);
@@ -774,6 +835,7 @@ namespace FinanceControl.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UserId", "Name")
+                        .IsUnique()
                         .HasDatabaseName("IX_Tags_UserId_Name");
 
                     b.ToTable("Tags", (string)null);
@@ -935,6 +997,12 @@ namespace FinanceControl.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("PasswordResetToken")
+                        .HasFilter("\"PasswordResetToken\" IS NOT NULL");
 
                     b.ToTable("Users", (string)null);
                 });
@@ -1145,6 +1213,17 @@ namespace FinanceControl.Data.Migrations
                     b.Navigation("LinkedTransaction");
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.MarketAssetFundamentals", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.MarketAsset", "MarketAsset")
+                        .WithOne("Fundamentals")
+                        .HasForeignKey("FinanceControl.Domain.Entities.MarketAssetFundamentals", "MarketAssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MarketAsset");
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.MarketPriceHistory", b =>
                 {
                     b.HasOne("FinanceControl.Domain.Entities.MarketAsset", "MarketAsset")
@@ -1352,6 +1431,8 @@ namespace FinanceControl.Data.Migrations
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.MarketAsset", b =>
                 {
+                    b.Navigation("Fundamentals");
+
                     b.Navigation("Investments");
 
                     b.Navigation("PriceHistory");

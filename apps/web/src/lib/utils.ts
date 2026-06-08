@@ -41,6 +41,7 @@ const ASSET_TYPE_KEYWORDS: Record<string, string> = {
   TesouroDireto:     "tesouro direto titulo publico renda fixa selic ipca prefixado",
   RendaFixa:         "renda fixa cdb lci lca cdi debenture pos fixado",
   Index:             "indice index benchmark referencia",
+  Moeda:             "moeda moedas cambio câmbio dolar dólar euro libra forex par usd eur",
   Outro:             "outro outros",
 };
 

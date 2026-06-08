@@ -1,14 +1,14 @@
 # Spec: Market Data (Brapi)
 
 > **Status:** Descritivo (documenta o código atual em `apps/api` + `apps/web`) com seção de gaps.
-> **Última sincronização com o código:** 2026-06-02.
+> **Última sincronização com o código:** 2026-06-05.
 > **Domínio:** Dados de mercado de ativos (cotações, histórico diário, ticks intraday, fundamentos) provenientes da [Brapi](https://brapi.dev). Catálogo global, compartilhado por todos os usuários.
 
 ---
 
 ## 1. Visão geral
 
-Market Data é a camada de **dados de mercado global** do app: o catálogo de ativos (ações, FIIs, ETFs, BDRs, cripto, índices) com cotação atual, histórico de preço diário, ticks intraday e indicadores fundamentalistas. Tudo vem da Brapi.
+Market Data é a camada de **dados de mercado global** do app: o catálogo de ativos (ações, FIIs, ETFs, BDRs, cripto, índices, moedas/câmbio, Tesouro Direto) com cotação atual, histórico de preço diário, ticks intraday, indicadores fundamentalistas e um feed de indicadores macro. Tudo vem da Brapi.
 
 Diferente da maioria das entidades, `MarketAsset` **não** herda `OwnedEntity` — herda `BaseEntity` direto e **não tem `UserId`**. A mesma linha `PETR4` é compartilhada por todos os usuários que a possuem. A deduplicação é garantida por um índice único em `Ticker`.
 
@@ -84,10 +84,30 @@ Tick intraday. Uma linha por ativo por slot de 15 min. Linhas com mais de **7 di
 
 > **Note bem:** nenhum endpoint deste spec lê `MarketPriceIntraday` hoje. A tabela é gravada pelo job intraday e purgada pelo cleanup, mas a API de leitura (detalhe) só retorna o histórico **diário** (`MarketPriceHistory`). Ver gap **G6**.
 
+### `MarketAssetFundamentals` (`BaseEntity`)
+`apps/api/FinanceControl.Domain/Entities/MarketAssetFundamentals.cs`
+
+Snapshot 1:1 de indicadores fundamentalistas por ativo, persistido **em massa** para permitir ranquear/filtrar o universo por métrica (DY, P/L, P/VP, valor de mercado, receita). Global — não owned. Só ativos equity-like (ações, FIIs, ETFs, BDRs) carregam fundamentos.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `Id` | `int` | PK |
+| `MarketAssetId` | `int` | FK → `MarketAsset` (**índice único**, cascade delete) |
+| `DividendYield` | `decimal?` | fração (0.0713 = 7,13%) |
+| `PriceToEarnings` | `decimal?` | P/L |
+| `PriceToBook` | `decimal?` | P/VP |
+| `ReturnOnEquity` | `decimal?` | fração |
+| `MarketCap` | `long?` | reais (não centavos) |
+| `TotalRevenue` | `decimal?` | reais |
+| `NetIncome` | `decimal?` | reais |
+| `FetchedAt` | `DateTime?` | UTC do último refresh |
+
+Preenchido pela passada de fundamentos do job diário (`ProcessFundamentalsBatchAsync`, via `/api/quote/{tickers}?modules=defaultKeyStatistics,financialData`). Migration: `AddDbIndexes` (cria a tabela `MarketAssetFundamentals`).
+
 ### Enum `EnumAssetType`
 `apps/api/FinanceControl.Shared/Enums/EnumAssetType.cs` — serializado como **string** (`HasConversion<string>()` no mapping e `JsonStringEnumConverter` global).
 
-`Acao`, `FundoInvestimento`, `FII`, `Cripto`, `Stock`, `Reit`, `BDR`, `ETF`, `ETFInternacional`, `TesouroDireto`, `RendaFixa`, `Index`, `Outro`
+`Acao`, `FundoInvestimento`, `FII`, `Cripto`, `Stock`, `Reit`, `BDR`, `ETF`, `ETFInternacional`, `TesouroDireto`, `RendaFixa`, `Index`, `Moeda`, `Outro`
 
 **Label legível (`AssetClass`)** — mapa estático em `MarketService.AssetTypeLabels`, usado para preencher o campo `AssetClass` nos DTOs:
 
@@ -105,6 +125,7 @@ Tick intraday. Uma linha por ativo por slot de 15 min. Linhas com mais de **7 di
 | `TesouroDireto` | `Tesouro Direto` |
 | `RendaFixa` | `Renda Fixa` |
 | `Index` | `Índice` |
+| `Moeda` | `Moeda` |
 | `Outro` | `Outro` |
 
 > **Note bem:** `TesouroDireto` e `RendaFixa` existem no enum e no mapa de labels, mas **nenhum** fluxo (job de sync ou `MapAssetType`) os atribui hoje — não há origem desses tipos vindo da Brapi. Ver gap **G5**.
@@ -122,11 +143,15 @@ Não há escopo por usuário (dados são globais), e nenhum corpo de requisiçã
 | `GET` | `/api/market/search` | Busca por ticker ou nome | `200` `MarketAssetDto[]` | `400` se `q` vazio |
 | `GET` | `/api/market/{ticker}` | Detalhe de um ativo + histórico diário | `200` `MarketAssetDetailDto` | `400` ticker vazio · `404` não encontrado |
 | `GET` | `/api/market/{ticker}/fundamentals` | Fundamentos (chamada Brapi ao vivo + cache 6h) | `200` `FundamentalsDto` | `400` · `404` sem dados · `503` token não configurado |
+| `GET` | `/api/market/{ticker}/fii` | Indicadores de FII (`/api/v2/fii/list` ao vivo + cache 6h) | `200` `FiiIndicatorsDto` | `400` · `404` sem dados · `503` token não configurado |
+| `GET` | `/api/market/macro` | Indicadores macro curados (`/api/v2/macro` ao vivo + cache 6h) | `200` `MacroIndicatorDto[]` | `503` token não configurado |
 
 ### `GET /api/market` — parâmetros (query string)
 ```
 type  : string?  = null            // nome do EnumAssetType (ex.: "Acao", "FII"); inválido/null → sem filtro
-sort  : string   = "change_desc"   // "change_desc" | "change_asc" | "price_desc" | (qualquer outro → ordem do pool)
+sort  : string   = "change_desc"   // preço/variação: "change_desc" | "change_asc" | "price_desc"
+                                   // fundamentalista (join MarketAssetFundamentals): "dy_desc" |
+                                   // "marketcap_desc" | "revenue_desc" | "pl_asc" | "pvp_asc" | "roe_desc"
 limit : int      = 20              // clamp 1..100 no controller
 ```
 
@@ -243,9 +268,10 @@ Se não houver previous close (`< 2` pontos no histórico) ou ele for `0`, `Prev
 
 ### RN-MKT-09 — Origem dos dados (jobs Brapi) — resumo
 Os dados deste domínio são preenchidos por jobs (detalhados em `specs/background-jobs.md`). O que **este** spec precisa saber sobre o que eles gravam:
-- **Sync do universo** (`SyncAssetUniverseAsync`): paginação de `/api/quote/list` (limit 200) faz upsert de `MarketAsset` (name, type via `MapAssetType`, logo, preço); semeia os benchmarks `^BVSP` (Ibovespa) e `IFIX` como `Index`; descobre criptos via `/api/v2/crypto/available` (entram como `Cripto`, `Currency = "USD"`, preço 0).
-- **Preço diário** (`RunAsync` → batches de quote/crypto): atualiza `CurrentPrice`/`LastPriceUpdate`/`LogoUrl`/`Currency` e grava **uma** linha de `MarketPriceHistory` por ativo por dia. No 1º run de um ativo (sem histórico), faz **backfill** com `range=max&interval=1d`.
-- **Intraday** (`RunIntradayAsync`): atualiza `CurrentPrice` e grava um tick `MarketPriceIntraday` no slot de 15 min (idempotente por slot). **Não** sincroniza universo nem grava histórico diário.
+- **Sync do universo** (`SyncAssetUniverseAsync`): paginação de `/api/quote/list` (limit 200) faz upsert de `MarketAsset` (name, type via `MapAssetType`, logo, preço); semeia os benchmarks `^BVSP` (Ibovespa) e `IFIX` como `Index`; descobre criptos via `/api/v2/crypto/available` (entram como `Cripto`, `Currency = "USD"`, preço 0); descobre pares de câmbio via `/api/v2/currency/available` (entram como `Moeda`, ticker no formato `USD-BRL`, `Currency = "BRL"`, preço 0); descobre títulos do Tesouro via `/api/v2/treasury/list` paginado (entram como `TesouroDireto`, ticker = slug em maiúsculo ex. `TESOURO-SELIC-01032031`, `Currency = "BRL"`).
+- **Preço diário** (`RunAsync` → batches de quote/crypto/currency/treasury): atualiza `CurrentPrice`/`LastPriceUpdate`/`LogoUrl`/`Currency` e grava **uma** linha de `MarketPriceHistory` por ativo por dia. No 1º run de um ativo (sem histórico), faz **backfill**: quote/crypto via `range=max&interval=1d` (histórico inline); moedas via `/api/v2/currency/historical` (série PTAX diária); Tesouro via `/api/v2/treasury/indicators` (preço atual) + `/api/v2/treasury/indicators/history` (série diária), usando o primeiro preço positivo entre buy/base/sell convertido a centavos.
+- **Intraday** (`RunIntradayAsync`): atualiza `CurrentPrice` (quote/crypto/currency) e grava um tick `MarketPriceIntraday` no slot de 15 min (idempotente por slot). **Não** sincroniza universo nem grava histórico diário (nem faz backfill de moedas). **Tesouro não entra no intraday** — indicadores são publicados 1×/dia.
+- **Fundamentos** (`ProcessFundamentalsBatchAsync`, só no job diário): passada separada e best-effort sobre o `quoteGroup` que chama `/api/quote/{tickers}?modules=defaultKeyStatistics,financialData`, faz upsert de `MarketAssetFundamentals` (DY, P/L, P/VP, ROE, marketCap, receita, lucro). **Isolada** dos batches de preço — uma falha de módulos nunca quebra a atualização de preço. Não roda no intraday.
 - **Cleanup** (`BrapiCleanupJobService`): apaga `MarketPriceIntraday` com `Timestamp` anterior a `now - 7 dias` (`IntradayRetentionDays = 7`).
 - **Matching de símbolo:** a Brapi às vezes devolve sufixo `.SA` (ex.: `IFIX` → `IFIX.SA`); `FindAssetBySymbolAsync` casa pelo símbolo exato e, em fallback, pelo símbolo sem o sufixo.
 - **Dividendos:** quando a Brapi retorna `cashDividends`, o job insere `InvestmentDividend` **por dono** do ativo (lógica de Investments) — ver `specs/investments.md`.
@@ -257,8 +283,8 @@ Os dados deste domínio são preenchidos por jobs (detalhados em `specs/backgrou
 
 ## 5. Front (Web)
 
-- **Rota:** `/market` → `app/(app)/market/page.tsx` (re-export de uma linha) → `features/market/MarketPage.tsx`. No menu lateral aparece como **"Mercado"** (`Sidebar.tsx`).
-- **Layout:** duas colunas (`lg:grid-cols-[380px_1fr]`). Esquerda = overview por abas **ou** resultados de busca; direita = card do ativo selecionado + gráfico; drawer lateral para fundamentos.
+- **Rotas:** `/market` → `MarketPage.tsx` (dashboard); `/market/[ticker]` → `MarketAssetPage.tsx` (página dedicada do ativo, lê o ticker via `useParams()`); `/market/ranking/[sort]?type=` → `MarketRankingPage.tsx` (lista completa de um ranking, `useSearchParams` em `Suspense`). Todos via `page.tsx` re-export de uma linha. No menu lateral aparece como **"Mercado"** (`Sidebar.tsx`).
+- **Layout (redesign):** o `/market` virou um **dashboard**: faixa de indicadores (`MarketIndicatorsStrip` — índices IBOV/IFIX + moedas USD-BRL/EUR-BRL + macro Selic/CDI/IPCA/IGP-M), filtro de classe (`PillSelect`) e cards de ranking (`RankingCard`) — Maiores altas/quedas (preço/variação) e, para classes equity, Maiores DY / Maior Valor de Mercado (sorts fundamentalistas), cada um com "Ver ranking". Clicar numa linha (`MarketAssetRow`, `Link` → `/market/[ticker]`) abre a página do ativo, que mostra `MarketAssetCard` + `MarketPriceChart` + fundamentos inline (`FundamentalsPanel`) ou indicadores de FII (`FiiPanel`). A busca de tickers vive no header (`GlobalSearch`, seção "Mercado" via `/market/search`). O `FundamentalsDrawer` continua só no `InvestmentDetailModal`.
 
 ### API client — `lib/api/market.ts`
 | Método | Endpoint | Observação |
@@ -310,7 +336,7 @@ O campo de busca é injetado pelo header global via `usePageSearch((q) => setQue
 - **G2 — `TargetHourUtc` divergente:** `appsettings.json` define `TargetHourUtc = 22`, mas o default de `BrapiSettings` é `19`. Como o agendamento é do escopo de `specs/background-jobs.md`, registrar aqui apenas a divergência de configuração e confirmar qual valor vale em produção.
 - **G3 — `MarketSearchBar` órfão:** o componente `features/market/components/MarketSearchBar.tsx` existe mas **não é importado** em `MarketPage` (a busca vem do `usePageSearch` do header). Confirmar se é código morto/legado ou se deveria estar em uso.
 - **G4 — `ListAsync`/`SearchAsync` sem cache de servidor:** apenas `GetFundamentalsAsync` usa `IMemoryCache`. List e search batem no banco a cada request (com group-by de previous close), embora sejam dados globais idênticos para todos. O `staleTime` de 5 min do front mitiga, mas não há cache server-side. Confirmar se é aceitável para a carga esperada.
-- **G5 — `TesouroDireto`/`RendaFixa` sem origem:** os valores existem no `EnumAssetType` e no mapa de labels, mas `MapAssetType` (sync do universo) nunca os produz e nenhum job os grava. **Confirmar** se são reservados para uma fonte futura (ex.: Tesouro Direto) ou se devem sair do enum/UI por ora.
+- **G5 — `RendaFixa` sem origem:** `TesouroDireto` agora **tem origem** (descoberta via `/api/v2/treasury/list` + preços via `/treasury/indicators`). `RendaFixa` continua sem nenhum job que o produza — **confirmar** se é reservado para fonte futura (CDB/LCI/LCA) ou se deve sair do enum/UI por ora.
 - **G6 — `MarketPriceIntraday` gravado mas nunca lido por esta API:** os jobs gravam ticks de 15 min e o cleanup os mantém por 7 dias, mas nenhum endpoint deste spec os consome — o detalhe só retorna histórico **diário**, e o preset `1D` do gráfico apenas fatia os 2 últimos pontos diários. **Confirmar** se há (ou haverá) um consumidor de intraday (ex.: gráfico intradiário em Investments) ou se a coleta intraday está adiantada em relação à leitura.
 - **G7 — Detalhe carrega histórico completo sem recorte:** `GetDetailAsync` retorna **todo** o `MarketPriceHistories` do ativo (com backfill `max`, potencialmente milhares de pontos) em todas as chamadas, deixando o recorte por período para o client. Para ativos com histórico longo isso pode ficar pesado; avaliar paginação/limite por janela no backend.
 
@@ -325,9 +351,9 @@ O campo de busca é injetado pelo header global via `usePageSearch((q) => setQue
 - `FinanceControl.Domain/Entities/MarketAsset.cs`, `MarketPriceHistory.cs`, `MarketPriceIntraday.cs`
 - `FinanceControl.Data/Mappings/MarketAssetMap.cs`, `MarketPriceHistoryMap.cs`, `MarketPriceIntradayMap.cs`
 - `FinanceControl.Shared/Enums/EnumAssetType.cs`
-- `FinanceControl.Shared/Dtos/Response/Market/MarketAssetDto.cs`, `MarketAssetDetailDto.cs`, `FundamentalsDto.cs`, `FundamentalDividendDto.cs`
+- `FinanceControl.Shared/Dtos/Response/Market/MarketAssetDto.cs`, `MarketAssetDetailDto.cs`, `FundamentalsDto.cs`, `FundamentalDividendDto.cs`, `FiiIndicatorsDto.cs`, `MacroIndicatorDto.cs`
 - `FinanceControl.Shared/Dtos/Response/Investment/InvestmentPriceHistoryDto.cs` (reusado no detalhe), `BrapiJobStatusDto.cs`
-- `FinanceControl.Services/Brapi/` — `BrapiSettings.cs`, `BrapiPriceUpdateJobService.cs`, `BrapiCleanupJobService.cs`, `BrapiAssetListResponse.cs`, `BrapiQuoteResponse.cs`, `BrapiCryptoResponse.cs`, `BrapiCryptoAvailableResponse.cs`
+- `FinanceControl.Services/Brapi/` — `BrapiSettings.cs`, `BrapiPriceUpdateJobService.cs`, `BrapiCleanupJobService.cs`, `BrapiAssetListResponse.cs`, `BrapiQuoteResponse.cs`, `BrapiCryptoResponse.cs`, `BrapiCryptoAvailableResponse.cs`, `BrapiCurrencyAvailableResponse.cs`, `BrapiCurrencyResponse.cs`, `BrapiCurrencyHistoricalResponse.cs`, `BrapiTreasuryResponse.cs`, `BrapiTreasuryHistoryResponse.cs`, `BrapiMacroResponse.cs`, `BrapiFiiListResponse.cs`
 - `FinanceControl.Workers/` — `BrapiPriceUpdateHostedService.cs`, `BrapiIntradayHostedService.cs`, `BrapiCleanupHostedService.cs` *(agendamento documentado em `specs/background-jobs.md`)*
 - `FinanceControl.Services/Extensions/ServicesExtensions.cs` (DI: `IMarketService` Scoped, `BrapiSettings` bind), `FinanceControl.WebApi/Program.cs` (`AddMemoryCache`), `FinanceControl.WebApi/appsettings.json` (`BrapiSettings`)
 

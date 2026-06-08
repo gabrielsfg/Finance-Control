@@ -17,6 +17,13 @@ export type MarketAsset = {
   lastPriceUpdate: string | null;
   previousClose: number | null;
   dayChangePct: number | null;
+  // Populated only on fundamental-sorted rankings (dy/pl/pvp/marketcap/revenue/roe).
+  dividendYield?: number | null;
+  priceToEarnings?: number | null;
+  priceToBook?: number | null;
+  returnOnEquity?: number | null;
+  marketCap?: number | null;
+  totalRevenue?: number | null;
 };
 
 export type MarketAssetDetail = MarketAsset & {
@@ -27,6 +34,31 @@ export type FundamentalDividend = {
   paymentDate: string | null;
   rate: number;
   label: string;
+};
+
+export type FiiIndicators = {
+  ticker: string;
+  name: string | null;
+  segmentType: string | null;
+  segment: string | null;
+  managementType: string | null;
+  mandate: string | null;
+  administratorName: string | null;
+  price: number | null;
+  navPerShare: number | null;
+  priceToNav: number | null;
+  dividendYield12m: number | null;
+  totalInvestors: number | null;
+  fetchedAt: string;
+};
+
+export type MacroIndicator = {
+  slug: string;
+  name: string;
+  unit: string | null;
+  value: number | null;
+  date: string | null;
+  previousValue: number | null;
 };
 
 export type Fundamentals = {

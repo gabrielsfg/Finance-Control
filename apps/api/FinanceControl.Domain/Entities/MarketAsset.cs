@@ -18,5 +18,6 @@ namespace FinanceControl.Domain.Entities
         public ICollection<MarketPriceHistory> PriceHistory { get; set; } = [];
         public ICollection<MarketPriceIntraday> PriceIntraday { get; set; } = [];
         public ICollection<Investment> Investments { get; set; } = [];
+        public MarketAssetFundamentals? Fundamentals { get; set; }
     }
 }

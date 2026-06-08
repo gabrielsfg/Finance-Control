@@ -155,8 +155,24 @@ namespace FinanceControl.Services.Services
 
         public async Task<InvestmentPortfolioDto> RegisterTransactionAsync(int userId, CreateInvestmentTransactionRequestDto dto)
         {
-            await using var context = _contextFactory.CreateDbContext();
+            // Atomic + retry-safe: a fresh context per attempt inside the execution strategy,
+            // and one transaction wrapping every write so a concurrency conflict (xmin) — or any
+            // failure — rolls the whole operation back instead of leaving an orphan linked
+            // financial transaction behind.
+            await using var strategyContext = _contextFactory.CreateDbContext();
+            var strategy = strategyContext.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var context = _contextFactory.CreateDbContext();
+                await using var dbTx = await context.Database.BeginTransactionAsync();
+                var portfolio = await RegisterTransactionCoreAsync(context, userId, dto);
+                await dbTx.CommitAsync();
+                return portfolio;
+            });
+        }
 
+        private async Task<InvestmentPortfolioDto> RegisterTransactionCoreAsync(ApplicationDbContext context, int userId, CreateInvestmentTransactionRequestDto dto)
+        {
             var totalValue = (long)Math.Round(dto.Quantity * dto.UnitPrice) + dto.OtherCosts;
             var ticker = dto.Ticker.ToUpperInvariant();
 
@@ -267,8 +283,20 @@ namespace FinanceControl.Services.Services
 
         public async Task<InvestmentPortfolioDto> DeleteTransactionAsync(int transactionId, int userId)
         {
-            await using var context = _contextFactory.CreateDbContext();
+            await using var strategyContext = _contextFactory.CreateDbContext();
+            var strategy = strategyContext.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var context = _contextFactory.CreateDbContext();
+                await using var dbTx = await context.Database.BeginTransactionAsync();
+                var portfolio = await DeleteTransactionCoreAsync(context, transactionId, userId);
+                await dbTx.CommitAsync();
+                return portfolio;
+            });
+        }
 
+        private async Task<InvestmentPortfolioDto> DeleteTransactionCoreAsync(ApplicationDbContext context, int transactionId, int userId)
+        {
             var tx = await context.InvestmentTransactions
                 .Include(t => t.Investment)
                 .FirstOrDefaultAsync(t => t.Id == transactionId && t.UserId == userId)

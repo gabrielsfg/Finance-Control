@@ -38,6 +38,41 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("{ticker}/fii")]
+        public async Task<IActionResult> GetFiiIndicatorsAsync([FromRoute] string ticker)
+        {
+            if (string.IsNullOrWhiteSpace(ticker))
+                return BadRequest(new { error = "Ticker is required." });
+
+            try
+            {
+                var result = await _marketService.GetFiiIndicatorsAsync(ticker);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { error = $"No FII data found for '{ticker}'." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(503, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("macro")]
+        public async Task<IActionResult> GetMacroIndicatorsAsync()
+        {
+            try
+            {
+                var result = await _marketService.GetMacroIndicatorsAsync();
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(503, new { error = ex.Message });
+            }
+        }
+
         [HttpGet("{ticker}")]
         public async Task<IActionResult> GetDetailAsync([FromRoute] string ticker)
         {

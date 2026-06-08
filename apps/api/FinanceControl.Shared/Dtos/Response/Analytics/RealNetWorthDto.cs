@@ -12,8 +12,8 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
     {
         public int Year { get; set; }
         public int Month { get; set; }
-        public int NominalNetWorth { get; set; }
-        public int RealNetWorth { get; set; }
+        public long NominalNetWorth { get; set; }
+        public long RealNetWorth { get; set; }
         public decimal AccumulatedInflationPct { get; set; }
     }
 }

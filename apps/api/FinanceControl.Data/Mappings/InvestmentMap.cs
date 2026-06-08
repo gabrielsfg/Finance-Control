@@ -28,6 +28,13 @@ namespace FinanceControl.Data.Mappings
             // One position per user per asset.
             builder.HasIndex(i => new { i.UserId, i.MarketAssetId }).IsUnique();
 
+            // Optimistic concurrency via the Postgres system column xmin: concurrent edits
+            // to the same position (e.g. two buys at once) are detected instead of silently
+            // overwriting each other. A uint shadow property marked IsRowVersion() is
+            // auto-mapped by Npgsql to the existing xmin system column — no real column is
+            // added, so this requires no migration.
+            builder.Property<uint>("Version").IsRowVersion();
+
             builder.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(i => i.UserId)
