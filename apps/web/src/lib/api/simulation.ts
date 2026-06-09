@@ -1,9 +1,36 @@
 import { api } from "./axios";
-import type { BenchmarkRates, HistoricalSimulation } from "@/lib/types/simulation";
+import type {
+  BenchmarkRates,
+  HistoricalSimulation,
+  PortfolioBacktestRequest,
+  PortfolioBacktestResult,
+} from "@/lib/types/simulation";
+
+export interface AssetRate {
+  ticker: string;
+  annualReturnPct: number;
+  yearsOfData: number;
+  isReal: boolean;
+  rateSource: string;
+}
+
+export interface AvailableBenchmark {
+  ticker: string;
+  name: string;
+  assetType: string;
+  earliestDate: string; // YYYY-MM-DD
+  latestDate: string;   // YYYY-MM-DD
+  monthsAvailable: number;
+}
 
 export const simulationApi = {
   getBenchmarkRates: async (): Promise<BenchmarkRates> => {
     const { data } = await api.get<BenchmarkRates>("/simulation/benchmark-rates");
+    return data;
+  },
+
+  getAvailableBenchmarks: async (): Promise<AvailableBenchmark[]> => {
+    const { data } = await api.get<AvailableBenchmark[]>("/simulation/available-benchmarks");
     return data;
   },
 
@@ -15,6 +42,25 @@ export const simulationApi = {
     initialAmount: number;
   }): Promise<HistoricalSimulation> => {
     const { data } = await api.get<HistoricalSimulation>("/simulation/historical", { params });
+    return data;
+  },
+
+  getAssetRates: async (tickers: string[]): Promise<AssetRate[]> => {
+    const { data } = await api.get<AssetRate[]>("/simulation/asset-rates", {
+      params: { tickers: tickers.join(",") },
+    });
+    return data;
+  },
+
+  getAssetRateForPeriod: async (ticker: string, period: string): Promise<AssetRate> => {
+    const { data } = await api.get<AssetRate>("/simulation/asset-rate", {
+      params: { ticker, period },
+    });
+    return data;
+  },
+
+  portfolioBacktest: async (req: PortfolioBacktestRequest): Promise<PortfolioBacktestResult> => {
+    const { data } = await api.post<PortfolioBacktestResult>("/simulation/portfolio/backtest", req);
     return data;
   },
 };

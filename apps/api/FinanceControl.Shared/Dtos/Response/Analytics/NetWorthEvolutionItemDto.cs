@@ -4,7 +4,7 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
     {
         public int Month { get; set; }
         public int Year { get; set; }
-        public int NetWorth { get; set; }
+        public long NetWorth { get; set; }
         public List<AccountBalanceItemDto> Breakdown { get; set; } = [];
     }
 
@@ -12,6 +12,6 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
     {
         public int AccountId { get; set; }
         public string AccountName { get; set; } = string.Empty;
-        public int Balance { get; set; }
+        public long Balance { get; set; }
     }
 }

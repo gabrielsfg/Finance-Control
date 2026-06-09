@@ -17,12 +17,14 @@ export const authApi = {
     return response.data;
   },
 
-  refresh: async (refreshToken: string): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>("/user/refresh", { refreshToken });
+  // Refresh token travels as HttpOnly cookie — no body needed.
+  refresh: async (): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>("/user/refresh", {});
     return response.data;
   },
 
-  logout: async (refreshToken: string): Promise<void> => {
-    await api.post("/user/logout", { refreshToken });
+  // Refresh token travels as HttpOnly cookie — backend invalidates it server-side.
+  logout: async (): Promise<void> => {
+    await api.post("/user/logout", {});
   },
 };

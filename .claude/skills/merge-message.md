@@ -29,17 +29,10 @@ Gere uma mensagem de merge/PR para a branch atual em comparação com a main.
 
    ### <Área/Tema 2>
    - <mudança>
-
-   ## Test plan
-
-   - [ ] <item de teste 1>
-   - [ ] <item de teste 2>
-   - [ ] Sem regressões em <área relacionada>
    ```
 
    - O Summary deve explicar o **porquê** da branch, não apenas o quê
    - Agrupe mudanças relacionadas em seções nomeadas
-   - O Test plan deve ser específico para as mudanças feitas
    - Escreva em inglês
 
 5. Também gere um **título de PR** curto (máx 70 chars) no formato:

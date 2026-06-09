@@ -28,7 +28,10 @@ if (string.IsNullOrWhiteSpace(jwtToken) || jwtToken.Length < 32)
 //DI Services
 builder.Services.AddAplicationServices(builder.Configuration);
 builder.Services.AddHostedService<RecurringTransactionHostedService>();
+builder.Services.AddHostedService<RefreshTokenCleanupHostedService>();
 builder.Services.AddHostedService<BrapiPriceUpdateHostedService>();
+builder.Services.AddHostedService<BrapiIntradayHostedService>();
+builder.Services.AddHostedService<BrapiCleanupHostedService>();
 builder.Services.AddMemoryCache();
 
 //DI Repositories
@@ -36,8 +39,18 @@ builder.Services.AddMemoryCache();
 //Add migration services.
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-        ), ServiceLifetime.Scoped);
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsql =>
+        {
+            // Neon suspends the compute endpoint after inactivity, so the first query
+            // following a cold start can fail with a transient connection error. Retry
+            // transparently instead of surfacing the failure to the user.
+            npgsql.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorCodesToAdd: null);
+            npgsql.CommandTimeout(30);
+        }), ServiceLifetime.Scoped);
 
 // Add services to the container.
 builder.Services.AddControllers()
@@ -88,8 +101,22 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowCredentials(); // Required so the browser sends the HttpOnly refresh-token cookie
     });
+});
+
+// In development the API (5xxx) and the web app (3000) run on different ports.
+// Cookies with SameSite=Strict are not sent on cross-site requests, which breaks
+// the refresh flow locally. The policy below downgrades SameSite to None (+ Secure)
+// only in Development so local testing works without changing production behaviour.
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.MinimumSameSitePolicy = builder.Environment.IsDevelopment()
+        ? SameSiteMode.None
+        : SameSiteMode.Strict;
+    options.Secure = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
 });
 
 builder.Services.AddRateLimiter(options =>
@@ -125,6 +152,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCookiePolicy();
 
 app.UseCors("WebApp");
 

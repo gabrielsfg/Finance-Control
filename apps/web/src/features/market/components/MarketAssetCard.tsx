@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { TrendingUp, TrendingDown, Clock } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
@@ -17,12 +18,14 @@ const ASSET_TYPE_COLORS: Record<string, string> = {
   ETFInternacional:  "#7C6FE0",
   TesouroDireto:     "#00C98D",
   RendaFixa:         "#4A9EFF",
+  Moeda:             "#14B8A6",
   Outro:             "#8A95A3",
 };
 
 type Props = { asset: MarketAssetDetail };
 
 export const MarketAssetCard = ({ asset }: Props) => {
+  const [logoError, setLogoError] = useState(false);
   const color = ASSET_TYPE_COLORS[asset.assetType] ?? "#8A95A3";
   const isUp = (asset.dayChangePct ?? 0) >= 0;
   const dayChangeAbs = asset.previousClose !== null
@@ -54,12 +57,12 @@ export const MarketAssetCard = ({ asset }: Props) => {
     <div className="border-border bg-surface rounded-xl border p-5">
       {/* Header: logo + nome + ticker + classe */}
       <div className="mb-5 flex items-start gap-4">
-        {asset.logoUrl ? (
+        {asset.logoUrl && !logoError ? (
           <img
             src={asset.logoUrl}
             alt={asset.ticker}
             className="h-12 w-12 shrink-0 rounded-xl object-contain bg-white/5"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            onError={() => setLogoError(true)}
           />
         ) : (
           <div

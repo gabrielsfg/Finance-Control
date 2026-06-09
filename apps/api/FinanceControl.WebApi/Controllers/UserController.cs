@@ -16,6 +16,8 @@ namespace FinanceControl.WebApi.Controllers
     [ApiController]
     public class UserController : BaseController
     {
+        private const string RefreshTokenCookieName = "refreshToken";
+
         private readonly IUserService _userService;
         private readonly IValidator<CreateUserRequestDto> _createUserValidator;
         private readonly IValidator<UserLoginRequestDto> _userLoginValidator;
@@ -41,11 +43,12 @@ namespace FinanceControl.WebApi.Controllers
             if (validatonResult.ToActionResult() is { } errorResult)
                 return errorResult;
 
-            var authResponse = await _userService.RegisterUserAsync(requestDto);
-            if (authResponse is null)
+            var tokens = await _userService.RegisterUserAsync(requestDto);
+            if (tokens is null)
                 return BadRequest("Email already exists.");
 
-            return Ok(authResponse);
+            SetRefreshTokenCookie(tokens.RefreshToken);
+            return Ok(new AuthResponseDto { AccessToken = tokens.AccessToken });
         }
 
         [HttpPost("login")]
@@ -67,21 +70,39 @@ namespace FinanceControl.WebApi.Controllers
             if (result.AuthResponse is null)
                 return BadRequest("Invalid email or password.");
 
-            return Ok(result.AuthResponse);
+            SetRefreshTokenCookie(result.AuthResponse.RefreshToken);
+            return Ok(new AuthResponseDto { AccessToken = result.AuthResponse.AccessToken });
         }
 
         [HttpPost("refresh")]
         [EnableRateLimiting("auth")]
-        public async Task<IActionResult> RefreshTokenAsync([FromBody] RefreshTokenRequestDto requestDto)
+        public async Task<IActionResult> RefreshTokenAsync()
         {
-            if (string.IsNullOrWhiteSpace(requestDto.RefreshToken))
-                return BadRequest("Refresh token is required.");
+            var refreshToken = Request.Cookies[RefreshTokenCookieName];
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                return Unauthorized("Refresh token cookie is missing.");
 
-            var response = await _userService.RefreshTokenAsync(requestDto.RefreshToken);
-            if (response is null)
+            var tokens = await _userService.RefreshTokenAsync(refreshToken);
+            if (tokens is null)
                 return Unauthorized("Invalid or expired refresh token.");
 
-            return Ok(response);
+            SetRefreshTokenCookie(tokens.RefreshToken);
+            return Ok(new AuthResponseDto { AccessToken = tokens.AccessToken });
+        }
+
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<IActionResult> LogoutAsync()
+        {
+            var refreshToken = Request.Cookies[RefreshTokenCookieName];
+
+            if (!string.IsNullOrWhiteSpace(refreshToken))
+                await _userService.LogoutAsync(refreshToken);
+
+            // Clear the cookie regardless of whether the token was valid —
+            // the client should always end up logged out.
+            ClearRefreshTokenCookie();
+            return NoContent();
         }
 
         [HttpGet("profile")]
@@ -132,18 +153,6 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(prefs);
         }
 
-[HttpPost("logout")]
-        [Authorize]
-        public async Task<IActionResult> LogoutAsync([FromBody] LogoutRequestDto requestDto)
-        {
-            if (string.IsNullOrWhiteSpace(requestDto.RefreshToken))
-                return BadRequest("Refresh token is required.");
-
-            await _userService.LogoutAsync(requestDto.RefreshToken);
-
-            return NoContent();
-        }
-
         [HttpDelete("me")]
         [Authorize]
         public async Task<IActionResult> DeleteAccountAsync([FromBody] DeleteAccountRequestDto requestDto)
@@ -155,6 +164,7 @@ namespace FinanceControl.WebApi.Controllers
             if (!success)
                 return BadRequest("Invalid password.");
 
+            ClearRefreshTokenCookie();
             return NoContent();
         }
 
@@ -198,6 +208,32 @@ namespace FinanceControl.WebApi.Controllers
                 return BadRequest("Invalid or expired reset token.");
 
             return Ok(new { message = "Password reset successfully." });
+        }
+
+        // ── Cookie helpers ────────────────────────────────────────────────────
+
+        private void SetRefreshTokenCookie(string refreshToken)
+        {
+            Response.Cookies.Append(RefreshTokenCookieName, refreshToken, new CookieOptions
+            {
+                HttpOnly = true,   // JavaScript cannot read this cookie
+                Secure = true,     // HTTPS only
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddDays(30),
+                Path = "/"
+            });
+        }
+
+        private void ClearRefreshTokenCookie()
+        {
+            Response.Cookies.Append(RefreshTokenCookieName, string.Empty, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UnixEpoch,
+                Path = "/"
+            });
         }
     }
 }

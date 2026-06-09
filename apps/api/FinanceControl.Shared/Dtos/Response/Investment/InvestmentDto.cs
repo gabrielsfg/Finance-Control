@@ -17,6 +17,9 @@ namespace FinanceControl.Shared.Dtos.Response.Investment
         public long TotalInvested { get; set; }
         public long TotalReturn { get; set; }
         public decimal TotalReturnPercent { get; set; }
+        public long? PreviousClose { get; set; }
+        public long DayChangeAbs { get; set; }
+        public decimal DayChangePct { get; set; }
         public DateTime? LastPriceUpdate { get; set; }
         public DateOnly? MaturityDate { get; set; }
         public decimal? ExpectedYieldPct { get; set; }

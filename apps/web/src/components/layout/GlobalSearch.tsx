@@ -7,6 +7,7 @@ import { accountsApi } from "@/lib/api/accounts";
 import { categoriesApi } from "@/lib/api/categories";
 import { investmentsApi } from "@/lib/api/investments";
 import { transactionsApi } from "@/lib/api/transactions";
+import { useMarketSearch } from "@/features/market/hooks/useMarket";
 import {
   Search,
   ArrowLeftRight,
@@ -84,6 +85,7 @@ const ASSET_TYPE_LABELS: Record<string, string> = {
   ETFInternacional: "ETF Int.",
   TesouroDireto: "Tesouro",
   RendaFixa: "Renda Fixa",
+  Moeda: "Moeda",
   Outro: "Outro",
 };
 
@@ -269,7 +271,25 @@ export const GlobalSearch = () => {
       qc.prefetchQuery({ queryKey: ["transactions"], queryFn: transactionsApi.getAll, staleTime: 60_000 });
   }, [qc]);
 
-  const sections = useGlobalSearch(isLocalSearch ? "" : query);
+  const baseSections = useGlobalSearch(isLocalSearch ? "" : query);
+
+  // Market tickers come from the live search API (not the local cache).
+  const marketQuery = !isLocalSearch && query.trim().length >= 2 ? query.trim() : "";
+  const { data: marketAssets = [] } = useMarketSearch(marketQuery);
+
+  const sections = useMemo(() => {
+    if (marketAssets.length === 0) return baseSections;
+    const marketResults: SearchResult[] = marketAssets.map((a) => ({
+      id: `market-${a.id}`,
+      kind: "investment",
+      label: a.ticker,
+      sublabel: a.name,
+      badge: a.assetClass,
+      href: `/market/${encodeURIComponent(a.ticker)}`,
+    }));
+    return [...baseSections, { title: "Mercado", results: marketResults }];
+  }, [baseSections, marketAssets]);
+
   const allResults = sections.flatMap((s) => s.results);
 
   // Reset active index when results change

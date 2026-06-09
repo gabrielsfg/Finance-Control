@@ -13,6 +13,8 @@ namespace FinanceControl.Shared.Enums
         ETFInternacional,
         TesouroDireto,
         RendaFixa,
+        Index,
+        Moeda,
         Outro
     }
 }

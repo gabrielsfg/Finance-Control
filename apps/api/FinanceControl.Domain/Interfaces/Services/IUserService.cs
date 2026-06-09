@@ -1,4 +1,3 @@
-﻿using FinanceControl.Domain.Entities;
 using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
@@ -8,11 +7,13 @@ namespace FinanceControl.Domain.Interfaces.Service
 {
     public interface IUserService
     {
-        Task<AuthResponseDto?> RegisterUserAsync(CreateUserRequestDto requestDto);
+        // Returns AuthTokensDto so the controller can set the refresh token
+        // as an HttpOnly cookie without including it in the response body.
+        Task<AuthTokensDto?> RegisterUserAsync(CreateUserRequestDto requestDto);
 
         Task<LoginResult> UserLoginAsync(UserLoginRequestDto requestDto);
 
-        Task<AuthResponseDto?> RefreshTokenAsync(string refreshToken);
+        Task<AuthTokensDto?> RefreshTokenAsync(string refreshToken);
 
         Task<UserProfileResponseDto?> GetProfileAsync(int userId);
 
@@ -22,7 +23,7 @@ namespace FinanceControl.Domain.Interfaces.Service
 
         Task<UserPreferencesResponseDto?> UpdatePreferencesAsync(int userId, UpdateUserPreferencesRequestDto requestDto);
 
-Task<string?> ForgotPasswordAsync(string email);
+        Task<string?> ForgotPasswordAsync(string email);
 
         Task<bool> ResetPasswordAsync(string token, string newPassword);
 

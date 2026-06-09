@@ -1,4 +1,4 @@
-export type TransactionType = "Income" | "Expense";
+export type TransactionType = "Income" | "Expense" | "Transfer";
 export type PaymentType = "OneTime" | "Installment" | "Recurring";
 export type PaymentMethod = "Debit" | "Credit";
 export type RecurrenceType =
@@ -24,6 +24,8 @@ export type TransactionItem = {
   subCategoryEmoji: string | null;
   accountId: number;
   accountName: string;
+  destinationAccountId: number | null;
+  destinationAccountName: string | null;
   recurringTransactionId: number | null;
   parentTransactionId: number | null;
   value: number;
@@ -48,8 +50,9 @@ export type SubCategoryItem = {
 
 export type CreateTransactionRequest = {
   includeInBudget: boolean;
-  subCategoryId: number;
+  subCategoryId?: number;
   accountId: number;
+  destinationAccountId?: number | null;
   value: number;
   type: TransactionType;
   description: string;
@@ -62,8 +65,9 @@ export type CreateTransactionRequest = {
 };
 
 export type UpdateTransactionRequest = {
-  subCategoryId: number;
+  subCategoryId?: number;
   accountId: number;
+  destinationAccountId?: number | null;
   value: number;
   type: TransactionType;
   description: string;

@@ -54,6 +54,9 @@ namespace FinanceControl.Data.Mappings
                 .WithMany(a => a.RecurringTransactions)
                 .HasForeignKey(rt => rt.AccountId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasIndex(rt => new { rt.IsActive, rt.EndDate })
+                .HasDatabaseName("IX_RecurringTransactions_IsActive_EndDate");
         }
     }
 }

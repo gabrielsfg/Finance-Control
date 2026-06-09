@@ -28,6 +28,12 @@ namespace FinanceControl.Data.Mappings
             builder.HasMany(t => t.Transactions)
                 .WithMany(t => t.Tags)
                 .UsingEntity(j => j.ToTable("TransactionTags"));
+
+            // Unique per user: a user cannot have two tags with the same name, and the
+            // tag lookup in AssociateTagsAsync becomes an index seek.
+            builder.HasIndex(t => new { t.UserId, t.Name })
+                .HasDatabaseName("IX_Tags_UserId_Name")
+                .IsUnique();
         }
     }
 }

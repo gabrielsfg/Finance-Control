@@ -15,5 +15,13 @@ namespace FinanceControl.Shared.Dtos.Response.Market
         public DateTime? LastPriceUpdate { get; set; }
         public long? PreviousClose { get; set; }
         public decimal? DayChangePct { get; set; }
+
+        // Populated only for fundamental-sorted rankings (dy/pl/pvp/marketcap/revenue/roe).
+        public decimal? DividendYield { get; set; }
+        public decimal? PriceToEarnings { get; set; }
+        public decimal? PriceToBook { get; set; }
+        public decimal? ReturnOnEquity { get; set; }
+        public long? MarketCap { get; set; }
+        public decimal? TotalRevenue { get; set; }
     }
 }

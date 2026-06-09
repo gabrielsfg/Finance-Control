@@ -11,6 +11,9 @@ namespace FinanceControl.Data.Mappings
             builder.ToTable("RefreshTokens");
             builder.HasKey(r => r.Id);
             builder.Property(r => r.Token).IsRequired();
+            // Refresh and logout look the token up by value on every call; the token is a
+            // 64-byte random string so a unique index is both correct and the hot path.
+            builder.HasIndex(r => r.Token).IsUnique();
             builder.Property(r => r.ExpiresAt)
                 .HasColumnType("timestamp with time zone")
                 .IsRequired();

@@ -24,6 +24,9 @@ namespace FinanceControl.Services.Services
 
         public async Task<Result<CreateTransactionResponseDto>> CreateTransactionAsync(CreateTransactionRequestDto requestDto, int userId)
         {
+            if (requestDto.Type == EnumTransactionType.Transfer)
+                return await CreateTransferAsync(requestDto, userId);
+
             var accountExists = await _context.Accounts
                 .AnyAsync(a => a.Id == requestDto.AccountId && a.UserId == userId);
             if (!accountExists)
@@ -44,36 +47,47 @@ namespace FinanceControl.Services.Services
                 resolvedBudgetId = activeBudget.Id;
             }
 
-            await using var dbTransaction = await _context.Database.BeginTransactionAsync();
-            try
+            // The retrying execution strategy (EnableRetryOnFailure) may re-run this whole
+            // delegate, so the transactional write lives inside it while the response is
+            // built afterwards from the committed ids — re-running a read would be wasteful
+            // and re-running committed writes would duplicate rows.
+            var strategy = _context.Database.CreateExecutionStrategy();
+            var createdIds = await strategy.ExecuteAsync(async () =>
             {
-                var createdTransactions = requestDto.PaymentType switch
+                await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    EnumPaymentType.OneTime => await CreateOneTimeAsync(requestDto, userId, resolvedBudgetId),
-                    EnumPaymentType.Installment => await CreateInstallmentsAsync(requestDto, userId, resolvedBudgetId),
-                    EnumPaymentType.Recurring => await CreateRecurringAsync(requestDto, userId, resolvedBudgetId),
-                    _ => null
-                };
+                    var createdTransactions = requestDto.PaymentType switch
+                    {
+                        EnumPaymentType.OneTime => await CreateOneTimeAsync(requestDto, userId, resolvedBudgetId),
+                        EnumPaymentType.Installment => await CreateInstallmentsAsync(requestDto, userId, resolvedBudgetId),
+                        EnumPaymentType.Recurring => await CreateRecurringAsync(requestDto, userId, resolvedBudgetId),
+                        _ => null
+                    };
 
-                if (createdTransactions is null || createdTransactions.Count == 0)
-                    return Result<CreateTransactionResponseDto>.Failure("Invalid payment type.");
+                    if (createdTransactions is null || createdTransactions.Count == 0)
+                        return null;
 
-                await _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync();
 
-                await AssociateTagsAsync(createdTransactions, requestDto.Tags, userId);
+                    await AssociateTagsAsync(createdTransactions, requestDto.Tags, userId);
 
-                await dbTransaction.CommitAsync();
+                    await dbTransaction.CommitAsync();
 
-                var transactionIds = createdTransactions.Select(t => t.Id).ToList();
-                var response = await BuildCreateResponseAsync(transactionIds);
+                    return createdTransactions.Select(t => t.Id).ToList();
+                }
+                catch
+                {
+                    await dbTransaction.RollbackAsync();
+                    throw;
+                }
+            });
 
-                return Result<CreateTransactionResponseDto>.Success(response);
-            }
-            catch
-            {
-                await dbTransaction.RollbackAsync();
-                throw;
-            }
+            if (createdIds is null || createdIds.Count == 0)
+                return Result<CreateTransactionResponseDto>.Failure("Invalid payment type.");
+
+            var response = await BuildCreateResponseAsync(createdIds);
+            return Result<CreateTransactionResponseDto>.Success(response);
         }
 
         public async Task<IEnumerable<GetTransactionResponseDto>> GetAllTransactionsAsync(int userId)
@@ -162,6 +176,8 @@ namespace FinanceControl.Services.Services
                     SubCategoryEmoji = t.SubCategory.Emoji,
                     AccountId = t.AccountId,
                     AccountName = t.Account.Name,
+                    DestinationAccountId = t.DestinationAccountId,
+                    DestinationAccountName = t.DestinationAccount != null ? t.DestinationAccount.Name : null,
                     RecurringTransactionId = t.RecurringTransactionId,
                     ParentTransactionId = t.ParentTransactionId,
                     Value = t.Value,
@@ -184,6 +200,9 @@ namespace FinanceControl.Services.Services
 
             if (transaction is null)
                 return Result<CreateTransactionResponseDto>.Failure("Transaction not found.");
+
+            if (transaction.Type == EnumTransactionType.Transfer || requestDto.Type == EnumTransactionType.Transfer)
+                return await UpdateTransferAsync(transaction, requestDto, userId);
 
             var accountExists = await _context.Accounts
                 .AnyAsync(a => a.Id == requestDto.AccountId && a.UserId == userId);
@@ -536,6 +555,96 @@ namespace FinanceControl.Services.Services
         /// <summary>
         /// Private methods
         /// </summary>
+
+        // A transfer is a single Transaction row linking a source (AccountId) and a destination
+        // (DestinationAccountId). Account balances are derived: the source subtracts, the
+        // destination adds (see AccountService). It carries no user subcategory — the system
+        // "Transferência" subcategory is used so it never pollutes expense/income analytics.
+        private async Task<Result<CreateTransactionResponseDto>> CreateTransferAsync(CreateTransactionRequestDto requestDto, int userId)
+        {
+            if (!requestDto.DestinationAccountId.HasValue || requestDto.DestinationAccountId.Value == requestDto.AccountId)
+                return Result<CreateTransactionResponseDto>.Failure("Invalid parameters.");
+
+            var validAccounts = await _context.Accounts
+                .CountAsync(a => a.UserId == userId && !a.IsSystem
+                    && (a.Id == requestDto.AccountId || a.Id == requestDto.DestinationAccountId.Value));
+            if (validAccounts < 2)
+                return Result<CreateTransactionResponseDto>.Failure("Invalid parameters.");
+
+            var transferSubCategoryId = await GetSystemTransferSubCategoryIdAsync(userId);
+
+            var transaction = new Transaction
+            {
+                UserId               = userId,
+                AccountId            = requestDto.AccountId,
+                DestinationAccountId = requestDto.DestinationAccountId.Value,
+                SubCategoryId        = transferSubCategoryId,
+                Value                = requestDto.Value,
+                Type                 = EnumTransactionType.Transfer,
+                Description          = requestDto.Description,
+                TransactionDate      = requestDto.TransactionDate,
+                PaymentType          = EnumPaymentType.OneTime,
+            };
+
+            _context.Transactions.Add(transaction);
+            await _context.SaveChangesAsync();
+
+            var response = await BuildCreateResponseAsync(new List<int> { transaction.Id });
+            return Result<CreateTransactionResponseDto>.Success(response);
+        }
+
+        private async Task<Result<CreateTransactionResponseDto>> UpdateTransferAsync(Transaction transaction, UpdateTransactionRequestDto requestDto, int userId)
+        {
+            // Converting between Transfer and Expense/Income would change the whole shape of the
+            // row (subcategory, budget, destination) — disallow it; the client never offers it.
+            if (transaction.Type != EnumTransactionType.Transfer || requestDto.Type != EnumTransactionType.Transfer)
+                return Result<CreateTransactionResponseDto>.Failure("A transfer cannot be converted to another transaction type.");
+
+            if (!requestDto.DestinationAccountId.HasValue || requestDto.DestinationAccountId.Value == requestDto.AccountId)
+                return Result<CreateTransactionResponseDto>.Failure("Invalid parameters.");
+
+            var validAccounts = await _context.Accounts
+                .CountAsync(a => a.UserId == userId && !a.IsSystem
+                    && (a.Id == requestDto.AccountId || a.Id == requestDto.DestinationAccountId.Value));
+            if (validAccounts < 2)
+                return Result<CreateTransactionResponseDto>.Failure("Invalid parameters.");
+
+            transaction.AccountId            = requestDto.AccountId;
+            transaction.DestinationAccountId = requestDto.DestinationAccountId.Value;
+            transaction.Value                = requestDto.Value;
+            transaction.Description          = requestDto.Description;
+            transaction.TransactionDate      = requestDto.TransactionDate;
+
+            await _context.SaveChangesAsync();
+
+            var response = await BuildCreateResponseAsync(new List<int> { transaction.Id });
+            return Result<CreateTransactionResponseDto>.Success(response);
+        }
+
+        // Resolves (creating on demand) the per-user system "Transferência" subcategory used to
+        // tag transfers. Mirrors the seed created on registration and the GoalService fallback.
+        private async Task<int> GetSystemTransferSubCategoryIdAsync(int userId)
+        {
+            var subCategory = await _context.SubCategories
+                .FirstOrDefaultAsync(s => s.UserId == userId && s.IsSystem && (s.Name == "Transferência" || s.Name == "Transfer"));
+            if (subCategory is not null)
+                return subCategory.Id;
+
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.IsSystem && (c.Name == "Outros" || c.Name == "Other"));
+            if (category is null)
+            {
+                category = new Category { UserId = userId, Name = "Outros", IsSystem = true };
+                _context.Categories.Add(category);
+                await _context.SaveChangesAsync();
+            }
+
+            var sub = new SubCategory { UserId = userId, CategoryId = category.Id, Name = "Transferência", IsSystem = true };
+            _context.SubCategories.Add(sub);
+            await _context.SaveChangesAsync();
+            return sub.Id;
+        }
+
         private async Task<List<Transaction>> CreateOneTimeAsync(CreateTransactionRequestDto dto, int userId, int? budgetId)
         {
             var transaction = new Transaction
@@ -667,6 +776,8 @@ namespace FinanceControl.Services.Services
                     SubCategoryEmoji = t.SubCategory.Emoji,
                     AccountId = t.AccountId,
                     AccountName = t.Account.Name,
+                    DestinationAccountId = t.DestinationAccountId,
+                    DestinationAccountName = t.DestinationAccount != null ? t.DestinationAccount.Name : null,
                     RecurringTransactionId = t.RecurringTransactionId,
                     ParentTransactionId = t.ParentTransactionId,
                     Value = t.Value,
@@ -704,6 +815,8 @@ namespace FinanceControl.Services.Services
                     SubCategoryEmoji = t.SubCategory.Emoji,
                     AccountId = t.AccountId,
                     AccountName = t.Account.Name,
+                    DestinationAccountId = t.DestinationAccountId,
+                    DestinationAccountName = t.DestinationAccount != null ? t.DestinationAccount.Name : null,
                     RecurringTransactionId = t.RecurringTransactionId,
                     ParentTransactionId = t.ParentTransactionId,
                     Value = t.Value,

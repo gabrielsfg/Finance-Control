@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FinanceControl.Data.Mappings
 {
-    public class InvestmentPriceHistoryMap : IEntityTypeConfiguration<InvestmentPriceHistory>
+    public class MarketPriceHistoryMap : IEntityTypeConfiguration<MarketPriceHistory>
     {
-        public void Configure(EntityTypeBuilder<InvestmentPriceHistory> builder)
+        public void Configure(EntityTypeBuilder<MarketPriceHistory> builder)
         {
-            builder.ToTable("InvestmentPriceHistories");
+            builder.ToTable("MarketPriceHistories");
             builder.HasKey(h => h.Id);
-            builder.Property(h => h.InvestmentId).IsRequired();
+            builder.Property(h => h.MarketAssetId).IsRequired();
             builder.Property(h => h.Date).HasColumnType("date").IsRequired();
             builder.Property(h => h.Price).IsRequired();
             builder.Property(h => h.CreatedAt)
@@ -22,11 +22,12 @@ namespace FinanceControl.Data.Mappings
                 .HasColumnType("timestamp with time zone")
                 .ValueGeneratedOnAdd();
 
-            builder.HasIndex(h => new { h.InvestmentId, h.Date }).IsUnique();
+            // Idempotency: one price row per asset per day.
+            builder.HasIndex(h => new { h.MarketAssetId, h.Date }).IsUnique();
 
-            builder.HasOne(h => h.Investment)
-                .WithMany(i => i.PriceHistory)
-                .HasForeignKey(h => h.InvestmentId)
+            builder.HasOne(h => h.MarketAsset)
+                .WithMany(a => a.PriceHistory)
+                .HasForeignKey(h => h.MarketAssetId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

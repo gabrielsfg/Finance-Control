@@ -10,6 +10,8 @@ export type AssetType =
   | "ETFInternacional"
   | "TesouroDireto"
   | "RendaFixa"
+  | "Moeda"
+  | "Index"
   | "Outro";
 
 export type InvestmentOperation = "Buy" | "Sell";
@@ -35,6 +37,9 @@ export type Investment = {
   totalInvested: number;
   totalReturn: number;
   totalReturnPercent: number;
+  previousClose: number | null;
+  dayChangeAbs: number;
+  dayChangePct: number;
   lastPriceUpdate: string | null;
   maturityDate: string | null;
   expectedYieldPct: number | null;

@@ -24,25 +24,41 @@ import type {
   CommitmentsImpactResponse,
 } from "@/lib/types/analytics.types";
 
+// A date range that ends before today is frozen — no new transactions can land
+// in a finished period — so its derived analytics can be cached aggressively.
+// Ranges that still include today stay short-lived. Transaction/investment
+// mutations invalidate ["analytics"], so even backdated edits refresh despite
+// the long stale time.
+const HISTORICAL_STALE_TIME = 1000 * 60 * 60 * 4; // 4h
+const LIVE_STALE_TIME = 60_000; // 1min
+
+const localToday = () => {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+};
+
+const rangeStaleTime = (finishDate: string) =>
+  finishDate < localToday() ? HISTORICAL_STALE_TIME : LIVE_STALE_TIME;
+
 export const useAnalyticsSummary = (startDate: string, finishDate: string, tagIds?: number[]) =>
   useQuery<AnalyticsSummaryResponse>({
     queryKey: ["analytics", "summary", startDate, finishDate, tagIds],
     queryFn: () => analyticsApi.getSummary(startDate, finishDate, tagIds),
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
   });
 
 export const useAnalyticsMonthly = (startDate: string, finishDate: string, tagIds?: number[]) =>
   useQuery<MonthlyData[]>({
     queryKey: ["analytics", "monthly", startDate, finishDate, tagIds],
     queryFn: () => analyticsApi.getIncomeExpense(startDate, finishDate, tagIds),
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
   });
 
 export const useAnalyticsHeatmap = (startDate: string, finishDate: string, tagIds?: number[]) =>
   useQuery<DaySpend[]>({
     queryKey: ["analytics", "heatmap", startDate, finishDate, tagIds],
     queryFn: () => analyticsApi.getSpendingHeatmap(startDate, finishDate, tagIds),
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
   });
 
 export const useAnalyticsCategoryEvolution = (startDate: string, finishDate: string, categoryIds: number[], tagIds?: number[]) =>
@@ -64,7 +80,7 @@ export const useAnalyticsCategoryEvolution = (startDate: string, finishDate: str
       }
       return Object.values(merged);
     },
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
     enabled: categoryIds.length > 0,
   });
 
@@ -72,49 +88,49 @@ export const useAnalyticsNetWorth = (startDate: string, finishDate: string) =>
   useQuery<NetWorthPoint[]>({
     queryKey: ["analytics", "net-worth", startDate, finishDate],
     queryFn: () => analyticsApi.getNetWorthEvolution(startDate, finishDate),
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
   });
 
 export const useAnalyticsInvestmentEvolution = (startDate: string, finishDate: string) =>
   useQuery<InvestmentEvolutionResponse>({
     queryKey: ["analytics", "investment-evolution", startDate, finishDate],
     queryFn: () => analyticsApi.getInvestmentEvolution(startDate, finishDate),
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
   });
 
 export const useInvestmentProfitabilityTotals = (startDate: string, finishDate: string) =>
   useQuery<ProfitabilityTotals>({
     queryKey: ["analytics", "profitability-totals", startDate, finishDate],
     queryFn: () => analyticsApi.getInvestmentProfitabilityTotals(startDate, finishDate),
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
   });
 
 export const useInvestmentAnnualReturns = (startDate: string, finishDate: string) =>
   useQuery<AnnualReturnsResponse>({
     queryKey: ["analytics", "annual-returns", startDate, finishDate],
     queryFn: () => analyticsApi.getInvestmentAnnualReturns(startDate, finishDate),
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
   });
 
 export const useInvestmentProfitabilityVsCdi = (startDate: string, finishDate: string) =>
   useQuery<ProfitabilityVsCdiPoint[]>({
     queryKey: ["analytics", "vs-cdi", startDate, finishDate],
     queryFn: () => analyticsApi.getInvestmentProfitabilityVsCdi(startDate, finishDate),
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
   });
 
 export const useInvestmentProfitabilityVsBenchmarks = (startDate: string, finishDate: string) =>
   useQuery<ProfitabilityVsBenchmarksResponse>({
     queryKey: ["analytics", "vs-benchmarks", startDate, finishDate],
     queryFn: () => analyticsApi.getInvestmentProfitabilityVsBenchmarks(startDate, finishDate),
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
   });
 
 export const useInvestmentLaunches = (startDate: string, finishDate: string) =>
   useQuery<InvestmentLaunchesResponse>({
     queryKey: ["analytics", "launches", startDate, finishDate],
     queryFn: () => analyticsApi.getInvestmentLaunches(startDate, finishDate),
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
   });
 
 export const useNetWorthProjection = (projectionMonths = 24) =>
@@ -163,7 +179,7 @@ export const useBalanceEvolution = (startDate: string, finishDate: string) =>
   useQuery<BalanceEvolutionPoint[]>({
     queryKey: ["analytics", "balance-evolution", startDate, finishDate],
     queryFn: () => analyticsApi.getBalanceEvolution(startDate, finishDate),
-    staleTime: 60_000,
+    staleTime: rangeStaleTime(finishDate),
   });
 
 export const useFutureCommitments = (months = 6) =>

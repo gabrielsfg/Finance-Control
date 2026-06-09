@@ -31,7 +31,7 @@ namespace FinanceControl.Services.Services
             _configuration = configuration;
         }
 
-        public async Task<AuthResponseDto?> RegisterUserAsync(CreateUserRequestDto requestDto)
+        public async Task<AuthTokensDto?> RegisterUserAsync(CreateUserRequestDto requestDto)
         {
             requestDto.Email = requestDto.Email.ToLower();
 
@@ -89,11 +89,12 @@ namespace FinanceControl.Services.Services
             return LoginResult.Success(await CreateAuthResponseAsync(user));
         }
 
-        public async Task<AuthResponseDto?> RefreshTokenAsync(string refreshToken)
+        public async Task<AuthTokensDto?> RefreshTokenAsync(string refreshToken)
         {
+            var hashedToken = HashToken(refreshToken);
             var stored = await _context.RefreshTokens
                 .Include(r => r.User)
-                .FirstOrDefaultAsync(r => r.Token == refreshToken);
+                .FirstOrDefaultAsync(r => r.Token == hashedToken);
 
             if (stored is null || stored.IsRevoked || stored.ExpiresAt <= DateTime.UtcNow)
                 return null;
@@ -204,19 +205,21 @@ namespace FinanceControl.Services.Services
                 return null;
 
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-            user.PasswordResetToken = token;
+            user.PasswordResetToken = HashToken(token);
             user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddHours(1);
 
             await _context.SaveChangesAsync();
 
-            // TODO: send token via email (email service not yet integrated)
+            // TODO: send token via email (email service not yet integrated).
+            // The raw token is returned/sent to the user; only its hash is stored.
             return token;
         }
 
         public async Task<bool> ResetPasswordAsync(string token, string newPassword)
         {
+            var hashedToken = HashToken(token);
             var user = await _context.Users.FirstOrDefaultAsync(u =>
-                u.PasswordResetToken == token &&
+                u.PasswordResetToken == hashedToken &&
                 u.PasswordResetTokenExpiresAt > DateTime.UtcNow);
 
             if (user is null)
@@ -232,8 +235,9 @@ namespace FinanceControl.Services.Services
 
         public async Task<bool> LogoutAsync(string refreshToken)
         {
+            var hashedToken = HashToken(refreshToken);
             var stored = await _context.RefreshTokens
-                .FirstOrDefaultAsync(r => r.Token == refreshToken);
+                .FirstOrDefaultAsync(r => r.Token == hashedToken);
 
             if (stored is null || stored.IsRevoked)
                 return false;
@@ -270,51 +274,38 @@ namespace FinanceControl.Services.Services
             // Categories, subcategories and accounts are also deleted because
             // the user may have created custom ones — the seed recreates the
             // defaults after this block, same as RegisterUserAsync.
-            var transactions = _context.Transactions.Where(t => t.UserId == userId);
-            _context.Transactions.RemoveRange(transactions);
+            //
+            // ExecuteDeleteAsync issues a single bulk DELETE per table — no rows are
+            // loaded into the change tracker. The whole wipe + re-seed runs inside one
+            // transaction via the execution strategy so it is atomic (all-or-nothing)
+            // and safe to retry against a Neon connection that may have gone cold.
+            // Order matters: children are deleted before their parents.
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var dbTransaction = await _context.Database.BeginTransactionAsync();
 
-            var recurringTransactions = _context.RecurringTransactions.Where(t => t.UserId == userId);
-            _context.RecurringTransactions.RemoveRange(recurringTransactions);
+                await _context.Transactions.Where(t => t.UserId == userId).ExecuteDeleteAsync();
+                await _context.RecurringTransactions.Where(t => t.UserId == userId).ExecuteDeleteAsync();
+                await _context.BudgetSubcategoryAllocations
+                    .Where(a => _context.Budgets.Any(b => b.Id == a.BudgetId && b.UserId == userId))
+                    .ExecuteDeleteAsync();
+                await _context.Budgets.Where(b => b.UserId == userId).ExecuteDeleteAsync();
+                await _context.Areas.Where(a => a.UserId == userId).ExecuteDeleteAsync();
+                await _context.InvestmentDividends.Where(d => d.UserId == userId).ExecuteDeleteAsync();
+                await _context.InvestmentTransactions.Where(t => t.UserId == userId).ExecuteDeleteAsync();
+                await _context.Investments.Where(i => i.UserId == userId).ExecuteDeleteAsync();
+                await _context.Accounts.Where(a => a.UserId == userId).ExecuteDeleteAsync();
+                await _context.Goals.Where(g => g.UserId == userId).ExecuteDeleteAsync();
+                await _context.SubCategories.Where(s => s.UserId == userId).ExecuteDeleteAsync();
+                await _context.Categories.Where(c => c.UserId == userId).ExecuteDeleteAsync();
+                await _context.RefreshTokens.Where(r => r.UserId == userId).ExecuteDeleteAsync();
 
-            var budgetAllocations = _context.BudgetSubcategoryAllocations
-                .Where(a => _context.Budgets.Any(b => b.Id == a.BudgetId && b.UserId == userId));
-            _context.BudgetSubcategoryAllocations.RemoveRange(budgetAllocations);
+                // Re-seed defaults exactly as RegisterUserAsync does, in the same transaction.
+                await SeedUserDataAsync(userId, user.PreferredLanguage);
 
-            var budgets = _context.Budgets.Where(b => b.UserId == userId);
-            _context.Budgets.RemoveRange(budgets);
-
-            var areas = _context.Areas.Where(a => a.UserId == userId);
-            _context.Areas.RemoveRange(areas);
-
-            var investmentDividends = _context.InvestmentDividends.Where(d => d.UserId == userId);
-            _context.InvestmentDividends.RemoveRange(investmentDividends);
-
-            var investmentTransactions = _context.InvestmentTransactions.Where(t => t.UserId == userId);
-            _context.InvestmentTransactions.RemoveRange(investmentTransactions);
-
-            var investments = _context.Investments.Where(i => i.UserId == userId);
-            _context.Investments.RemoveRange(investments);
-
-            var accounts = _context.Accounts.Where(a => a.UserId == userId);
-            _context.Accounts.RemoveRange(accounts);
-
-            var goals = _context.Goals.Where(g => g.UserId == userId);
-            _context.Goals.RemoveRange(goals);
-
-            var subCategories = _context.SubCategories.Where(s => s.UserId == userId);
-            _context.SubCategories.RemoveRange(subCategories);
-
-            var categories = _context.Categories.Where(c => c.UserId == userId);
-            _context.Categories.RemoveRange(categories);
-
-            var refreshTokens = _context.RefreshTokens.Where(r => r.UserId == userId);
-            _context.RefreshTokens.RemoveRange(refreshTokens);
-
-            await _context.SaveChangesAsync();
-
-            // Re-seed defaults exactly as RegisterUserAsync does.
-            var restoredUser = await _context.Users.FindAsync(userId);
-            await SeedUserDataAsync(userId, restoredUser?.PreferredLanguage);
+                await dbTransaction.CommitAsync();
+            });
 
             return true;
         }
@@ -382,12 +373,15 @@ namespace FinanceControl.Services.Services
             await _context.SaveChangesAsync();
         }
 
-        private async Task<AuthResponseDto> CreateAuthResponseAsync(User user)
+        private async Task<AuthTokensDto> CreateAuthResponseAsync(User user)
         {
             var accessToken = CreateAccessToken(user);
             var refreshToken = await CreateRefreshTokenAsync(user.Id);
 
-            return new AuthResponseDto
+            // AuthTokensDto is an internal transport object — the controller
+            // sets the refresh token as an HttpOnly cookie and exposes only
+            // the access token in the response body.
+            return new AuthTokensDto
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken
@@ -423,7 +417,7 @@ namespace FinanceControl.Services.Services
             var refreshToken = new RefreshToken
             {
                 UserId = userId,
-                Token = token,
+                Token = HashToken(token),
                 ExpiresAt = DateTime.UtcNow.AddDays(30),
                 CreatedAt = DateTime.UtcNow
             };
@@ -431,7 +425,17 @@ namespace FinanceControl.Services.Services
             _context.RefreshTokens.Add(refreshToken);
             await _context.SaveChangesAsync();
 
+            // Return the raw token to the client; only its hash is persisted.
             return token;
+        }
+
+        // Refresh and reset tokens are high-entropy random values, so a fast unsalted
+        // SHA-256 is sufficient: we only ever look a token up by its hash, and storing
+        // the hash means a database leak does not expose usable tokens.
+        private static string HashToken(string token)
+        {
+            var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+            return Convert.ToHexString(hash);
         }
     }
 }

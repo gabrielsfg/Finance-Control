@@ -27,7 +27,11 @@ export const useCreateTransaction = () => {
   return useMutation({
     mutationFn: (data: CreateTransactionRequest) => transactionsApi.create(data),
     onSuccess: () => {
+      // Transactions feed account balances, the dashboard and analytics — refresh all.
       queryClient.invalidateQueries({ queryKey: ["transactions", "filtered"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
     },
   });
 };
@@ -38,7 +42,11 @@ export const useUpdateTransaction = () => {
     mutationFn: ({ id, data }: { id: number; data: UpdateTransactionRequest }) =>
       transactionsApi.update(id, data),
     onSuccess: () => {
+      // Transactions feed account balances, the dashboard and analytics — refresh all.
       queryClient.invalidateQueries({ queryKey: ["transactions", "filtered"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
     },
   });
 };
@@ -48,7 +56,11 @@ export const useDeleteTransaction = () => {
   return useMutation({
     mutationFn: (id: number) => transactionsApi.delete(id),
     onSuccess: () => {
+      // Transactions feed account balances, the dashboard and analytics — refresh all.
       queryClient.invalidateQueries({ queryKey: ["transactions", "filtered"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
     },
   });
 };

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercentNeutral } from "@/lib/utils/formatNumber";
-import { cn } from "@/lib/utils";
+import { cn, matchesSearch, assetTypeKeywords } from "@/lib/utils";
 import type { AssetType, Investment, InvestmentPortfolio } from "@/lib/types/investments.types";
 
 const ASSET_CLASSES: { assetClass: string; types: AssetType[] }[] = [
@@ -64,9 +64,11 @@ function InvestmentRow({
   portfolioValue: number;
   onSelectInvestment: (inv: Investment) => void;
 }) {
-  const isPositive = inv.totalReturn >= 0;
-  const color      = ASSET_TYPE_COLORS[inv.assetType] ?? "#8A95A3";
-  const pct        = portfolioValue > 0 ? (inv.currentValue / portfolioValue) * 100 : 0;
+  const isRentabPositive  = inv.totalReturn >= 0;
+  const isDayPositive     = inv.dayChangeAbs >= 0;
+  const hasDayChange      = inv.previousClose !== null && inv.previousClose > 0;
+  const color             = ASSET_TYPE_COLORS[inv.assetType] ?? "#8A95A3";
+  const pct               = portfolioValue > 0 ? (inv.currentValue / portfolioValue) * 100 : 0;
 
   return (
     <tr
@@ -98,17 +100,25 @@ function InvestmentRow({
         <span className="font-money text-text-sub text-[13px]">{formatCurrency(inv.currentPrice / 100)}</span>
       </td>
       <td className={cn("px-4 py-3 text-right", W.changePct)}>
-        <span className={cn("font-mono text-[13px] font-medium", isPositive ? "text-green" : "text-red")}>
-          {formatPercentNeutral(Math.abs(inv.totalReturnPercent))}
-        </span>
+        {hasDayChange ? (
+          <span className={cn("font-mono text-[13px] font-medium", isDayPositive ? "text-green" : "text-red")}>
+            {formatPercentNeutral(Math.abs(inv.dayChangePct))}
+          </span>
+        ) : (
+          <span className="font-mono text-[13px] text-text-muted">—</span>
+        )}
       </td>
       <td className={cn("px-4 py-3 text-right", W.changeR)}>
-        <span className={cn("font-money text-[13px] font-medium", isPositive ? "text-green" : "text-red")}>
-          {formatCurrency(Math.abs(inv.totalReturn) / 100)}
-        </span>
+        {hasDayChange ? (
+          <span className={cn("font-money text-[13px] font-medium", isDayPositive ? "text-green" : "text-red")}>
+            {formatCurrency(Math.abs(inv.dayChangeAbs) / 100)}
+          </span>
+        ) : (
+          <span className="font-money text-[13px] text-text-muted">—</span>
+        )}
       </td>
       <td className={cn("px-4 py-3 text-right", W.rentab)}>
-        <span className={cn("font-mono text-[13px] font-medium", isPositive ? "text-green" : "text-red")}>
+        <span className={cn("font-mono text-[13px] font-medium", isRentabPositive ? "text-green" : "text-red")}>
           {formatPercentNeutral(Math.abs(inv.totalReturnPercent))}
         </span>
       </td>
@@ -135,13 +145,23 @@ function ClassCard({
 }) {
   const [open, setOpen] = useState(true);
 
-  const isEmpty       = investments.length === 0;
-  const groupValue    = investments.reduce((s, i) => s + i.currentValue, 0);
-  const groupInvested = investments.reduce((s, i) => s + i.totalInvested, 0);
-  const groupReturn   = investments.reduce((s, i) => s + i.totalReturn, 0);
-  const groupYield    = groupInvested > 0 ? (groupReturn / groupInvested) * 100 : 0;
-  const groupPct      = portfolioValue > 0 ? (groupValue / portfolioValue) * 100 : 0;
-  const isPositive    = groupReturn >= 0;
+  const isEmpty          = investments.length === 0;
+  const groupValue       = investments.reduce((s, i) => s + i.currentValue, 0);
+  const groupInvested    = investments.reduce((s, i) => s + i.totalInvested, 0);
+  const groupReturn      = investments.reduce((s, i) => s + i.totalReturn, 0);
+  const groupYield       = groupInvested > 0 ? (groupReturn / groupInvested) * 100 : 0;
+  const groupPct         = portfolioValue > 0 ? (groupValue / portfolioValue) * 100 : 0;
+  const isRentabPositive = groupReturn >= 0;
+
+  // Day change: only sum assets that have previousClose data
+  const withDayChange    = investments.filter(i => i.previousClose !== null && i.previousClose > 0);
+  const groupDayChangeAbs = withDayChange.reduce((s, i) => s + i.dayChangeAbs, 0);
+  const groupDayInvested  = withDayChange.reduce((s, i) => s + i.totalInvested, 0);
+  const groupDayChangePct = groupDayInvested > 0
+    ? withDayChange.reduce((s, i) => s + i.dayChangePct * (i.totalInvested / groupDayInvested), 0)
+    : 0;
+  const hasDayChange     = withDayChange.length > 0;
+  const isDayPositive    = groupDayChangeAbs >= 0;
 
   return (
     <div className={cn("border-border bg-surface overflow-hidden rounded-xl border", isEmpty && "opacity-50")}>
@@ -184,22 +204,22 @@ function ClassCard({
 
               <td className={cn("px-4 py-4 text-right", W.changePct)}>
                 <p className="text-text-muted text-[10px] uppercase tracking-[0.05em]">Variação</p>
-                {isEmpty ? (
+                {isEmpty || !hasDayChange ? (
                   <p className="font-mono mt-0.5 text-[13px] font-medium text-text-muted">—</p>
                 ) : (
-                  <p className={cn("font-mono mt-0.5 text-[13px] font-medium", isPositive ? "text-green" : "text-red")}>
-                    {formatPercentNeutral(Math.abs(groupYield))}
+                  <p className={cn("font-mono mt-0.5 text-[13px] font-medium", isDayPositive ? "text-green" : "text-red")}>
+                    {formatPercentNeutral(Math.abs(groupDayChangePct))}
                   </p>
                 )}
               </td>
 
               <td className={cn("px-4 py-4 text-right", W.changeR)}>
                 <p className="text-text-muted text-[10px] uppercase tracking-[0.05em]">Variação (R$)</p>
-                {isEmpty ? (
+                {isEmpty || !hasDayChange ? (
                   <p className="font-money mt-0.5 text-[13px] font-medium text-text-muted">—</p>
                 ) : (
-                  <p className={cn("font-money mt-0.5 text-[13px] font-medium", isPositive ? "text-green" : "text-red")}>
-                    {formatCurrency(Math.abs(groupReturn) / 100)}
+                  <p className={cn("font-money mt-0.5 text-[13px] font-medium", isDayPositive ? "text-green" : "text-red")}>
+                    {formatCurrency(Math.abs(groupDayChangeAbs) / 100)}
                   </p>
                 )}
               </td>
@@ -209,7 +229,7 @@ function ClassCard({
                 {isEmpty ? (
                   <p className="font-mono mt-0.5 text-[13px] font-medium text-text-muted">—</p>
                 ) : (
-                  <p className={cn("font-mono mt-0.5 text-[13px] font-medium", isPositive ? "text-green" : "text-red")}>
+                  <p className={cn("font-mono mt-0.5 text-[13px] font-medium", isRentabPositive ? "text-green" : "text-red")}>
                     {formatPercentNeutral(Math.abs(groupYield))}
                   </p>
                 )}
@@ -266,11 +286,10 @@ function ClassCard({
 export const InvestmentsTable = ({ portfolio, search, visibleTypes, onSelectInvestment }: Props) => {
   const { investments, currentValue: portfolioValue } = portfolio;
 
-  const q = search.trim().toLowerCase();
-  const filteredIds = q
+  const filteredIds = search.trim()
     ? new Set(
         investments
-          .filter((inv) => inv.name.toLowerCase().includes(q) || inv.ticker.toLowerCase().includes(q))
+          .filter((inv) => matchesSearch(search, inv.name, inv.ticker, assetTypeKeywords(inv.assetType)))
           .map((inv) => inv.id)
       )
     : null;

@@ -28,9 +28,11 @@ namespace FinanceControl.Services.Extensions
             services.AddHttpClient();
 
             services.AddSingleton<RecurringTransactionJobService>();
+            services.AddSingleton<RefreshTokenCleanupJobService>();
 
             services.Configure<BrapiSettings>(configuration.GetSection("BrapiSettings"));
             services.AddSingleton<BrapiPriceUpdateJobService>();
+            services.AddSingleton<BrapiCleanupJobService>();
 
             return services;
         }

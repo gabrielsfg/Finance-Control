@@ -48,6 +48,9 @@ export const useRegisterTransaction = () => {
     mutationFn: investmentsApi.registerTransaction,
     onSuccess: (data) => {
       queryClient.setQueryData(["investments"], data);
+      // Net worth and investment analytics derive from the portfolio.
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 };
@@ -58,6 +61,9 @@ export const useDeleteTransaction = () => {
     mutationFn: investmentsApi.deleteTransaction,
     onSuccess: (data) => {
       queryClient.setQueryData(["investments"], data);
+      // Net worth and investment analytics derive from the portfolio.
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 };
@@ -68,6 +74,9 @@ export const useRegisterDividend = () => {
     mutationFn: investmentsApi.registerDividend,
     onSuccess: (data) => {
       queryClient.setQueryData(["investments"], data);
+      // Net worth and investment analytics derive from the portfolio.
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 };
@@ -86,6 +95,8 @@ export const useUpdateInvestmentPrice = () => {
     mutationFn: ({ id, dto }) => investmentsApi.updatePrice(id, dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["investments"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 };

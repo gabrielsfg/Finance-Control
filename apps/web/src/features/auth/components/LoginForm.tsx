@@ -26,7 +26,7 @@ export const LoginForm = ({ onSwitch }: { onSwitch: () => void }) => {
     setServerError(null);
     try {
       const response = await authApi.login(data);
-      login(response.accessToken, response.refreshToken);
+      login(response.accessToken);
       router.refresh();
       router.push("/dashboard");
     } catch (err: unknown) {

@@ -11,6 +11,8 @@ namespace FinanceControl.Shared.Dtos.Response
         public string? SubCategoryEmoji { get; set; }
         public int AccountId { get; set; }
         public string AccountName { get; set; }
+        public int? DestinationAccountId { get; set; }
+        public string? DestinationAccountName { get; set; }
         public int? RecurringTransactionId { get; set; }
         public int? ParentTransactionId { get; set; }
         public int Value { get; set; }

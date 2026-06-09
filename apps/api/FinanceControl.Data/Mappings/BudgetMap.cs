@@ -32,6 +32,9 @@ namespace FinanceControl.Data.Mappings
                 .WithMany()
                 .HasForeignKey(b => b.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasIndex(b => new { b.UserId, b.IsActive })
+                .HasDatabaseName("IX_Budgets_UserId_IsActive");
         }
     }
 }

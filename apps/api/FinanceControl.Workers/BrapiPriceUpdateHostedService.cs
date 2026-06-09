@@ -23,7 +23,7 @@ namespace FinanceControl.Workers
         {
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            var initialDelay = ComputeDelayUntilNext22hUtc();
+            var initialDelay = ComputeDelayUntilNext19hUtc();
             _logger.LogInformation(
                 "BrapiPriceUpdateHostedService scheduled. First run in {Delay:hh\\:mm\\:ss}.",
                 initialDelay);
@@ -65,11 +65,13 @@ namespace FinanceControl.Workers
             }
         }
 
-        private static TimeSpan ComputeDelayUntilNext22hUtc()
+        // 19:00 UTC = 16:00 BRT, after market close + after-market (B3 closes 18:00 BRT = 21:00 UTC,
+        // but after-market ends 18:00 BRT). Using 19:00 UTC ensures last price is the official close.
+        private static TimeSpan ComputeDelayUntilNext19hUtc()
         {
             var now = DateTime.UtcNow;
-            var todayAt22h = now.Date.AddHours(22);
-            var target = now < todayAt22h ? todayAt22h : todayAt22h.AddDays(1);
+            var todayAt19h = now.Date.AddHours(19);
+            var target = now < todayAt19h ? todayAt19h : todayAt19h.AddDays(1);
             return target - now;
         }
 
