@@ -1,12 +1,38 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace FinanceControl.Services.Brapi
 {
+    /// <summary>
+    /// Reads any JSON number (integer, decimal, or scientific-notation float) as a long.
+    /// Brapi occasionally returns marketCap as a floating-point value (e.g. 1.23e13) which
+    /// System.Text.Json cannot coerce to long? directly — this converter handles that case
+    /// by reading the raw number as decimal and casting to long.
+    /// </summary>
+    internal sealed class NullableLongFromNumberConverter : JsonConverter<long?>
+    {
+        public override long? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.Null)
+                return null;
+            // Parse as decimal to accept both integer and floating-point representations,
+            // then truncate to long (same semantics as an explicit cast).
+            var value = reader.GetDecimal();
+            return (long)value;
+        }
+
+        public override void Write(Utf8JsonWriter writer, long? value, JsonSerializerOptions options)
+        {
+            if (value is null) writer.WriteNullValue();
+            else writer.WriteNumberValue(value.Value);
+        }
+    }
+
     internal record BrapiQuoteResponse(
         [property: JsonPropertyName("results")] List<BrapiQuoteResult> Results,
         [property: JsonPropertyName("requestedAt")] DateTime RequestedAt,
         // "took" alternates between string and int depending on payload size — use JsonElement to accept both.
-        [property: JsonPropertyName("took")] System.Text.Json.JsonElement? Took = null
+        [property: JsonPropertyName("took")] JsonElement? Took = null
     );
 
     internal record BrapiQuoteResult(
@@ -18,10 +44,12 @@ namespace FinanceControl.Services.Brapi
         [property: JsonPropertyName("dividendsData")] BrapiDividendsData? DividendsData,
         [property: JsonPropertyName("historicalDataPrice")] List<BrapiHistoricalPrice>? HistoricalDataPrice,
         // Populated only when the request asks for &modules=defaultKeyStatistics,financialData.
-        [property: JsonPropertyName("marketCap")] long? MarketCap = null,
+        // Uses a custom converter because Brapi occasionally returns marketCap as a float (e.g. 1.23e13).
+        [property: JsonPropertyName("marketCap")]
+        [property: JsonConverter(typeof(NullableLongFromNumberConverter))] long? MarketCap = null,
         [property: JsonPropertyName("priceEarnings")] decimal? PriceEarnings = null,
-        [property: JsonPropertyName("defaultKeyStatistics")] System.Text.Json.JsonElement? DefaultKeyStatistics = null,
-        [property: JsonPropertyName("financialData")] System.Text.Json.JsonElement? FinancialData = null
+        [property: JsonPropertyName("defaultKeyStatistics")] JsonElement? DefaultKeyStatistics = null,
+        [property: JsonPropertyName("financialData")] JsonElement? FinancialData = null
     );
 
     internal record BrapiDividendsData(

@@ -23,7 +23,7 @@ namespace FinanceControl.WebApi.Controllers
             [FromQuery] string sort = "change_desc",
             [FromQuery] int limit = 20)
         {
-            limit = Math.Clamp(limit, 1, 100);
+            limit = Math.Clamp(limit, 1, 2000);
             var result = await _marketService.ListAsync(type, sort, limit);
             return Ok(result);
         }

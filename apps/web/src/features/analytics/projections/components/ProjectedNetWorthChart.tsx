@@ -70,12 +70,11 @@ export function ProjectedNetWorthChart({ data }: Props) {
 
   const chartData = [
     ...historicalPoints,
-    // Shared junction point so the two lines connect visually
-    {
+    ...(joinPoint ? [{
       label:      toLabel(joinPoint.year, joinPoint.month),
       historical: joinPoint.netWorth,
       projected:  joinPoint.netWorth,
-    },
+    }] : []),
     ...projectedPoints,
   ];
 

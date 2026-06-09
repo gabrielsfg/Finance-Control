@@ -1051,21 +1051,49 @@ namespace FinanceControl.Services.Brapi
             }
         }
 
+        // Status codes that are worth retrying — transient server/gateway errors and rate limiting.
+        private static readonly HashSet<int> _retryableStatusCodes = [429, 500, 502, 503, 504];
+        private const int MaxAttempts = 3;
+
         private async Task<T?> FetchWithRetryAsync<T>(string url, CancellationToken cancellationToken)
         {
             using var client = _httpClientFactory.CreateClient();
             client.Timeout = TimeSpan.FromSeconds(_settings.TimeoutSeconds);
 
-            try
+            for (var attempt = 1; attempt <= MaxAttempts; attempt++)
             {
-                return await FetchAsync<T>(client, url, cancellationToken);
+                try
+                {
+                    return await FetchAsync<T>(client, url, cancellationToken);
+                }
+                catch (HttpRequestException ex) when (attempt < MaxAttempts && IsRetryable(ex))
+                {
+                    // Exponential backoff: base delay * 2^(attempt-1).
+                    // attempt 1 → 1× base, attempt 2 → 2× base.
+                    var delay = TimeSpan.FromMinutes(_settings.RetryDelayMinutes * Math.Pow(2, attempt - 1));
+                    _logger.LogWarning(
+                        "Brapi request failed (attempt {Attempt}/{Max}, status {Status}). Retrying in {Delay}s. URL: {Url}",
+                        attempt, MaxAttempts, ex.StatusCode.HasValue ? (int)ex.StatusCode : 0,
+                        (int)delay.TotalSeconds, SanitizeUrl(url));
+                    await Task.Delay(delay, cancellationToken);
+                }
+                catch (TaskCanceledException) when (attempt < MaxAttempts)
+                {
+                    // Timeout — also worth retrying with backoff.
+                    var delay = TimeSpan.FromMinutes(_settings.RetryDelayMinutes * Math.Pow(2, attempt - 1));
+                    _logger.LogWarning(
+                        "Brapi request timed out (attempt {Attempt}/{Max}). Retrying in {Delay}s.",
+                        attempt, MaxAttempts, (int)delay.TotalSeconds);
+                    await Task.Delay(delay, cancellationToken);
+                }
             }
-            catch
-            {
-                await Task.Delay(TimeSpan.FromMinutes(_settings.RetryDelayMinutes), cancellationToken);
-                return await FetchAsync<T>(client, url, cancellationToken);
-            }
+
+            // Final attempt outside the loop so the exception propagates naturally.
+            return await FetchAsync<T>(client, url, cancellationToken);
         }
+
+        private static bool IsRetryable(HttpRequestException ex) =>
+            ex.StatusCode.HasValue && _retryableStatusCodes.Contains((int)ex.StatusCode);
 
         private static async Task<T?> FetchAsync<T>(HttpClient client, string url, CancellationToken cancellationToken)
         {
@@ -1073,6 +1101,13 @@ namespace FinanceControl.Services.Brapi
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             return JsonSerializer.Deserialize<T>(json, JsonOptions);
+        }
+
+        /// Strips the token query-param before logging so it never appears in log output.
+        private static string SanitizeUrl(string url)
+        {
+            var idx = url.IndexOf("token=", StringComparison.Ordinal);
+            return idx < 0 ? url : url[..idx] + "token=***";
         }
 
         // Brapi sometimes returns symbols with a ".SA" suffix (e.g. IFIX → IFIX.SA).

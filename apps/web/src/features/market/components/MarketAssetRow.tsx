@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
@@ -15,16 +16,16 @@ import {
 export type RowMetric = "change" | "price" | "dy" | "marketcap" | "pl" | "pvp" | "revenue";
 
 function AssetLogo({ asset, size = 36 }: { asset: MarketAsset; size?: number }) {
-  if (asset.logoUrl) {
+  const [imgError, setImgError] = useState(false);
+
+  if (asset.logoUrl && !imgError) {
     return (
       <img
         src={asset.logoUrl}
         alt={asset.ticker}
         style={{ height: size, width: size }}
         className="shrink-0 rounded-[10px] bg-white/5 object-contain"
-        onError={(e) => {
-          (e.target as HTMLImageElement).style.display = "none";
-        }}
+        onError={() => setImgError(true)}
       />
     );
   }

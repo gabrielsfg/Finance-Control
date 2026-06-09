@@ -178,50 +178,6 @@ namespace FinanceControl.Services.Services
             return sorted.ToList();
         }
 
-        // Portuguese names for ISO currency codes so "BRL-USD" (stored with no descriptive
-        // name in the DB) still matches when the user types "dolar" or "real".
-        private static readonly Dictionary<string, string> CurrencyNames =
-            new(StringComparer.OrdinalIgnoreCase)
-            {
-                ["USD"] = "dolar americano",
-                ["EUR"] = "euro",
-                ["GBP"] = "libra esterlina",
-                ["JPY"] = "iene japones",
-                ["BRL"] = "real brasileiro",
-                ["ARS"] = "peso argentino",
-                ["CAD"] = "dolar canadense",
-                ["AUD"] = "dolar australiano",
-                ["CHF"] = "franco suico",
-                ["CNY"] = "yuan chines",
-                ["MXN"] = "peso mexicano",
-                ["CLP"] = "peso chileno",
-                ["COP"] = "peso colombiano",
-                ["PEN"] = "sol peruano",
-                ["UYU"] = "peso uruguaio",
-                ["ZAR"] = "rand sul africano",
-                ["RUB"] = "rublo russo",
-                ["INR"] = "rupia indiana",
-                ["KRW"] = "won coreano",
-                ["NOK"] = "coroa norueguesa",
-                ["SEK"] = "coroa sueca",
-                ["DKK"] = "coroa dinamarquesa",
-                ["NZD"] = "dolar nova zelandia",
-                ["TRY"] = "lira turca",
-                ["SGD"] = "dolar cingapura",
-                ["HKD"] = "dolar hong kong",
-                ["BTC"] = "bitcoin",
-                ["ETH"] = "ethereum",
-            };
-
-        private static bool MatchesCurrencyAlias(string ticker, string qNorm)
-        {
-            foreach (var code in ticker.Split(['-', '/'], StringSplitOptions.RemoveEmptyEntries))
-                if (CurrencyNames.TryGetValue(code, out var alias) &&
-                    StripDiacritics(alias).Contains(qNorm, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            return false;
-        }
-
         // Strip diacritics so "dolar" matches "Dólar", "real" matches "Réal", etc.
         private static string StripDiacritics(string text)
         {
@@ -259,8 +215,7 @@ namespace FinanceControl.Services.Services
             var extraCurrencies = currencyCandidates.Where(a =>
                 !existingIds.Contains(a.Id) &&
                 (StripDiacritics(a.Name.ToUpperInvariant()).Contains(qNorm) ||
-                 StripDiacritics(a.Ticker.ToUpperInvariant()).Contains(qNorm) ||
-                 MatchesCurrencyAlias(a.Ticker, qNorm)));
+                 StripDiacritics(a.Ticker.ToUpperInvariant()).Contains(qNorm)));
             assets = [.. assets, .. extraCurrencies];
 
             var assetIds = assets.Select(a => a.Id).ToList();

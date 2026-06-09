@@ -10,6 +10,8 @@ export type AssetType =
   | "ETFInternacional"
   | "TesouroDireto"
   | "RendaFixa"
+  | "Moeda"
+  | "Index"
   | "Outro";
 
 export type InvestmentOperation = "Buy" | "Sell";

@@ -7,6 +7,7 @@ import { MarketAssetCard } from "@/features/market/components/MarketAssetCard";
 import { MarketPriceChart } from "@/features/market/components/MarketPriceChart";
 import { FundamentalsPanel } from "@/features/market/components/FundamentalsPanel";
 import { FiiPanel } from "@/features/market/components/FiiPanel";
+import { CurrencyCrossRate } from "@/features/market/components/CurrencyCrossRate";
 import { useMarketAssetDetail } from "@/features/market/hooks/useMarket";
 
 const FUNDAMENTAL_TYPES = new Set([
@@ -50,6 +51,7 @@ export function MarketAssetPage() {
           <MarketPriceChart ticker={detail.ticker} history={detail.priceHistory} />
           {FUNDAMENTAL_TYPES.has(detail.assetType) && <FundamentalsPanel ticker={detail.ticker} />}
           {detail.assetType === "FII" && <FiiPanel ticker={detail.ticker} />}
+          {detail.assetType === "Moeda" && <CurrencyCrossRate asset={detail} />}
         </>
       )}
     </div>

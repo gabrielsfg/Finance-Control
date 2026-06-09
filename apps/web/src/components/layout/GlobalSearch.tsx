@@ -279,7 +279,7 @@ export const GlobalSearch = () => {
 
   const sections = useMemo(() => {
     if (marketAssets.length === 0) return baseSections;
-    const marketResults: SearchResult[] = marketAssets.slice(0, 6).map((a) => ({
+    const marketResults: SearchResult[] = marketAssets.map((a) => ({
       id: `market-${a.id}`,
       kind: "investment",
       label: a.ticker,

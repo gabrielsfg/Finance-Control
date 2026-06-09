@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { TrendingUp, TrendingDown, Coins, Building2, Sparkles } from "lucide-react";
 import { PillSelect } from "@/components/shared/PillSelect";
-import { MarketIndicatorsStrip } from "@/features/market/components/MarketIndicatorsStrip";
+import { MarketIndicators } from "@/features/market/components/MarketIndicators";
 import { RankingCard } from "@/features/market/components/RankingCard";
 import { usePageSearch } from "@/lib/hooks/usePageHeader";
 
@@ -42,7 +42,7 @@ export function MarketPage() {
         <PillSelect options={TYPE_OPTIONS} value={type} onChange={setType} />
       </div>
 
-      <MarketIndicatorsStrip />
+      <MarketIndicators />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <RankingCard
