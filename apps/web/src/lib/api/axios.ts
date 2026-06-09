@@ -4,18 +4,23 @@ import { clearPersistedQueryCache } from "@/lib/queryClient";
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api",
   headers: { "Content-Type": "application/json" },
+  // Required so the browser sends the HttpOnly refresh-token cookie
+  // on cross-origin requests to the API domain.
+  withCredentials: true,
 });
 
 // Inject access token on every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken");
+  // Import lazily to avoid circular dependency (store → api → store)
+  const { useAuthStore } = require("@/lib/stores/authStore");
+  const token = useAuthStore.getState().accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// Handle 401 — attempt refresh, retry once, then logout
+// Handle 401 — attempt refresh via HttpOnly cookie, retry once, then logout
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -25,25 +30,23 @@ api.interceptors.response.use(
       original._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem("refreshToken");
-        if (!refreshToken) throw new Error("No refresh token");
-
+        // The refresh token travels as an HttpOnly cookie — no body needed.
+        // withCredentials ensures the browser attaches it automatically.
         const { data } = await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api"}/user/refresh`,
-          { refreshToken },
+          {},
+          { withCredentials: true },
         );
 
-        localStorage.setItem("accessToken", data.accessToken);
-        localStorage.setItem("refreshToken", data.refreshToken);
-        document.cookie = `accessToken=${data.accessToken}; path=/; max-age=604800; SameSite=Lax`;
+        const { useAuthStore } = require("@/lib/stores/authStore");
+        useAuthStore.getState().setAccessToken(data.accessToken);
 
         original.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(original);
       } catch {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        document.cookie = "accessToken=; path=/; max-age=0; SameSite=Lax";
+        const { useAuthStore } = require("@/lib/stores/authStore");
         clearPersistedQueryCache();
+        await useAuthStore.getState().logout();
         window.location.href = "/login";
       }
     }

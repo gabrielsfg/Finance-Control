@@ -101,8 +101,22 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowCredentials(); // Required so the browser sends the HttpOnly refresh-token cookie
     });
+});
+
+// In development the API (5xxx) and the web app (3000) run on different ports.
+// Cookies with SameSite=Strict are not sent on cross-site requests, which breaks
+// the refresh flow locally. The policy below downgrades SameSite to None (+ Secure)
+// only in Development so local testing works without changing production behaviour.
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.MinimumSameSitePolicy = builder.Environment.IsDevelopment()
+        ? SameSiteMode.None
+        : SameSiteMode.Strict;
+    options.Secure = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
 });
 
 builder.Services.AddRateLimiter(options =>
@@ -138,6 +152,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCookiePolicy();
 
 app.UseCors("WebApp");
 

@@ -82,6 +82,9 @@ const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
   Recurring: "Recorrente",
 };
 
+// Only Credit and Checking accounts support installments and recurring
+const ACCOUNTS_WITH_INSTALLMENT_RECURRING = new Set<AccountItem["type"]>(["Credit", "Checking"]);
+
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   Debit: "Débito",
   Credit: "Crédito",
@@ -157,7 +160,8 @@ function PaymentMethodSelectContent() {
   );
 }
 
-function PaymentTypeSelectContent() {
+function PaymentTypeSelectContent({ accountType }: { accountType?: AccountItem["type"] }) {
+  const supportsMore = !accountType || ACCOUNTS_WITH_INSTALLMENT_RECURRING.has(accountType);
   return (
     <SelectContent {...DROPDOWN_PROPS}>
       <SelectItem value="OneTime">
@@ -171,28 +175,32 @@ function PaymentTypeSelectContent() {
           </div>
         </div>
       </SelectItem>
-      <SelectItem value="Installment">
-        <div className="flex items-center gap-2.5 py-0.5">
-          <span className="text-blue bg-blue/10 flex h-7 w-7 items-center justify-center rounded-md">
-            <LayoutGrid size={13} />
-          </span>
-          <div className="flex flex-col">
-            <span className="text-[14px] font-medium leading-tight">Parcelado</span>
-            <span className="text-text-muted text-[11px] leading-tight">Dividido em parcelas</span>
+      {supportsMore && (
+        <SelectItem value="Installment">
+          <div className="flex items-center gap-2.5 py-0.5">
+            <span className="text-blue bg-blue/10 flex h-7 w-7 items-center justify-center rounded-md">
+              <LayoutGrid size={13} />
+            </span>
+            <div className="flex flex-col">
+              <span className="text-[14px] font-medium leading-tight">Parcelado</span>
+              <span className="text-text-muted text-[11px] leading-tight">Dividido em parcelas</span>
+            </div>
           </div>
-        </div>
-      </SelectItem>
-      <SelectItem value="Recurring">
-        <div className="flex items-center gap-2.5 py-0.5">
-          <span className="text-purple bg-purple/10 flex h-7 w-7 items-center justify-center rounded-md">
-            <RefreshCw size={13} />
-          </span>
-          <div className="flex flex-col">
-            <span className="text-[14px] font-medium leading-tight">Recorrente</span>
-            <span className="text-text-muted text-[11px] leading-tight">Repete automaticamente</span>
+        </SelectItem>
+      )}
+      {supportsMore && (
+        <SelectItem value="Recurring">
+          <div className="flex items-center gap-2.5 py-0.5">
+            <span className="text-purple bg-purple/10 flex h-7 w-7 items-center justify-center rounded-md">
+              <RefreshCw size={13} />
+            </span>
+            <div className="flex flex-col">
+              <span className="text-[14px] font-medium leading-tight">Recorrente</span>
+              <span className="text-text-muted text-[11px] leading-tight">Repete automaticamente</span>
+            </div>
           </div>
-        </div>
-      </SelectItem>
+        </SelectItem>
+      )}
     </SelectContent>
   );
 }
@@ -474,6 +482,24 @@ function CreateForm({
     ? (createSubCategorySelected.emoji ? `${createSubCategorySelected.emoji} ${createSubCategorySelected.name}` : createSubCategorySelected.name)
     : undefined;
 
+  // Pre-select the default account once accounts load
+  useEffect(() => {
+    if (accounts.length === 0) return;
+    const defaultAccount = accounts.find((a) => a.isDefaultAccount);
+    if (defaultAccount && !accountIdValue) {
+      setValue("accountId", String(defaultAccount.id));
+    }
+  }, [accounts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When account changes to a type that doesn't support installment/recurring, reset paymentType
+  useEffect(() => {
+    if (!createAccountSelected) return;
+    if (!ACCOUNTS_WITH_INSTALLMENT_RECURRING.has(createAccountSelected.type)) {
+      if (paymentType === "Installment" || paymentType === "Recurring") {
+        setValue("paymentType", "OneTime");
+      }
+    }
+  }, [createAccountSelected?.type]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSubmit = async (values: CreateValues) => {
     setServerError(null);
@@ -601,7 +627,7 @@ function CreateForm({
           <SelectTrigger className={TRIGGER_CLASS}>
             <SelectValue />
           </SelectTrigger>
-          <PaymentTypeSelectContent />
+          <PaymentTypeSelectContent accountType={createAccountSelected?.type} />
         </Select>
       </FormField>
 
@@ -626,6 +652,10 @@ function CreateForm({
             max="60"
             placeholder="Ex: 12"
             className={cn(INPUT_CLASS, errors.totalInstallments && "border-red/60")}
+            onBlur={(e) => {
+              const n = Number(e.target.value);
+              if (n < 2) setValue("totalInstallments", "2");
+            }}
           />
         </FormField>
       )}
@@ -730,6 +760,16 @@ function EditForm({
   const editPaymentType = watch("paymentType") as PaymentType;
 
   const accountSelected = accounts.find((a) => String(a.id) === accountValue);
+
+  // When account changes to a type that doesn't support installment/recurring, reset paymentType
+  useEffect(() => {
+    if (!accountSelected) return;
+    if (!ACCOUNTS_WITH_INSTALLMENT_RECURRING.has(accountSelected.type)) {
+      if (editPaymentType === "Installment" || editPaymentType === "Recurring") {
+        setValue("paymentType", "OneTime");
+      }
+    }
+  }, [accountSelected?.type]); // eslint-disable-line react-hooks/exhaustive-deps
   const subCategorySelected = subcategories.find((s) => String(s.id) === subCategoryValue);
   const subCategoryLabel = subCategorySelected
     ? (subCategorySelected.emoji ? `${subCategorySelected.emoji} ${subCategorySelected.name}` : subCategorySelected.name)
@@ -884,7 +924,7 @@ function EditForm({
           <SelectTrigger className={TRIGGER_CLASS}>
             <SelectValue />
           </SelectTrigger>
-          <PaymentTypeSelectContent />
+          <PaymentTypeSelectContent accountType={accountSelected?.type} />
         </Select>
       </FormField>
 
@@ -903,6 +943,10 @@ function EditForm({
             max="60"
             placeholder="Ex: 12"
             className={cn(INPUT_CLASS, errors.totalInstallments && "border-red/60")}
+            onBlur={(e) => {
+              const n = Number(e.target.value);
+              if (n < 2) setValue("totalInstallments", "2");
+            }}
           />
         </FormField>
       )}

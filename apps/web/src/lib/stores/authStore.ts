@@ -6,11 +6,11 @@ import type { AuthUser } from "@/lib/types/auth.types";
 
 type AuthState = {
   accessToken: string | null;
-  refreshToken: string | null;
   user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (accessToken: string, refreshToken: string) => void;
+  login: (accessToken: string, user?: AuthUser) => void;
   logout: () => Promise<void>;
+  setAccessToken: (token: string) => void;
   setUser: (user: AuthUser) => void;
 };
 
@@ -18,46 +18,34 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       accessToken: null,
-      refreshToken: null,
       user: null,
       isAuthenticated: false,
 
-      login: (accessToken, refreshToken) => {
-        // Drop any cache left by a previous account before the new one loads.
+      login: (accessToken, user) => {
         clearPersistedQueryCache();
-        localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("refreshToken", refreshToken);
-        // 7-day cookie so the middleware never loses auth between sessions
-        document.cookie = `accessToken=${accessToken}; path=/; max-age=604800; SameSite=Lax`;
-        set({ accessToken, refreshToken, isAuthenticated: true });
+        set({ accessToken, user: user ?? null, isAuthenticated: true });
       },
 
       logout: async () => {
-        const { refreshToken } = get();
-        if (refreshToken) {
-          try {
-            await authApi.logout(refreshToken);
-          } catch {
-            // logout even if API call fails
-          }
+        try {
+          await authApi.logout();
+        } catch {
+          // logout even if API call fails
         }
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        document.cookie = "accessToken=; path=/; max-age=0; SameSite=Lax";
         clearPersistedQueryCache();
-        set({ accessToken: null, refreshToken: null, user: null, isAuthenticated: false });
+        set({ accessToken: null, user: null, isAuthenticated: false });
       },
+
+      setAccessToken: (token) => set({ accessToken: token }),
 
       setUser: (user) => set({ user }),
     }),
     {
       name: "controle-auth",
-      partialize: (state) => ({
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
-        isAuthenticated: state.isAuthenticated,
-        user: state.user,
-      }),
+      // Only persist the flag — tokens and PII stay in memory only.
+      // On reload the 401→refresh flow silently restores the accessToken
+      // using the HttpOnly refresh-token cookie sent automatically by the browser.
+      partialize: (state) => ({ isAuthenticated: state.isAuthenticated }),
     },
   ),
 );

@@ -39,7 +39,7 @@ export const RegisterForm = ({ onSwitch }: { onSwitch: () => void }) => {
     setServerError(null);
     try {
       const response = await authApi.register(data);
-      login(response.accessToken, response.refreshToken);
+      login(response.accessToken);
       router.refresh();
       router.push("/dashboard");
     } catch {

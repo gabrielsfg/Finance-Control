@@ -5,10 +5,10 @@ import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persist
 import { useState } from "react";
 import { getQueryClient, PERSIST_CACHE_KEY, PERSIST_BUSTER } from "@/lib/queryClient";
 
-// Only reference/master data is persisted to disk — it rarely changes, is cheap
-// to re-validate in the background, and lets these pages paint instantly on
-// reload. Volatile or PII-heavy data (transactions, dashboard, analytics,
-// profile) is intentionally left out so it never lands in localStorage.
+// Only reference/master data is persisted — it rarely changes, is cheap to
+// re-validate in the background, and lets these pages paint instantly on reload.
+// sessionStorage is used instead of localStorage so the cache is automatically
+// cleared when the tab closes, avoiding stale financial data on shared machines.
 const PERSISTED_QUERY_ROOTS = new Set([
   "categories",
   "subcategories",
@@ -22,7 +22,7 @@ export const QueryProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [persister] = useState(() =>
     createSyncStoragePersister({
-      storage: typeof window !== "undefined" ? window.localStorage : undefined,
+      storage: typeof window !== "undefined" ? window.sessionStorage : undefined,
       key: PERSIST_CACHE_KEY,
     }),
   );
@@ -32,7 +32,7 @@ export const QueryProvider = ({ children }: { children: React.ReactNode }) => {
       client={queryClient}
       persistOptions={{
         persister,
-        maxAge: 1000 * 60 * 60 * 24, // 24h — drop snapshots older than a day
+        maxAge: 1000 * 60 * 60 * 24,
         buster: PERSIST_BUSTER,
         dehydrateOptions: {
           shouldDehydrateQuery: (query) => {

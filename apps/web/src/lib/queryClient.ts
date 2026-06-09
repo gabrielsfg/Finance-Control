@@ -34,7 +34,7 @@ export const getQueryClient = (): QueryClient => {
 // next account on a shared machine.
 export const clearPersistedQueryCache = (): void => {
   if (typeof window !== "undefined") {
-    window.localStorage.removeItem(PERSIST_CACHE_KEY);
+    window.sessionStorage.removeItem(PERSIST_CACHE_KEY);
   }
   browserQueryClient?.clear();
 };

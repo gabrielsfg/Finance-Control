@@ -31,7 +31,7 @@ namespace FinanceControl.Services.Services
             _configuration = configuration;
         }
 
-        public async Task<AuthResponseDto?> RegisterUserAsync(CreateUserRequestDto requestDto)
+        public async Task<AuthTokensDto?> RegisterUserAsync(CreateUserRequestDto requestDto)
         {
             requestDto.Email = requestDto.Email.ToLower();
 
@@ -89,7 +89,7 @@ namespace FinanceControl.Services.Services
             return LoginResult.Success(await CreateAuthResponseAsync(user));
         }
 
-        public async Task<AuthResponseDto?> RefreshTokenAsync(string refreshToken)
+        public async Task<AuthTokensDto?> RefreshTokenAsync(string refreshToken)
         {
             var hashedToken = HashToken(refreshToken);
             var stored = await _context.RefreshTokens
@@ -373,12 +373,15 @@ namespace FinanceControl.Services.Services
             await _context.SaveChangesAsync();
         }
 
-        private async Task<AuthResponseDto> CreateAuthResponseAsync(User user)
+        private async Task<AuthTokensDto> CreateAuthResponseAsync(User user)
         {
             var accessToken = CreateAccessToken(user);
             var refreshToken = await CreateRefreshTokenAsync(user.Id);
 
-            return new AuthResponseDto
+            // AuthTokensDto is an internal transport object — the controller
+            // sets the refresh token as an HttpOnly cookie and exposes only
+            // the access token in the response body.
+            return new AuthTokensDto
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken
