@@ -1,6 +1,7 @@
 using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Services.Extensions;
 using FinanceControl.Services.Validations;
+using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
 using FinanceControl.WebApi.Controllers.Base;

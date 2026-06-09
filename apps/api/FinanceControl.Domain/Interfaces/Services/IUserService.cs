@@ -1,3 +1,4 @@
+using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
 using LoginResult = FinanceControl.Shared.Dtos.Response.LoginResult;

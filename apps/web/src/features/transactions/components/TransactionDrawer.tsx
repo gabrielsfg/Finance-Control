@@ -11,6 +11,7 @@ import {
   Trash2,
   ArrowDownLeft,
   ArrowUpRight,
+  ArrowLeftRight,
   RefreshCw,
   Layers,
   Calendar,
@@ -242,54 +243,105 @@ function BudgetToggle({
   );
 }
 
+const TYPE_TOGGLE_ACTIVE: Record<TransactionType, string> = {
+  Income: "bg-green/15 text-green",
+  Expense: "bg-red/15 text-red",
+  Transfer: "bg-blue/15 text-blue",
+};
+
+const TYPE_TOGGLE_LABEL: Record<TransactionType, string> = {
+  Income: "Receita",
+  Expense: "Despesa",
+  Transfer: "Transferência",
+};
+
+function TypeToggle({
+  value,
+  onChange,
+  options,
+}: {
+  value: TransactionType;
+  onChange: (t: TransactionType) => void;
+  options: TransactionType[];
+}) {
+  return (
+    <div className="bg-surface2 flex rounded-xl p-1.5">
+      {options.map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onChange(t)}
+          className={cn(
+            "flex-1 rounded-lg py-2.5 text-[14px] font-medium transition-colors",
+            value === t ? TYPE_TOGGLE_ACTIVE[t] : "text-text-muted hover:text-text-sub",
+          )}
+        >
+          {TYPE_TOGGLE_LABEL[t]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Schemas ───────────────────────────────────────────────────────────────────
+
+// For transfers the destination account is required and must differ from the source;
+// the subcategory/installment/recurrence rules only apply to expense/income.
+function refineTransaction(
+  data: { type: string; accountId: string; destinationAccountId?: string; subCategoryId?: string; paymentType: string; totalInstallments?: string; recurrence?: string },
+  ctx: z.RefinementCtx,
+) {
+  if (data.type === "Transfer") {
+    if (!data.destinationAccountId)
+      ctx.addIssue({ code: "custom", path: ["destinationAccountId"], message: "Conta de destino obrigatória" });
+    else if (data.destinationAccountId === data.accountId)
+      ctx.addIssue({ code: "custom", path: ["destinationAccountId"], message: "Origem e destino devem ser diferentes" });
+    return;
+  }
+  if (!data.subCategoryId)
+    ctx.addIssue({ code: "custom", path: ["subCategoryId"], message: "Categoria obrigatória" });
+  if (data.paymentType === "Installment") {
+    const n = Number(data.totalInstallments);
+    if (!data.totalInstallments || isNaN(n) || n < 2 || n > 60)
+      ctx.addIssue({ code: "custom", path: ["totalInstallments"], message: "Parcelas: 2 a 60" });
+  }
+  if (data.paymentType === "Recurring" && !data.recurrence)
+    ctx.addIssue({ code: "custom", path: ["recurrence"], message: "Selecione a recorrência" });
+}
 
 const createSchema = z
   .object({
     description: z.string().min(1, "Descrição obrigatória"),
     value: z.string().min(1, "Valor obrigatório"),
     transactionDate: z.string().min(1, "Data obrigatória"),
-    subCategoryId: z.string().min(1, "Categoria obrigatória"),
+    type: z.enum(["Expense", "Income", "Transfer"]),
+    subCategoryId: z.string().optional(),
     accountId: z.string().min(1, "Conta obrigatória"),
+    destinationAccountId: z.string().optional(),
     paymentType: z.enum(["OneTime", "Installment", "Recurring"]),
     paymentMethod: z.enum(["Debit", "Credit", ""]).optional(),
     totalInstallments: z.string().optional(),
     recurrence: z.string().optional(),
     includeInBudget: z.boolean(),
   })
-  .superRefine((data, ctx) => {
-    if (data.paymentType === "Installment") {
-      const n = Number(data.totalInstallments);
-      if (!data.totalInstallments || isNaN(n) || n < 2 || n > 60)
-        ctx.addIssue({ code: "custom", path: ["totalInstallments"], message: "Parcelas: 2 a 60" });
-    }
-    if (data.paymentType === "Recurring" && !data.recurrence)
-      ctx.addIssue({ code: "custom", path: ["recurrence"], message: "Selecione a recorrência" });
-  });
+  .superRefine(refineTransaction);
 
 const editSchema = z
   .object({
     description: z.string().min(1, "Descrição obrigatória"),
     value: z.string().min(1, "Valor obrigatório"),
     transactionDate: z.string().min(1, "Data obrigatória"),
-    subCategoryId: z.string().min(1, "Categoria obrigatória"),
+    type: z.enum(["Expense", "Income", "Transfer"]),
+    subCategoryId: z.string().optional(),
     accountId: z.string().min(1, "Conta obrigatória"),
+    destinationAccountId: z.string().optional(),
     paymentMethod: z.enum(["Debit", "Credit", ""]).optional(),
-    type: z.enum(["Expense", "Income"]),
     paymentType: z.enum(["OneTime", "Installment", "Recurring"]),
     totalInstallments: z.string().optional(),
     recurrence: z.string().optional(),
     includeInBudget: z.boolean(),
   })
-  .superRefine((data, ctx) => {
-    if (data.paymentType === "Installment") {
-      const n = Number(data.totalInstallments);
-      if (!data.totalInstallments || isNaN(n) || n < 2 || n > 60)
-        ctx.addIssue({ code: "custom", path: ["totalInstallments"], message: "Parcelas: 2 a 60" });
-    }
-    if (data.paymentType === "Recurring" && !data.recurrence)
-      ctx.addIssue({ code: "custom", path: ["recurrence"], message: "Selecione a recorrência" });
-  });
+  .superRefine(refineTransaction);
 
 type CreateValues = z.infer<typeof createSchema>;
 type EditValues = z.infer<typeof editSchema>;
@@ -311,6 +363,7 @@ function DetailView({
   onDelete: () => void;
 }) {
   const isIncome = transaction.type === "Income";
+  const isTransfer = transaction.type === "Transfer";
   const dateObj = parseDateLocal(transaction.transactionDate);
   const dateLabel = dateObj.toLocaleDateString("pt-BR", {
     weekday: "long",
@@ -326,10 +379,12 @@ function DetailView({
         <div
           className={cn(
             "flex h-16 w-16 items-center justify-center rounded-[16px]",
-            isIncome ? "bg-green/10" : "bg-red/10",
+            isTransfer ? "bg-blue/10" : isIncome ? "bg-green/10" : "bg-red/10",
           )}
         >
-          {isIncome ? (
+          {isTransfer ? (
+            <ArrowLeftRight size={28} className="text-blue" />
+          ) : isIncome ? (
             <ArrowUpRight size={28} className="text-green" />
           ) : (
             <ArrowDownLeft size={28} className="text-red" />
@@ -338,10 +393,10 @@ function DetailView({
         <p
           className={cn(
             "font-money font-700 text-[32px]",
-            isIncome ? "text-green" : "text-red",
+            isTransfer ? "text-text" : isIncome ? "text-green" : "text-red",
           )}
         >
-          {isIncome ? "+" : "-"}
+          {isTransfer ? "" : isIncome ? "+" : "-"}
           {formatCurrency(Math.abs(transaction.value) / 100)}
         </p>
         <p className="text-text font-medium text-[16px]">{transaction.description}</p>
@@ -378,23 +433,32 @@ function DetailView({
       {/* Details list */}
       <div className="border-border bg-surface2 divide-border flex flex-col divide-y rounded-xl border">
         <DetailRow icon={<Calendar size={15} />} label="Data" value={dateLabel} />
-        <DetailRow icon={<Wallet size={15} />} label="Conta" value={transaction.accountName} />
-        <DetailRow
-          icon={<Tag size={15} />}
-          label="Categoria"
-          value={transaction.subCategoryEmoji ? `${transaction.subCategoryEmoji} ${transaction.subCategoryName}` : transaction.subCategoryName}
-        />
-        <DetailRow
-          icon={<CreditCard size={15} />}
-          label="Tipo de pagamento"
-          value={PAYMENT_TYPE_LABELS[transaction.paymentType]}
-        />
-        {transaction.paymentMethod && (
-          <DetailRow
-            icon={<CreditCard size={15} />}
-            label="Forma de pagamento"
-            value={PAYMENT_METHOD_LABELS[transaction.paymentMethod]}
-          />
+        {isTransfer ? (
+          <>
+            <DetailRow icon={<Wallet size={15} />} label="Origem" value={transaction.accountName} />
+            <DetailRow icon={<ArrowLeftRight size={15} />} label="Destino" value={transaction.destinationAccountName ?? "—"} />
+          </>
+        ) : (
+          <>
+            <DetailRow icon={<Wallet size={15} />} label="Conta" value={transaction.accountName} />
+            <DetailRow
+              icon={<Tag size={15} />}
+              label="Categoria"
+              value={transaction.subCategoryEmoji ? `${transaction.subCategoryEmoji} ${transaction.subCategoryName}` : transaction.subCategoryName}
+            />
+            <DetailRow
+              icon={<CreditCard size={15} />}
+              label="Tipo de pagamento"
+              value={PAYMENT_TYPE_LABELS[transaction.paymentType]}
+            />
+            {transaction.paymentMethod && (
+              <DetailRow
+                icon={<CreditCard size={15} />}
+                label="Forma de pagamento"
+                value={PAYMENT_METHOD_LABELS[transaction.paymentMethod]}
+              />
+            )}
+          </>
         )}
       </div>
 
@@ -462,8 +526,10 @@ function CreateForm({
       description: "",
       value: "",
       transactionDate: new Date().toISOString().slice(0, 10),
+      type: defaultType,
       subCategoryId: "",
       accountId: "",
+      destinationAccountId: "",
       paymentType: "OneTime",
       paymentMethod: "",
       totalInstallments: "",
@@ -472,11 +538,14 @@ function CreateForm({
     },
   });
 
+  const isTransfer = transactionType === "Transfer";
   const paymentType = watch("paymentType") as PaymentType;
   const accountIdValue = watch("accountId");
+  const destinationAccountIdValue = watch("destinationAccountId");
   const subCategoryIdValue = watch("subCategoryId");
 
   const createAccountSelected = accounts.find((a) => String(a.id) === accountIdValue);
+  const createDestAccountSelected = accounts.find((a) => String(a.id) === destinationAccountIdValue);
   const createSubCategorySelected = subcategories.find((s) => String(s.id) === subCategoryIdValue);
   const createSubCategoryLabel = createSubCategorySelected
     ? (createSubCategorySelected.emoji ? `${createSubCategorySelected.emoji} ${createSubCategorySelected.name}` : createSubCategorySelected.name)
@@ -504,29 +573,46 @@ function CreateForm({
   const onSubmit = async (values: CreateValues) => {
     setServerError(null);
     try {
-      await mutateAsync({
-        description: values.description,
-        value: Math.round(parseFloat(values.value) * 100),
-        transactionDate: values.transactionDate,
-        subCategoryId: Number(values.subCategoryId),
-        accountId: Number(values.accountId),
-        type: transactionType,
-        paymentType: values.paymentType as PaymentType,
-        paymentMethod:
-          values.paymentMethod === "Debit" || values.paymentMethod === "Credit"
-            ? values.paymentMethod
-            : null,
-        totalInstallments:
-          values.paymentType === "Installment" && values.totalInstallments
-            ? Number(values.totalInstallments)
-            : null,
-        recurrence:
-          values.paymentType === "Recurring" && values.recurrence
-            ? (values.recurrence as RecurrenceType)
-            : null,
-        includeInBudget: values.includeInBudget,
-        tags: createTags,
-      });
+      if (isTransfer) {
+        await mutateAsync({
+          description: values.description,
+          value: Math.round(parseFloat(values.value) * 100),
+          transactionDate: values.transactionDate,
+          accountId: Number(values.accountId),
+          destinationAccountId: Number(values.destinationAccountId),
+          type: "Transfer",
+          paymentType: "OneTime",
+          paymentMethod: null,
+          totalInstallments: null,
+          recurrence: null,
+          includeInBudget: false,
+          tags: [],
+        });
+      } else {
+        await mutateAsync({
+          description: values.description,
+          value: Math.round(parseFloat(values.value) * 100),
+          transactionDate: values.transactionDate,
+          subCategoryId: Number(values.subCategoryId),
+          accountId: Number(values.accountId),
+          type: transactionType,
+          paymentType: values.paymentType as PaymentType,
+          paymentMethod:
+            values.paymentMethod === "Debit" || values.paymentMethod === "Credit"
+              ? values.paymentMethod
+              : null,
+          totalInstallments:
+            values.paymentType === "Installment" && values.totalInstallments
+              ? Number(values.totalInstallments)
+              : null,
+          recurrence:
+            values.paymentType === "Recurring" && values.recurrence
+              ? (values.recurrence as RecurrenceType)
+              : null,
+          includeInBudget: values.includeInBudget,
+          tags: createTags,
+        });
+      }
       reset();
       setCreateTags([]);
       setTransactionType(defaultType);
@@ -541,30 +627,16 @@ function CreateForm({
       {/* Scrollable fields */}
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
       {/* Type toggle */}
-      <div className="bg-surface2 flex rounded-xl p-1.5">
-        {(["Expense", "Income"] as TransactionType[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTransactionType(t)}
-            className={cn(
-              "flex-1 rounded-lg py-2.5 text-[15px] font-medium transition-colors",
-              transactionType === t
-                ? t === "Income"
-                  ? "bg-green/15 text-green"
-                  : "bg-red/15 text-red"
-                : "text-text-muted hover:text-text-sub",
-            )}
-          >
-            {t === "Income" ? "Receita" : "Despesa"}
-          </button>
-        ))}
-      </div>
+      <TypeToggle
+        value={transactionType}
+        onChange={(t) => { setTransactionType(t); setValue("type", t); }}
+        options={["Expense", "Income", "Transfer"]}
+      />
 
       <FormField label="Descrição" error={errors.description?.message}>
         <input
           {...register("description")}
-          placeholder="Ex: Mercado, Salário..."
+          placeholder={isTransfer ? "Ex: Transferência para poupança" : "Ex: Mercado, Salário..."}
           className={cn(INPUT_CLASS, errors.description && "border-red/60")}
         />
       </FormField>
@@ -591,8 +663,8 @@ function CreateForm({
         />
       </FormField>
 
-      <FormField label="Conta" error={errors.accountId?.message}>
-        <Select onValueChange={(v) => setValue("accountId", v as string, { shouldValidate: true })}>
+      <FormField label={isTransfer ? "Conta de origem" : "Conta"} error={errors.accountId?.message}>
+        <Select value={accountIdValue ?? ""} onValueChange={(v) => setValue("accountId", v as string, { shouldValidate: true })}>
           <SelectTrigger className={cn(TRIGGER_CLASS, errors.accountId && "border-red/60")}>
             <SelectValue>
               {createAccountSelected
@@ -611,39 +683,67 @@ function CreateForm({
         </Select>
       </FormField>
 
-      <FormField label="Categoria" error={errors.subCategoryId?.message}>
-        <Select onValueChange={(v) => setValue("subCategoryId", v as string, { shouldValidate: true })}>
-          <SelectTrigger className={cn(TRIGGER_CLASS, errors.subCategoryId && "border-red/60")}>
-            <SelectValue>
-              {createSubCategoryLabel ?? <span className="text-text-muted">Selecionar categoria</span>}
-            </SelectValue>
-          </SelectTrigger>
-          <CategorySelectContent subcategories={subcategories} />
-        </Select>
-      </FormField>
+      {isTransfer && (
+        <FormField label="Conta de destino" error={errors.destinationAccountId?.message}>
+          <Select value={destinationAccountIdValue ?? ""} onValueChange={(v) => setValue("destinationAccountId", v as string, { shouldValidate: true })}>
+            <SelectTrigger className={cn(TRIGGER_CLASS, errors.destinationAccountId && "border-red/60")}>
+              <SelectValue>
+                {createDestAccountSelected
+                  ? (() => { const cfg = ACCOUNT_TYPE_CONFIG[createDestAccountSelected.type]; const Icon = cfg.Icon; return (
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: `${cfg.color}1a` }}>
+                          <Icon size={12} style={{ color: cfg.color }} />
+                        </span>
+                        <span>{createDestAccountSelected.name}</span>
+                      </div>
+                    ); })()
+                  : <span className="text-text-muted">Selecionar conta</span>}
+              </SelectValue>
+            </SelectTrigger>
+            <AccountSelectContent accounts={accounts.filter((a) => String(a.id) !== accountIdValue)} />
+          </Select>
+        </FormField>
+      )}
 
-      <FormField label="Tipo de pagamento">
-        <Select defaultValue="OneTime" onValueChange={(v) => setValue("paymentType", v as PaymentType)}>
-          <SelectTrigger className={TRIGGER_CLASS}>
-            <SelectValue />
-          </SelectTrigger>
-          <PaymentTypeSelectContent accountType={createAccountSelected?.type} />
-        </Select>
-      </FormField>
+      {!isTransfer && (
+        <FormField label="Categoria" error={errors.subCategoryId?.message}>
+          <Select onValueChange={(v) => setValue("subCategoryId", v as string, { shouldValidate: true })}>
+            <SelectTrigger className={cn(TRIGGER_CLASS, errors.subCategoryId && "border-red/60")}>
+              <SelectValue>
+                {createSubCategoryLabel ?? <span className="text-text-muted">Selecionar categoria</span>}
+              </SelectValue>
+            </SelectTrigger>
+            <CategorySelectContent subcategories={subcategories} />
+          </Select>
+        </FormField>
+      )}
 
-      <FormField label="Forma de pagamento">
-        <Select
-          defaultValue=""
-          onValueChange={(v) => setValue("paymentMethod", v as "Debit" | "Credit" | "")}
-        >
-          <SelectTrigger className={TRIGGER_CLASS}>
-            <SelectValue placeholder="Opcional" />
-          </SelectTrigger>
-          <PaymentMethodSelectContent />
-        </Select>
-      </FormField>
+      {!isTransfer && (
+        <FormField label="Tipo de pagamento">
+          <Select defaultValue="OneTime" onValueChange={(v) => setValue("paymentType", v as PaymentType)}>
+            <SelectTrigger className={TRIGGER_CLASS}>
+              <SelectValue />
+            </SelectTrigger>
+            <PaymentTypeSelectContent accountType={createAccountSelected?.type} />
+          </Select>
+        </FormField>
+      )}
 
-      {paymentType === "Installment" && (
+      {!isTransfer && (
+        <FormField label="Forma de pagamento">
+          <Select
+            defaultValue=""
+            onValueChange={(v) => setValue("paymentMethod", v as "Debit" | "Credit" | "")}
+          >
+            <SelectTrigger className={TRIGGER_CLASS}>
+              <SelectValue placeholder="Opcional" />
+            </SelectTrigger>
+            <PaymentMethodSelectContent />
+          </Select>
+        </FormField>
+      )}
+
+      {!isTransfer && paymentType === "Installment" && (
         <FormField label="Número de parcelas" error={errors.totalInstallments?.message}>
           <input
             {...register("totalInstallments")}
@@ -660,7 +760,7 @@ function CreateForm({
         </FormField>
       )}
 
-      {paymentType === "Recurring" && (
+      {!isTransfer && paymentType === "Recurring" && (
         <FormField label="Recorrência" error={errors.recurrence?.message}>
           <Select onValueChange={(v) => setValue("recurrence", v as string)}>
             <SelectTrigger
@@ -679,9 +779,11 @@ function CreateForm({
         </FormField>
       )}
 
-      <FormField label="Tags">
-        <TagInput value={createTags} onChange={setCreateTags} />
-      </FormField>
+      {!isTransfer && (
+        <FormField label="Tags">
+          <TagInput value={createTags} onChange={setCreateTags} />
+        </FormField>
+      )}
 
       {transactionType === "Expense" && (
         <BudgetToggle
@@ -743,6 +845,7 @@ function EditForm({
       transactionDate: transaction.transactionDate,
       subCategoryId: String(transaction.subCategoryId),
       accountId: String(transaction.accountId),
+      destinationAccountId: transaction.destinationAccountId ? String(transaction.destinationAccountId) : "",
       paymentMethod: transaction.paymentMethod ?? "",
       type: transaction.type,
       paymentType: transaction.paymentType,
@@ -753,13 +856,15 @@ function EditForm({
     setServerError(null);
   }, [transaction, reset]);
 
-
+  const isTransfer = transactionType === "Transfer";
   const subCategoryValue = watch("subCategoryId");
   const accountValue = watch("accountId");
+  const destinationAccountValue = watch("destinationAccountId");
   const paymentMethodValue = watch("paymentMethod");
   const editPaymentType = watch("paymentType") as PaymentType;
 
   const accountSelected = accounts.find((a) => String(a.id) === accountValue);
+  const editDestAccountSelected = accounts.find((a) => String(a.id) === destinationAccountValue);
 
   // When account changes to a type that doesn't support installment/recurring, reset paymentType
   useEffect(() => {
@@ -779,32 +884,52 @@ function EditForm({
   const onSubmit = async (values: EditValues) => {
     setServerError(null);
     try {
-      await mutateAsync({
-        id: transaction.id,
-        data: {
-          subCategoryId: Number(values.subCategoryId),
-          accountId: Number(values.accountId),
-          value: Math.round(parseFloat(values.value) * 100),
-          type: transactionType,
-          description: values.description,
-          transactionDate: values.transactionDate,
-          paymentType: values.paymentType as PaymentType,
-          paymentMethod:
-            values.paymentMethod === "Debit" || values.paymentMethod === "Credit"
-              ? values.paymentMethod
-              : null,
-          totalInstallments:
-            values.paymentType === "Installment" && values.totalInstallments
-              ? Number(values.totalInstallments)
-              : null,
-          recurrence:
-            values.paymentType === "Recurring" && values.recurrence
-              ? (values.recurrence as RecurrenceType)
-              : null,
-          includeInBudget: values.includeInBudget,
-          tags: editTags,
-        },
-      });
+      if (isTransfer) {
+        await mutateAsync({
+          id: transaction.id,
+          data: {
+            accountId: Number(values.accountId),
+            destinationAccountId: Number(values.destinationAccountId),
+            value: Math.round(parseFloat(values.value) * 100),
+            type: "Transfer",
+            description: values.description,
+            transactionDate: values.transactionDate,
+            paymentType: "OneTime",
+            paymentMethod: null,
+            totalInstallments: null,
+            recurrence: null,
+            includeInBudget: false,
+            tags: [],
+          },
+        });
+      } else {
+        await mutateAsync({
+          id: transaction.id,
+          data: {
+            subCategoryId: Number(values.subCategoryId),
+            accountId: Number(values.accountId),
+            value: Math.round(parseFloat(values.value) * 100),
+            type: transactionType,
+            description: values.description,
+            transactionDate: values.transactionDate,
+            paymentType: values.paymentType as PaymentType,
+            paymentMethod:
+              values.paymentMethod === "Debit" || values.paymentMethod === "Credit"
+                ? values.paymentMethod
+                : null,
+            totalInstallments:
+              values.paymentType === "Installment" && values.totalInstallments
+                ? Number(values.totalInstallments)
+                : null,
+            recurrence:
+              values.paymentType === "Recurring" && values.recurrence
+                ? (values.recurrence as RecurrenceType)
+                : null,
+            includeInBudget: values.includeInBudget,
+            tags: editTags,
+          },
+        });
+      }
       onClose();
     } catch {
       setServerError("Erro ao atualizar transação. Tente novamente.");
@@ -816,26 +941,19 @@ function EditForm({
     <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
       {/* Scrollable fields */}
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
-      {/* Type toggle */}
-      <div className="bg-surface2 flex rounded-xl p-1.5">
-        {(["Expense", "Income"] as TransactionType[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => { setTransactionType(t); setValue("type", t); }}
-            className={cn(
-              "flex-1 rounded-lg py-2.5 text-[15px] font-medium transition-colors",
-              transactionType === t
-                ? t === "Income"
-                  ? "bg-green/15 text-green"
-                  : "bg-red/15 text-red"
-                : "text-text-muted hover:text-text-sub",
-            )}
-          >
-            {t === "Income" ? "Receita" : "Despesa"}
-          </button>
-        ))}
-      </div>
+      {/* Type toggle — transfers keep their type; expense/income can swap freely */}
+      {isTransfer ? (
+        <div className="bg-blue/10 text-blue flex items-center justify-center gap-2 rounded-xl py-2.5 text-[14px] font-medium">
+          <ArrowLeftRight size={15} />
+          Transferência
+        </div>
+      ) : (
+        <TypeToggle
+          value={transactionType}
+          onChange={(t) => { setTransactionType(t); setValue("type", t); }}
+          options={["Expense", "Income"]}
+        />
+      )}
 
       <FormField label="Descrição" error={errors.description?.message}>
         <input
@@ -865,7 +983,7 @@ function EditForm({
         />
       </FormField>
 
-      <FormField label="Conta">
+      <FormField label={isTransfer ? "Conta de origem" : "Conta"}>
         <Select
           value={accountValue ?? ""}
           onValueChange={(v) => setValue("accountId", v as string, { shouldValidate: true })}
@@ -888,47 +1006,78 @@ function EditForm({
         </Select>
       </FormField>
 
-      <FormField label="Categoria">
-        <Select
-          value={subCategoryValue ?? ""}
-          onValueChange={(v) => setValue("subCategoryId", v as string, { shouldValidate: true })}
-        >
-          <SelectTrigger className={TRIGGER_CLASS}>
-            <SelectValue>
-              {subCategoryLabel ?? <span className="text-text-muted">Selecionar categoria</span>}
-            </SelectValue>
-          </SelectTrigger>
-          <CategorySelectContent subcategories={subcategories} />
-        </Select>
-      </FormField>
+      {isTransfer && (
+        <FormField label="Conta de destino" error={errors.destinationAccountId?.message}>
+          <Select
+            value={destinationAccountValue ?? ""}
+            onValueChange={(v) => setValue("destinationAccountId", v as string, { shouldValidate: true })}
+          >
+            <SelectTrigger className={cn(TRIGGER_CLASS, errors.destinationAccountId && "border-red/60")}>
+              <SelectValue>
+                {editDestAccountSelected
+                  ? (() => { const cfg = ACCOUNT_TYPE_CONFIG[editDestAccountSelected.type]; const Icon = cfg.Icon; return (
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: `${cfg.color}1a` }}>
+                          <Icon size={12} style={{ color: cfg.color }} />
+                        </span>
+                        <span>{editDestAccountSelected.name}</span>
+                      </div>
+                    ); })()
+                  : <span className="text-text-muted">Selecionar conta</span>}
+              </SelectValue>
+            </SelectTrigger>
+            <AccountSelectContent accounts={accounts.filter((a) => String(a.id) !== accountValue)} />
+          </Select>
+        </FormField>
+      )}
 
-      <FormField label="Forma de pagamento">
-        <Select
-          value={paymentMethodValue ?? ""}
-          onValueChange={(v) => setValue("paymentMethod", v as "Debit" | "Credit" | "")}
-        >
-          <SelectTrigger className={TRIGGER_CLASS}>
-            <SelectValue>
-              {paymentMethodLabel ?? <span className="text-text-muted">Nenhuma</span>}
-            </SelectValue>
-          </SelectTrigger>
-          <PaymentMethodSelectContent />
-        </Select>
-      </FormField>
+      {!isTransfer && (
+        <FormField label="Categoria">
+          <Select
+            value={subCategoryValue ?? ""}
+            onValueChange={(v) => setValue("subCategoryId", v as string, { shouldValidate: true })}
+          >
+            <SelectTrigger className={TRIGGER_CLASS}>
+              <SelectValue>
+                {subCategoryLabel ?? <span className="text-text-muted">Selecionar categoria</span>}
+              </SelectValue>
+            </SelectTrigger>
+            <CategorySelectContent subcategories={subcategories} />
+          </Select>
+        </FormField>
+      )}
 
-      <FormField label="Tipo de pagamento">
-        <Select
-          value={editPaymentType}
-          onValueChange={(v) => setValue("paymentType", v as PaymentType)}
-        >
-          <SelectTrigger className={TRIGGER_CLASS}>
-            <SelectValue />
-          </SelectTrigger>
-          <PaymentTypeSelectContent accountType={accountSelected?.type} />
-        </Select>
-      </FormField>
+      {!isTransfer && (
+        <FormField label="Forma de pagamento">
+          <Select
+            value={paymentMethodValue ?? ""}
+            onValueChange={(v) => setValue("paymentMethod", v as "Debit" | "Credit" | "")}
+          >
+            <SelectTrigger className={TRIGGER_CLASS}>
+              <SelectValue>
+                {paymentMethodLabel ?? <span className="text-text-muted">Nenhuma</span>}
+              </SelectValue>
+            </SelectTrigger>
+            <PaymentMethodSelectContent />
+          </Select>
+        </FormField>
+      )}
 
-      {editPaymentType !== transaction.paymentType && (
+      {!isTransfer && (
+        <FormField label="Tipo de pagamento">
+          <Select
+            value={editPaymentType}
+            onValueChange={(v) => setValue("paymentType", v as PaymentType)}
+          >
+            <SelectTrigger className={TRIGGER_CLASS}>
+              <SelectValue />
+            </SelectTrigger>
+            <PaymentTypeSelectContent accountType={accountSelected?.type} />
+          </Select>
+        </FormField>
+      )}
+
+      {!isTransfer && editPaymentType !== transaction.paymentType && (
         <p className="text-orange bg-orange/8 border-orange/20 rounded-lg border px-3.5 py-2.5 text-[12px]">
           Trocar o tipo de pagamento recriará a transação. O ID original será removido.
         </p>
@@ -968,9 +1117,11 @@ function EditForm({
         </FormField>
       )}
 
-      <FormField label="Tags">
-        <TagInput value={editTags} onChange={setEditTags} />
-      </FormField>
+      {!isTransfer && (
+        <FormField label="Tags">
+          <TagInput value={editTags} onChange={setEditTags} />
+        </FormField>
+      )}
 
       {transactionType === "Expense" && (
         <BudgetToggle

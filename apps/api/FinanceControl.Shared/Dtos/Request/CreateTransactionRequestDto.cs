@@ -7,6 +7,7 @@ namespace FinanceControl.Shared.Dtos.Request
         public bool IncludeInBudget { get; set; }
         public int SubCategoryId { get; set; }
         public int AccountId { get; set; }
+        public int? DestinationAccountId { get; set; }
         public int Value { get; set; }
         public EnumTransactionType Type { get; set; }
         public string Description { get; set; }

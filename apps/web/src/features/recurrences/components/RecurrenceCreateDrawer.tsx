@@ -33,7 +33,8 @@ import { useCreateRecurring } from "../hooks/useRecurrences";
 import { DatePickerField } from "@/components/shared/DatePickerField";
 import { useCreateTransaction } from "@/features/transactions/hooks/useTransactions";
 import type { AccountItem } from "@/lib/types/accounts.types";
-import type { TransactionType, RecurrenceType } from "@/lib/types/transactions.types";
+import type { RecurrenceType } from "@/lib/types/transactions.types";
+import type { TransactionType } from "@/lib/types/recurrences.types";
 
 export type CreateMode = "recurring" | "installment";
 

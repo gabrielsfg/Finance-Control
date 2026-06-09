@@ -122,7 +122,7 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
           {/* Transactions for the day */}
           {txs.map((t, i) => {
             const isIncome = t.type === "Income";
-            const isTransfer = t.recurringTransactionId !== null && t.type !== "Income" && t.type !== "Expense";
+            const isTransfer = t.type === "Transfer";
             const subColor = subColorMap.get(t.subCategoryId) ?? getCategoryColor(null, t.subCategoryName);
             const subEmoji = subEmojiMap.get(t.subCategoryId) ?? t.subCategoryEmoji;
 
@@ -139,10 +139,12 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
                 <div
                   className={cn(
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]",
-                    isIncome ? "bg-green/10" : "bg-red/10",
+                    isTransfer ? "bg-blue/10" : isIncome ? "bg-green/10" : "bg-red/10",
                   )}
                 >
-                  <span className="text-[14px]">{isIncome ? "💰" : "💸"}</span>
+                  {isTransfer
+                    ? <ArrowLeftRight size={15} className="text-blue" />
+                    : <span className="text-[14px]">{isIncome ? "💰" : "💸"}</span>}
                 </div>
 
                 {/* Description + meta */}
@@ -163,11 +165,21 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
                     )}
                   </div>
                   <div className="mt-0.5 flex items-center gap-2">
-                    {t.accountName && (
-                      <span className="text-text-muted text-[12px]">{t.accountName}</span>
-                    )}
-                    {t.paymentMethod && (
-                      <span className="text-text-muted text-[12px]">· {PAYMENT_METHOD_LABELS[t.paymentMethod]}</span>
+                    {isTransfer ? (
+                      <span className="text-text-muted flex items-center gap-1 text-[12px]">
+                        {t.accountName}
+                        <ArrowLeftRight size={10} className="shrink-0" />
+                        {t.destinationAccountName ?? "—"}
+                      </span>
+                    ) : (
+                      <>
+                        {t.accountName && (
+                          <span className="text-text-muted text-[12px]">{t.accountName}</span>
+                        )}
+                        {t.paymentMethod && (
+                          <span className="text-text-muted text-[12px]">· {PAYMENT_METHOD_LABELS[t.paymentMethod]}</span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -180,7 +192,7 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
                       isIncome ? "text-green" : isTransfer ? "text-text-sub" : "text-text",
                     )}
                   >
-                    {isIncome ? "+" : "-"}{formatCurrency(Math.abs(t.value) / 100)}
+                    {isTransfer ? "" : isIncome ? "+" : "-"}{formatCurrency(Math.abs(t.value) / 100)}
                   </span>
                   <span
                     className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"

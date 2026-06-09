@@ -136,8 +136,7 @@ export function TransactionsPage() {
     const needle = normalizeText(searchQuery.trim());
     return items.filter((t) => {
       if (filterDay && t.transactionDate !== filterDay) return false;
-      if (filter.typeFilter === "Transfer" && t.recurringTransactionId === null && t.parentTransactionId === null) return false;
-      if (filter.typeFilter !== "All" && filter.typeFilter !== "Transfer" && t.type !== filter.typeFilter) return false;
+      if (filter.typeFilter !== "All" && t.type !== filter.typeFilter) return false;
       if (needle) {
         const inDescription = t.description ? normalizeText(t.description).includes(needle) : false;
         const inTags = t.tags ? t.tags.some((tag) => normalizeText(tag.name).includes(needle)) : false;
