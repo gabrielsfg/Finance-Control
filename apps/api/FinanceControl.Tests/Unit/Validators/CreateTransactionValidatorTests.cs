@@ -93,5 +93,49 @@ namespace FinanceControl.Tests.Unit.Validators
             dto.Recurrence = null;
             Assert.False(_validator.Validate(dto).IsValid);
         }
+
+        // ── Transfers ────────────────────────────────────────────────────────────
+
+        private static CreateTransactionRequestDto ValidTransfer() => new()
+        {
+            AccountId = 1,
+            DestinationAccountId = 2,
+            Value = 100,
+            Type = EnumTransactionType.Transfer,
+            PaymentType = EnumPaymentType.OneTime,
+            TransactionDate = new DateOnly(2026, 1, 1),
+        };
+
+        [Fact]
+        public void Valid_Transfer_WithDistinctDestination_Passes()
+        {
+            // No subcategory required for transfers — the system one is resolved server-side.
+            Assert.True(_validator.Validate(ValidTransfer()).IsValid);
+        }
+
+        [Fact]
+        public void Invalid_Transfer_WithoutDestination_Fails()
+        {
+            var dto = ValidTransfer();
+            dto.DestinationAccountId = null;
+            Assert.False(_validator.Validate(dto).IsValid);
+        }
+
+        [Fact]
+        public void Invalid_Transfer_SameSourceAndDestination_Fails()
+        {
+            var dto = ValidTransfer();
+            dto.DestinationAccountId = dto.AccountId;
+            Assert.False(_validator.Validate(dto).IsValid);
+        }
+
+        [Fact]
+        public void Invalid_Transfer_NotOneTime_Fails()
+        {
+            var dto = ValidTransfer();
+            dto.PaymentType = EnumPaymentType.Installment;
+            dto.TotalInstallments = 3;
+            Assert.False(_validator.Validate(dto).IsValid);
+        }
     }
 }
