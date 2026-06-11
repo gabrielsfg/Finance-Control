@@ -3,17 +3,13 @@
 import { ArrowLeftRight, RefreshCw, Layers, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { parseLocalDate } from "@/lib/utils/budgetPeriod";
 import type { TransactionItem } from "@/lib/types/transactions.types";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   Debit: "Débito",
   Credit: "Crédito",
 };
-
-function parseDateLocal(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
 
 type Props = {
   transactions: TransactionItem[];
@@ -61,7 +57,7 @@ export const TransactionsTable = ({ transactions, search, onEdit, onDelete }: Pr
             >
               <td className="px-5 py-3.5">
                 <span className="font-mono text-text-muted text-[13px]">
-                  {parseDateLocal(t.transactionDate).toLocaleDateString("pt-BR", {
+                  {parseLocalDate(t.transactionDate).toLocaleDateString("pt-BR", {
                     day: "2-digit",
                     month: "short",
                   })}

@@ -282,8 +282,8 @@ export const GlobalSearch = () => {
     const marketResults: SearchResult[] = marketAssets.map((a) => ({
       id: `market-${a.id}`,
       kind: "investment",
-      label: a.ticker,
-      sublabel: a.name,
+      label: a.coinName ?? a.ticker,
+      sublabel: a.coinName ? a.ticker : a.name,
       badge: a.assetClass,
       href: `/market/${encodeURIComponent(a.ticker)}`,
     }));

@@ -121,8 +121,8 @@ export function MarketAssetRow({ asset, metric = "change", rank }: Props) {
       )}
       <AssetLogo asset={asset} />
       <div className="min-w-0 flex-1">
-        <p className="text-text truncate text-[13px] font-semibold">{asset.ticker}</p>
-        <p className="text-text-muted truncate text-[11px]">{asset.name}</p>
+        <p className="text-text truncate text-[13px] font-semibold">{asset.coinName ?? asset.ticker}</p>
+        <p className="text-text-muted truncate text-[11px]">{asset.coinName ? asset.ticker : asset.name}</p>
       </div>
       <div className="shrink-0">
         <MetricValue asset={asset} metric={metric} />

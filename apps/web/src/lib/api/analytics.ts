@@ -21,6 +21,8 @@ import type {
   FutureCommitmentsItem,
   BalanceProjectionResponse,
   CommitmentsImpactResponse,
+  SavingsPeriodsResponse,
+  SavingsDetailResponse,
 } from "@/lib/types/analytics.types";
 
 export const analyticsApi = {
@@ -168,6 +170,20 @@ export const analyticsApi = {
   getCommitmentsImpact: async (months = 6): Promise<CommitmentsImpactResponse> => {
     const response = await api.get<CommitmentsImpactResponse>("/analytics/projection/commitments-impact", {
       params: { months },
+    });
+    return response.data;
+  },
+
+  getSavingsPeriods: async (budgetId: number, periods = 12): Promise<SavingsPeriodsResponse> => {
+    const response = await api.get<SavingsPeriodsResponse>("/analytics/savings/periods", {
+      params: { budgetId, periods },
+    });
+    return response.data;
+  },
+
+  getSavingsDetail: async (budgetId: number, periodStart?: string): Promise<SavingsDetailResponse> => {
+    const response = await api.get<SavingsDetailResponse>("/analytics/savings/detail", {
+      params: { budgetId, ...(periodStart ? { periodStart } : {}) },
     });
     return response.data;
   },

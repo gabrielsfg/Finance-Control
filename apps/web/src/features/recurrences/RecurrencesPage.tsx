@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { RefreshCw, Layers, Wallet, Bell } from "lucide-react";
 import { StatCard } from "@/components/shared/StatCard";
 import { RecurringList } from "./components/RecurringList";
@@ -11,6 +11,7 @@ import { RecurrenceCreateDrawer } from "./components/RecurrenceCreateDrawer";
 import { CancelRecurringDialog } from "./components/CancelRecurringDialog";
 import { RecurrencesFilters } from "./components/RecurrencesFilters";
 import { useRecurrencePage, useCancelRecurring, useReactivateRecurring } from "./hooks/useRecurrences";
+import { useRecurrenceMetrics } from "./hooks/useRecurrenceMetrics";
 import { useActiveBudget } from "@/features/budgets/hooks/useActiveBudget";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { usePageNova, usePageFilter } from "@/lib/hooks/usePageHeader";
@@ -45,151 +46,19 @@ export function RecurrencesPage() {
   usePageNova("Novo", () => setCreateOpen(true));
   usePageFilter(<RecurrencesFilters filter={filter} onChange={setFilter} />);
 
-  // Filter recurring: show active + cancelled that were still active in the budget period
-  const filteredRecurring = useMemo(() => {
-    if (!data) return [];
-
-    const firstDayOfMonth = new Date(filter.startDate);
-    const lastDayOfMonth  = new Date(filter.endDate);
-
-    return data.recurring.filter(r => {
-      const start = new Date(r.startDate);
-      const end   = r.endDate ? new Date(r.endDate) : null;
-
-      // must have started by end of the selected month
-      if (start > lastDayOfMonth) return false;
-
-      // if inactive, only show if it was still active at some point during the month
-      if (!r.isActive && end && end < firstDayOfMonth) return false;
-
-      // category / subcategory filter (subCategoryIds is source of truth since toggling a category auto-toggles its subs)
-      if (filter.subCategoryIds.length > 0 && !filter.subCategoryIds.includes(r.subCategoryId)) return false;
-      else if (filter.subCategoryIds.length === 0 && filter.categoryIds.length > 0 && !filter.categoryIds.includes(r.categoryId)) return false;
-
-      // account filter
-      if (filter.accountIds.length > 0 && !filter.accountIds.includes(r.accountId)) return false;
-
-      return true;
-    });
-  }, [data, filter]);
-
-  const filteredInstallments = useMemo(() => {
-    if (!data) return [];
-
-    return data.installments.filter(inst => {
-      // active installments or completed ones that were in progress during the budget period
-      const start = new Date(inst.transactionDate);
-      const endMonth = new Date(start);
-      endMonth.setMonth(endMonth.getMonth() + inst.totalInstallments - 1);
-      const firstDayOfMonth = new Date(filter.startDate);
-      const lastDayOfMonth  = new Date(filter.endDate);
-
-      if (start > lastDayOfMonth) return false;
-      if (endMonth < firstDayOfMonth) return false;
-
-      if (filter.subCategoryIds.length > 0 && !filter.subCategoryIds.includes(inst.subCategoryId)) return false;
-      else if (filter.subCategoryIds.length === 0 && filter.categoryIds.length > 0 && !filter.categoryIds.includes(inst.categoryId)) return false;
-      if (filter.accountIds.length > 0 && !filter.accountIds.includes(inst.accountId)) return false;
-
-      return true;
-    });
-  }, [data, filter]);
+  const {
+    filteredRecurring,
+    filteredInstallments,
+    totalRemainingInstallments,
+    subscriptionNetMonthly,
+    installmentNetMonthly,
+    subscriptionAnnual,
+    installmentRemainingNet,
+    nextDebit,
+  } = useRecurrenceMetrics(data, filter);
 
   const showRecurring    = filter.typeFilter === "All" || filter.typeFilter === "Recurring";
   const showInstallments = filter.typeFilter === "All" || filter.typeFilter === "Installment";
-
-  const totalRemainingInstallments = useMemo(
-    () => filteredInstallments.reduce((s, i) => s + i.remainingAmount, 0),
-    [filteredInstallments]
-  );
-
-  // Net monthly amounts (income - expense) for each category
-  const subscriptionNetMonthly = useMemo(() => {
-    return filteredRecurring
-      .filter(r => r.isActive)
-      .reduce((s, r) => s + (r.type === "Income" ? r.value : -r.value), 0);
-  }, [filteredRecurring]);
-
-  const installmentNetMonthly = useMemo(() => {
-    return filteredInstallments
-      .filter(i => i.remainingInstallments > 0)
-      .reduce((s, i) => s + (i.type === "Income" ? i.value : -i.value), 0);
-  }, [filteredInstallments]);
-
-  // Annual totals: sum each active recurring's value × months elapsed since startDate (min 12)
-  const subscriptionAnnual = useMemo(() => {
-    const now = new Date();
-    return filteredRecurring
-      .filter(r => r.isActive)
-      .reduce((s, r) => {
-        const start = new Date(r.startDate);
-        const months = Math.max(
-          12,
-          (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()) + 1,
-        );
-        return s + r.value * months * (r.type === "Income" ? 1 : -1);
-      }, 0);
-  }, [filteredRecurring]);
-
-  // Installments: remaining total value (signed)
-  const installmentRemainingNet = useMemo(() => {
-    return filteredInstallments
-      .filter(i => i.remainingInstallments > 0)
-      .reduce((s, i) => s + i.remainingAmount * (i.type === "Income" ? 1 : -1), 0);
-  }, [filteredInstallments]);
-
-  // Next upcoming debit: closest future date from active recurring + open installments
-  const nextDebit = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const RECURRENCE_DAYS: Record<string, number> = {
-      Daily: 1, WorkDay: 1, Weekly: 7, Biweekly: 14,
-      Monthly: 30, Quarterly: 90, Semiannually: 180, Annually: 365,
-    };
-
-    type Candidate = { date: Date; description: string; value: number };
-    const candidates: Candidate[] = [];
-
-    // Active recurring items — advance startDate by recurrence period until >= today
-    for (const r of filteredRecurring) {
-      if (!r.isActive) continue;
-      const start = new Date(r.startDate);
-      start.setHours(0, 0, 0, 0);
-
-      if (r.recurrence === "Monthly" || r.recurrence === "Quarterly" ||
-          r.recurrence === "Semiannually" || r.recurrence === "Annually") {
-        // Use calendar-month arithmetic to hit the same day-of-month
-        const monthsStep =
-          r.recurrence === "Monthly" ? 1 :
-          r.recurrence === "Quarterly" ? 3 :
-          r.recurrence === "Semiannually" ? 6 : 12;
-        const next = new Date(start);
-        while (next < today) next.setMonth(next.getMonth() + monthsStep);
-        candidates.push({ date: next, description: r.description, value: r.value });
-      } else {
-        const step = RECURRENCE_DAYS[r.recurrence] ?? 1;
-        const next = new Date(start);
-        while (next < today) next.setDate(next.getDate() + step);
-        candidates.push({ date: next, description: r.description, value: r.value });
-      }
-    }
-
-    // Open installments — same day-of-month as transactionDate, this or next month
-    for (const inst of filteredInstallments) {
-      if (inst.remainingInstallments === 0) continue;
-      const start = new Date(inst.transactionDate);
-      const next = new Date(today.getFullYear(), today.getMonth(), start.getDate());
-      if (next < today) next.setMonth(next.getMonth() + 1);
-      candidates.push({ date: next, description: inst.description, value: inst.value });
-    }
-
-    if (candidates.length === 0) return null;
-    candidates.sort((a, b) => a.date.getTime() - b.date.getTime());
-    const best = candidates[0];
-    const daysUntil = Math.round((best.date.getTime() - today.getTime()) / 86_400_000);
-    return { date: best.date, description: best.description, value: best.value, daysUntil };
-  }, [filteredRecurring, filteredInstallments]);
 
   function openDrawer(item: DrawerItem) {
     setDrawer(item);

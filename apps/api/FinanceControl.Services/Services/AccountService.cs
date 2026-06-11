@@ -31,6 +31,8 @@ namespace FinanceControl.Services.Services
                 GoalAmount = requestDto.GoalAmount,
                 IsDefaultAccount = requestDto.IsDefaultAccount,
                 BillingDueDay = hasCreditFields ? requestDto.BillingDueDay : null,
+                // Closing day is a credit-card concept only (not checking).
+                BillingClosingDay = requestDto.Type == EnumAccountType.Credit ? requestDto.BillingClosingDay : null,
                 CreditLimit = hasCreditFields ? requestDto.CreditLimit : null,
             };
 
@@ -161,6 +163,7 @@ namespace FinanceControl.Services.Services
                 GoalAmount = account.GoalAmount,
                 IsDefaultAccount = account.IsDefaultAccount,
                 BillingDueDay = account.BillingDueDay,
+                BillingClosingDay = account.BillingClosingDay,
                 CreditLimit = account.CreditLimit,
                 RecentTransactions = recentTransactions
             };
@@ -179,6 +182,7 @@ namespace FinanceControl.Services.Services
             account.GoalAmount = requestDto.GoalAmount;
             account.IsDefaultAccount = requestDto.IsDefaultAccount;
             account.BillingDueDay = hasCreditFieldsUpdate ? requestDto.BillingDueDay : null;
+            account.BillingClosingDay = requestDto.Type == EnumAccountType.Credit ? requestDto.BillingClosingDay : null;
             account.CreditLimit = hasCreditFieldsUpdate ? requestDto.CreditLimit : null;
 
             await _context.SaveChangesAsync();

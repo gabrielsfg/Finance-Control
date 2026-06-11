@@ -1753,6 +1753,298 @@ namespace FinanceControl.Services.Services
             return result;
         }
 
+        public async Task<SavingsPeriodsDto?> GetSavingsPeriodsAsync(int userId, int budgetId, int periods = 12)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var budget = await context.Budgets.FirstOrDefaultAsync(b => b.Id == budgetId && b.UserId == userId);
+            if (budget is null)
+                return null;
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var periodList = ComputeBudgetPeriods(budget.StartDate, budget.Recurrence, periods, today);
+            var minStart = periodList[0].Start;
+            var maxEnd = periodList[^1].End;
+
+            var flows = await GetSavingsFlowsAsync(context, userId, minStart, maxEnd);
+            var (plannedIncome, plannedExpense) = await GetPlannedTotalsAsync(context, budgetId);
+
+            var items = periodList.Select(p => BuildSavingsPeriodItem(p.Start, p.End, flows)).ToList();
+            items[^1].IsCurrent = true;
+
+            // Drop leading periods with no activity so a young budget does not show a tail of empty bars.
+            var firstActive = items.FindIndex(i => i.Income != 0 || i.Expense != 0 || i.Invested != 0 || i.GoalContributions != 0);
+            if (firstActive > 0)
+                items = items.Skip(firstActive).ToList();
+            if (firstActive < 0)
+                items = [items[^1]];
+
+            // Streak only counts closed periods: an in-progress period is biased positive
+            // because income usually lands at the start while expenses accrue over time.
+            var streak = 0;
+            foreach (var item in Enumerable.Reverse(items).Where(i => i.PeriodEnd <= today))
+            {
+                if (item.Savings > 0) streak++;
+                else break;
+            }
+
+            return new SavingsPeriodsDto
+            {
+                Periods = items,
+                PositiveStreak = streak,
+                PlannedIncome = plannedIncome,
+                PlannedExpense = plannedExpense,
+                PlannedSavings = plannedIncome - plannedExpense,
+                PlannedRate = plannedIncome > 0
+                    ? Math.Round((double)(plannedIncome - plannedExpense) / plannedIncome * 100, 1)
+                    : null,
+            };
+        }
+
+        public async Task<SavingsDetailDto?> GetSavingsDetailAsync(int userId, int budgetId, DateOnly? periodStart = null)
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var budget = await context.Budgets.FirstOrDefaultAsync(b => b.Id == budgetId && b.UserId == userId);
+            if (budget is null)
+                return null;
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var currentStart = CurrentBudgetPeriodStart(budget.StartDate, today);
+            var start = periodStart ?? currentStart;
+            var end = AddBudgetRecurrence(start, budget.Recurrence);
+
+            var flows = await GetSavingsFlowsAsync(context, userId, start, end);
+            var core = BuildSavingsPeriodItem(start, end, flows);
+            var (plannedIncome, plannedExpense) = await GetPlannedTotalsAsync(context, budgetId);
+
+            // Budget-scoped: how each expense allocation fared against what was actually spent
+            var areas = await context.Areas
+                .Where(a => a.BudgetId == budgetId && a.UserId == userId)
+                .Include(a => a.BudgetSubcategoryAllocations)
+                    .ThenInclude(al => al.SubCategory)
+                        .ThenInclude(sc => sc.Category)
+                .ToListAsync();
+
+            var spentBySubCategory = await context.Transactions
+                .Where(t => t.BudgetId == budgetId && t.UserId == userId
+                    && t.Type == EnumTransactionType.Expense
+                    && t.TransactionDate >= start && t.TransactionDate < end)
+                .GroupBy(t => t.SubCategoryId)
+                .Select(g => new { SubCategoryId = g.Key, Total = g.Sum(t => t.Value) })
+                .ToDictionaryAsync(x => x.SubCategoryId, x => x.Total);
+
+            var allocations = areas
+                .SelectMany(a => a.BudgetSubcategoryAllocations
+                    .Where(al => al.AllocationType == EnumAllocationType.Expense)
+                    .Select(al => new SavingsAllocationStatusDto
+                    {
+                        SubCategoryId = al.SubCategoryId,
+                        SubCategoryName = al.SubCategory.Name,
+                        SubCategoryEmoji = al.SubCategory.Emoji,
+                        CategoryName = al.SubCategory.Category.Name,
+                        CategoryColor = al.SubCategory.Category.Color,
+                        AreaName = a.Name,
+                        Allocated = al.ExpectedValue,
+                        Spent = spentBySubCategory.GetValueOrDefault(al.SubCategoryId),
+                    }))
+                .OrderByDescending(al => al.Spent - al.Allocated)
+                .ToList();
+
+            var areaImpacts = areas
+                .Select(a => new SavingsAreaImpactDto
+                {
+                    AreaId = a.Id,
+                    Name = a.Name,
+                    PlannedExpense = a.BudgetSubcategoryAllocations
+                        .Where(al => al.AllocationType == EnumAllocationType.Expense)
+                        .Sum(al => al.ExpectedValue),
+                    ActualExpense = a.BudgetSubcategoryAllocations
+                        .Where(al => al.AllocationType == EnumAllocationType.Expense)
+                        .Sum(al => spentBySubCategory.GetValueOrDefault(al.SubCategoryId)),
+                })
+                .Where(a => a.PlannedExpense > 0 || a.ActualExpense > 0)
+                .OrderByDescending(a => a.ActualExpense - a.PlannedExpense)
+                .ToList();
+
+            var withinLimit = allocations.Count(al => al.Spent <= al.Allocated);
+
+            return new SavingsDetailDto
+            {
+                PeriodStart = start,
+                PeriodEnd = end,
+                IsCurrent = start == currentStart,
+                Income = core.Income,
+                Expense = core.Expense,
+                Invested = core.Invested,
+                GoalContributions = core.GoalContributions,
+                Savings = core.Savings,
+                SavingsRate = core.SavingsRate,
+                PlannedIncome = plannedIncome,
+                PlannedExpense = plannedExpense,
+                PlannedSavings = plannedIncome - plannedExpense,
+                PlannedRate = plannedIncome > 0
+                    ? Math.Round((double)(plannedIncome - plannedExpense) / plannedIncome * 100, 1)
+                    : null,
+                AllocationsTotal = allocations.Count,
+                AllocationsWithinLimit = withinLimit,
+                AdherenceRate = allocations.Count > 0
+                    ? Math.Round((double)withinLimit / allocations.Count * 100, 1)
+                    : null,
+                Allocations = allocations,
+                Areas = areaImpacts,
+            };
+        }
+
+        /// <summary>
+        /// All money movements needed to compute savings for a window, fetched once and
+        /// sliced per period in memory.
+        /// </summary>
+        private sealed record SavingsFlows(
+            List<(DateOnly Date, EnumTransactionType Type, int Value)> Transactions,
+            List<(DateOnly Date, EnumInvestmentOperation Operation, long TotalValue)> InvestmentTransactions,
+            List<(DateOnly Date, int Value, bool FromSystem, bool ToSystem)> SystemTransfers);
+
+        private static async Task<SavingsFlows> GetSavingsFlowsAsync(ApplicationDbContext context, int userId, DateOnly from, DateOnly to)
+        {
+            // Income/expense excluding transactions spawned by investment buys/sells —
+            // money moved into investments is savings, not spending, and sell proceeds
+            // are not earnings. Dividend income has no InvestmentTransaction, so it counts.
+            var transactions = (await context.Transactions
+                .Where(t => t.UserId == userId
+                    && t.TransactionDate >= from && t.TransactionDate < to
+                    && t.Type != EnumTransactionType.Transfer
+                    && !context.InvestmentTransactions.Any(it => it.LinkedTransactionId == t.Id))
+                .Select(t => new { t.TransactionDate, t.Type, t.Value })
+                .ToListAsync())
+                .Select(t => (t.TransactionDate, t.Type, t.Value))
+                .ToList();
+
+            var investmentTransactions = (await context.InvestmentTransactions
+                .Where(it => it.UserId == userId && it.Date >= from && it.Date < to)
+                .Select(it => new { it.Date, it.Operation, it.TotalValue })
+                .ToListAsync())
+                .Select(it => (it.Date, it.Operation, it.TotalValue))
+                .ToList();
+
+            var systemTransfers = (await context.Transactions
+                .Where(t => t.UserId == userId
+                    && t.TransactionDate >= from && t.TransactionDate < to
+                    && t.Type == EnumTransactionType.Transfer
+                    && (t.Account.IsSystem || (t.DestinationAccountId != null && t.DestinationAccount!.IsSystem)))
+                .Select(t => new
+                {
+                    t.TransactionDate,
+                    t.Value,
+                    FromSystem = t.Account.IsSystem,
+                    ToSystem = t.DestinationAccountId != null && t.DestinationAccount!.IsSystem,
+                })
+                .ToListAsync())
+                .Select(t => (t.TransactionDate, t.Value, t.FromSystem, t.ToSystem))
+                .ToList();
+
+            return new SavingsFlows(transactions, investmentTransactions, systemTransfers);
+        }
+
+        private static SavingsPeriodItemDto BuildSavingsPeriodItem(DateOnly start, DateOnly end, SavingsFlows flows)
+        {
+            var income = flows.Transactions
+                .Where(t => t.Date >= start && t.Date < end && t.Type == EnumTransactionType.Income)
+                .Sum(t => t.Value);
+            var expense = flows.Transactions
+                .Where(t => t.Date >= start && t.Date < end && t.Type == EnumTransactionType.Expense)
+                .Sum(t => t.Value);
+
+            var investedLong = flows.InvestmentTransactions
+                .Where(it => it.Date >= start && it.Date < end)
+                .Sum(it => it.Operation == EnumInvestmentOperation.Buy ? it.TotalValue : -it.TotalValue);
+            var invested = (int)Math.Clamp(investedLong, int.MinValue, int.MaxValue);
+
+            var goalContributions = flows.SystemTransfers
+                .Where(t => t.Date >= start && t.Date < end)
+                .Sum(t => t.ToSystem && !t.FromSystem ? t.Value : t.FromSystem && !t.ToSystem ? -t.Value : 0);
+
+            var savings = income - expense;
+
+            return new SavingsPeriodItemDto
+            {
+                PeriodStart = start,
+                PeriodEnd = end,
+                Income = income,
+                Expense = expense,
+                Invested = invested,
+                GoalContributions = goalContributions,
+                Savings = savings,
+                SavingsRate = income > 0 ? Math.Round((double)savings / income * 100, 1) : null,
+            };
+        }
+
+        private static async Task<(int PlannedIncome, int PlannedExpense)> GetPlannedTotalsAsync(ApplicationDbContext context, int budgetId)
+        {
+            var totals = await context.BudgetSubcategoryAllocations
+                .Where(a => a.BudgetId == budgetId)
+                .GroupBy(a => a.AllocationType)
+                .Select(g => new { Type = g.Key, Total = g.Sum(a => a.ExpectedValue) })
+                .ToListAsync();
+
+            var income = totals.FirstOrDefault(t => t.Type == EnumAllocationType.Income)?.Total ?? 0;
+            var expense = totals.FirstOrDefault(t => t.Type == EnumAllocationType.Expense)?.Total ?? 0;
+            return (income, expense);
+        }
+
+        /// <summary>Mirrors BudgetService.ComputePeriod: the period start is the budget's start day clamped to the anchor month.</summary>
+        private static DateOnly CurrentBudgetPeriodStart(int startDay, DateOnly today)
+        {
+            var clampedDay = Math.Min(startDay, DateTime.DaysInMonth(today.Year, today.Month));
+            return new DateOnly(today.Year, today.Month, clampedDay);
+        }
+
+        /// <summary>
+        /// The last <paramref name="count"/> budget periods ending at the current one, ordered
+        /// oldest → newest. Month-based recurrences re-anchor to the clamped start day of each
+        /// month; weekly/biweekly tile backward in fixed steps.
+        /// </summary>
+        private static List<(DateOnly Start, DateOnly End)> ComputeBudgetPeriods(int startDay, EnumBudgetRecurrence recurrence, int count, DateOnly today)
+        {
+            var periods = new List<(DateOnly, DateOnly)>();
+            var start = CurrentBudgetPeriodStart(startDay, today);
+
+            for (var i = 0; i < count; i++)
+            {
+                periods.Add((start, AddBudgetRecurrence(start, recurrence)));
+                start = recurrence switch
+                {
+                    EnumBudgetRecurrence.Weekly => start.AddDays(-7),
+                    EnumBudgetRecurrence.Biweekly => start.AddDays(-14),
+                    EnumBudgetRecurrence.Monthly => MonthAnchoredStart(start, startDay, -1),
+                    EnumBudgetRecurrence.Semiannually => MonthAnchoredStart(start, startDay, -6),
+                    EnumBudgetRecurrence.Annually => MonthAnchoredStart(start, startDay, -12),
+                    _ => MonthAnchoredStart(start, startDay, -1),
+                };
+            }
+
+            periods.Reverse();
+            return periods;
+        }
+
+        private static DateOnly MonthAnchoredStart(DateOnly start, int startDay, int monthOffset)
+        {
+            var anchor = new DateOnly(start.Year, start.Month, 1).AddMonths(monthOffset);
+            var clampedDay = Math.Min(startDay, DateTime.DaysInMonth(anchor.Year, anchor.Month));
+            return new DateOnly(anchor.Year, anchor.Month, clampedDay);
+        }
+
+        private static DateOnly AddBudgetRecurrence(DateOnly start, EnumBudgetRecurrence recurrence) =>
+            recurrence switch
+            {
+                EnumBudgetRecurrence.Weekly => start.AddDays(7),
+                EnumBudgetRecurrence.Biweekly => start.AddDays(14),
+                EnumBudgetRecurrence.Monthly => start.AddMonths(1),
+                EnumBudgetRecurrence.Semiannually => start.AddMonths(6),
+                EnumBudgetRecurrence.Annually => start.AddYears(1),
+                _ => start.AddMonths(1),
+            };
+
         private static DayHeatmapState ComputeDayState(int expense, int net, int maxExpense, int maxNet)
         {
             if (net > 0)

@@ -212,6 +212,39 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("savings/periods")]
+        public async Task<IActionResult> GetSavingsPeriodsAsync(
+            [FromQuery] int budgetId,
+            [FromQuery] int periods = 12)
+        {
+            var validation = this.ValidatePositiveId(budgetId, "budgetId");
+            if (validation is not null) return validation;
+
+            if (periods < 1 || periods > 24)
+                return BadRequest(new { error = "periods must be between 1 and 24." });
+
+            var result = await _analyticsService.GetSavingsPeriodsAsync(GetUserId(), budgetId, periods);
+            if (result is null)
+                return NotFound(new { error = "Budget not found." });
+
+            return Ok(result);
+        }
+
+        [HttpGet("savings/detail")]
+        public async Task<IActionResult> GetSavingsDetailAsync(
+            [FromQuery] int budgetId,
+            [FromQuery] DateOnly? periodStart = null)
+        {
+            var validation = this.ValidatePositiveId(budgetId, "budgetId");
+            if (validation is not null) return validation;
+
+            var result = await _analyticsService.GetSavingsDetailAsync(GetUserId(), budgetId, periodStart);
+            if (result is null)
+                return NotFound(new { error = "Budget not found." });
+
+            return Ok(result);
+        }
+
         [HttpGet("investment/evolution")]
         public async Task<IActionResult> GetInvestmentEvolutionAsync(
             [FromQuery] DateOnly startDate,

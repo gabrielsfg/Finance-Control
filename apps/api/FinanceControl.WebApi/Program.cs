@@ -11,6 +11,7 @@ using FinanceControl.Workers;
 using FinanceControl.Services.Brapi;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -20,15 +21,26 @@ Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
 var builder = WebApplication.CreateBuilder(args);
 
+// appsettings.Local.json — gitignored secrets file, equivalent to .env for local dev.
+// Copy appsettings.Local.json.example → appsettings.Local.json and fill in your values.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 // Validate JWT token key length at startup
 var jwtToken = builder.Configuration["AppSettings:Token"];
 if (string.IsNullOrWhiteSpace(jwtToken) || jwtToken.Length < 32)
     throw new InvalidOperationException("AppSettings:Token must be at least 32 characters long.");
 
+// Validate CORS config at startup (required in non-development environments)
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+if (!builder.Environment.IsDevelopment() && allowedOrigins.Length == 0)
+    throw new InvalidOperationException("Cors:AllowedOrigins must be configured in production.");
+
 //DI Services
+builder.Services.AddHealthChecks();
 builder.Services.AddAplicationServices(builder.Configuration);
 builder.Services.AddHostedService<RecurringTransactionHostedService>();
 builder.Services.AddHostedService<RefreshTokenCleanupHostedService>();
+builder.Services.AddHostedService<NotificationReminderHostedService>();
 builder.Services.AddHostedService<BrapiPriceUpdateHostedService>();
 builder.Services.AddHostedService<BrapiIntradayHostedService>();
 builder.Services.AddHostedService<BrapiCleanupHostedService>();
@@ -98,25 +110,42 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("WebApp", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); // Required so the browser sends the HttpOnly refresh-token cookie
     });
 });
 
-// In development the API (5xxx) and the web app (3000) run on different ports.
-// Cookies with SameSite=Strict are not sent on cross-site requests, which breaks
-// the refresh flow locally. The policy below downgrades SameSite to None (+ Secure)
-// only in Development so local testing works without changing production behaviour.
+// SameSite strategy for the HttpOnly refresh-token cookie:
+//   Development  → None (browser is cross-origin between port 5xxx and 3000)
+//   Production   → Lax  (web and API live under the same apex domain, e.g.
+//                        app.domain.com → api.domain.com — same-site, so Lax
+//                        cookies are sent on XHR/fetch)
+//
+// If you ever deploy web and API on completely different domains (cross-site),
+// override via env var: AppSettings__CookieSameSite=None  (requires HTTPS).
 builder.Services.Configure<CookiePolicyOptions>(options =>
 {
-    options.MinimumSameSitePolicy = builder.Environment.IsDevelopment()
-        ? SameSiteMode.None
-        : SameSiteMode.Strict;
+    var sameSiteCfg = builder.Configuration["AppSettings:CookieSameSite"];
+    options.MinimumSameSitePolicy = sameSiteCfg is not null
+        ? Enum.Parse<SameSiteMode>(sameSiteCfg)
+        : builder.Environment.IsDevelopment()
+            ? SameSiteMode.None
+            : SameSiteMode.Lax;
     options.Secure = builder.Environment.IsDevelopment()
         ? CookieSecurePolicy.SameAsRequest
         : CookieSecurePolicy.Always;
+});
+
+// Trust forwarded headers from the reverse proxy (Railway / Fly / Render).
+// Without this, HttpsRedirection and cookie Secure policy read the wrong scheme.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Clear the default whitelist — cloud platforms use dynamic IPs.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
 });
 
 builder.Services.AddRateLimiter(options =>
@@ -142,16 +171,26 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-app.UseMiddleware<FinanceControl.WebApi.Middleware.GlobalExceptionMiddleware>();
+// ForwardedHeaders must run before anything that reads scheme/IP (HTTPS redirect, cookie policy).
+app.UseForwardedHeaders();
 
-// Configure the HTTP request pipeline.
+app.UseMiddleware<FinanceControl.WebApi.Middleware.GlobalExceptionMiddleware>();
+app.UseMiddleware<FinanceControl.WebApi.Middleware.SecurityHeadersMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    app.UseHsts();
+}
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCookiePolicy();
 
@@ -163,5 +202,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers().RequireRateLimiting("general");
+app.MapHealthChecks("/health").AllowAnonymous();
 
 app.Run();

@@ -24,6 +24,7 @@ import {
   useCommitmentsImpact,
 } from "./hooks/useAnalytics";
 import { useAnalyticsFilter } from "./AnalyticsFilterContext";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 export function AnalyticsProjectionsPage() {
   const { start, finish, activeTagIds } = useAnalyticsFilter();
@@ -56,10 +57,10 @@ export function AnalyticsProjectionsPage() {
       {/* 4 KPI cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Saldo proj. fim do mês", value: bp ? `${bp.projectedBalance < 0 ? "-" : ""}${(Math.abs(bp.projectedBalance) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: bp && bp.projectedBalance < 0 ? "text-red" : "text-text" },
-          { label: "Próx. compromissos",     value: nextCommitments > 0 ? `${(nextCommitments / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: "text-orange" },
-          { label: "Patrimônio em 12m",      value: projectedIn12m > 0 ? `${(projectedIn12m / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: "text-blue" },
-          { label: "Meta de poupança anual", value: annualSavingsGoal > 0 ? `${(annualSavingsGoal / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "—", color: "text-purple" },
+          { label: "Saldo proj. fim do mês", value: bp ? formatCurrency(bp.projectedBalance / 100) : "—", color: bp && bp.projectedBalance < 0 ? "text-red" : "text-text" },
+          { label: "Próx. compromissos",     value: nextCommitments > 0 ? formatCurrency(nextCommitments / 100) : "—", color: "text-orange" },
+          { label: "Patrimônio em 12m",      value: projectedIn12m > 0 ? formatCurrency(projectedIn12m / 100) : "—", color: "text-blue" },
+          { label: "Meta de poupança anual", value: annualSavingsGoal > 0 ? formatCurrency(annualSavingsGoal / 100) : "—", color: "text-purple" },
         ].map(({ label, value, color }) => (
           <div key={label} className="border-border bg-surface rounded-xl border p-4">
             <p className="text-text-muted text-[11px] uppercase tracking-[0.05em]">{label}</p>

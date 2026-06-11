@@ -1,5 +1,7 @@
+using System.Globalization;
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
+using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,8 +28,16 @@ namespace FinanceControl.Services.Services
 
             await using var scope = _scopeFactory.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
 
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+            // Users who turned the "recurrence charged" notification off. Missing = enabled.
+            var chargedDisabledUsers = await context.NotificationPreferences
+                .Where(p => !p.RecurrenceChargedEnabled)
+                .Select(p => p.UserId)
+                .ToListAsync(cancellationToken);
+            var chargedDisabledSet = new HashSet<int>(chargedDisabledUsers);
 
             var activeRecurrences = await context.RecurringTransactions
                 .Where(rt => rt.IsActive && (rt.EndDate == null || rt.EndDate >= today))
@@ -40,7 +50,8 @@ namespace FinanceControl.Services.Services
             {
                 try
                 {
-                    var generated = await ProcessRecurrenceAsync(context, rt, today, cancellationToken);
+                    var generated = await ProcessRecurrenceAsync(
+                        context, notificationService, chargedDisabledSet, rt, today, cancellationToken);
                     totalGenerated += generated;
                 }
                 catch (Exception ex)
@@ -60,6 +71,8 @@ namespace FinanceControl.Services.Services
 
         private async Task<int> ProcessRecurrenceAsync(
             ApplicationDbContext context,
+            INotificationService notificationService,
+            HashSet<int> chargedDisabledUsers,
             RecurringTransaction rt,
             DateOnly today,
             CancellationToken cancellationToken)
@@ -128,6 +141,20 @@ namespace FinanceControl.Services.Services
                     "RecurringTransaction {Id} (User {UserId}): generated {Count} instance(s) for dates [{Dates}]",
                     rt.Id, rt.UserId, newTransactions.Count,
                     string.Join(", ", newTransactions.Select(t => t.TransactionDate)));
+
+                // Notify the user only for the instance charged today — catch-up
+                // instances for past dates do not raise a notification (avoids a
+                // flood on the first run after downtime).
+                if (!chargedDisabledUsers.Contains(rt.UserId) && newTransactions.Any(t => t.TransactionDate == today))
+                {
+                    await notificationService.CreateAsync(
+                        rt.UserId,
+                        EnumNotificationType.RecurrenceCharged,
+                        "Cobrança recorrente",
+                        $"{rt.Description} • {FormatBrl(rt.Value)}",
+                        "/transactions",
+                        $"rec-charged-{rt.Id}-{today:yyyy-MM-dd}");
+                }
             }
 
             return newTransactions.Count;
@@ -156,5 +183,10 @@ namespace FinanceControl.Services.Services
                 next = next.AddDays(1);
             return next;
         }
+
+        private static readonly CultureInfo BrlCulture = CultureInfo.GetCultureInfo("pt-BR");
+
+        // Cents (int) → "R$ 44,90".
+        private static string FormatBrl(int cents) => (cents / 100m).ToString("C", BrlCulture);
     }
 }

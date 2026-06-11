@@ -12,6 +12,7 @@ namespace FinanceControl.Shared.Dtos.Response
         public int? GoalAmount { get; set; }
         public bool IsDefaultAccount { get; set; }
         public int? BillingDueDay { get; set; }
+        public int? BillingClosingDay { get; set; }
         public int? CreditLimit { get; set; }
         public List<RecentTransactionDto> RecentTransactions { get; set; } = [];
     }

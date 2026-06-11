@@ -12,6 +12,7 @@ namespace FinanceControl.Data.Mappings
             builder.HasKey(a => a.Id);
             builder.Property(a => a.Ticker).IsRequired();
             builder.Property(a => a.Name).IsRequired();
+            builder.Property(a => a.CoinName);
             builder.Property(a => a.AssetType)
                 .HasConversion<string>()
                 .IsRequired();

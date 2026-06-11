@@ -115,19 +115,5 @@ namespace FinanceControl.Tests.Unit.Validators
             Assert.False(v.Validate(dto).IsValid);
         }
 
-        [Fact]
-        public void RecordGoalCheckpoint_Valid_Passes()
-        {
-            var v = new RecordGoalCheckpointValidator();
-            Assert.True(v.Validate(new RecordGoalCheckpointRequestDto { Amount = 100 }).IsValid);
-        }
-
-        [Fact]
-        public void RecordGoalCheckpoint_Zero_Fails()
-        {
-            var v = new RecordGoalCheckpointValidator();
-            Assert.False(v.Validate(new RecordGoalCheckpointRequestDto { Amount = 0 }).IsValid);
-        }
-
     }
 }

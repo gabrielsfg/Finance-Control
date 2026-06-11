@@ -34,6 +34,7 @@ export const useAuthStore = create<AuthState>()(
         }
         clearPersistedQueryCache();
         set({ accessToken: null, user: null, isAuthenticated: false });
+        window.location.href = "/login";
       },
 
       setAccessToken: (token) => set({ accessToken: token }),

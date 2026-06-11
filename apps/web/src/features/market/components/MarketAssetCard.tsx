@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type React from "react";
 import { TrendingUp, TrendingDown, Clock } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
@@ -22,9 +23,9 @@ const ASSET_TYPE_COLORS: Record<string, string> = {
   Outro:             "#8A95A3",
 };
 
-type Props = { asset: MarketAssetDetail };
+type Props = { asset: MarketAssetDetail; trailing?: React.ReactNode };
 
-export const MarketAssetCard = ({ asset }: Props) => {
+export const MarketAssetCard = ({ asset, trailing }: Props) => {
   const [logoError, setLogoError] = useState(false);
   const color = ASSET_TYPE_COLORS[asset.assetType] ?? "#8A95A3";
   const isUp = (asset.dayChangePct ?? 0) >= 0;
@@ -55,7 +56,7 @@ export const MarketAssetCard = ({ asset }: Props) => {
 
   return (
     <div className="border-border bg-surface rounded-xl border p-5">
-      {/* Header: logo + nome + ticker + classe */}
+      {/* Header: logo + nome + ticker + classe + trailing */}
       <div className="mb-5 flex items-start gap-4">
         {asset.logoUrl && !logoError ? (
           <img
@@ -74,7 +75,9 @@ export const MarketAssetCard = ({ asset }: Props) => {
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="font-display font-700 text-text text-[20px] tracking-tight">{asset.ticker}</h2>
+            <h2 className="font-display font-700 text-text text-[20px] tracking-tight">
+              {asset.coinName ?? asset.ticker}
+            </h2>
             <span
               className="rounded-full px-2 py-0.5 text-[11px] font-medium text-white"
               style={{ backgroundColor: color + "cc" }}
@@ -83,8 +86,11 @@ export const MarketAssetCard = ({ asset }: Props) => {
             </span>
             <span className="text-text-muted text-[12px]">{asset.currency}</span>
           </div>
-          <p className="text-text-sub mt-0.5 text-[13px] truncate">{asset.name}</p>
+          <p className="text-text-sub mt-0.5 text-[13px] truncate">
+            {asset.coinName ? asset.ticker : asset.name}
+          </p>
         </div>
+        {trailing && <div className="shrink-0">{trailing}</div>}
       </div>
 
       {/* Preço principal + variação dia */}

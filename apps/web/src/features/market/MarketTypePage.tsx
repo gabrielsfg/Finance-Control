@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import {
-  ArrowLeft,
   TrendingUp,
   TrendingDown,
   Building2,
@@ -14,15 +12,16 @@ import {
   Landmark,
   Coins,
   CandlestickChart,
-  Search,
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Clock,
   type LucideIcon,
 } from "lucide-react";
 import { RankingCard } from "@/features/market/components/RankingCard";
 import { MarketAssetRow } from "@/features/market/components/MarketAssetRow";
 import { useMarketList } from "@/features/market/hooks/useMarket";
+import { usePageSearch } from "@/lib/hooks/usePageHeader";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 100;
@@ -98,6 +97,8 @@ export function MarketTypePage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
 
+  usePageSearch(setSearch, `Buscar em ${meta?.label ?? "ativos"}...`);
+
   // Reset to first page whenever search or slug changes
   useEffect(() => { setPage(0); }, [search, slug]);
 
@@ -108,19 +109,20 @@ export function MarketTypePage() {
     limit: 2000,
   });
 
+  const syncTime = (() => {
+    const iso = allAssets[0]?.lastPriceUpdate;
+    if (!iso) return null;
+    const d = new Date(iso);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString())
+      return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  })();
+
   if (!meta) {
     return (
-      <div className="flex flex-col gap-5">
-        <Link
-          href="/market"
-          className="text-text-muted hover:text-text flex w-fit items-center gap-1.5 text-[13px] transition-colors"
-        >
-          <ArrowLeft size={15} />
-          Voltar ao mercado
-        </Link>
-        <div className="border-border bg-surface flex h-64 items-center justify-center rounded-2xl border">
-          <p className="text-text-sub text-[14px]">Tipo de ativo não encontrado.</p>
-        </div>
+      <div className="border-border bg-surface flex h-64 items-center justify-center rounded-2xl border">
+        <p className="text-text-sub text-[14px]">Tipo de ativo não encontrado.</p>
       </div>
     );
   }
@@ -137,14 +139,6 @@ export function MarketTypePage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link
-        href="/market"
-        className="text-text-muted hover:text-text flex w-fit items-center gap-1.5 text-[13px] transition-colors"
-      >
-        <ArrowLeft size={15} />
-        Voltar ao mercado
-      </Link>
-
       {/* Header */}
       <div className="flex items-center gap-3">
         <div
@@ -156,6 +150,12 @@ export function MarketTypePage() {
         <div>
           <h1 className="font-display font-700 text-text text-[22px] tracking-tight">{meta.label}</h1>
           <p className="text-text-muted text-[13px]">{meta.description}</p>
+          {syncTime && (
+            <div className="mt-1 flex items-center gap-1">
+              <Clock size={11} className="text-text-muted" />
+              <span className="text-text-muted text-[11px]">Última sinc. às {syncTime}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -183,7 +183,7 @@ export function MarketTypePage() {
       <div className="border-border bg-surface rounded-2xl border">
         {/* Header */}
         <div className="border-border flex items-center gap-3 border-b px-4 py-3">
-          <h3 className="text-text flex-1 text-[14px] font-semibold">
+          <h3 className="text-text text-[14px] font-semibold">
             Todos
             {!isLoading && (
               <span className="text-text-muted ml-1.5 text-[13px] font-normal">
@@ -193,21 +193,6 @@ export function MarketTypePage() {
               </span>
             )}
           </h3>
-          <div
-            className={cn(
-              "border-border bg-surface2 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-colors",
-              search && "border-green/50",
-            )}
-          >
-            <Search size={13} className="text-text-muted shrink-0" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar ticker ou nome..."
-              className="text-text placeholder:text-text-muted w-[180px] bg-transparent text-[13px] outline-none"
-            />
-          </div>
         </div>
 
         {/* Rows */}

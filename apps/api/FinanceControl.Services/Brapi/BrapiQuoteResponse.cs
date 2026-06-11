@@ -37,6 +37,7 @@ namespace FinanceControl.Services.Brapi
 
     internal record BrapiQuoteResult(
         [property: JsonPropertyName("symbol")] string Symbol,
+        [property: JsonPropertyName("longName")] string? LongName,
         [property: JsonPropertyName("currency")] string Currency,
         [property: JsonPropertyName("logourl")] string? LogoUrl,
         [property: JsonPropertyName("regularMarketPrice")] decimal? RegularMarketPrice,

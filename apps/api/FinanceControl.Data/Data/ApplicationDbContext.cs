@@ -30,6 +30,9 @@ namespace FinanceControl.Data.Data
         public DbSet<MarketPriceHistory> MarketPriceHistories { get; set; }
         public DbSet<MarketPriceIntraday> MarketPriceIntradays { get; set; }
         public DbSet<MarketAssetFundamentals> MarketAssetFundamentals { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<NotificationPreference> NotificationPreferences { get; set; }
+        public DbSet<AlertRule> AlertRules { get; set; }
 
         public override int SaveChanges()
         {

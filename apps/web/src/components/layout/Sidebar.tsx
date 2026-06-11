@@ -88,6 +88,7 @@ const navItems: NavItem[] = [
     icon: BarChart3,
     children: [
       { href: "/analytics",               label: "Gastos",        icon: PieChart },
+      { href: "/analytics/economia",      label: "Economia",      icon: PiggyBank },
       { href: "/analytics/patrimonio",    label: "Patrimônio",    icon: Landmark },
       { href: "/analytics/investimentos", label: "Investimentos", icon: LineChart },
       { href: "/analytics/projecoes",     label: "Projeções",     icon: TrendingUp },

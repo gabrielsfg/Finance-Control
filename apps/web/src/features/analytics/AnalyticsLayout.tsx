@@ -14,6 +14,7 @@ function modeForPath(pathname: string): AnalyticsFilterMode {
   const segment = pathname.split("/")[2] ?? ""; // "" → gastos (bare route)
   if (segment === "investimentos") return "investments";
   if (segment === "projecoes") return "none";
+  if (segment === "economia") return "none"; // has its own budget/period selectors
   return "expenses"; // gastos + patrimonio
 }
 

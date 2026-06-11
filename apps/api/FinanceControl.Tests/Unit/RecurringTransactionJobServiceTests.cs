@@ -31,6 +31,9 @@ namespace FinanceControl.Tests.Unit
             services.AddEntityFrameworkInMemoryDatabase();
             services.AddDbContext<FinanceControl.Data.Data.ApplicationDbContext>(opt =>
                 opt.UseInMemoryDatabase(dbName));
+            // The job raises "recurrence charged" notifications, so it resolves
+            // INotificationService from the scope.
+            services.AddScoped<FinanceControl.Domain.Interfaces.Services.INotificationService, NotificationService>();
             return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
         }
 

@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Text.Json;
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
+using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Shared.Dtos.Response.Investment;
 using FinanceControl.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -39,6 +41,10 @@ namespace FinanceControl.Services.Brapi
 
         public BrapiJobStatusDto LastStatus { get; private set; } = new();
 
+        // Prevents RunAsync and RunIntradayAsync from running concurrently — both share DB
+        // connections and the Neon free tier rejects too many simultaneous connection attempts.
+        private readonly SemaphoreSlim _jobLock = new(1, 1);
+
         public BrapiPriceUpdateJobService(
             IServiceScopeFactory scopeFactory,
             ILogger<BrapiPriceUpdateJobService> logger,
@@ -55,6 +61,23 @@ namespace FinanceControl.Services.Brapi
         // Updates CurrentPrice + writes one MarketPriceIntraday tick per asset.
         // Does NOT sync the asset universe or write daily history.
         public async Task RunIntradayAsync(CancellationToken cancellationToken)
+        {
+            if (!await _jobLock.WaitAsync(TimeSpan.Zero, cancellationToken))
+            {
+                _logger.LogInformation("BrapiIntradayJob skipped — daily job is already running.");
+                return;
+            }
+            try
+            {
+                await RunIntradayCoreAsync(cancellationToken);
+            }
+            finally
+            {
+                _jobLock.Release();
+            }
+        }
+
+        private async Task RunIntradayCoreAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("BrapiIntradayJob started at {Time} UTC", DateTime.UtcNow);
 
@@ -104,6 +127,9 @@ namespace FinanceControl.Services.Brapi
 
             await Task.WhenAll(quoteTasks.Concat(cryptoTasks).Concat(currencyTasks));
 
+            // Prices are now fresh in the DB — check user price alerts.
+            await EvaluatePriceAlertsAsync(scope.ServiceProvider, cancellationToken);
+
             status.IsRunning = false;
             status.FinishedAt = DateTime.UtcNow;
 
@@ -113,6 +139,19 @@ namespace FinanceControl.Services.Brapi
         }
 
         public async Task RunAsync(CancellationToken cancellationToken)
+        {
+            await _jobLock.WaitAsync(cancellationToken);
+            try
+            {
+                await RunCoreAsync(cancellationToken);
+            }
+            finally
+            {
+                _jobLock.Release();
+            }
+        }
+
+        private async Task RunCoreAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("BrapiPriceUpdateJob started at {Time} UTC", DateTime.UtcNow);
 
@@ -218,6 +257,24 @@ namespace FinanceControl.Services.Brapi
             await Task.WhenAll(quoteTasks.Concat(cryptoTasks).Concat(currencyTasks)
                 .Concat(treasuryTasks).Concat(fundamentalsTasks));
 
+            // FII DY must overwrite whatever the general fundamentals batch wrote, so this
+            // pass runs sequentially after Task.WhenAll above.
+            var fiiGroup = allAssets.Where(a => a.AssetType == EnumAssetType.FII).ToArray();
+            if (fiiGroup.Length > 0)
+            {
+                var fiiFundamentalsTasks = fiiGroup.Chunk(_settings.BatchSize).Select(batch =>
+                    ProcessWithSemaphoreAsync(semaphore, async () =>
+                    {
+                        await using var batchScope = _scopeFactory.CreateAsyncScope();
+                        var batchCtx = batchScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                        await ProcessFiiFundamentalsAsync(batchCtx, batch, status, cancellationToken);
+                    }, cancellationToken));
+                await Task.WhenAll(fiiFundamentalsTasks);
+            }
+
+            // Prices are now fresh in the DB — check user price alerts.
+            await EvaluatePriceAlertsAsync(scope.ServiceProvider, cancellationToken);
+
             status.IsRunning   = false;
             status.FinishedAt  = DateTime.UtcNow;
             LastStatus = status;
@@ -239,6 +296,72 @@ namespace FinanceControl.Services.Brapi
                 semaphore.Release();
             }
         }
+
+        // One-shot price alerts: once the asset's CurrentPrice crosses the user's
+        // target, fire a notification and deactivate the rule so it never repeats.
+        private async Task EvaluatePriceAlertsAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
+
+                var rules = await context.AlertRules
+                    .Where(r => r.IsActive && !r.IsTriggered)
+                    .ToListAsync(cancellationToken);
+                if (rules.Count == 0)
+                    return;
+
+                var assetIds = rules.Select(r => r.MarketAssetId).Distinct().ToList();
+                var assets = await context.MarketAssets
+                    .Where(a => assetIds.Contains(a.Id))
+                    .Select(a => new { a.Id, a.Ticker, a.CurrentPrice })
+                    .ToDictionaryAsync(a => a.Id, cancellationToken);
+
+                var notificationService = serviceProvider.GetRequiredService<INotificationService>();
+                var triggered = 0;
+
+                foreach (var rule in rules)
+                {
+                    if (!assets.TryGetValue(rule.MarketAssetId, out var asset) || asset.CurrentPrice <= 0)
+                        continue;
+
+                    var hit = rule.Direction == EnumAlertDirection.Above
+                        ? asset.CurrentPrice >= rule.TargetValue
+                        : asset.CurrentPrice <= rule.TargetValue;
+                    if (!hit)
+                        continue;
+
+                    rule.IsActive = false;
+                    rule.IsTriggered = true;
+                    rule.TriggeredAt = DateTime.UtcNow;
+
+                    var verb = rule.Direction == EnumAlertDirection.Above ? "atingiu" : "caiu para";
+                    await notificationService.CreateAsync(
+                        rule.UserId,
+                        EnumNotificationType.PriceAlert,
+                        $"{asset.Ticker} {verb} {FormatBrl(asset.CurrentPrice)}",
+                        $"Seu alerta de {FormatBrl(rule.TargetValue)} foi atingido.",
+                        $"/market/{asset.Ticker}",
+                        $"price-alert-{rule.Id}");
+                    triggered++;
+                }
+
+                // Persist rule deactivations (CreateAsync skips its own save on dedupe).
+                await context.SaveChangesAsync(cancellationToken);
+
+                if (triggered > 0)
+                    _logger.LogInformation("Price alerts triggered: {Count}", triggered);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Price alert evaluation failed.");
+            }
+        }
+
+        private static readonly CultureInfo BrlCulture = CultureInfo.GetCultureInfo("pt-BR");
+
+        // Cents (long) → "R$ 32,15".
+        private static string FormatBrl(long cents) => (cents / 100m).ToString("C", BrlCulture);
 
         // Discovers the full B3 asset universe from /api/quote/list and upserts each as a
         // MarketAsset (name, type, logo, current price). Cheap metadata pass — full price
@@ -493,6 +616,9 @@ namespace FinanceControl.Services.Brapi
                 asset.LastPriceUpdate = DateTime.UtcNow;
                 if (result.LogoUrl is not null) asset.LogoUrl = result.LogoUrl;
                 asset.Currency = result.Currency ?? "BRL";
+                // Populate name for assets whose discovery only stored the ticker as a placeholder.
+                if (result.LongName is not null && asset.Name == asset.Ticker)
+                    asset.Name = result.LongName;
 
                 // One price-history row per asset per day (closing job only)
                 await UpsertPriceHistoryAsync(context, asset, result.HistoricalDataPrice, today, isFirstRun, cancellationToken);
@@ -564,6 +690,7 @@ namespace FinanceControl.Services.Brapi
                 asset.CurrentPrice = newCoinPrice;
                 asset.LastPriceUpdate = DateTime.UtcNow;
                 if (coin.CoinImageUrl is not null) asset.LogoUrl = coin.CoinImageUrl;
+                if (coin.CoinName is not null) asset.CoinName = coin.CoinName;
                 asset.Currency = coin.Currency ?? "BRL";
 
                 await UpsertPriceHistoryAsync(context, asset, coin.HistoricalDataPrice, today, isFirstRun, cancellationToken);
@@ -908,13 +1035,18 @@ namespace FinanceControl.Services.Brapi
                 var netIncome = GetJsonDecimal(result.DefaultKeyStatistics, "netIncomeToCommon");
                 var marketCap = result.MarketCap;
 
-                // Don't persist an all-null row (e.g. some ETFs have no fundamentals).
-                if (dy is null && pe is null && pb is null && roe is null &&
-                    revenue is null && netIncome is null && marketCap is null)
-                    continue;
-
                 var fundamentals = await context.MarketAssetFundamentals
                     .FirstOrDefaultAsync(f => f.MarketAssetId == asset.Id, cancellationToken);
+
+                // Don't create a new row when everything is null — but do stamp FetchedAt on
+                // existing rows so the staleness filter in ListAsync stays accurate.
+                if (dy is null && pe is null && pb is null && roe is null &&
+                    revenue is null && netIncome is null && marketCap is null)
+                {
+                    if (fundamentals is not null)
+                        fundamentals.FetchedAt = DateTime.UtcNow;
+                    continue;
+                }
 
                 if (fundamentals is null)
                 {
@@ -930,6 +1062,63 @@ namespace FinanceControl.Services.Brapi
                 fundamentals.TotalRevenue    = revenue;
                 fundamentals.NetIncome       = netIncome;
                 fundamentals.FetchedAt       = DateTime.UtcNow;
+            }
+
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        // Dedicated DY pass for FIIs using /api/v2/fii/list — more accurate than the general
+        // quote modules endpoint. Runs after ProcessFundamentalsBatchAsync so it always wins.
+        private async Task ProcessFiiFundamentalsAsync(
+            ApplicationDbContext context,
+            MarketAsset[] batch,
+            BrapiJobStatusDto status,
+            CancellationToken cancellationToken)
+        {
+            var symbols = string.Join(",", batch.Select(a => a.Ticker));
+            var url = $"https://brapi.dev/api/v2/fii/list?symbols={symbols}&token={_settings.Token}";
+
+            BrapiFiiListResponse? response;
+            try
+            {
+                response = await FetchWithRetryAsync<BrapiFiiListResponse>(url, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "FII fundamentals batch failed for symbols: {Symbols}", symbols);
+                return;
+            }
+
+            if (response?.Fiis is null) return;
+
+            foreach (var fii in response.Fiis)
+            {
+                if (string.IsNullOrWhiteSpace(fii.Symbol)) continue;
+
+                var asset = await FindAssetBySymbolAsync(context, fii.Symbol, cancellationToken);
+                if (asset is null) continue;
+
+                // Brapi may return dividendYield12m as a percentage (e.g. 21.70) or a fraction
+                // (e.g. 0.2170). Normalise to fraction to match MarketAssetFundamentals convention.
+                var rawDy = fii.DividendYield12m;
+                var dy = rawDy.HasValue
+                    ? (Math.Abs(rawDy.Value) > 1m ? rawDy.Value / 100m : rawDy.Value)
+                    : (decimal?)null;
+
+                if (dy is null && fii.PriceToNav is null) continue;
+
+                var fundamentals = await context.MarketAssetFundamentals
+                    .FirstOrDefaultAsync(f => f.MarketAssetId == asset.Id, cancellationToken);
+
+                if (fundamentals is null)
+                {
+                    fundamentals = new MarketAssetFundamentals { MarketAssetId = asset.Id };
+                    context.MarketAssetFundamentals.Add(fundamentals);
+                }
+
+                fundamentals.DividendYield = dy;
+                if (fii.PriceToNav is not null) fundamentals.PriceToBook = fii.PriceToNav;
+                fundamentals.FetchedAt = DateTime.UtcNow;
             }
 
             await context.SaveChangesAsync(cancellationToken);

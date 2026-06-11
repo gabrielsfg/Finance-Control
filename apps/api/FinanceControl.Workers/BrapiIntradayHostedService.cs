@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace FinanceControl.Workers
 {
-    // Runs every 15 minutes during B3 market hours (10:00–18:00 BRT = 13:00–21:00 UTC).
+    // Runs every 30 minutes during B3 market hours (10:00–18:00 BRT = 13:00–21:00 UTC).
     public class BrapiIntradayHostedService : IHostedService, IDisposable
     {
         private readonly BrapiPriceUpdateJobService _jobService;
@@ -15,7 +15,7 @@ namespace FinanceControl.Workers
         // B3 market window in UTC: 13:00–21:00 (BRT = UTC-3, market 10h–18h BRT)
         private const int MarketOpenUtc = 13;
         private const int MarketCloseUtc = 21;
-        private static readonly TimeSpan Interval = TimeSpan.FromMinutes(15);
+        private static readonly TimeSpan Interval = TimeSpan.FromMinutes(30);
 
         public BrapiIntradayHostedService(
             BrapiPriceUpdateJobService jobService,
@@ -78,11 +78,11 @@ namespace FinanceControl.Workers
             }
         }
 
-        // Aligns the first tick to the next 15-min boundary (e.g. :00, :15, :30, :45).
+        // Aligns the first tick to the next 30-min boundary (e.g. :00, :30).
         private static TimeSpan ComputeDelayUntilNextSlot()
         {
             var now = DateTime.UtcNow;
-            var nextSlotMinute = (now.Minute / 15 + 1) * 15;
+            var nextSlotMinute = (now.Minute / 30 + 1) * 30;
             var next = nextSlotMinute < 60
                 ? new DateTime(now.Year, now.Month, now.Day, now.Hour, nextSlotMinute, 0, DateTimeKind.Utc)
                 : new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc).AddHours(1);

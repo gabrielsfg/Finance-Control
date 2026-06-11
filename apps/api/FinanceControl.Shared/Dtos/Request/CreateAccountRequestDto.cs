@@ -9,6 +9,7 @@ namespace FinanceControl.Shared.Dtos.Request
         public int? GoalAmount { get; set; }
         public bool IsDefaultAccount { get; set; } = true;
         public int? BillingDueDay { get; set; }
+        public int? BillingClosingDay { get; set; }
         public int? CreditLimit { get; set; }
         public int? InitialBalance { get; set; }
     }

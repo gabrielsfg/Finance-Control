@@ -20,6 +20,7 @@ import { useSubCategories } from "@/features/transactions/hooks/useSubCategories
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
 import { useTags } from "@/features/transactions/hooks/useTags";
 import { getCategoryColor } from "@/lib/config/categoryColors";
+import { parseLocalDate } from "@/lib/utils/budgetPeriod";
 import type { TransactionsFilter } from "@/features/transactions/types/filters.types";
 import type { TransactionItem } from "@/lib/types/transactions.types";
 
@@ -234,8 +235,7 @@ export function TransactionsPage() {
     }
 
     if (filterDay) {
-      const [y, m, d] = filterDay.split("-").map(Number);
-      const label = new Date(y, m - 1, d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+      const label = parseLocalDate(filterDay).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
       chips.push({
         id: "filterDay",
         label,

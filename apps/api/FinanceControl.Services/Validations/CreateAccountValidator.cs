@@ -27,6 +27,15 @@ namespace FinanceControl.Services.Validations
             RuleFor(a => a.BillingDueDay)
                 .Null().WithMessage("BillingDueDay is only applicable to Credit/Checking accounts.")
                 .When(a => a.Type != EnumAccountType.Credit && a.Type != EnumAccountType.Checking);
+
+            // Closing day is optional and credit-card only.
+            RuleFor(a => a.BillingClosingDay)
+                .InclusiveBetween(1, 31).WithMessage("BillingClosingDay must be between 1 and 31.")
+                .When(a => a.BillingClosingDay.HasValue);
+
+            RuleFor(a => a.BillingClosingDay)
+                .Null().WithMessage("BillingClosingDay is only applicable to Credit accounts.")
+                .When(a => a.Type != EnumAccountType.Credit);
         }
     }
 }

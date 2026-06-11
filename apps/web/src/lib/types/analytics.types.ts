@@ -318,3 +318,64 @@ export type InvestmentLaunchesResponse = {
   monthlyPoints: InvestmentLaunchMonthPoint[];
   summary: InvestmentLaunchesSummary;
 };
+
+// ── /api/analytics/savings (Economia) ────────────────────────────────────────
+export type SavingsPeriodItem = {
+  periodStart: string; // YYYY-MM-DD
+  periodEnd: string;   // exclusive (start of the next period)
+  isCurrent: boolean;
+  income: number;            // cents, excludes investment-sell proceeds
+  expense: number;           // cents, excludes investment buys
+  invested: number;          // cents, net buys − sells
+  goalContributions: number; // cents, net transfers into goal accounts
+  savings: number;           // cents
+  savingsRate: number | null; // %, null when no income
+};
+
+export type SavingsPeriodsResponse = {
+  periods: SavingsPeriodItem[]; // oldest → newest; last one is the current period
+  positiveStreak: number;
+  plannedIncome: number;
+  plannedExpense: number;
+  plannedSavings: number;
+  plannedRate: number | null;
+};
+
+export type SavingsAllocationStatus = {
+  subCategoryId: number;
+  subCategoryName: string;
+  subCategoryEmoji: string | null;
+  categoryName: string;
+  categoryColor: string | null;
+  areaName: string;
+  allocated: number; // cents
+  spent: number;     // cents
+};
+
+export type SavingsAreaImpact = {
+  areaId: number;
+  name: string;
+  plannedExpense: number; // cents
+  actualExpense: number;  // cents
+};
+
+export type SavingsDetailResponse = {
+  periodStart: string;
+  periodEnd: string; // exclusive
+  isCurrent: boolean;
+  income: number;
+  expense: number;
+  invested: number;
+  goalContributions: number;
+  savings: number;
+  savingsRate: number | null;
+  plannedIncome: number;
+  plannedExpense: number;
+  plannedSavings: number;
+  plannedRate: number | null;
+  allocationsTotal: number;
+  allocationsWithinLimit: number;
+  adherenceRate: number | null;
+  allocations: SavingsAllocationStatus[]; // ordered by overage descending
+  areas: SavingsAreaImpact[];             // ordered by deviation descending
+};

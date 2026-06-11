@@ -25,10 +25,13 @@ namespace FinanceControl.Services.Extensions
             services.AddScoped<IMarketService, MarketService>();
             services.AddScoped<ISimulationService, SimulationService>();
             services.AddScoped<IRecurrencePageService, RecurrencePageService>();
+            services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IAlertRuleService, AlertRuleService>();
             services.AddHttpClient();
 
             services.AddSingleton<RecurringTransactionJobService>();
             services.AddSingleton<RefreshTokenCleanupJobService>();
+            services.AddSingleton<NotificationReminderJobService>();
 
             services.Configure<BrapiSettings>(configuration.GetSection("BrapiSettings"));
             services.AddSingleton<BrapiPriceUpdateJobService>();

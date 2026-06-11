@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { parseLocalDate } from "@/lib/utils/budgetPeriod";
 import { ACCOUNT_TYPE_CONFIG } from "@/lib/config/accountTypes";
 import {
   useCreateTransaction,
@@ -348,11 +349,6 @@ type EditValues = z.infer<typeof editSchema>;
 
 // ── Detail view ───────────────────────────────────────────────────────────────
 
-function parseDateLocal(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
-
 function DetailView({
   transaction,
   onEdit,
@@ -364,7 +360,7 @@ function DetailView({
 }) {
   const isIncome = transaction.type === "Income";
   const isTransfer = transaction.type === "Transfer";
-  const dateObj = parseDateLocal(transaction.transactionDate);
+  const dateObj = parseLocalDate(transaction.transactionDate);
   const dateLabel = dateObj.toLocaleDateString("pt-BR", {
     weekday: "long",
     day: "2-digit",

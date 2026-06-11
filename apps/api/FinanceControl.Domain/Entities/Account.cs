@@ -12,6 +12,7 @@ namespace FinanceControl.Domain.Entities
         public bool IsDefaultAccount { get; set; }
         public bool IsSystem { get; set; } = false;
         public int? BillingDueDay { get; set; }
+        public int? BillingClosingDay { get; set; }
         public int? CreditLimit { get; set; }
         public ICollection<Transaction> Transactions { get; set; } = [];
         public ICollection<Transaction> IncomingTransfers { get; set; } = [];

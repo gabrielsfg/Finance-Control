@@ -23,6 +23,10 @@ namespace FinanceControl.Domain.Interfaces.Services
         Task<PortfolioCompositionProjectionDto> GetPortfolioCompositionProjectionAsync(int userId, int projectionMonths = 12);
         Task<RealNetWorthDto> GetRealNetWorthAsync(int userId);
 
+        // Savings (budget-period based)
+        Task<SavingsPeriodsDto?> GetSavingsPeriodsAsync(int userId, int budgetId, int periods = 12);
+        Task<SavingsDetailDto?> GetSavingsDetailAsync(int userId, int budgetId, DateOnly? periodStart = null);
+
         // Investment analytics
         Task<InvestmentEvolutionResponseDto> GetInvestmentEvolutionAsync(int userId, DateOnly startDate, DateOnly finishDate);
         Task<ProfitabilityTotalsDto> GetInvestmentProfitabilityTotalsAsync(int userId, DateOnly startDate, DateOnly finishDate);

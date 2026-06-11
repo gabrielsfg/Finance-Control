@@ -1,0 +1,31 @@
+# Build artifacts — always excluded, rebuilt inside the container
+**/bin/
+**/obj/
+
+# Tests — not needed in the production image
+FinanceControl.Tests/
+
+# IDE and OS files
+**/.vs/
+**/.vscode/
+**/.idea/
+**/*.user
+**/*.suo
+**/*.userprefs
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Local secrets — must never end up in the image
+**/appsettings.Local.json
+**/appsettings.*.Local.json
+
+# Temp / junk files
+**/*.TMP
+**/*~
+
+# Docs
+README.md
+CLAUDE.md

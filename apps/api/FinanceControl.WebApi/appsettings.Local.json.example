@@ -1,0 +1,17 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=YOUR_HOST;Database=YOUR_DB;Username=YOUR_USER;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true;"
+  },
+  "AppSettings": {
+    "Token": "your-super-secret-jwt-key-minimum-32-characters-long",
+    "Issuer": "http://localhost:5112",
+    "Audience": "http://localhost:5112",
+    "TokenValidityMins": 10
+  },
+  "Cors": {
+    "AllowedOrigins": [ "http://localhost:3000", "https://localhost:3000" ]
+  },
+  "BrapiSettings": {
+    "Token": "your-brapi-token"
+  }
+}

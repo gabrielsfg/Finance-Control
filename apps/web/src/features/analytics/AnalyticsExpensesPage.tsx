@@ -15,6 +15,7 @@ import {
   useAnalyticsCategoryEvolution,
 } from "./hooks/useAnalytics";
 import { useAnalyticsFilter } from "./AnalyticsFilterContext";
+import { parseMonthYear } from "@/lib/utils/budgetPeriod";
 
 export function AnalyticsExpensesPage() {
   const { start, finish, activeTagIds } = useAnalyticsFilter();
@@ -24,11 +25,11 @@ export function AnalyticsExpensesPage() {
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`
   );
   const calendarMonthStart = calendarMonth + "-01";
-  const [cmY, cmM] = calendarMonth.split("-").map(Number);
+  const [cmY, cmM] = parseMonthYear(calendarMonth);
   const calendarEnd = new Date(cmY, cmM, 0).toISOString().slice(0, 10);
 
   function shiftCalendarMonth(delta: number) {
-    const [y, m] = calendarMonth.split("-").map(Number);
+    const [y, m] = parseMonthYear(calendarMonth);
     const d = new Date(y, m - 1 + delta, 1);
     setCalendarMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   }

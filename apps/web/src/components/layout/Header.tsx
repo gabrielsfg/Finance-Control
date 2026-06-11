@@ -1,9 +1,10 @@
 "use client";
 
-import { Bell, Plus, Sun, Moon, PanelLeft, FileUp } from "lucide-react";
+import { Plus, Sun, Moon, PanelLeft, FileUp } from "lucide-react";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { useHeaderStore } from "@/lib/stores/headerStore";
 import { GlobalSearch } from "./GlobalSearch";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 
 export const Header = () => {
   const { theme, toggleTheme, toggleSidebar } = useUIStore();
@@ -55,10 +56,7 @@ export const Header = () => {
         </button>
 
         {/* Notifications */}
-        <button title="Notificações" className="text-text-sub hover:bg-surface2 hover:text-text relative flex h-9 w-9 items-center justify-center rounded-[9px] transition-colors">
-          <Bell size={16} strokeWidth={1.75} />
-          <span className="bg-green absolute top-2 right-2 h-1.5 w-1.5 rounded-full" />
-        </button>
+        <NotificationBell />
 
         {/* Nova CTA — shown only when a page registers it */}
         {onNovaClick && (

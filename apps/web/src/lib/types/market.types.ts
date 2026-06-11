@@ -9,6 +9,7 @@ export type MarketAsset = {
   id: number;
   ticker: string;
   name: string;
+  coinName: string | null;
   assetType: AssetType;
   assetClass: string;
   logoUrl: string | null;

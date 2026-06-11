@@ -10,6 +10,7 @@ namespace FinanceControl.Services.Brapi
 
     internal record BrapiCryptoCoin(
         [property: JsonPropertyName("coin")] string Coin,
+        [property: JsonPropertyName("coinName")] string? CoinName,
         [property: JsonPropertyName("currency")] string Currency,
         [property: JsonPropertyName("coinImageUrl")] string? CoinImageUrl,
         [property: JsonPropertyName("regularMarketPrice")] decimal? RegularMarketPrice,

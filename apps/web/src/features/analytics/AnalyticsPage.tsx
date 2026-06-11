@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AnalyticsExpensesPage } from "./AnalyticsExpensesPage";
+import { AnalyticsSavingsPage } from "./AnalyticsSavingsPage";
 import { AnalyticsNetWorthPage } from "./AnalyticsNetWorthPage";
 import { AnalyticsInvestmentsPage } from "./AnalyticsInvestmentsPage";
 import { AnalyticsProjectionsPage } from "./AnalyticsProjectionsPage";
@@ -11,6 +12,7 @@ import { AnalyticsProjectionsPage } from "./AnalyticsProjectionsPage";
 /** First entry (`gastos`) is served by the bare `/analytics` route. */
 const TABS = {
   gastos:        AnalyticsExpensesPage,
+  economia:      AnalyticsSavingsPage,
   patrimonio:    AnalyticsNetWorthPage,
   investimentos: AnalyticsInvestmentsPage,
   projecoes:     AnalyticsProjectionsPage,

@@ -7,6 +7,7 @@ namespace FinanceControl.Shared.Dtos.Response.Market
         public int Id { get; set; }
         public string Ticker { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
+        public string? CoinName { get; set; }
         public EnumAssetType AssetType { get; set; }
         public string AssetClass { get; set; } = string.Empty;
         public string? LogoUrl { get; set; }

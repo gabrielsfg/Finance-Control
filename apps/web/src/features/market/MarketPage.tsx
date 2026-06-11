@@ -1,11 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { TrendingUp, TrendingDown, Coins, Building2, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Coins, Building2, Sparkles, Clock } from "lucide-react";
 import { PillSelect } from "@/components/shared/PillSelect";
 import { MarketIndicators } from "@/features/market/components/MarketIndicators";
 import { RankingCard } from "@/features/market/components/RankingCard";
 import { usePageSearch } from "@/lib/hooks/usePageHeader";
+import { useMarketList } from "@/features/market/hooks/useMarket";
+
+function formatSyncTime(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  if (isToday) return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
 
 const TYPE_OPTIONS = [
   { value: "all", label: "Todas" },
@@ -24,8 +34,10 @@ const EQUITY_TYPES = new Set(["all", "Acao", "FII", "ETF", "BDR", "Stock", "Fund
 export function MarketPage() {
   const [type, setType] = useState("all");
 
-  // Enable the global header search (which surfaces market tickers → asset page).
   usePageSearch();
+
+  const { data: probe } = useMarketList({ limit: 1 });
+  const syncTime = formatSyncTime(probe?.[0]?.lastPriceUpdate);
 
   const typeParam = type === "all" ? undefined : type;
   const showFundamentals = EQUITY_TYPES.has(type);
@@ -38,6 +50,12 @@ export function MarketPage() {
           <p className="text-text-muted mt-0.5 text-[13px]">
             Rankings e indicadores de ações, FIIs, ETFs, cripto, moedas e Tesouro
           </p>
+          {syncTime && (
+            <div className="mt-1 flex items-center gap-1">
+              <Clock size={11} className="text-text-muted" />
+              <span className="text-text-muted text-[11px]">Última sinc. às {syncTime}</span>
+            </div>
+          )}
         </div>
         <PillSelect options={TYPE_OPTIONS} value={type} onChange={setType} />
       </div>
@@ -63,7 +81,7 @@ export function MarketPage() {
         {showFundamentals ? (
           <>
             <RankingCard
-              title="Maiores Dividend Yield"
+              title="Maiores Rendimento de Dividendos"
               icon={<Coins size={15} className="text-green" />}
               sort="dy_desc"
               type={typeParam}

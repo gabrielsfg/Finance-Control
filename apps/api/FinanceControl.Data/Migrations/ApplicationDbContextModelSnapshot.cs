@@ -30,6 +30,9 @@ namespace FinanceControl.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BillingClosingDay")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("BillingDueDay")
                         .HasColumnType("integer");
 
@@ -70,6 +73,59 @@ namespace FinanceControl.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Accounts", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.AlertRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTriggered")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MarketAssetId")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("TargetValue")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("TriggeredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MarketAssetId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_AlertRules_UserId");
+
+                    b.HasIndex("IsActive", "IsTriggered")
+                        .HasDatabaseName("IX_AlertRules_IsActive_IsTriggered");
+
+                    b.ToTable("AlertRules", (string)null);
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.Area", b =>
@@ -494,6 +550,9 @@ namespace FinanceControl.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("CoinName")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -654,6 +713,116 @@ namespace FinanceControl.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("MarketPriceIntradays", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActionUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("DedupeKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("IX_Notifications_UserId_CreatedAt");
+
+                    b.HasIndex("UserId", "DedupeKey")
+                        .HasDatabaseName("IX_Notifications_UserId_DedupeKey");
+
+                    b.ToTable("Notifications", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.NotificationPreference", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("BudgetAlertEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("BudgetWarningPercent")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CardClosingDaysAhead")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("CardClosingEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("CardDueDaysAhead")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("CardDueEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<bool>("RecurrenceChargedEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_NotificationPreferences_UserId");
+
+                    b.ToTable("NotificationPreferences", (string)null);
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.RecurringTransaction", b =>
@@ -1070,6 +1239,23 @@ namespace FinanceControl.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.AlertRule", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.MarketAsset", "MarketAsset")
+                        .WithMany()
+                        .HasForeignKey("MarketAssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FinanceControl.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MarketAsset");
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.Area", b =>
                 {
                     b.HasOne("FinanceControl.Domain.Entities.Budget", null)
@@ -1244,6 +1430,24 @@ namespace FinanceControl.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("MarketAsset");
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.NotificationPreference", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.RecurringTransaction", b =>

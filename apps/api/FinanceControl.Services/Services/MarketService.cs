@@ -75,9 +75,14 @@ namespace FinanceControl.Services.Services
 
             if (isFundamentalSort)
             {
+                // Only show fundamentals data refreshed within the last 7 days so stale snapshots
+                // never surface in rankings after an asset stops being covered by Brapi.
+                var staleCutoff = DateTime.UtcNow.AddDays(-7);
+
                 // Rank by a stored fundamental metric — order/limit in the DB via the join.
                 var fq = context.MarketAssets
-                    .Where(a => a.CurrentPrice > 0 && a.Fundamentals != null);
+                    .Where(a => a.CurrentPrice > 0 && a.Fundamentals != null
+                                && a.Fundamentals.FetchedAt >= staleCutoff);
                 if (parsedType.HasValue)
                     fq = fq.Where(a => a.AssetType == parsedType.Value);
 
@@ -145,6 +150,7 @@ namespace FinanceControl.Services.Services
                     Id              = a.Id,
                     Ticker          = a.Ticker,
                     Name            = a.Name,
+                    CoinName        = a.CoinName,
                     AssetType       = a.AssetType,
                     AssetClass      = AssetTypeLabels.GetValueOrDefault(a.AssetType, "Outro"),
                     LogoUrl         = a.LogoUrl,
@@ -242,7 +248,8 @@ namespace FinanceControl.Services.Services
             var assets = await context.MarketAssets
                 .Where(a =>
                     a.Ticker.ToUpper().Contains(q) ||
-                    a.Name.ToUpper().Contains(q))
+                    a.Name.ToUpper().Contains(q) ||
+                    (a.CoinName != null && a.CoinName.ToUpper().Contains(q)))
                 .OrderBy(a => a.Ticker)
                 .Take(20)
                 .ToListAsync();
@@ -290,6 +297,7 @@ namespace FinanceControl.Services.Services
                     Id              = a.Id,
                     Ticker          = a.Ticker,
                     Name            = a.Name,
+                    CoinName        = a.CoinName,
                     AssetType       = a.AssetType,
                     AssetClass      = AssetTypeLabels.GetValueOrDefault(a.AssetType, "Outro"),
                     LogoUrl         = a.LogoUrl,
@@ -332,6 +340,7 @@ namespace FinanceControl.Services.Services
                 Id              = asset.Id,
                 Ticker          = asset.Ticker,
                 Name            = asset.Name,
+                CoinName        = asset.CoinName,
                 AssetType       = asset.AssetType,
                 AssetClass      = AssetTypeLabels.GetValueOrDefault(asset.AssetType, "Outro"),
                 LogoUrl         = asset.LogoUrl,

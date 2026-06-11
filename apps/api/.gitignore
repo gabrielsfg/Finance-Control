@@ -88,3 +88,7 @@ nunit-*.xml
 
 # Claude
 .claude/
+
+# Local secrets — equivalent to .env; never commit
+appsettings.Local.json
+appsettings.*.Local.json

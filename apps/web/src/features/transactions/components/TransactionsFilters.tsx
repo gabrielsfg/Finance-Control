@@ -6,6 +6,7 @@ import {
   CalendarDays, Tag, Hash, Wallet, BookOpen, ListFilter, ArrowUpDown, DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { parseLocalDate } from "@/lib/utils/budgetPeriod";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
@@ -85,8 +86,7 @@ export function getActiveFilterTags(
   }
 
   if (meta.filterDay) {
-    const [y, m, d] = meta.filterDay.split("-").map(Number);
-    const label = new Date(y, m - 1, d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+    const label = parseLocalDate(meta.filterDay).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
     tags.push({ id: "filterDay", label });
   }
 

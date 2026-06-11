@@ -5,6 +5,12 @@ export function parseLocalDate(dateStr: string): Date {
   return new Date(year, month - 1, day);
 }
 
+/** Splits a "YYYY-MM" string into [year, month] (month is 1-based). */
+export function parseMonthYear(monthStr: string): [number, number] {
+  const [year, month] = monthStr.split("-").map(Number);
+  return [year, month];
+}
+
 export function shiftByRecurrence(date: Date, recurrence: BudgetRecurrence, direction: number): Date {
   const d = new Date(date);
   switch (recurrence) {

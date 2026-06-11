@@ -20,6 +20,10 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Singleton refresh promise — deduplicates concurrent 401s so a burst of
+// parallel requests with an expired token triggers exactly one refresh call.
+let refreshPromise: Promise<string> | null = null;
+
 // Handle 401 — attempt refresh via HttpOnly cookie, retry once, then logout
 api.interceptors.response.use(
   (response) => response,
@@ -32,22 +36,32 @@ api.interceptors.response.use(
       try {
         // The refresh token travels as an HttpOnly cookie — no body needed.
         // withCredentials ensures the browser attaches it automatically.
-        const { data } = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api"}/user/refresh`,
-          {},
-          { withCredentials: true },
-        );
+        if (!refreshPromise) {
+          refreshPromise = axios
+            .post(
+              `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api"}/user/refresh`,
+              {},
+              { withCredentials: true },
+            )
+            .then((res) => res.data.accessToken)
+            .finally(() => {
+              refreshPromise = null;
+            });
+        }
+
+        const newToken = await refreshPromise;
 
         const { useAuthStore } = require("@/lib/stores/authStore");
-        useAuthStore.getState().setAccessToken(data.accessToken);
+        // Use setAccessToken, not login — login clears the query cache which
+        // would wipe the data that just came back and leave the page loading forever.
+        useAuthStore.getState().setAccessToken(newToken);
 
-        original.headers.Authorization = `Bearer ${data.accessToken}`;
+        original.headers.Authorization = `Bearer ${newToken}`;
         return api(original);
       } catch {
         const { useAuthStore } = require("@/lib/stores/authStore");
         clearPersistedQueryCache();
         await useAuthStore.getState().logout();
-        window.location.href = "/login";
       }
     }
 

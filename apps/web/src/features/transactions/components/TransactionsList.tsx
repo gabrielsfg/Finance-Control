@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { ArrowLeftRight, Pencil, RefreshCw, Layers, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { parseLocalDate } from "@/lib/utils/budgetPeriod";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { TransactionItem } from "@/lib/types/transactions.types";
 
@@ -19,13 +20,8 @@ function hexToRgb(hex: string) {
   return `${r} ${g} ${b}`;
 }
 
-function parseDateLocal(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
-
 function formatDayHeader(dateStr: string) {
-  const date = parseDateLocal(dateStr);
+  const date = parseLocalDate(dateStr);
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);

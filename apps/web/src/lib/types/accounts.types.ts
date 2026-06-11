@@ -17,6 +17,7 @@ export type AccountDetail = {
   goalAmount: number | null;
   isDefaultAccount: boolean;
   billingDueDay: number | null;
+  billingClosingDay: number | null;
   creditLimit: number | null;
 };
 
@@ -26,6 +27,7 @@ export type CreateAccountRequest = {
   goalAmount?: number | null;
   isDefaultAccount: boolean;
   billingDueDay?: number | null;
+  billingClosingDay?: number | null;
   creditLimit?: number | null;
   initialBalance?: number | null;
 };
@@ -37,6 +39,7 @@ export type UpdateAccountRequest = {
   goalAmount?: number | null;
   isDefaultAccount: boolean;
   billingDueDay?: number | null;
+  billingClosingDay?: number | null;
   creditLimit?: number | null;
   newBalance?: number | null;
 };

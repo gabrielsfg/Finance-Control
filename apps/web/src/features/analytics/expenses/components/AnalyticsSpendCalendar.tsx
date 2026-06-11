@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { parseMonthYear } from "@/lib/utils/budgetPeriod";
 import { cn } from "@/lib/utils";
 import type { DaySpend, DayHeatmapState } from "@/lib/types/analytics.types";
 
@@ -41,7 +42,7 @@ const TEXT: Record<DayHeatmapState, string> = {
 
 export const AnalyticsSpendCalendar = ({ data, month, onPrev, onNext }: Props) => {
   const router = useRouter();
-  const [year, monthNum1] = month.split("-").map(Number);
+  const [year, monthNum1] = parseMonthYear(month);
   const monthNum = monthNum1 - 1;
   const offset = new Date(year, monthNum, 1).getDay();
   const daysInMonth = new Date(year, monthNum + 1, 0).getDate();

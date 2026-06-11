@@ -52,6 +52,7 @@ const baseSchema = z
     goalAmount: z.string().optional(),
     isDefaultAccount: z.boolean(),
     billingDueDay: z.string().optional(),
+    billingClosingDay: z.string().optional(),
     creditLimit: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -65,6 +66,12 @@ const baseSchema = z
       }
       if (!data.creditLimit?.trim())
         ctx.addIssue({ code: "custom", path: ["creditLimit"], message: "Obrigatório" });
+    }
+    // Closing day is optional and credit-card only.
+    if (data.type === "Credit" && data.billingClosingDay?.trim()) {
+      const day = Number(data.billingClosingDay);
+      if (isNaN(day) || day < 1 || day > 31)
+        ctx.addIssue({ code: "custom", path: ["billingClosingDay"], message: "Dia inválido (1-31)" });
     }
   });
 
@@ -166,12 +173,13 @@ function CreateForm({ onClose }: { onClose: () => void }) {
       resolver: zodResolver(createSchema),
       defaultValues: {
         name: "", type: "Checking", isDefaultAccount: false,
-        initialBalance: "", goalAmount: "", billingDueDay: "", creditLimit: "",
+        initialBalance: "", goalAmount: "", billingDueDay: "", billingClosingDay: "", creditLimit: "",
       },
     });
 
   const accountType = watch("type") as AccountType;
   const showCreditFields = CREDIT_TYPES.includes(accountType);
+  const isCredit = accountType === "Credit";
 
   const onSubmit = async (values: CreateValues) => {
     setServerError(null);
@@ -183,6 +191,7 @@ function CreateForm({ onClose }: { onClose: () => void }) {
         initialBalance: values.initialBalance ? Math.round(parseFloat(values.initialBalance) * 100) : null,
         goalAmount: values.goalAmount ? Math.round(parseFloat(values.goalAmount) * 100) : null,
         billingDueDay: showCreditFields && values.billingDueDay ? Number(values.billingDueDay) : null,
+        billingClosingDay: isCredit && values.billingClosingDay ? Number(values.billingClosingDay) : null,
         creditLimit: showCreditFields && values.creditLimit ? Math.round(parseFloat(values.creditLimit) * 100) : null,
       });
       reset();
@@ -227,6 +236,16 @@ function CreateForm({ onClose }: { onClose: () => void }) {
               />
             </FormField>
           </div>
+        )}
+
+        {isCredit && (
+          <FormField label="Fechamento (dia) — opcional" error={errors.billingClosingDay?.message}>
+            <input
+              {...register("billingClosingDay")}
+              type="number" min="1" max="31" placeholder="8"
+              className={cn(INPUT_CLASS, errors.billingClosingDay && "border-red/60")}
+            />
+          </FormField>
         )}
 
         <FormField label="Saldo inicial (R$)">
@@ -281,6 +300,7 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
       isDefaultAccount: account.isDefaultAccount,
       goalAmount: "",
       billingDueDay: "",
+      billingClosingDay: "",
       creditLimit: account.creditLimit ? String(account.creditLimit / 100) : "",
       newBalance: "",
     });
@@ -289,6 +309,7 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
 
   const accountType = watch("type") as AccountType;
   const showCreditFields = CREDIT_TYPES.includes(accountType);
+  const isCredit = accountType === "Credit";
   const newBalanceValue = watch("newBalance");
 
   const onSubmit = async (values: EditValues) => {
@@ -303,6 +324,7 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
           isDefaultAccount: values.isDefaultAccount,
           goalAmount: values.goalAmount ? Math.round(parseFloat(values.goalAmount) * 100) : null,
           billingDueDay: showCreditFields && values.billingDueDay ? Number(values.billingDueDay) : null,
+          billingClosingDay: isCredit && values.billingClosingDay ? Number(values.billingClosingDay) : null,
           creditLimit: showCreditFields && values.creditLimit ? Math.round(parseFloat(values.creditLimit) * 100) : null,
           newBalance: values.newBalance?.trim() ? Math.round(parseFloat(values.newBalance) * 100) : null,
         },
@@ -347,6 +369,16 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
               />
             </FormField>
           </div>
+        )}
+
+        {isCredit && (
+          <FormField label="Fechamento (dia) — opcional" error={errors.billingClosingDay?.message}>
+            <input
+              {...register("billingClosingDay")}
+              type="number" min="1" max="31" placeholder="8"
+              className={cn(INPUT_CLASS, errors.billingClosingDay && "border-red/60")}
+            />
+          </FormField>
         )}
 
         <FormField label="Meta de saldo (R$) — opcional">

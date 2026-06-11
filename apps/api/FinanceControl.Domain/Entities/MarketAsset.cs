@@ -9,6 +9,7 @@ namespace FinanceControl.Domain.Entities
     {
         public string Ticker { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
+        public string? CoinName { get; set; }
         public EnumAssetType AssetType { get; set; }
         public long CurrentPrice { get; set; }
         public DateTime? LastPriceUpdate { get; set; }

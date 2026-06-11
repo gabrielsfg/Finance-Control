@@ -82,9 +82,12 @@ namespace FinanceControl.Services.Services
                 return LoginResult.Failed();
             }
 
-            user.FailedLoginAttempts = 0;
-            user.LockoutEnd = null;
-            await _context.SaveChangesAsync();
+            if (user.FailedLoginAttempts != 0 || user.LockoutEnd != null)
+            {
+                user.FailedLoginAttempts = 0;
+                user.LockoutEnd = null;
+                await _context.SaveChangesAsync();
+            }
 
             return LoginResult.Success(await CreateAuthResponseAsync(user));
         }

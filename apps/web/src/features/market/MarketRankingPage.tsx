@@ -2,11 +2,11 @@
 
 import { useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { PillSelect } from "@/components/shared/PillSelect";
 import { MarketAssetRow, type RowMetric } from "@/features/market/components/MarketAssetRow";
 import { useMarketList } from "@/features/market/hooks/useMarket";
+import { usePageSearch } from "@/lib/hooks/usePageHeader";
 
 type RankingMeta = { title: string; metric: RowMetric; fundamental?: boolean };
 
@@ -14,7 +14,7 @@ const RANKING_META: Record<string, RankingMeta> = {
   change_desc:    { title: "Maiores altas",          metric: "change" },
   change_asc:     { title: "Maiores quedas",         metric: "change" },
   price_desc:     { title: "Em destaque",            metric: "change" },
-  dy_desc:        { title: "Maiores Dividend Yield", metric: "dy",        fundamental: true },
+  dy_desc:        { title: "Maiores Rendimento de Dividendos", metric: "dy",        fundamental: true },
   marketcap_desc: { title: "Maior Valor de Mercado", metric: "marketcap", fundamental: true },
   revenue_desc:   { title: "Maiores Receitas",       metric: "revenue",   fundamental: true },
   pl_asc:         { title: "Menores P/L",            metric: "pl",        fundamental: true },
@@ -54,6 +54,9 @@ function RankingContent() {
 
   const initialType = searchParams.get("type") ?? "all";
   const [type, setType] = useState(initialType);
+  const [search, setSearch] = useState("");
+
+  usePageSearch(setSearch, "Buscar ticker ou nome...");
 
   const { data: assets = [], isLoading } = useMarketList({
     type: type === "all" ? undefined : type,
@@ -61,20 +64,18 @@ function RankingContent() {
     limit: 50,
   });
 
+  const filtered = search.trim()
+    ? assets.filter((a) => {
+        const q = search.trim().toLowerCase();
+        return a.ticker.toLowerCase().includes(q) || a.name.toLowerCase().includes(q);
+      })
+    : assets;
+
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3">
-        <Link
-          href="/market"
-          className="text-text-muted hover:text-text flex w-fit items-center gap-1.5 text-[13px] transition-colors"
-        >
-          <ArrowLeft size={15} />
-          Voltar ao mercado
-        </Link>
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="font-display font-700 text-text text-[22px] tracking-tight">{meta.title}</h1>
-          <PillSelect options={TYPE_OPTIONS} value={type} onChange={setType} />
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="font-display font-700 text-text text-[22px] tracking-tight">{meta.title}</h1>
+        <PillSelect options={TYPE_OPTIONS} value={type} onChange={setType} />
       </div>
 
       <div className="border-border bg-surface rounded-2xl border p-2.5">
@@ -82,15 +83,17 @@ function RankingContent() {
           <div className="flex items-center justify-center py-16">
             <Loader2 size={20} className="text-green animate-spin" />
           </div>
-        ) : assets.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <p className="text-text-muted py-16 text-center text-[13px]">
-            {meta.fundamental
+            {search.trim()
+              ? `Nenhum resultado para "${search}"`
+              : meta.fundamental
               ? "Sem dados fundamentalistas para este filtro ainda."
               : "Nenhum ativo disponível."}
           </p>
         ) : (
           <div className="flex flex-col gap-1">
-            {assets.map((asset, i) => (
+            {filtered.map((asset, i) => (
               <MarketAssetRow key={asset.id} asset={asset} metric={meta.metric} rank={i + 1} />
             ))}
           </div>

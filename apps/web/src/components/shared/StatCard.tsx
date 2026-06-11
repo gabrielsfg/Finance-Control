@@ -1,10 +1,12 @@
 import { type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrency, formatPercent } from "@/lib/utils/index";
+import { formatCurrency, formatPercent, formatPercentNeutral } from "@/lib/utils/index";
 
 type StatCardProps = {
   label: string;
   value: number;
+  /** How `value` is rendered. Defaults to currency. */
+  format?: "currency" | "percent";
   change?: number;
   previousValue?: number;
   lowerIsBetter?: boolean;
@@ -17,6 +19,7 @@ type StatCardProps = {
 export const StatCard = ({
   label,
   value,
+  format = "currency",
   change,
   previousValue,
   lowerIsBetter = false,
@@ -43,7 +46,8 @@ export const StatCard = ({
         </div>
       </div>
       <p className={cn("font-money font-600 text-[22px]", valueColor)}>
-        {isNegative && "-"}{formatCurrency(Math.abs(value))}
+        {isNegative && "-"}
+        {format === "percent" ? formatPercentNeutral(Math.abs(value), 1) : formatCurrency(Math.abs(value))}
       </p>
       {subText !== undefined && (
         <p className="text-text-muted mt-1.5 text-[12px]">{subText}</p>

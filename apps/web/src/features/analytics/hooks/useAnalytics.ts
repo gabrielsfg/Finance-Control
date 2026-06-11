@@ -22,6 +22,8 @@ import type {
   FutureCommitmentsItem,
   BalanceProjectionResponse,
   CommitmentsImpactResponse,
+  SavingsPeriodsResponse,
+  SavingsDetailResponse,
 } from "@/lib/types/analytics.types";
 
 // A date range that ends before today is frozen — no new transactions can land
@@ -201,4 +203,20 @@ export const useCommitmentsImpact = (months = 6) =>
     queryKey: ["analytics", "commitments-impact", months],
     queryFn: () => analyticsApi.getCommitmentsImpact(months),
     staleTime: 60_000,
+  });
+
+export const useSavingsPeriods = (budgetId: number | undefined, periods = 12) =>
+  useQuery<SavingsPeriodsResponse>({
+    queryKey: ["analytics", "savings-periods", budgetId, periods],
+    queryFn: () => analyticsApi.getSavingsPeriods(budgetId!, periods),
+    enabled: budgetId !== undefined,
+    staleTime: LIVE_STALE_TIME,
+  });
+
+export const useSavingsDetail = (budgetId: number | undefined, periodStart: string | undefined) =>
+  useQuery<SavingsDetailResponse>({
+    queryKey: ["analytics", "savings-detail", budgetId, periodStart],
+    queryFn: () => analyticsApi.getSavingsDetail(budgetId!, periodStart),
+    enabled: budgetId !== undefined && periodStart !== undefined,
+    staleTime: LIVE_STALE_TIME,
   });
