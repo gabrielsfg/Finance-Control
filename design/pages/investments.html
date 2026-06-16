@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Investimentos · Quantia</title>
+<script>
+  (function(){try{var s=localStorage.getItem('quantia-theme');var d=window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',s||d);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/quantia.css" />
+</head>
+<body data-page="investments" data-eyebrow="Carteira" data-title="Investimentos" data-sub="R$ 21.480,30 investidos · +12,4% no ano." data-cta="Novo aporte" data-search="Buscar ativo…">
+<div class="shell">
+  <main class="main">
+    <div class="page">
+
+      <!-- Totalizador principal (herói) -->
+      <section class="hero reveal" style="margin-bottom:26px;">
+        <div class="tile-echo">
+          <svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="9" fill="#fff"/><path d="M0 9C0 4 4 0 9 0H18A18 18 0 0 1 0 18Z" fill="#17211D"/><path d="M36 27c0 5-4 9-9 9H18A18 18 0 0 1 36 18Z" fill="#17211D"/></svg>
+        </div>
+        <div class="patrimonio">
+          <div class="eyebrow">Patrimônio investido</div>
+          <div class="big-figure"><span class="cur">R$</span>21.480<span class="cents">,30</span></div>
+          <div class="delta">
+            <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 15l7-7 7 7"/></svg>12,4%</span>
+            <span class="note">R$ 2.370 de rendimento no ano</span>
+          </div>
+          <div class="mini-stats">
+            <div class="ms"><div class="eyebrow">Hoje</div><div class="v" style="color:var(--moss-lift)">+ R$ 312</div></div>
+            <div class="ms"><div class="eyebrow">Proventos / mês</div><div class="v">R$ 184</div></div>
+            <div class="ms"><div class="eyebrow">Aportes / mês</div><div class="v">R$ 1.200</div></div>
+          </div>
+        </div>
+        <div class="fluxo">
+          <div class="fl-top"><span class="ttl">Composição</span><span class="per">desde o 1º aporte</span></div>
+          <div class="flow-row">
+            <div class="fr-head"><span class="lab"><span class="dot" style="background:var(--moss-lift)"></span>Total aportado</span><span class="val" style="color:var(--moss-lift)">R$ 19.110,00</span></div>
+            <div class="flow-track"><div class="flow-fill in" style="--to:1"></div></div>
+          </div>
+          <div class="flow-row">
+            <div class="fr-head"><span class="lab"><span class="dot" style="background:var(--gold)"></span>Rendimento</span><span class="val" style="color:var(--gold)">+ R$ 2.370,30</span></div>
+            <div class="flow-track"><div class="flow-fill" style="--to:.124;background:linear-gradient(90deg,var(--gold),#e3b65a)"></div></div>
+          </div>
+          <div class="fl-net"><span class="lab">Patrimônio atual</span><span class="v">R$ 21.480,30</span></div>
+        </div>
+      </section>
+
+      <!-- evolução + alocação -->
+      <div class="grid">
+        <div class="card col-7">
+          <div class="card-head">
+            <h3>Evolução da carteira</h3>
+            <a class="link" href="#">12 meses</a>
+          </div>
+          <svg class="chart" viewBox="0 0 520 200" role="img" aria-label="Evolução da carteira nos últimos 12 meses">
+            <line class="ch-grid" x1="30" y1="33" x2="510" y2="33"/>
+            <line class="ch-grid" x1="30" y1="78" x2="510" y2="78"/>
+            <line class="ch-grid" x1="30" y1="123" x2="510" y2="123"/>
+            <line class="ch-base" x1="30" y1="168" x2="510" y2="168"/>
+            <path class="ch-area moss" d="M36,150 L103,146 L170,150 L237,130 L304,120 L371,102 L438,74 L503,52 L503,168 L36,168 Z"/>
+            <path class="ch-line moss" d="M36,150 L103,146 L170,150 L237,130 L304,120 L371,102 L438,74 L503,52"/>
+            <circle class="ch-dot" cx="503" cy="52" r="5" style="stroke:var(--moss)"/>
+            <circle cx="503" cy="52" r="2.3" style="fill:var(--moss)"/>
+            <text class="ch-callout" x="500" y="40" text-anchor="end" font-size="12.5">R$ 21,5 mil</text>
+            <text class="ch-axis" x="36" y="188" text-anchor="middle">jul</text>
+            <text class="ch-axis" x="170" y="188" text-anchor="middle">out</text>
+            <text class="ch-axis" x="304" y="188" text-anchor="middle">jan</text>
+            <text class="ch-axis" x="438" y="188" text-anchor="middle">abr</text>
+            <text class="ch-axis" x="503" y="188" text-anchor="end">jun</text>
+          </svg>
+          <p class="chart-note">Rentabilidade de <b>+12,4%</b> no ano, contra +9,1% do CDI no período.</p>
+        </div>
+
+        <div class="card col-5">
+          <div class="card-head">
+            <h3>Alocação por classe</h3>
+          </div>
+          <div class="donut-wrap">
+            <svg class="donut" width="172" height="172" viewBox="0 0 200 200" role="img" aria-label="Alocação da carteira por classe de ativo">
+              <g transform="rotate(-90 100 100)">
+                <circle class="seg" cx="100" cy="100" r="70" style="stroke:var(--moss)"   stroke-dasharray="181.7 439.8" stroke-dashoffset="0"/>
+                <circle class="seg" cx="100" cy="100" r="70" style="stroke:var(--accent)" stroke-dasharray="93.8 439.8"  stroke-dashoffset="-184.7"/>
+                <circle class="seg" cx="100" cy="100" r="70" style="stroke:var(--gold)"   stroke-dasharray="120.1 439.8" stroke-dashoffset="-281.5"/>
+                <circle class="seg" cx="100" cy="100" r="70" style="stroke:var(--clay)"   stroke-dasharray="32.2 439.8"  stroke-dashoffset="-404.6"/>
+              </g>
+              <text class="hole-amt" x="100" y="97" text-anchor="middle" font-size="19">R$ 21.480</text>
+              <text class="hole-lab" x="100" y="115" text-anchor="middle" font-size="9.5">INVESTIDO</text>
+            </svg>
+            <div class="donut-legend">
+              <div class="dl"><span class="sw" style="background:var(--moss)"></span><span class="nm">Ações</span><span class="vv"><b>R$ 9.092</b> · 42%</span></div>
+              <div class="dl"><span class="sw" style="background:var(--accent)"></span><span class="nm">FIIs</span><span class="vv"><b>R$ 4.726</b> · 22%</span></div>
+              <div class="dl"><span class="sw" style="background:var(--gold)"></span><span class="nm">Renda fixa</span><span class="vv"><b>R$ 6.014</b> · 28%</span></div>
+              <div class="dl"><span class="sw" style="background:var(--clay)"></span><span class="nm">Cripto</span><span class="vv"><b>R$ 1.719</b> · 8%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- posições -->
+      <div class="section-title">
+        <h2>Posições</h2>
+        <div class="ln"></div>
+        <a class="link" href="#">6 ativos</a>
+      </div>
+
+      <div class="card flush">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Ativo</th>
+              <th>Classe</th>
+              <th class="r">Qtd.</th>
+              <th class="r">Preço médio</th>
+              <th class="r">Atual</th>
+              <th class="r">Posição</th>
+              <th class="r">Rent.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:60px;display:inline-block;">PETR4</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">Petrobras</span></div></td>
+              <td><span class="tagcat"><span class="cdot" style="background:var(--moss)"></span>Ações</span></td>
+              <td class="r mono">120</td>
+              <td class="r"><span class="amt">R$ 32,10</span></td>
+              <td class="r"><span class="amt">R$ 38,42</span></td>
+              <td class="r"><span class="amt">R$ 4.610<span class="cents">,40</span></span></td>
+              <td class="r"><span class="amt pos">+19,7%</span></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:60px;display:inline-block;">ITUB4</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">Itaú Unibanco</span></div></td>
+              <td><span class="tagcat"><span class="cdot" style="background:var(--moss)"></span>Ações</span></td>
+              <td class="r mono">100</td>
+              <td class="r"><span class="amt">R$ 30,40</span></td>
+              <td class="r"><span class="amt">R$ 33,10</span></td>
+              <td class="r"><span class="amt">R$ 3.310<span class="cents">,00</span></span></td>
+              <td class="r"><span class="amt pos">+8,9%</span></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:60px;display:inline-block;">HGLG11</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">CSHG Logística</span></div></td>
+              <td><span class="tagcat"><span class="cdot" style="background:var(--accent)"></span>FIIs</span></td>
+              <td class="r mono">30</td>
+              <td class="r"><span class="amt">R$ 158,00</span></td>
+              <td class="r"><span class="amt">R$ 162,40</span></td>
+              <td class="r"><span class="amt">R$ 4.872<span class="cents">,00</span></span></td>
+              <td class="r"><span class="amt pos">+2,8%</span></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:60px;display:inline-block;">WEGE3</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">WEG</span></div></td>
+              <td><span class="tagcat"><span class="cdot" style="background:var(--moss)"></span>Ações</span></td>
+              <td class="r mono">60</td>
+              <td class="r"><span class="amt">R$ 48,00</span></td>
+              <td class="r"><span class="amt">R$ 52,87</span></td>
+              <td class="r"><span class="amt">R$ 3.172<span class="cents">,20</span></span></td>
+              <td class="r"><span class="amt pos">+10,1%</span></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:60px;display:inline-block;">IPCA+29</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">Tesouro IPCA+ 2029</span></div></td>
+              <td><span class="tagcat"><span class="cdot" style="background:var(--gold)"></span>Renda fixa</span></td>
+              <td class="r mono">—</td>
+              <td class="r mono" style="color:var(--muted)">—</td>
+              <td class="r mono" style="color:var(--muted)">—</td>
+              <td class="r"><span class="amt">R$ 6.014<span class="cents">,00</span></span></td>
+              <td class="r"><span class="amt pos">+9,2%</span></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:60px;display:inline-block;">BTC</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">Bitcoin</span></div></td>
+              <td><span class="tagcat"><span class="cdot" style="background:var(--clay)"></span>Cripto</span></td>
+              <td class="r mono">0,012</td>
+              <td class="r"><span class="amt">R$ 374k</span></td>
+              <td class="r"><span class="amt">R$ 358k</span></td>
+              <td class="r"><span class="amt">R$ 1.719<span class="cents">,00</span></span></td>
+              <td class="r"><span class="amt neg">−4,3%</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

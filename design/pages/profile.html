@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Perfil · Quantia</title>
+<script>
+  (function(){try{var s=localStorage.getItem('quantia-theme');var d=window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',s||d);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/quantia.css" />
+</head>
+<body data-page="profile" data-eyebrow="Conta" data-title="Perfil" data-sub="Gabriel Silva · membro desde março de 2024." data-search="">
+<div class="shell">
+  <main class="main">
+    <div class="page">
+
+      <div class="grid">
+
+        <!-- coluna principal -->
+        <div class="col-8" style="display:flex;flex-direction:column;gap:var(--gut);">
+
+          <!-- dados pessoais -->
+          <div class="card">
+            <div class="row" style="gap:16px;margin-bottom:22px;">
+              <div class="avatar-lg">G</div>
+              <div style="flex:1;min-width:0;">
+                <div class="row" style="gap:10px;">
+                  <span style="font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:-.01em;">Gabriel Silva</span>
+                  <span class="tagx gold">Premium</span>
+                </div>
+                <div class="cell-sub" style="margin-top:3px;">gabriel@exemplo.com</div>
+              </div>
+              <button class="btn btn-ghost btn-sm">Trocar foto</button>
+            </div>
+
+            <div class="form-grid">
+              <div class="field"><label>Nome</label><div class="inp body"><input value="Gabriel" /></div></div>
+              <div class="field"><label>Sobrenome</label><div class="inp body"><input value="Silva" /></div></div>
+              <div class="field"><label>E-mail</label><div class="inp body"><input value="gabriel@exemplo.com" /></div></div>
+              <div class="field"><label>Telefone</label><div class="inp body"><input value="(11) 98765-4321" /></div></div>
+              <div class="field"><label>Moeda principal</label><button class="sel"><span>Real (R$)</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button></div>
+              <div class="field"><label>Fuso horário</label><button class="sel"><span>Brasília (GMT-3)</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button></div>
+            </div>
+
+            <div class="row" style="gap:10px;margin-top:22px;">
+              <button class="btn btn-primary">Salvar alterações</button>
+              <button class="btn btn-ghost">Cancelar</button>
+            </div>
+          </div>
+
+          <!-- preferências -->
+          <div class="card">
+            <div class="card-head"><h3>Preferências</h3></div>
+            <div class="setting-row">
+              <div class="txt"><div class="nm">Tema escuro</div><div class="ds">Use o toggle do topo para alternar a qualquer momento.</div></div>
+              <span class="switch on"></span>
+            </div>
+            <div class="setting-row">
+              <div class="txt"><div class="nm">Notificações por e-mail</div><div class="ds">Resumo de faturas, metas e vencimentos.</div></div>
+              <span class="switch on"></span>
+            </div>
+            <div class="setting-row">
+              <div class="txt"><div class="nm">Resumo semanal</div><div class="ds">Todo domingo, um panorama da semana.</div></div>
+              <span class="switch"></span>
+            </div>
+            <div class="setting-row">
+              <div class="txt"><div class="nm">Alertas de orçamento</div><div class="ds">Avise quando uma categoria passar de 90%.</div></div>
+              <span class="switch on"></span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- coluna lateral -->
+        <div class="col-4" style="display:flex;flex-direction:column;gap:var(--gut);">
+
+          <!-- plano -->
+          <div class="card">
+            <div class="card-head"><h3>Plano</h3></div>
+            <div class="row between" style="margin-bottom:4px;">
+              <span style="font-family:var(--display);font-weight:700;font-size:18px;">Pessoal</span>
+              <span class="amt" style="font-size:16px;"><span class="cur">R$</span>0<span style="color:var(--muted);font-size:12px;">/mês</span></span>
+            </div>
+            <p class="cell-sub" style="margin:0 0 14px;">Contas, transações e relatórios essenciais — sem custo.</p>
+            <div class="ledger-rule"></div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin:14px 0 16px;">
+              <div class="row" style="gap:9px;font-size:13.5px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--moss)" stroke-width="2.4"><path d="M5 12l5 5L20 7"/></svg>Contas e categorias ilimitadas</div>
+              <div class="row" style="gap:9px;font-size:13.5px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--moss)" stroke-width="2.4"><path d="M5 12l5 5L20 7"/></svg>Análises dos últimos 12 meses</div>
+              <div class="row" style="gap:9px;font-size:13.5px;color:var(--muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Insight diário com IA <span class="tagx gold" style="font-size:9.5px;">Premium</span></div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center;">Conhecer o Premium</button>
+          </div>
+
+          <!-- segurança -->
+          <div class="card">
+            <div class="card-head"><h3>Segurança</h3></div>
+            <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-bottom:14px;">Alterar senha</button>
+            <div class="setting-row" style="padding-top:0;">
+              <div class="txt"><div class="nm">MacBook · São Paulo</div><div class="ds">Sessão atual · agora</div></div>
+              <span class="st-pill ok">ativa</span>
+            </div>
+            <div class="setting-row">
+              <div class="txt"><div class="nm">iPhone · São Paulo</div><div class="ds">há 3 horas</div></div>
+              <button class="row-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:14px;color:var(--clay);">Sair de todas as sessões</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

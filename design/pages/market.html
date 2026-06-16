@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cotações · Quantia</title>
+<script>
+  (function(){try{var s=localStorage.getItem('quantia-theme');var d=window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',s||d);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/quantia.css" />
+</head>
+<body data-page="market" data-eyebrow="Mercado · B3" data-title="Cotações" data-sub="Ibovespa 128.940 pts · +0,8% hoje." data-search="Buscar ativo (PETR4, HGLG11…)">
+<div class="shell">
+  <main class="main">
+    <div class="page">
+
+      <!-- indicadores -->
+      <div class="stats" style="margin-bottom:26px;">
+        <div class="stat">
+          <div class="eyebrow">Ibovespa</div>
+          <div class="v">128.940</div>
+          <div class="foot"><span class="trend up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 15l7-7 7 7"/></svg>0,8%</span> hoje</div>
+        </div>
+        <div class="stat">
+          <div class="eyebrow">IFIX</div>
+          <div class="v">3.280</div>
+          <div class="foot"><span class="trend up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 15l7-7 7 7"/></svg>0,2%</span> hoje</div>
+        </div>
+        <div class="stat">
+          <div class="eyebrow">Dólar</div>
+          <div class="v"><span class="cur">R$</span>5,42</div>
+          <div class="foot"><span class="trend down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 9l7 7 7-7"/></svg>0,3%</span> hoje</div>
+        </div>
+        <div class="stat">
+          <div class="eyebrow">Bitcoin</div>
+          <div class="v"><span class="cur">R$</span>358.200</div>
+          <div class="foot"><span class="trend up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 15l7-7 7 7"/></svg>2,1%</span> hoje</div>
+        </div>
+      </div>
+
+      <!-- abas + busca -->
+      <div class="toolbar">
+        <div class="tabs">
+          <a class="tab active">Ações</a>
+          <a class="tab">FIIs</a>
+          <a class="tab">ETFs</a>
+          <a class="tab">Cripto</a>
+          <a class="tab">Moedas</a>
+        </div>
+        <span class="spacer"></span>
+        <label class="input-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+          <input placeholder="Buscar ativo…" aria-label="Buscar" />
+        </label>
+      </div>
+
+      <!-- tabela de ativos -->
+      <div class="card flush">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Ativo</th>
+              <th class="r">Preço</th>
+              <th class="r">Dia</th>
+              <th style="width:130px;">7 dias</th>
+              <th style="width:48px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:62px;display:inline-block;">PETR4</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">Petrobras</span></div></td>
+              <td class="r"><span class="amt">R$ 38,42</span></td>
+              <td class="r"><span class="amt pos">+1,8%</span></td>
+              <td><svg class="spark" viewBox="0 0 120 38" preserveAspectRatio="none"><polyline class="ch-line moss" style="stroke-width:2;fill:none" points="0,28 20,30 40,24 60,26 80,18 100,14 120,7"/></svg></td>
+              <td class="r"><button class="row-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:62px;display:inline-block;">VALE3</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">Vale</span></div></td>
+              <td class="r"><span class="amt">R$ 61,20</span></td>
+              <td class="r"><span class="amt neg">−0,4%</span></td>
+              <td><svg class="spark" viewBox="0 0 120 38" preserveAspectRatio="none"><polyline class="ch-line clay" style="stroke-width:2;fill:none" points="0,12 20,10 40,16 60,15 80,20 100,22 120,26"/></svg></td>
+              <td class="r"><button class="row-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:62px;display:inline-block;">ITUB4</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">Itaú Unibanco</span></div></td>
+              <td class="r"><span class="amt">R$ 33,10</span></td>
+              <td class="r"><span class="amt neg">−0,6%</span></td>
+              <td><svg class="spark" viewBox="0 0 120 38" preserveAspectRatio="none"><polyline class="ch-line clay" style="stroke-width:2;fill:none" points="0,14 20,16 40,13 60,18 80,17 100,22 120,25"/></svg></td>
+              <td class="r"><button class="row-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:62px;display:inline-block;">MGLU3</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">Magazine Luiza</span></div></td>
+              <td class="r"><span class="amt">R$ 2,14</span></td>
+              <td class="r"><span class="amt pos">+4,2%</span></td>
+              <td><svg class="spark" viewBox="0 0 120 38" preserveAspectRatio="none"><polyline class="ch-line moss" style="stroke-width:2;fill:none" points="0,30 20,26 40,28 60,20 80,16 100,12 120,5"/></svg></td>
+              <td class="r"><button class="row-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:62px;display:inline-block;">WEGE3</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">WEG</span></div></td>
+              <td class="r"><span class="amt">R$ 52,87</span></td>
+              <td class="r"><span class="amt pos">+0,9%</span></td>
+              <td><svg class="spark" viewBox="0 0 120 38" preserveAspectRatio="none"><polyline class="ch-line moss" style="stroke-width:2;fill:none" points="0,22 20,20 40,21 60,16 80,17 100,12 120,10"/></svg></td>
+              <td class="r"><button class="row-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:62px;display:inline-block;">BBAS3</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">Banco do Brasil</span></div></td>
+              <td class="r"><span class="amt">R$ 27,90</span></td>
+              <td class="r"><span class="amt pos">+1,1%</span></td>
+              <td><svg class="spark" viewBox="0 0 120 38" preserveAspectRatio="none"><polyline class="ch-line moss" style="stroke-width:2;fill:none" points="0,26 20,24 40,25 60,19 80,15 100,16 120,9"/></svg></td>
+              <td class="r"><button class="row-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:62px;display:inline-block;">ABEV3</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">Ambev</span></div></td>
+              <td class="r"><span class="amt">R$ 12,65</span></td>
+              <td class="r"><span class="amt neg">−0,2%</span></td>
+              <td><svg class="spark" viewBox="0 0 120 38" preserveAspectRatio="none"><polyline class="ch-line clay" style="stroke-width:2;fill:none" points="0,15 20,14 40,18 60,16 80,19 100,18 120,22"/></svg></td>
+              <td class="r"><button class="row-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="cell-main"><span style="font-family:var(--mono);font-weight:600;font-size:13px;width:62px;display:inline-block;">B3SA3</span><span class="nm" style="font-weight:400;color:var(--muted);font-size:13px;">B3</span></div></td>
+              <td class="r"><span class="amt">R$ 11,40</span></td>
+              <td class="r"><span class="amt pos">+0,5%</span></td>
+              <td><svg class="spark" viewBox="0 0 120 38" preserveAspectRatio="none"><polyline class="ch-line moss" style="stroke-width:2;fill:none" points="0,24 20,22 40,23 60,20 80,18 100,17 120,13"/></svg></td>
+              <td class="r"><button class="row-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"/></svg></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

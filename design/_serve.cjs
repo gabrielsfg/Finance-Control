@@ -6,7 +6,7 @@ const ROOT = path.join(__dirname); // pasta /design (caminho absoluto, sem cwd)
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml' };
 http.createServer((req, res) => {
   let p = decodeURIComponent((req.url || '/').split('?')[0]);
-  if (p === '/' || p === '') p = '/rebrand-model.html';
+  if (p === '/' || p === '') p = '/index.html';
   const fp = path.join(ROOT, p);
   fs.readFile(fp, (err, data) => {
     if (err) { res.writeHead(404, { 'content-type': 'text/plain' }); res.end('not found'); return; }
