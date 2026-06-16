@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simulações · Meta · Quantia</title>
+<script>
+  (function(){try{var s=localStorage.getItem('quantia-theme');var d=window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',s||d);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/quantia.css" />
+</head>
+<body data-page="simulations" data-eyebrow="Planejamento" data-title="Projeção de meta" data-sub="Descubra o aporte ou o prazo para alcançar um objetivo." data-cta="Salvar cenário" data-search="">
+<div class="shell">
+  <main class="main">
+    <div class="page">
+
+      <!-- abas de simulação -->
+      <div class="toolbar">
+        <div class="tabs">
+          <a class="tab" href="simulations.html">Juros compostos</a>
+          <a class="tab" href="simulations-aposentadoria.html">Aposentadoria</a>
+          <a class="tab" href="simulations-historica.html">Histórica</a>
+          <a class="tab" href="simulations-carteira.html">Carteira</a>
+          <a class="tab active">Meta</a>
+          <a class="tab" href="simulations-comparar.html">Comparar</a>
+        </div>
+      </div>
+
+      <!-- parâmetros + resultado -->
+      <div class="grid">
+        <div class="card col-4">
+          <div class="card-head"><h3>Parâmetros</h3></div>
+
+          <!-- modo: calcular prazo / aporte -->
+          <div class="seg-row" style="width:100%;margin-bottom:16px;">
+            <span class="opt active" style="flex:1;text-align:center;">⏱ Calcular prazo</span>
+            <span class="opt" style="flex:1;text-align:center;">💰 Calcular aporte</span>
+          </div>
+
+          <div class="field" style="max-width:none;margin-bottom:14px;">
+            <label>Valor da meta</label>
+            <div class="inp"><span class="cur">R$</span><input value="50.000,00" inputmode="decimal" /></div>
+          </div>
+          <div class="field" style="max-width:none;margin-bottom:14px;">
+            <label>Já tenho</label>
+            <div class="inp"><span class="cur">R$</span><input value="5.000,00" inputmode="decimal" /></div>
+          </div>
+          <div class="field" style="max-width:none;margin-bottom:14px;">
+            <label>Taxa anual</label>
+            <div class="inp"><input value="10,0" inputmode="decimal" /><span class="cur" style="margin-left:auto;">%</span></div>
+          </div>
+          <div class="field" style="max-width:none;margin-bottom:14px;">
+            <label>Aporte mensal</label>
+            <div class="inp"><span class="cur">R$</span><input value="1.000,00" inputmode="decimal" /></div>
+          </div>
+          <div class="field" style="max-width:none;margin-bottom:4px;">
+            <label>Tipo de ativo (para IR)</label>
+            <div class="sel" style="width:100%;"><span>Renda fixa bancária</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg></div>
+          </div>
+        </div>
+
+        <div class="card col-4">
+          <!-- card resultado (verde) -->
+          <div style="border-radius:var(--r-lg);padding:20px;background:linear-gradient(135deg,color-mix(in srgb,var(--moss) 14%,transparent),color-mix(in srgb,var(--moss) 5%,transparent));border:1px solid color-mix(in srgb,var(--moss) 30%,transparent);height:100%;">
+            <div class="eyebrow" style="color:var(--moss);margin-bottom:12px;">Prazo necessário</div>
+            <div style="font-family:var(--mono);font-weight:700;font-size:38px;letter-spacing:-.03em;line-height:.95;">3 anos</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;">e 5 meses · 41 meses no total</div>
+            <div style="margin-top:20px;display:flex;flex-direction:column;gap:11px;font-family:var(--mono);font-size:12px;">
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Meta</span><span style="color:var(--ink);">R$ 50.000,00</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Já guardado</span><span style="color:var(--ink);">R$ 5.000,00</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Total aportado</span><span style="color:var(--gold);">R$ 46.000,00</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Ganho líquido</span><span style="color:var(--moss);">+R$ 4.860,00</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Imposto total</span><span style="color:var(--clay);">R$ 1.140,00</span></div>
+            </div>
+            <div style="margin-top:18px;">
+              <div class="row between" style="margin-bottom:6px;font-family:var(--mono);font-size:11px;"><span class="muted">Progresso atual</span><span style="color:var(--moss);">10,0%</span></div>
+              <div style="height:8px;border-radius:var(--r-pill);overflow:hidden;background:color-mix(in srgb,var(--moss) 20%,transparent);"><div style="height:100%;width:10%;background:var(--moss);border-radius:var(--r-pill);"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card col-4">
+          <div class="card-head"><h3>Curva até a meta</h3></div>
+          <svg class="chart" viewBox="0 0 360 250" role="img" aria-label="Curva de crescimento do patrimônio até atingir a meta">
+            <line class="ch-grid" x1="36" y1="40" x2="344" y2="40"/>
+            <line class="ch-grid" x1="36" y1="86" x2="344" y2="86"/>
+            <line class="ch-grid" x1="36" y1="132" x2="344" y2="132"/>
+            <line class="ch-base" x1="36" y1="200" x2="344" y2="200"/>
+            <!-- linha de meta -->
+            <line x1="36" y1="46" x2="344" y2="46" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="5 3"/>
+            <text x="340" y="40" text-anchor="end" font-size="10.5" fill="var(--gold)" font-family="var(--mono)">Meta · R$ 50k</text>
+            <!-- investido (amarelo) -->
+            <path class="ch-line" style="stroke:var(--gold);stroke-width:2;opacity:.6" d="M44,194 L94,176 L144,158 L194,138 L244,118 L294,98 L336,80"/>
+            <!-- patrimônio bruto (verde, área) -->
+            <path class="ch-area moss" d="M44,194 L94,172 L144,148 L194,122 L244,94 L294,66 L336,46 L336,200 L44,200 Z"/>
+            <path class="ch-line moss" d="M44,194 L94,172 L144,148 L194,122 L244,94 L294,66 L336,46"/>
+            <circle class="ch-dot" cx="336" cy="46" r="5" style="stroke:var(--moss)"/>
+            <circle cx="336" cy="46" r="2.3" style="fill:var(--moss)"/>
+            <text class="ch-axis" x="44" y="220" text-anchor="middle">M0</text>
+            <text class="ch-axis" x="194" y="220" text-anchor="middle">M20</text>
+            <text class="ch-axis" x="336" y="220" text-anchor="end">M41</text>
+          </svg>
+          <div class="legend">
+            <span class="lg"><span class="sw" style="background:var(--moss)"></span>Bruto</span>
+            <span class="lg"><span class="sw" style="background:#7c6fe0"></span>Líquido</span>
+            <span class="lg"><span class="sw" style="background:var(--gold)"></span>Investido</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- fluxo financeiro completo -->
+      <div class="section-title">
+        <h2>Fluxo financeiro completo</h2>
+        <div class="ln"></div>
+      </div>
+
+      <div class="card">
+        <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;">
+          <div class="stat" style="box-shadow:none;"><div class="eyebrow">Aporte inicial</div><div class="v amt">R$ 5.000</div></div>
+          <div class="stat" style="box-shadow:none;"><div class="eyebrow">Aportes mensais</div><div class="v amt">R$ 41.000</div></div>
+          <div class="stat" style="box-shadow:none;"><div class="eyebrow">Total aportado</div><div class="v amt" style="color:var(--gold)">R$ 46.000</div></div>
+          <div class="stat" style="box-shadow:none;"><div class="eyebrow">Patrimônio bruto</div><div class="v amt">R$ 52.000</div></div>
+          <div class="stat" style="box-shadow:none;"><div class="eyebrow">Rendimento bruto</div><div class="v amt" style="color:var(--moss)">R$ 6.000</div></div>
+          <div class="stat" style="box-shadow:none;"><div class="eyebrow">IR a pagar</div><div class="v amt" style="color:var(--gold)">R$ 1.020</div></div>
+          <div class="stat" style="box-shadow:none;"><div class="eyebrow">IOF a pagar</div><div class="v amt" style="color:var(--clay)">R$ 0</div></div>
+          <div class="stat" style="box-shadow:none;"><div class="eyebrow">Patrimônio líquido</div><div class="v amt" style="color:#7c6fe0">R$ 50.860</div></div>
+        </div>
+        <div class="row wrap" style="gap:24px;margin-top:16px;padding-top:16px;border-top:1px solid var(--mist);font-family:var(--mono);font-size:12px;">
+          <span class="muted">Renda bruta no último mês: <b style="color:var(--ink);">R$ 433/mês</b></span>
+          <span class="muted">Renda líquida: <b style="color:var(--moss);">R$ 368/mês</b></span>
+          <span class="muted">Alíquota IR: <b style="color:var(--gold);">17,5% — 361 a 720 dias</b></span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

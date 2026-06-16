@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simulações · Comparar · Quantia</title>
+<script>
+  (function(){try{var s=localStorage.getItem('quantia-theme');var d=window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',s||d);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/quantia.css" />
+</head>
+<body data-page="simulations" data-eyebrow="Planejamento" data-title="Comparar cenários" data-sub="Coloque diferentes investimentos lado a lado." data-cta="Salvar cenário" data-search="">
+<div class="shell">
+  <main class="main">
+    <div class="page">
+
+      <!-- abas de simulação -->
+      <div class="toolbar">
+        <div class="tabs">
+          <a class="tab" href="simulations.html">Juros compostos</a>
+          <a class="tab" href="simulations-aposentadoria.html">Aposentadoria</a>
+          <a class="tab" href="simulations-historica.html">Histórica</a>
+          <a class="tab" href="simulations-carteira.html">Carteira</a>
+          <a class="tab" href="simulations-meta.html">Meta</a>
+          <a class="tab active">Comparar</a>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- coluna esquerda: parâmetros + taxas + cenários -->
+        <div class="col-4">
+          <div class="card" style="margin-bottom:20px;">
+            <div class="card-head"><h3>Parâmetros</h3></div>
+            <div class="field" style="max-width:none;margin-bottom:14px;">
+              <label>Valor inicial</label>
+              <div class="inp"><span class="cur">R$</span><input value="10.000,00" inputmode="decimal" /></div>
+            </div>
+            <div class="field" style="max-width:none;margin-bottom:14px;">
+              <label>Aporte mensal</label>
+              <div class="inp"><span class="cur">R$</span><input value="500,00" inputmode="decimal" /></div>
+            </div>
+            <label style="font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:8px;">Período</label>
+            <div class="seg-row" style="flex-wrap:wrap;">
+              <span class="opt">1a</span><span class="opt">2a</span><span class="opt">5a</span>
+              <span class="opt active">10a</span><span class="opt">20a</span><span class="opt">30a</span>
+            </div>
+          </div>
+
+          <!-- taxas de referência -->
+          <div class="card" style="margin-bottom:20px;">
+            <div class="card-head">
+              <h3 style="font-size:14px;">Taxas de referência</h3>
+              <span class="st-pill info" style="margin-left:auto;">Banco Central</span>
+            </div>
+            <div class="row between" style="padding:6px 0;font-family:var(--mono);font-size:13px;"><span class="muted">CDI</span><span style="color:var(--moss);">11,15% a.a.</span></div>
+            <div class="row between" style="padding:6px 0;font-family:var(--mono);font-size:13px;"><span class="muted">SELIC</span><span style="color:var(--moss);">11,25% a.a.</span></div>
+            <div class="row between" style="padding:6px 0;font-family:var(--mono);font-size:13px;"><span class="muted">IPCA 12m</span><span style="color:var(--moss);">4,62% a.a.</span></div>
+          </div>
+
+          <!-- cenários -->
+          <div class="section-title" style="margin:0 0 14px;">
+            <h2 style="font-size:15px;">Cenários</h2>
+            <div class="ln"></div>
+            <a class="link" href="#">+ Adicionar</a>
+          </div>
+
+          <!-- cenário vencedor -->
+          <div class="card" style="margin-bottom:12px;border-color:color-mix(in srgb,#2C6B57 40%,transparent);background:color-mix(in srgb,#2C6B57 5%,transparent);">
+            <div class="row between" style="margin-bottom:10px;">
+              <span class="cell-main"><span class="cdot" style="background:#2C6B57"></span><span class="nm">Ibovespa (avg)</span><svg viewBox="0 0 24 24" fill="var(--gold)" stroke="none" style="width:13px;height:13px;"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z"/></svg></span>
+              <span class="muted" style="font-family:var(--mono);font-size:11px;">trocar</span>
+            </div>
+            <div class="row" style="gap:6px;margin-bottom:10px;"><span class="st-pill soon">estimado</span><span class="muted" style="font-size:10.5px;">média histórica</span></div>
+            <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+              <div class="field" style="max-width:none;"><label>Taxa anual</label><div class="inp" style="padding:8px 12px;"><input value="13,0" /><span class="cur">%</span></div></div>
+              <div class="field" style="max-width:none;"><label>Tipo (IR)</label><div class="sel" style="padding:8px 10px;font-size:12px;min-width:0;"><span>Ações</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg></div></div>
+            </div>
+            <div class="row between" style="padding-top:10px;border-top:1px solid color-mix(in srgb,#2C6B57 20%,var(--mist));"><span class="muted" style="font-size:11px;">Patrimônio bruto</span><span class="amt" style="color:#2C6B57;font-size:14px;font-weight:600;">R$ 204.318</span></div>
+          </div>
+
+          <!-- cenário 2 -->
+          <div class="card" style="margin-bottom:12px;">
+            <div class="row between" style="margin-bottom:10px;">
+              <span class="cell-main"><span class="cdot" style="background:#1F3CE0"></span><span class="nm">CDB 100% CDI</span></span>
+              <span class="muted" style="font-family:var(--mono);font-size:11px;">trocar</span>
+            </div>
+            <div class="row" style="gap:6px;margin-bottom:10px;"><span class="muted" style="font-size:10.5px;">BACEN (dinâmico)</span></div>
+            <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+              <div class="field" style="max-width:none;"><label>Taxa anual</label><div class="inp" style="padding:8px 12px;"><input value="11,15" /><span class="cur">%</span></div></div>
+              <div class="field" style="max-width:none;"><label>Tipo (IR)</label><div class="sel" style="padding:8px 10px;font-size:12px;min-width:0;"><span>RF bancária</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg></div></div>
+            </div>
+            <div class="row between" style="padding-top:10px;border-top:1px solid var(--mist);"><span class="muted" style="font-size:11px;">Patrimônio bruto</span><span class="amt" style="color:#1F3CE0;font-size:14px;font-weight:600;">R$ 172.940</span></div>
+          </div>
+
+          <!-- cenário 3 -->
+          <div class="card">
+            <div class="row between" style="margin-bottom:10px;">
+              <span class="cell-main"><span class="cdot" style="background:#7c6fe0"></span><span class="nm">Tesouro IPCA+</span></span>
+              <span class="muted" style="font-family:var(--mono);font-size:11px;">trocar</span>
+            </div>
+            <div class="row" style="gap:6px;margin-bottom:10px;"><span class="st-pill soon">estimado</span></div>
+            <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+              <div class="field" style="max-width:none;"><label>Taxa anual</label><div class="inp" style="padding:8px 12px;"><input value="8,5" /><span class="cur">%</span></div></div>
+              <div class="field" style="max-width:none;"><label>Tipo (IR)</label><div class="sel" style="padding:8px 10px;font-size:12px;min-width:0;"><span>Tesouro</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg></div></div>
+            </div>
+            <div class="row between" style="padding-top:10px;border-top:1px solid var(--mist);"><span class="muted" style="font-size:11px;">Patrimônio bruto</span><span class="amt" style="color:#7c6fe0;font-size:14px;font-weight:600;">R$ 138.260</span></div>
+          </div>
+        </div>
+
+        <!-- coluna direita: gráfico + tabela -->
+        <div class="col-8">
+          <div class="card" style="margin-bottom:20px;">
+            <div class="card-head">
+              <h3>Evolução comparada</h3>
+              <span class="sub-h">Projeção de 10 anos · agrupado por ano</span>
+              <div class="seg-row" style="margin-left:auto;padding:2px;">
+                <span class="opt active" style="padding:5px 10px;font-size:12px;">Bruto</span>
+                <span class="opt" style="padding:5px 10px;font-size:12px;">Líquido</span>
+              </div>
+            </div>
+            <svg class="chart" viewBox="0 0 640 260" role="img" aria-label="Comparação da evolução de três cenários de investimento em 10 anos">
+              <line class="ch-grid" x1="44" y1="40" x2="620" y2="40"/>
+              <line class="ch-grid" x1="44" y1="84" x2="620" y2="84"/>
+              <line class="ch-grid" x1="44" y1="128" x2="620" y2="128"/>
+              <line class="ch-grid" x1="44" y1="172" x2="620" y2="172"/>
+              <line class="ch-base" x1="44" y1="210" x2="620" y2="210"/>
+              <text class="ch-axis" x="38" y="214" text-anchor="end">0</text>
+              <text class="ch-axis" x="38" y="172" text-anchor="end">50k</text>
+              <text class="ch-axis" x="38" y="128" text-anchor="end">100k</text>
+              <text class="ch-axis" x="38" y="44" text-anchor="end">200k</text>
+              <!-- Tesouro IPCA+ (roxo) -->
+              <path class="ch-line" style="stroke:#7c6fe0;stroke-width:1.8" d="M52,204 L108,196 L164,186 L220,174 L276,160 L332,144 L388,125 L444,103 L500,88 L556,76 L612,64"/>
+              <!-- CDB CDI (cobalto) -->
+              <path class="ch-line" style="stroke:#1F3CE0;stroke-width:1.8" d="M52,204 L108,194 L164,182 L220,168 L276,152 L332,133 L388,111 L444,86 L500,68 L556,56 L612,42"/>
+              <!-- Ibovespa (verde, vencedor, mais grosso) -->
+              <path class="ch-line moss" style="stroke-width:2.8" d="M52,204 L108,192 L164,178 L220,161 L276,141 L332,118 L388,91 L444,60 L500,42 L556,28 L612,18"/>
+              <circle class="ch-dot" cx="612" cy="18" r="5" style="stroke:var(--moss)"/>
+              <circle cx="612" cy="18" r="2.3" style="fill:var(--moss)"/>
+              <text class="ch-axis" x="52" y="230" text-anchor="middle">ano 1</text>
+              <text class="ch-axis" x="332" y="230" text-anchor="middle">5</text>
+              <text class="ch-axis" x="612" y="230" text-anchor="end">10</text>
+            </svg>
+            <div class="legend">
+              <span class="lg"><span class="sw" style="background:var(--moss)"></span>Ibovespa (avg) 🏆</span>
+              <span class="lg"><span class="sw" style="background:#1F3CE0"></span>CDB 100% CDI</span>
+              <span class="lg"><span class="sw" style="background:#7c6fe0"></span>Tesouro IPCA+</span>
+            </div>
+          </div>
+
+          <!-- tabela resultado final -->
+          <div class="card flush">
+            <div class="card-head">
+              <h3>Resultado final</h3>
+              <span class="sub-h">Após 10 anos — patrimônio bruto</span>
+            </div>
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Cenário</th>
+                  <th class="r">Taxa</th>
+                  <th class="r">Patrimônio</th>
+                  <th class="r">Rendimento</th>
+                  <th class="r">Imposto</th>
+                  <th class="r">Renda/mês</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background:var(--surface-2);">
+                  <td><span class="cell-main"><span class="cdot" style="background:#2C6B57"></span><span class="nm">Ibovespa (avg)</span><svg viewBox="0 0 24 24" fill="var(--gold)" stroke="none" style="width:12px;height:12px;"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5z"/></svg></span><div class="cell-sub">estimado</div></td>
+                  <td class="r amt muted">13,00% a.a.</td>
+                  <td class="r amt" style="color:#2C6B57;font-weight:600;">R$ 204.318</td>
+                  <td class="r amt pos">+R$ 134.318</td>
+                  <td class="r amt" style="color:var(--gold);">R$ 20.148<div class="cell-sub">15,0% IR</div></td>
+                  <td class="r amt">R$ 2.213</td>
+                </tr>
+                <tr>
+                  <td><span class="cell-main"><span class="cdot" style="background:#1F3CE0"></span><span class="nm">CDB 100% CDI</span></span><div class="cell-sub">BACEN</div></td>
+                  <td class="r amt muted">11,15% a.a.</td>
+                  <td class="r amt" style="color:#1F3CE0;font-weight:600;">R$ 172.940</td>
+                  <td class="r amt pos">+R$ 102.940</td>
+                  <td class="r amt" style="color:var(--gold);">R$ 15.441<div class="cell-sub">15,0% IR</div></td>
+                  <td class="r amt">R$ 1.873</td>
+                </tr>
+                <tr>
+                  <td><span class="cell-main"><span class="cdot" style="background:#7c6fe0"></span><span class="nm">Tesouro IPCA+</span></span><div class="cell-sub">estimado</div></td>
+                  <td class="r amt muted">8,50% a.a.</td>
+                  <td class="r amt" style="color:#7c6fe0;font-weight:600;">R$ 138.260</td>
+                  <td class="r amt pos">+R$ 68.260</td>
+                  <td class="r amt" style="color:var(--gold);">R$ 10.239<div class="cell-sub">15,0% IR</div></td>
+                  <td class="r amt">R$ 1.498</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="row wrap" style="gap:20px;margin-top:14px;padding:0 16px;font-family:var(--mono);font-size:11px;">
+              <span class="muted">Total aportado: <b style="color:var(--ink);">R$ 70.000</b></span>
+              <span class="muted">Inicial: <b style="color:var(--ink);">R$ 10.000</b></span>
+              <span class="muted">Mensal: <b style="color:var(--ink);">R$ 500</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

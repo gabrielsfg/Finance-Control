@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Análises · Projeções · Quantia</title>
+<script>
+  (function(){try{var s=localStorage.getItem('quantia-theme');var d=window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',s||d);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/quantia.css" />
+</head>
+<body data-page="analytics" data-eyebrow="Análises · Junho 2026" data-title="Projeções" data-sub="Para onde o seu dinheiro caminha — saldo, patrimônio e liberdade." data-search="Buscar relatório…">
+<div class="shell">
+  <main class="main">
+    <div class="page">
+
+      <!-- abas de análise -->
+      <div class="toolbar">
+        <div class="tabs">
+          <a class="tab" href="analytics.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 3"/></svg>Gastos</a>
+          <a class="tab" href="analytics-patrimonio.html">Patrimônio</a>
+          <a class="tab" href="analytics-investimentos.html">Investimentos</a>
+          <a class="tab active">Projeções</a>
+          <a class="tab" href="analytics-economia.html">Economia</a>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="stats" style="margin-bottom:22px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));">
+        <div class="stat">
+          <div class="eyebrow">Saldo proj. fim do mês</div>
+          <div class="v">R$ 4.180</div>
+          <div class="foot">após contas previstas</div>
+        </div>
+        <div class="stat">
+          <div class="eyebrow">Próx. compromissos</div>
+          <div class="v" style="color:var(--clay)">R$ 6.420</div>
+          <div class="foot">próximos 3 meses</div>
+        </div>
+        <div class="stat">
+          <div class="eyebrow">Patrimônio em 12m</div>
+          <div class="v" style="color:var(--accent)">R$ 112,8k</div>
+          <div class="foot">projetado</div>
+        </div>
+        <div class="stat">
+          <div class="eyebrow">Meta de poupança anual</div>
+          <div class="v" style="color:#7c6fe0">R$ 33,5k</div>
+          <div class="foot">no ritmo atual</div>
+        </div>
+      </div>
+
+      <!-- linha do tempo financeira -->
+      <div class="card" style="margin-bottom:22px;">
+        <div class="card-head">
+          <h3>Linha do tempo financeira</h3>
+          <a class="link" href="#">marcos previstos</a>
+        </div>
+        <svg class="chart" viewBox="0 0 760 150" role="img" aria-label="Marcos financeiros projetados ao longo do tempo">
+          <line x1="40" y1="80" x2="724" y2="80" stroke="var(--mist)" stroke-width="2"/>
+          <!-- marco 1 -->
+          <circle cx="120" cy="80" r="7" fill="var(--moss)"/>
+          <line x1="120" y1="73" x2="120" y2="44" stroke="var(--mist)"/>
+          <text x="120" y="36" text-anchor="middle" font-size="11.5" fill="var(--ink)" font-family="var(--mono)" font-weight="600">Reserva 6 meses</text>
+          <text x="120" y="104" text-anchor="middle" class="ch-axis">set/2026</text>
+          <!-- marco 2 -->
+          <circle cx="300" cy="80" r="7" fill="var(--accent)"/>
+          <line x1="300" y1="73" x2="300" y2="44" stroke="var(--mist)"/>
+          <text x="300" y="36" text-anchor="middle" font-size="11.5" fill="var(--ink)" font-family="var(--mono)" font-weight="600">R$ 100 mil</text>
+          <text x="300" y="104" text-anchor="middle" class="ch-axis">fev/2027</text>
+          <!-- marco 3 -->
+          <circle cx="500" cy="80" r="7" fill="var(--gold)"/>
+          <line x1="500" y1="73" x2="500" y2="44" stroke="var(--mist)"/>
+          <text x="500" y="36" text-anchor="middle" font-size="11.5" fill="var(--ink)" font-family="var(--mono)" font-weight="600">Entrada do imóvel</text>
+          <text x="500" y="104" text-anchor="middle" class="ch-axis">out/2028</text>
+          <!-- marco 4 -->
+          <circle cx="680" cy="80" r="7" fill="#7c6fe0"/>
+          <line x1="680" y1="73" x2="680" y2="44" stroke="var(--mist)"/>
+          <text x="680" y="36" text-anchor="middle" font-size="11.5" fill="var(--ink)" font-family="var(--mono)" font-weight="600">R$ 250 mil</text>
+          <text x="680" y="104" text-anchor="middle" class="ch-axis">2030</text>
+        </svg>
+      </div>
+
+      <!-- grade de gráficos de projeção -->
+      <div class="grid">
+        <!-- patrimônio projetado -->
+        <div class="card col-6">
+          <div class="card-head">
+            <h3>Patrimônio projetado</h3>
+            <a class="link" href="#">24 meses</a>
+          </div>
+          <svg class="chart" viewBox="0 0 360 200" role="img" aria-label="Projeção do patrimônio para os próximos 24 meses">
+            <line class="ch-grid" x1="34" y1="34" x2="344" y2="34"/>
+            <line class="ch-grid" x1="34" y1="74" x2="344" y2="74"/>
+            <line class="ch-grid" x1="34" y1="114" x2="344" y2="114"/>
+            <line class="ch-base" x1="34" y1="160" x2="344" y2="160"/>
+            <!-- histórico (sólido) -->
+            <path class="ch-line moss" d="M42,134 L92,124 L142,110 L192,96"/>
+            <!-- projetado (tracejado) -->
+            <path class="ch-line" style="stroke:var(--moss);stroke-dasharray:5 4;opacity:.7" d="M192,96 L242,76 L292,54 L336,34"/>
+            <circle cx="192" cy="96" r="4" class="ch-dot" style="stroke:var(--moss)"/>
+            <text class="ch-axis" x="42" y="178" text-anchor="middle">hoje</text>
+            <text class="ch-axis" x="192" y="178" text-anchor="middle">+12m</text>
+            <text class="ch-axis" x="336" y="178" text-anchor="end">+24m</text>
+            <text class="ch-callout" x="336" y="28" text-anchor="end" font-size="11">R$ 138k</text>
+          </svg>
+          <p class="chart-note">Crescimento médio de <b>+R$ 2,7 mil/mês</b> mantém a trajetória de alta.</p>
+        </div>
+
+        <!-- renda passiva -->
+        <div class="card col-6">
+          <div class="card-head">
+            <h3>Renda passiva projetada</h3>
+            <a class="link" href="#">cobertura</a>
+          </div>
+          <svg class="chart" viewBox="0 0 360 200" role="img" aria-label="Projeção da renda passiva vs custo de vida mensal">
+            <line class="ch-grid" x1="34" y1="34" x2="344" y2="34"/>
+            <line class="ch-grid" x1="34" y1="74" x2="344" y2="74"/>
+            <line class="ch-grid" x1="34" y1="114" x2="344" y2="114"/>
+            <line class="ch-base" x1="34" y1="160" x2="344" y2="160"/>
+            <!-- custo de vida (linha clay) -->
+            <line x1="34" y1="60" x2="344" y2="60" stroke="var(--clay)" stroke-width="1.5" stroke-dasharray="5 3"/>
+            <text x="340" y="54" text-anchor="end" font-size="10.5" fill="var(--clay)" font-family="var(--mono)">Custo de vida</text>
+            <!-- renda passiva (área accent) -->
+            <path class="ch-area" d="M42,150 L92,144 L142,135 L192,123 L242,108 L292,90 L336,72 L336,160 L42,160 Z"/>
+            <path class="ch-line" d="M42,150 L92,144 L142,135 L192,123 L242,108 L292,90 L336,72"/>
+            <text class="ch-axis" x="42" y="178" text-anchor="middle">hoje</text>
+            <text class="ch-axis" x="336" y="178" text-anchor="end">+24m</text>
+          </svg>
+          <p class="chart-note">Renda passiva cobre <b>38%</b> do custo de vida — liberdade financeira estimada em ~9 anos.</p>
+        </div>
+
+        <!-- taxa de poupança -->
+        <div class="card col-6">
+          <div class="card-head">
+            <h3>Taxa de poupança</h3>
+            <a class="link" href="#">6 meses</a>
+          </div>
+          <svg class="chart" viewBox="0 0 360 200" role="img" aria-label="Taxa de poupança mês a mês">
+            <line class="ch-grid" x1="34" y1="40" x2="344" y2="40"/>
+            <line class="ch-grid" x1="34" y1="84" x2="344" y2="84"/>
+            <line class="ch-grid" x1="34" y1="128" x2="344" y2="128"/>
+            <line class="ch-base" x1="34" y1="160" x2="344" y2="160"/>
+            <text class="ch-axis" x="28" y="44" text-anchor="end">50%</text>
+            <text class="ch-axis" x="28" y="128" text-anchor="end">10%</text>
+            <rect class="bar-in" x="48"  y="96"  width="34" height="64"  rx="4"/>
+            <rect class="bar-in" x="100" y="84"  width="34" height="76"  rx="4"/>
+            <rect class="bar-in" x="152" y="104" width="34" height="56"  rx="4"/>
+            <rect class="bar-in" x="204" y="72"  width="34" height="88"  rx="4"/>
+            <rect class="bar-in" x="256" y="60"  width="34" height="100" rx="4"/>
+            <rect class="bar-in" x="308" y="52"  width="34" height="108" rx="4"/>
+            <text class="ch-axis" x="65"  y="178" text-anchor="middle">jan</text>
+            <text class="ch-axis" x="221" y="178" text-anchor="middle">abr</text>
+            <text class="ch-axis" x="325" y="178" text-anchor="middle">jun</text>
+          </svg>
+          <p class="chart-note">Tendência de alta — junho fechou em <b>41%</b>, melhor mês do semestre.</p>
+        </div>
+
+        <!-- saldo projetado do mês -->
+        <div class="card col-6">
+          <div class="card-head">
+            <h3>Saldo projetado do mês</h3>
+            <a class="link" href="#">30 dias</a>
+          </div>
+          <svg class="chart" viewBox="0 0 360 200" role="img" aria-label="Projeção do saldo da conta ao longo dos próximos 30 dias">
+            <line class="ch-grid" x1="34" y1="40" x2="344" y2="40"/>
+            <line class="ch-grid" x1="34" y1="84" x2="344" y2="84"/>
+            <line class="ch-base" x1="34" y1="130" x2="344" y2="130"/>
+            <!-- saldo realizado (sólido) -->
+            <path class="ch-line" d="M42,70 L100,62 L158,96 L200,90"/>
+            <!-- projetado (tracejado) -->
+            <path class="ch-line" style="stroke-dasharray:5 4;opacity:.7" d="M200,90 L258,118 L316,84 L336,74"/>
+            <circle cx="200" cy="90" r="4" class="ch-dot"/>
+            <text class="ch-axis" x="42" y="150" text-anchor="middle">dia 1</text>
+            <text class="ch-axis" x="200" y="150" text-anchor="middle">hoje</text>
+            <text class="ch-axis" x="336" y="150" text-anchor="end">dia 30</text>
+            <text class="ch-callout" x="336" y="68" text-anchor="end" font-size="11">R$ 4.180</text>
+          </svg>
+          <p class="chart-note">Vale do mês na 3ª semana (contas fixas), recuperando para <b>R$ 4.180</b> no fechamento.</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="../assets/shell.js"></script>
+</body>
+</html>
