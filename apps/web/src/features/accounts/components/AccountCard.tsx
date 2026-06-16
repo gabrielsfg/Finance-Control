@@ -35,7 +35,8 @@ export const AccountCard = ({
 
   return (
     <div
-      className="border-border bg-surface group relative flex flex-col gap-3 rounded-xl border p-5 transition-shadow hover:shadow-sm cursor-pointer"
+      className="group relative flex flex-col gap-3 rounded-[20px] border p-5 transition-shadow hover:shadow-sm cursor-pointer"
+      style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
       onClick={onCardClick}
     >
       {account.isDefaultAccount ? (
@@ -61,7 +62,7 @@ export const AccountCard = ({
           <Icon size={18} strokeWidth={1.75} style={{ color }} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-500 text-text truncate text-[15px]">{account.name}</p>
+          <p className="font-medium text-[--text] truncate text-[15px]">{account.name}</p>
           <div className="mt-0.5 flex items-center gap-1.5">
             <p className="text-text-muted text-[12px]">{label}</p>
             <span
@@ -85,7 +86,7 @@ export const AccountCard = ({
         </p>
         <p
           className={cn(
-            "font-money font-600 text-[22px] tracking-tight",
+            "font-money font-bold text-[22px] tracking-tight",
             isNegative ? "text-red" : "text-text",
           )}
         >
@@ -118,7 +119,7 @@ export const AccountCard = ({
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(); }}
           title="Editar conta"
-          className="border-border text-text-sub hover:bg-surface2 hover:text-text flex h-7 flex-1 items-center justify-center gap-1.5 rounded-lg border text-[13px] transition-colors"
+          className="border-border text-text-sub hover:bg-surface2 hover:text-text flex h-7 flex-1 items-center justify-center gap-1.5 rounded-[9px] border text-[13px] transition-colors"
         >
           <Pencil size={12} />
           Editar
@@ -126,7 +127,7 @@ export const AccountCard = ({
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(account); }}
           title="Excluir conta"
-          className="border-red/40 text-red hover:bg-red/10 flex h-7 flex-1 items-center justify-center gap-1.5 rounded-lg border text-[13px] transition-colors"
+          className="border-red/40 text-red hover:bg-red/10 flex h-7 flex-1 items-center justify-center gap-1.5 rounded-[9px] border text-[13px] transition-colors"
         >
           <Trash2 size={12} />
           Excluir

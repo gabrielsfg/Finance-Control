@@ -21,7 +21,7 @@ type Props = {
 export const TransactionsTable = ({ transactions, search, onEdit, onDelete }: Props) => {
   if (transactions.length === 0) {
     return (
-      <div className="border-border bg-surface overflow-hidden rounded-xl border">
+      <div className="overflow-hidden rounded-[20px] border" style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}>
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="bg-surface2 mb-4 flex h-12 w-12 items-center justify-center rounded-[12px]">
             <ArrowLeftRight size={20} className="text-text-muted" strokeWidth={1.5} />
@@ -36,7 +36,7 @@ export const TransactionsTable = ({ transactions, search, onEdit, onDelete }: Pr
   }
 
   return (
-    <div className="border-border bg-surface overflow-hidden rounded-xl border">
+    <div className="overflow-hidden rounded-[20px] border" style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}>
       <table className="w-full">
         <thead>
           <tr className="border-border border-b">
@@ -107,7 +107,7 @@ export const TransactionsTable = ({ transactions, search, onEdit, onDelete }: Pr
               <td className="px-5 py-3.5 text-right">
                 <span
                   className={cn(
-                    "font-money font-600 text-[15px]",
+                    "font-money font-semibold text-[15px]",
                     t.type === "Income" ? "text-green" : "text-text",
                   )}
                 >
@@ -119,13 +119,13 @@ export const TransactionsTable = ({ transactions, search, onEdit, onDelete }: Pr
                 <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <button
                     onClick={() => onEdit(t)}
-                    className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                    className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors"
                   >
                     <Pencil size={13} />
                   </button>
                   <button
                     onClick={() => onDelete(t)}
-                    className="text-text-sub hover:bg-red/10 hover:text-red flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                    className="text-text-sub hover:bg-red/10 hover:text-red flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors"
                   >
                     <Trash2 size={13} />
                   </button>

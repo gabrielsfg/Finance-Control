@@ -57,20 +57,18 @@ export const CategoryDonutChart = ({ categories }: Props) => {
   const onMouseLeave = useCallback(() => setActiveIndex(undefined), []);
 
   const header = (
-    <div className="mb-4 flex items-start justify-between">
-      <div>
-        <h2 className="font-display font-700 text-text text-[18px] tracking-tight">Gastos por Categoria</h2>
-        <p className="text-text-muted mt-0.5 text-[13px]">{formatDateMonth(new Date())}</p>
-      </div>
-      <Link href="/categories" className="font-500 text-text-sub hover:text-green text-[12px] transition-colors">
-        Ver categorias →
+    <div className="mb-4 flex items-center gap-[10px]">
+      <h2 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[--text]">Gastos por Categoria</h2>
+      <span className="font-mono text-[11px] text-[--text-sub]">{formatDateMonth(new Date())}</span>
+      <Link href="/categories" className="ml-auto font-mono text-[11px] tracking-[0.1em] uppercase text-[--brand-accent] hover:underline">
+        Ver categorias
       </Link>
     </div>
   );
 
   if (data.length === 0) {
     return (
-      <div className="border-border bg-surface flex h-full flex-col rounded-xl border p-5">
+      <div className="border-[--border-color] bg-[--surface] flex h-full flex-col rounded-[20px] border p-[22px]">
         {header}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8">
           <PieChartIcon size={32} className="text-text-muted opacity-40" />
@@ -81,7 +79,7 @@ export const CategoryDonutChart = ({ categories }: Props) => {
   }
 
   return (
-    <div className="border-border bg-surface flex h-full flex-col rounded-xl border p-5">
+    <div className="border-[--border-color] bg-[--surface] flex h-full flex-col rounded-[20px] border p-[22px]">
       {header}
 
       <div className="w-full flex-1" style={{ minHeight: 160 }}>

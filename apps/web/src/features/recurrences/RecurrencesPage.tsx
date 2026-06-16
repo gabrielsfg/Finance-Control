@@ -15,6 +15,7 @@ import { useRecurrenceMetrics } from "./hooks/useRecurrenceMetrics";
 import { useActiveBudget } from "@/features/budgets/hooks/useActiveBudget";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { usePageNova, usePageFilter } from "@/lib/hooks/usePageHeader";
+import { PageTopbar } from "@/components/layout/PageTopbar";
 import { defaultRecurrenceFilter } from "@/lib/types/recurrences.types";
 import type { RecurrenceFilter, RecurringItem, InstallmentItem } from "@/lib/types/recurrences.types";
 
@@ -112,15 +113,12 @@ export function RecurrencesPage() {
   const activeRecurringCount    = filteredRecurring.filter(r => r.isActive).length;
   const activeInstallmentCount  = filteredInstallments.filter(i => i.remainingInstallments > 0).length;
 
+  const subtitle = `${activeRecurringCount} assinatura${activeRecurringCount !== 1 ? "s" : ""} ativa${activeRecurringCount !== 1 ? "s" : ""} · ${activeInstallmentCount} parcelamento${activeInstallmentCount !== 1 ? "s" : ""} em aberto`;
+
   return (
+    <div className="px-[clamp(20px,3.4vw,46px)] pb-[60px]">
+      <PageTopbar title="Recorrências" subtitle={subtitle} />
     <div className="flex flex-col gap-6">
-      {/* Page title */}
-      <div>
-        <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Recorrências</h1>
-        <p className="text-text-muted mt-0.5 text-[13px]">
-          {activeRecurringCount} assinatura{activeRecurringCount !== 1 ? "s" : ""} ativa{activeRecurringCount !== 1 ? "s" : ""} · {activeInstallmentCount} parcelamento{activeInstallmentCount !== 1 ? "s" : ""} em aberto
-        </p>
-      </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -151,7 +149,7 @@ export function RecurrencesPage() {
         />
 
         {/* Next debit card */}
-        <div className="border-border bg-surface rounded-xl border p-5">
+        <div className="rounded-[20px] border p-5" style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}>
           <div className="mb-3 flex items-center justify-between">
             <span className="text-text-muted text-[12px] uppercase tracking-[0.04em]">Próximo vencimento</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-[8px]" style={{ backgroundColor: "#F5A62318" }}>
@@ -160,7 +158,7 @@ export function RecurrencesPage() {
           </div>
           {nextDebit ? (
             <>
-              <p className="font-money font-600 text-[22px]" style={{ color: "#F5A623" }}>
+              <p className="font-money font-bold text-[22px]" style={{ color: "#F5A623" }}>
                 Dia {nextDebit.date.getDate()}
               </p>
               <p className="text-text-muted mt-1.5 truncate text-[12px]">
@@ -173,7 +171,7 @@ export function RecurrencesPage() {
               </p>
             </>
           ) : (
-            <p className="font-money font-600 text-text-muted text-[22px]">—</p>
+            <p className="font-money font-bold text-text-muted text-[22px]">—</p>
           )}
         </div>
       </div>
@@ -188,9 +186,9 @@ export function RecurrencesPage() {
         const freePct  = Math.max(0, 100 - subPct - instPct);
 
         return (
-          <div className="border-border bg-surface rounded-xl border p-4">
+          <div className="rounded-[20px] border p-4" style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}>
             <div className="mb-3 flex items-center justify-between">
-              <span className="font-display text-text text-[14px] font-semibold">Comprometimento da Renda Mensal</span>
+              <span className="font-display text-[--text] text-[14px] font-semibold">Comprometimento da Renda Mensal</span>
               <span className="text-text-muted text-[12px]">
                 Renda:{" "}
                 <span className="font-money text-text">{formatCurrency(income)}</span>
@@ -303,6 +301,7 @@ export function RecurrencesPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
       />
+    </div>
     </div>
   );
 }

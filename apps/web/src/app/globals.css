@@ -5,125 +5,150 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Fonts */
-  --font-display: var(--font-space-grotesk);
-  --font-sans: var(--font-dm-sans);
-  --font-mono: var(--font-jetbrains-mono);
+  /* Fonts — Quantia design system */
+  --font-display: var(--font-bricolage);
+  --font-sans: var(--font-hanken);
+  --font-mono: var(--font-ibm-plex-mono);
 
-  /* shadcn semantic tokens → design system */
+  /* shadcn semantic tokens */
   --color-background: var(--bg);
   --color-foreground: var(--text);
   --color-card: var(--surface);
   --color-card-foreground: var(--text);
   --color-popover: var(--surface);
   --color-popover-foreground: var(--text);
-  --color-primary: var(--green);
-  --color-primary-foreground: #000000;
+  --color-primary: var(--brand-cobalt);
+  --color-primary-foreground: #ffffff;
   --color-secondary: var(--surface2);
   --color-secondary-foreground: var(--text);
   --color-muted: var(--surface2);
   --color-muted-foreground: var(--text-sub);
   --color-accent: var(--surface2);
   --color-accent-foreground: var(--text);
-  --color-destructive: var(--red);
+  --color-destructive: var(--clay);
   --color-border: var(--border-color);
-  --color-border-light: var(--border-light);
-  --color-input: var(--surface2);
-  --color-ring: var(--green);
+  --color-input: var(--border-color);
+  --color-ring: var(--brand-cobalt);
 
   /* Chart colors */
-  --color-chart-1: var(--green);
-  --color-chart-2: var(--red);
-  --color-chart-3: var(--purple);
-  --color-chart-4: var(--blue);
-  --color-chart-5: var(--orange);
+  --color-chart-1: var(--moss);
+  --color-chart-2: var(--brand-cobalt);
+  --color-chart-3: var(--clay);
+  --color-chart-4: var(--gold);
+  --color-chart-5: var(--text-sub);
 
-  /* Border radius scale — matches design system */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
-  --radius-2xl: 14px;
-  --radius-3xl: 16px;
+  /* Brand tokens as Tailwind utilities */
+  --color-brand: var(--brand-cobalt);
+  --color-brand-accent: var(--brand-accent);
+  --color-moss: var(--moss);
+  --color-moss-lift: var(--moss-lift);
+  --color-clay: var(--clay);
+  --color-clay-lift: var(--clay-lift);
+  --color-gold: var(--gold);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-panel-fg: var(--panel-foreground);
+  --color-panel-muted: var(--panel-muted);
 
-  /* Design system accent colors as Tailwind utilities */
-  --color-green: var(--green);
-  --color-red: var(--red);
-  --color-purple: var(--purple);
-  --color-blue: var(--blue);
-  --color-orange: var(--orange);
-  --color-yellow: var(--yellow);
-  --color-cyan: var(--cyan);
+  /* Border radius — Quantia scale */
+  --radius-sm: 9px;
+  --radius-md: 13px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --radius-pill: 999px;
 
-  /* Surface tokens */
+  /* Legacy aliases — keep existing components working */
+  --color-green: var(--moss);
+  --color-red: var(--clay);
+  --color-purple: var(--brand-cobalt);
+  --color-blue: var(--brand-cobalt);
+  --color-orange: var(--gold);
+  --color-yellow: var(--gold);
+  --color-cyan: var(--moss-lift);
   --color-surface: var(--surface);
   --color-surface2: var(--surface2);
   --color-surface3: var(--surface3);
-
-  /* Text tokens */
   --color-text: var(--text);
   --color-text-sub: var(--text-sub);
-  --color-text-muted: var(--text-muted);
+  --color-text-muted: var(--text-sub);
 
-  /* Sidebar tokens */
+  /* Sidebar */
   --color-sidebar: var(--surface);
   --color-sidebar-foreground: var(--text);
-  --color-sidebar-primary: var(--green);
-  --color-sidebar-primary-foreground: #000000;
+  --color-sidebar-primary: var(--text);
+  --color-sidebar-primary-foreground: var(--bg);
   --color-sidebar-accent: var(--surface2);
   --color-sidebar-accent-foreground: var(--text);
   --color-sidebar-border: var(--border-color);
-  --color-sidebar-ring: var(--green);
+  --color-sidebar-ring: var(--brand-cobalt);
 }
 
-/* ── Dark theme (primary) ─────────────────────────────────────────── */
+/* ── Light theme (primary — warm osso palette) ─────────────────── */
 :root {
-  color-scheme: dark;
-
-  --bg: #08090c;
-  --surface: #0e1117;
-  --surface2: #141920;
-  --surface3: #1a2030;
-  --border-color: #1e2635;
-  --border-light: #252e3d;
-  --border-chart: #2a3447;
-
-  --text: #edf2f7;
-  --text-sub: #8a95a3;
-  --text-muted: #6b7a8d;
-
-  --green: #00c98d;
-  --red: #f25f5c;
-  --purple: #7c6fe0;
-  --blue: #4a9eff;
-  --orange: #f5a623;
-  --yellow: #f5ce42;
-  --cyan: #00d4a0;
-}
-
-/* ── Light theme ──────────────────────────────────────────────────── */
-.light {
   color-scheme: light;
 
-  --bg: #f5f7fa;
-  --surface: #ffffff;
-  --surface2: #f0f4f8;
-  --surface3: #e6ecf3;
-  --border-color: #dde4ef;
-  --border-light: #e8edf5;
-  --border-chart: #c8d3e0;
+  --bg: #efebe1;
+  --surface: #faf8f3;
+  --surface2: #f3f0e8;
+  --surface3: #e7e3d8;
+  --border-color: #dcd7c9;
+  --border-light: #e7e3d8;
 
-  --text: #0f1318;
-  --text-sub: #566070;
-  --text-muted: #90a0b0;
+  --text: #17211d;
+  --text-sub: #6b6657;
+  --text-muted: #6b6657;
 
-  --green: #008a55;
-  --red: #cc1a1a;
-  --purple: #5648c8;
-  --blue: #1a6fd4;
-  --orange: #c97500;
-  --yellow: #b89000;
-  --cyan: #009070;
+  --brand-cobalt: #1f3ce0;
+  --brand-accent: #1f3ce0;
+  --cobalt-lift: #8197ff;
+  --moss: #2c6b57;
+  --moss-lift: #5fc6a0;
+  --clay: #b0451f;
+  --clay-lift: #ff8a5b;
+  --gold: #c8932b;
+
+  /* Panel-hero — always dark, tokens own both themes */
+  --panel: #17211d;
+  --panel-2: #1e2b26;
+  --panel-foreground: #efebe1;
+  --panel-fg: #efebe1;
+  --panel-muted: #a7a293;
+
+  --shadow-sm: 0 1px 0 rgba(23, 33, 29, 0.04), 0 10px 24px -20px rgba(23, 33, 29, 0.45);
+  --shadow-md: 0 1px 0 rgba(23, 33, 29, 0.04), 0 26px 50px -34px rgba(23, 33, 29, 0.55);
+}
+
+/* ── Dark theme ─────────────────────────────────────────────────── */
+.dark {
+  color-scheme: dark;
+
+  --bg: #0e1613;
+  --surface: #16201c;
+  --surface2: #1e2a25;
+  --surface3: #2b3833;
+  --border-color: #2b3833;
+  --border-light: #243029;
+
+  --text: #ece7da;
+  --text-sub: #8e9a91;
+  --text-muted: #8e9a91;
+
+  --brand-cobalt: #3d5bff;
+  --brand-accent: #8197ff;
+  --cobalt-lift: #8197ff;
+  --moss: #5fc6a0;
+  --moss-lift: #5fc6a0;
+  --clay: #ff8a5b;
+  --clay-lift: #ff8a5b;
+  --gold: #e3b65a;
+
+  --panel: #12201e;
+  --panel-2: #1a302c;
+  --panel-foreground: #ece7da;
+  --panel-muted: #8fa39a;
+
+  --shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.03), 0 14px 30px -22px rgba(0, 0, 0, 0.7);
+  --shadow-md: 0 1px 0 rgba(255, 255, 255, 0.03), 0 34px 60px -36px rgba(0, 0, 0, 0.85);
 }
 
 @layer base {
@@ -133,12 +158,42 @@
 
   body {
     @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    letter-spacing: 0.005em;
   }
 
-  /* Monetary values always use mono font */
-  .font-money {
-    font-family: var(--font-jetbrains-mono);
+  .font-money,
+  .font-mono {
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
+  }
+}
+
+/* Flow bar fill animation */
+@keyframes growX {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(var(--to, 1));
+  }
+}
+
+.flow-fill {
+  transform: scaleX(var(--to, 1));
+  transform-origin: left center;
+}
+
+.is-loaded .flow-fill {
+  animation: growX 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+  .flow-fill {
+    transform: scaleX(var(--to, 1));
   }
 }

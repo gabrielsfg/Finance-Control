@@ -87,7 +87,7 @@ function RecurringDetail({ item, onEdit, onCancel, onReactivate }: {
       </div>
 
       {/* Value highlight */}
-      <div className="bg-surface2 border-border rounded-xl border p-4">
+      <div className="bg-surface2 rounded-[13px] border p-4" style={{ borderColor: "var(--border-color)" }}>
         <p className="text-text-muted mb-1 text-[11px] uppercase tracking-wide">Valor mensal</p>
         <p className="font-money text-text text-[28px] font-bold">{formatCurrency(item.value / 100)}</p>
         <p className="text-text-muted mt-0.5 text-[12px]">
@@ -96,7 +96,7 @@ function RecurringDetail({ item, onEdit, onCancel, onReactivate }: {
       </div>
 
       {/* Details */}
-      <div className="border-border divide-border divide-y rounded-xl border px-4">
+      <div className="divide-border divide-y rounded-[13px] border px-4" style={{ borderColor: "var(--border-color)" }}>
         <DetailRow icon={Tag}      label="Subcategoria"  value={item.subCategoryEmoji ? `${item.subCategoryEmoji} ${item.subCategoryName}` : item.subCategoryName} />
         <DetailRow icon={Wallet}   label="Conta"         value={item.accountName} />
         <DetailRow icon={RefreshCw} label="Recorrência"  value={RECURRENCE_LABELS[item.recurrence]} />
@@ -116,13 +116,13 @@ function RecurringDetail({ item, onEdit, onCancel, onReactivate }: {
           <>
             <button
               onClick={onEdit}
-              className="bg-surface2 hover:bg-surface3 text-text border-border w-full rounded-xl border py-3 text-[14px] font-semibold transition-colors"
+              className="bg-surface2 hover:bg-surface3 text-text w-full rounded-[13px] border py-3 text-[14px] font-semibold transition-colors" style={{ borderColor: "var(--border-color)" }}
             >
               Editar assinatura
             </button>
             <button
               onClick={onCancel}
-              className="text-red hover:bg-red/10 border-red/25 w-full rounded-xl border py-3 text-[14px] font-semibold transition-colors"
+              className="text-red hover:bg-red/10 border-red/25 w-full rounded-[13px] border py-3 text-[14px] font-semibold transition-colors"
             >
               Cancelar assinatura
             </button>
@@ -130,7 +130,7 @@ function RecurringDetail({ item, onEdit, onCancel, onReactivate }: {
         ) : (
           <button
             onClick={onReactivate}
-            className="text-green hover:bg-green/10 border-green/30 w-full rounded-xl border py-3 text-[14px] font-semibold transition-colors"
+            className="text-green hover:bg-green/10 border-green/30 w-full rounded-[13px] border py-3 text-[14px] font-semibold transition-colors"
           >
             Reativar assinatura
           </button>
@@ -188,7 +188,7 @@ function InstallmentDetail({ item, onEdit }: {
       </div>
 
       {/* Value highlight */}
-      <div className="bg-surface2 border-border rounded-xl border p-4">
+      <div className="bg-surface2 rounded-[13px] border p-4" style={{ borderColor: "var(--border-color)" }}>
         <p className="text-text-muted mb-1 text-[11px] uppercase tracking-wide">Valor da parcela</p>
         <p className="font-money text-text text-[28px] font-bold">{formatCurrency(item.value / 100)}</p>
         <p className="text-text-muted mt-0.5 text-[12px]">
@@ -197,7 +197,7 @@ function InstallmentDetail({ item, onEdit }: {
       </div>
 
       {/* Progress */}
-      <div className="bg-surface2 border-border rounded-xl border p-4">
+      <div className="bg-surface2 rounded-[13px] border p-4" style={{ borderColor: "var(--border-color)" }}>
         <div className="mb-2 flex items-center justify-between">
           <span className="text-text-muted text-[12px]">Progresso</span>
           <span className="text-text-muted text-[12px]">{pct.toFixed(0)}%</span>
@@ -227,7 +227,7 @@ function InstallmentDetail({ item, onEdit }: {
       </div>
 
       {/* Details */}
-      <div className="border-border divide-border divide-y rounded-xl border px-4">
+      <div className="divide-border divide-y rounded-[13px] border px-4" style={{ borderColor: "var(--border-color)" }}>
         <DetailRow icon={Wallet}   label="Conta"         value={item.accountName} />
         <DetailRow icon={Tag}      label="Subcategoria"  value={item.subCategoryEmoji ? `${item.subCategoryEmoji} ${item.subCategoryName}` : item.subCategoryName} />
         <DetailRow icon={Calendar} label="Início"        value={transactionDate} />
@@ -241,7 +241,7 @@ function InstallmentDetail({ item, onEdit }: {
       {!done && (
         <button
           onClick={onEdit}
-          className="bg-surface2 hover:bg-surface3 text-text border-border w-full rounded-xl border py-3 text-[14px] font-semibold transition-colors"
+          className="bg-surface2 hover:bg-surface3 text-text w-full rounded-[13px] border py-3 text-[14px] font-semibold transition-colors" style={{ borderColor: "var(--border-color)" }}
         >
           Editar parcelamento
         </button>
@@ -276,18 +276,19 @@ export function RecurrenceDrawer({ open, data, onClose, onEdit, onCancel, onReac
       {/* Drawer */}
       <div
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] flex-col bg-surface shadow-2xl transition-transform duration-300",
+          "fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] flex-col shadow-2xl transition-transform duration-300",
           open ? "translate-x-0" : "translate-x-full",
         )}
+        style={{ background: "var(--surface)", borderLeft: "1px solid var(--border-color)" }}
       >
         {/* Header */}
-        <div className="border-border flex items-center justify-between border-b px-6 py-4">
-          <span className="text-text-sub text-[13px] font-semibold uppercase tracking-wider">
+        <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: "var(--border-color)" }}>
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-[--text-sub]">
             {data?.kind === "recurring" ? "Assinatura" : "Parcelamento"}
           </span>
           <button
             onClick={onClose}
-            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-[9px] transition-colors"
           >
             <X size={16} />
           </button>

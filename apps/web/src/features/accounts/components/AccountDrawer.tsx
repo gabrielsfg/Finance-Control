@@ -38,10 +38,10 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = Object.fromEntries(
 ) as Record<AccountType, string>;
 
 const INPUT_CLASS =
-  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-green/60 h-11 rounded-lg px-3.5 text-[15px]";
+  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-[--brand-cobalt] h-11 rounded-[13px] px-3.5 text-[15px]";
 
 const TRIGGER_CLASS =
-  "border-border bg-surface2 text-text w-full !h-11 rounded-lg px-3.5 text-[15px]";
+  "border-border bg-surface2 text-text w-full !h-11 rounded-[13px] px-3.5 text-[15px]";
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -99,7 +99,7 @@ function DefaultAccountToggle({ checked, onChange }: { checked: boolean; onChang
       type="button"
       onClick={() => onChange(!checked)}
       className={cn(
-        "border-border flex w-full items-center gap-3.5 rounded-xl border p-4 text-left transition-colors",
+        "border-border flex w-full items-center gap-3.5 rounded-[13px] border p-4 text-left transition-colors",
         checked ? "border-green/40 bg-green/5" : "bg-surface2 hover:bg-surface2/80",
       )}
     >
@@ -272,7 +272,7 @@ function CreateForm({ onClose }: { onClose: () => void }) {
         {serverError && <p className="text-red text-[13px]">{serverError}</p>}
       </div>
 
-      <div className="border-border shrink-0 border-t px-6 py-4">
+      <div className="shrink-0 border-t px-6 py-4" style={{ borderColor: "var(--border-color)" }}>
         <div className="flex gap-3">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
           <Button type="submit" className="flex-1" disabled={isPending}>
@@ -395,7 +395,7 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
         />
 
         {/* Balance adjustment */}
-        <div className="border-border rounded-xl border p-4">
+        <div className="rounded-[13px] border p-4" style={{ borderColor: "var(--border-color)" }}>
           <div className="mb-3 flex items-center gap-2">
             <SlidersHorizontal size={14} className="text-text-muted" />
             <span className="text-text text-[13px] font-medium">Ajustar saldo</span>
@@ -421,7 +421,7 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
         {serverError && <p className="text-red text-[13px]">{serverError}</p>}
       </div>
 
-      <div className="border-border shrink-0 border-t px-6 py-4">
+      <div className="shrink-0 border-t px-6 py-4" style={{ borderColor: "var(--border-color)" }}>
         <div className="flex gap-3">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
           <Button type="submit" className="flex-1" disabled={isPending}>
@@ -463,7 +463,7 @@ function DetailView({
           <Icon size={28} style={{ color }} strokeWidth={1.5} />
         </div>
         <div className="text-center">
-          <p className="text-text font-display font-600 text-[20px]">{account.name}</p>
+          <p className="text-text font-display font-bold text-[20px] tracking-[-0.01em]">{account.name}</p>
           <p className="text-text-muted mt-0.5 text-[13px]">{ACCOUNT_TYPE_LABELS[account.type]}</p>
         </div>
         {account.isDefaultAccount && (
@@ -475,12 +475,12 @@ function DetailView({
       </div>
 
       {/* Balance card */}
-      <div className="border-border bg-surface2 rounded-xl border p-5">
+      <div className="bg-surface2 rounded-[20px] border p-5" style={{ borderColor: "var(--border-color)" }}>
         <p className="text-text-muted mb-1 text-[11px] tracking-[0.05em] uppercase">
           {isCredit ? "Fatura atual" : "Saldo atual"}
         </p>
         <p
-          className="font-money font-600 text-[28px] tracking-tight"
+          className="font-money font-bold text-[28px] tracking-tight"
           style={{ color: isNegative ? "var(--red)" : isCredit ? "var(--purple)" : "var(--text)" }}
         >
           {formatCurrency(Math.abs(account.currentAmount / 100))}
@@ -565,12 +565,13 @@ export function AccountDrawer({ open, mode, account, onClose, onDeleteRequest }:
       <div
         ref={panelRef}
         className={cn(
-          "bg-surface border-border fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
+          "fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
+        style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
       >
         {/* Header */}
-        <div className="border-border flex items-center justify-between border-b px-6 py-5">
+        <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: "var(--border-color)" }}>
           <div className="flex items-center gap-2">
             {showBack && (
               <button
@@ -580,12 +581,12 @@ export function AccountDrawer({ open, mode, account, onClose, onDeleteRequest }:
                 ←
               </button>
             )}
-            <h2 className="font-display font-600 text-text text-[17px]">{titles[innerMode]}</h2>
+            <h2 className="font-display font-bold text-[--text] text-[17px] tracking-[-0.01em]">{titles[innerMode]}</h2>
           </div>
           <button
             onClick={onClose}
             title="Fechar"
-            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-[9px] transition-colors"
           >
             <X size={16} />
           </button>

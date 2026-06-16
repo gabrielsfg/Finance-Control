@@ -6,6 +6,13 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["design/_serve.cjs"],
       "port": 4173
+    },
+    {
+      "name": "web-dev",
+      "cwd": "apps/web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "-p", "3001"],
+      "port": 3001
     }
   ]
 }
