@@ -1,20 +1,13 @@
 "use client";
 
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { cn } from "@/lib/utils";
 import type { CategoryProjection } from "@/lib/types/analytics.types";
 
 function barColor(spentPercent: number): string {
-  if (spentPercent > 100) return "var(--red)";
-  if (spentPercent >= 80) return "var(--orange)";
-  return "var(--green)";
-}
-
-function barBg(spentPercent: number): string {
-  if (spentPercent > 100) return "bg-red/10";
-  if (spentPercent >= 80) return "bg-orange/10";
-  return "bg-green/10";
+  if (spentPercent > 100) return "var(--clay)";
+  if (spentPercent >= 80) return "var(--gold)";
+  return "var(--moss)";
 }
 
 type Props = { data: CategoryProjection[] };
@@ -26,8 +19,8 @@ export function ProjectedSpendingHeatmap({ data }: Props) {
   const monthElapsed   = data[0]?.monthElapsedPercent ?? 0;
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Projeção de Gastos por Categoria"
         subtitle={`${monthElapsed.toFixed(0)}% do mês decorrido — projeção baseada nos últimos 3 meses`}
       />
@@ -58,10 +51,13 @@ export function ProjectedSpendingHeatmap({ data }: Props) {
         {data.map((cat) => {
           const pct      = Math.min(cat.spentPercent, 140);
           const color    = barColor(cat.spentPercent);
-          const bgClass  = barBg(cat.spentPercent);
 
           return (
-            <div key={cat.categoryId} className={cn("rounded-xl border border-border p-4", bgClass.replace("/10", "/5"))}>
+            <div
+              key={cat.categoryId}
+              className="rounded-[13px] border border-[var(--border-color)] p-4"
+              style={{ backgroundColor: `color-mix(in srgb, ${color} 5%, transparent)` }}
+            >
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-text text-[14px] font-medium">{cat.categoryName}</span>
                 <span
@@ -100,6 +96,6 @@ export function ProjectedSpendingHeatmap({ data }: Props) {
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }

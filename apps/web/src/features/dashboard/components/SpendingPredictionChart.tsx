@@ -52,15 +52,15 @@ export const SpendingPredictionChart = ({ data }: Props) => {
   })();
 
   return (
-    <div className="border-[--border-color] bg-[--surface] flex flex-col rounded-[20px] border p-[22px]">
+    <div className="border-[var(--border-color)] bg-[var(--surface)] flex flex-col rounded-[20px] border p-[22px]">
       <div className="mb-4 flex items-center gap-[10px]">
-        <h2 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[--text]">
+        <h2 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">
           Previsão de Gastos
         </h2>
-        <span className="font-mono text-[11px] text-[--text-sub]">acumulado vs. média 6 meses</span>
+        <span className="font-mono text-[11px] text-[var(--text-sub)]">acumulado vs. média 6 meses</span>
         <Link
           href="/analytics"
-          className="ml-auto font-mono text-[11px] tracking-[0.1em] uppercase text-[--brand-accent] hover:underline"
+          className="ml-auto font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--brand-accent)] hover:underline"
         >
           Ver analytics
         </Link>

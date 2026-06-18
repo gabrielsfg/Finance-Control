@@ -62,7 +62,7 @@ export const AccountCard = ({
           <Icon size={18} strokeWidth={1.75} style={{ color }} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-[--text] truncate text-[15px]">{account.name}</p>
+          <p className="font-medium text-[var(--text)] truncate text-[15px]">{account.name}</p>
           <div className="mt-0.5 flex items-center gap-1.5">
             <p className="text-text-muted text-[12px]">{label}</p>
             <span

@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn, matchesSearch } from "@/lib/utils";
 import { Plus, Trash2, Info, Search, ChevronDown, Check, Trophy, BarChart2 } from "lucide-react";
@@ -19,11 +19,14 @@ import {
   ASSET_CATEGORY_LABELS,
   PRESET_ASSETS, PRESET_ASSET_GROUPS,
 } from "@/lib/types/simulation";
+import { CHART_GRID, axisTick, SERIES, PresetPill, SegRow, SegOption } from "./simShared";
 
-const inputCls = "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-green/60 transition-colors";
+/** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
+const inputCls =
+  "h-9 w-full rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 font-mono text-[13px] tabular-nums text-[var(--text)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--text-sub)]/60 focus:border-[var(--brand-cobalt)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]";
 
 const SCENARIO_COLORS = [
-  "var(--green)", "var(--blue)", "var(--purple)", "var(--orange)",
+  SERIES.moss, SERIES.cobalt, SERIES.violet, SERIES.gold,
 ];
 
 const PERIOD_PRESETS = [
@@ -115,20 +118,21 @@ function AssetPicker({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
-        className="border-border bg-surface w-full max-w-2xl rounded-2xl border shadow-2xl flex flex-col max-h-[85vh]"
+        style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
+        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-[20px] border shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-border px-5 py-4 flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-[var(--border-color)] px-5 py-4">
           <div>
-            <p className="text-text font-medium text-[15px]">Escolher ativo</p>
-            <p className="text-text-muted text-[12px]">Taxa baseada em médias históricas ou dados reais do BACEN</p>
+            <p className="font-display text-[15px] font-bold tracking-[-0.01em] text-[var(--text)]">Escolher ativo</p>
+            <p className="text-[12px] text-[var(--text-sub)]">Taxa baseada em médias históricas ou dados reais do BACEN</p>
           </div>
-          <button onClick={onClose} className="text-text-muted hover:text-text text-[20px] leading-none">×</button>
+          <button onClick={onClose} className="text-[20px] leading-none text-[var(--text-sub)] hover:text-[var(--text)]">×</button>
         </div>
 
-        <div className="px-5 py-3 border-b border-border">
+        <div className="border-b border-[var(--border-color)] px-5 py-3">
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-sub)]" />
             <input
               className={cn(inputCls, "pl-8")}
               value={search}
@@ -139,11 +143,11 @@ function AssetPicker({
           </div>
         </div>
 
-        <div className="flex gap-1.5 overflow-x-auto px-5 py-2.5 border-b border-border">
+        <div className="flex gap-1.5 overflow-x-auto border-b border-[var(--border-color)] px-5 py-2.5">
           <button
             onClick={() => setActiveGroup("all")}
-            className={cn("shrink-0 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
-              activeGroup === "all" ? "bg-green/15 text-green" : "text-text-muted hover:text-text")}
+            className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+              activeGroup === "all" ? "bg-[color-mix(in_srgb,var(--brand-accent)_14%,transparent)] text-[var(--brand-accent)]" : "text-[var(--text-sub)] hover:text-[var(--text)]")}
           >
             Todos
           </button>
@@ -151,17 +155,17 @@ function AssetPicker({
             <button
               key={g}
               onClick={() => setActiveGroup(g)}
-              className={cn("shrink-0 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
-                activeGroup === g ? "bg-green/15 text-green" : "text-text-muted hover:text-text")}
+              className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                activeGroup === g ? "bg-[color-mix(in_srgb,var(--brand-accent)_14%,transparent)] text-[var(--brand-accent)]" : "text-[var(--text-sub)] hover:text-[var(--text)]")}
             >
               {lbl}
             </button>
           ))}
         </div>
 
-        <div className="overflow-y-auto flex-1 px-3 py-2">
+        <div className="flex-1 overflow-y-auto px-3 py-2">
           {filtered.length === 0 ? (
-            <p className="text-text-muted text-center py-8 text-[13px]">Nenhum ativo encontrado</p>
+            <p className="py-8 text-center text-[13px] text-[var(--text-sub)]">Nenhum ativo encontrado</p>
           ) : (
             <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
               {filtered.map((asset) => {
@@ -170,24 +174,24 @@ function AssetPicker({
                   <button
                     key={asset.id}
                     onClick={() => { onSelect({ ...asset, annualRate: resolved.rate, isStub: resolved.isStub, rateSource: resolved.rateSource }); onClose(); }}
-                    className="text-left rounded-xl border border-border bg-surface2/50 hover:bg-surface2 hover:border-green/30 p-3 transition-all"
+                    className="rounded-[13px] border border-[var(--border-color)] bg-[var(--surface2)] p-3 text-left transition-all hover:border-[var(--brand-accent)]/40"
                   >
-                    <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="mb-1 flex items-start justify-between gap-2">
                       <div>
-                        <span className="text-text text-[13px] font-medium">{asset.label}</span>
+                        <span className="text-[13px] font-medium text-[var(--text)]">{asset.label}</span>
                         {asset.ticker && (
-                          <span className="ml-1.5 text-[10px] text-text-muted bg-surface2 border border-border rounded px-1 py-0.5">{asset.ticker}</span>
+                          <span className="ml-1.5 rounded border border-[var(--border-color)] bg-[var(--surface)] px-1 py-0.5 font-mono text-[10px] text-[var(--text-sub)]">{asset.ticker}</span>
                         )}
                       </div>
-                      <div className="text-right shrink-0">
-                        <span className="font-money text-[14px] text-green font-600">{resolved.rate.toFixed(2)}%</span>
-                        <span className="text-text-muted text-[10px] block">a.a.</span>
+                      <div className="shrink-0 text-right">
+                        <span className="font-mono text-[14px] font-semibold tabular-nums text-[var(--moss)]">{resolved.rate.toFixed(2)}%</span>
+                        <span className="block text-[10px] text-[var(--text-sub)]">a.a.</span>
                       </div>
                     </div>
-                    <p className="text-text-muted text-[11px] leading-snug">{asset.description}</p>
+                    <p className="text-[11px] leading-snug text-[var(--text-sub)]">{asset.description}</p>
                     <div className="mt-1.5 flex items-center gap-1">
-                      {resolved.isStub && <span className="text-[10px] bg-orange/10 text-orange rounded px-1.5 py-0.5">estimado</span>}
-                      <span className="text-[10px] text-text-muted">{resolved.rateSource}</span>
+                      {resolved.isStub && <span className="rounded px-1.5 py-0.5 text-[10px] text-[var(--gold)]" style={{ background: "color-mix(in srgb, var(--gold) 12%, transparent)" }}>estimado</span>}
+                      <span className="text-[10px] text-[var(--text-sub)]">{resolved.rateSource}</span>
                     </div>
                   </button>
                 );
@@ -223,21 +227,21 @@ const AssetCategorySelect = ({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="border-border bg-surface2 text-text flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-[13px] transition-colors hover:border-green/40"
+        className="flex h-9 w-full items-center justify-between gap-2 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 text-[13px] text-[var(--text)] transition-colors hover:border-[var(--brand-accent)]/50"
       >
         <span className="truncate text-left">{ASSET_CATEGORY_LABELS[value]}</span>
-        <ChevronDown size={14} className={cn("text-text-muted transition-transform shrink-0", open && "rotate-180")} />
+        <ChevronDown size={14} className={cn("text-[var(--text-sub)] transition-transform shrink-0", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="border-border bg-surface absolute left-0 top-10 z-50 flex flex-col gap-px rounded-xl border p-1.5 shadow-lg w-full min-w-[220px]">
+        <div className="absolute left-0 top-10 z-50 flex w-full min-w-[220px] flex-col gap-px rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] p-1.5 shadow-lg">
           {(Object.entries(ASSET_CATEGORY_LABELS) as [AssetCategory, string][]).map(([k, v]) => (
             <button
               key={k}
               onClick={() => { onChange(k); setOpen(false); }}
-              className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-surface2"
+              className="flex items-center justify-between gap-2 rounded-[9px] px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--surface2)]"
             >
-              <span className={cn("text-text-sub", value === k && "text-text")}>{v}</span>
-              {value === k && <Check size={12} className="text-green shrink-0" />}
+              <span className={cn("text-[var(--text-sub)]", value === k && "text-[var(--text)]")}>{v}</span>
+              {value === k && <Check size={12} className="text-[var(--brand-accent)] shrink-0" />}
             </button>
           ))}
         </div>
@@ -250,12 +254,15 @@ const AssetCategorySelect = ({
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="border-border bg-surface rounded-lg border px-3 py-2.5 shadow-md min-w-[220px]">
-      <p className="text-text-muted mb-2 text-[11px]">{label}</p>
+    <div
+      className="min-w-[220px] rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5"
+      style={{ boxShadow: "var(--shadow-md)" }}
+    >
+      <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-sub)]">{label}</p>
       {payload.map((e: any) => (
-        <div key={e.name} className="flex items-center justify-between gap-4 mb-0.5">
+        <div key={e.name} className="mb-0.5 flex items-center justify-between gap-4">
           <span className="text-[12px]" style={{ color: e.stroke }}>{e.name}</span>
-          <span className="font-money text-[12px]" style={{ color: e.stroke }}>
+          <span className="font-mono text-[12px] tabular-nums" style={{ color: e.stroke }}>
             {formatCurrency(e.value / 100)}
           </span>
         </div>
@@ -388,39 +395,30 @@ export const ScenarioComparator = () => {
           <div className="flex flex-col gap-4">
 
             {/* Global parameters */}
-            <div className="border-border bg-surface rounded-xl border p-5">
-              <SectionHeader title="Parâmetros" />
+            <Card>
+              <CardHead title="Parâmetros" />
 
-              <div className="mt-4 flex flex-col gap-3">
+              <div className="flex flex-col gap-3.5">
                 <div>
-                  <label className="text-text-muted mb-1.5 block text-[12px]">Valor inicial (R$)</label>
+                  <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Valor inicial (R$)</label>
                   <input className={inputCls} value={initialAmount} onChange={(e) => setInitialAmount(e.target.value)} placeholder="10000" />
                 </div>
                 <div>
-                  <label className="text-text-muted mb-1.5 block text-[12px]">Aporte mensal (R$)</label>
+                  <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Aporte mensal (R$)</label>
                   <input className={inputCls} value={monthlyContrib} onChange={(e) => setMonthlyContrib(e.target.value)} placeholder="500" />
                 </div>
                 <div>
-                  <label className="text-text-muted mb-1.5 block text-[12px]">Período</label>
+                  <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Período</label>
                   <div className="flex gap-1">
                     {PERIOD_PRESETS.map((p) => (
-                      <button
-                        key={p.months}
-                        onClick={() => { setPresetMonths(p.months); setCustomMonths(""); }}
-                        className={cn(
-                          "flex-1 rounded-lg border px-1.5 py-1 text-[11px] font-medium transition-colors",
-                          (!customMonths && presetMonths === p.months)
-                            ? "bg-green/15 text-green border-green/30"
-                            : "text-text-muted border-border hover:text-text",
-                        )}
-                      >
+                      <PresetPill key={p.months} active={!customMonths && presetMonths === p.months} onClick={() => { setPresetMonths(p.months); setCustomMonths(""); }}>
                         {p.label}
-                      </button>
+                      </PresetPill>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="text-text-muted mb-1.5 block text-[12px]">Ou digite em meses</label>
+                  <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Ou digite em meses</label>
                   <input
                     className={inputCls}
                     value={customMonths}
@@ -429,15 +427,15 @@ export const ScenarioComparator = () => {
                   />
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Live rates card */}
             {rates && (
-              <div className="border-border bg-surface rounded-xl border p-5">
+              <Card>
                 <div className="mb-3 flex items-center gap-2">
-                  <Info size={14} className="text-blue shrink-0" />
-                  <p className="text-text text-[13px] font-semibold">Taxas de referência</p>
-                  <span className="ml-auto text-[10px] text-text-muted bg-surface2 border border-border rounded-full px-2 py-0.5">Banco Central</span>
+                  <Info size={14} className="shrink-0 text-[var(--brand-accent)]" />
+                  <p className="font-display text-[15px] font-bold tracking-[-0.01em] text-[var(--text)]">Taxas de referência</p>
+                  <span className="ml-auto rounded-full border border-[var(--border-color)] bg-[var(--surface2)] px-2 py-0.5 font-mono text-[10px] text-[var(--text-sub)]">Banco Central</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   {[
@@ -446,22 +444,22 @@ export const ScenarioComparator = () => {
                     { label: "IPCA 12m",  value: rates.ipcaTrailing12m.toFixed(2)   },
                   ].map((r) => (
                     <div key={r.label} className="flex items-center justify-between">
-                      <span className="text-text-muted text-[12px]">{r.label}</span>
-                      <span className="font-money text-green font-medium text-[13px]">{r.value}% a.a.</span>
+                      <span className="text-[12px] text-[var(--text-sub)]">{r.label}</span>
+                      <span className="font-mono text-[13px] font-medium tabular-nums text-[var(--moss)]">{r.value}% a.a.</span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
             {/* Scenario cards */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <p className="text-text text-[13px] font-semibold">Cenários</p>
+                <p className="font-display text-[15px] font-bold tracking-[-0.01em] text-[var(--text)]">Cenários</p>
                 {scenarios.length < 4 && (
                   <button
                     onClick={addScenario}
-                    className="flex items-center gap-1.5 rounded-lg border border-dashed border-border px-2.5 py-1 text-[12px] text-text-muted transition-colors hover:border-green/40 hover:text-green"
+                    className="flex items-center gap-1.5 rounded-[13px] border border-dashed border-[var(--border-color)] px-2.5 py-1 text-[12px] text-[var(--text-sub)] transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-accent)]"
                   >
                     <Plus size={13} />
                     Adicionar
@@ -478,11 +476,11 @@ export const ScenarioComparator = () => {
                 return (
                   <div
                     key={s.id}
-                    className="rounded-xl border p-4 transition-colors"
+                    className="rounded-[20px] border p-4 transition-colors"
                     style={{
                       borderColor: isWinner
                         ? `color-mix(in srgb, ${s.color} 40%, transparent)`
-                        : "var(--border)",
+                        : "var(--border-color)",
                       backgroundColor: isWinner
                         ? `color-mix(in srgb, ${s.color} 5%, transparent)`
                         : "var(--surface)",
@@ -493,21 +491,21 @@ export const ScenarioComparator = () => {
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
                         <input
-                          className="bg-transparent text-[13px] font-medium text-text outline-none border-b border-transparent focus:border-border min-w-0 w-full"
+                          className="w-full min-w-0 border-b border-transparent bg-transparent text-[13px] font-medium text-[var(--text)] outline-none focus:border-[var(--border-color)]"
                           value={s.label}
                           onChange={(e) => updateScenario(s.id, { label: e.target.value })}
                         />
-                        {isWinner && <Trophy size={12} className="text-green shrink-0" />}
+                        {isWinner && <Trophy size={12} className="shrink-0 text-[var(--moss)]" />}
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           onClick={() => setPickerFor(s.id)}
-                          className="rounded-md border border-border px-2 py-1 text-[11px] text-text-muted hover:text-green hover:border-green/30 transition-colors"
+                          className="rounded-[9px] border border-[var(--border-color)] px-2 py-1 text-[11px] text-[var(--text-sub)] transition-colors hover:border-[var(--brand-accent)]/30 hover:text-[var(--brand-accent)]"
                         >
                           Trocar
                         </button>
                         {scenarios.length > 1 && (
-                          <button onClick={() => removeScenario(s.id)} className="text-text-muted hover:text-red transition-colors">
+                          <button onClick={() => removeScenario(s.id)} className="text-[var(--text-sub)] transition-colors hover:text-[var(--clay)]">
                             <Trash2 size={13} />
                           </button>
                         )}
@@ -517,16 +515,16 @@ export const ScenarioComparator = () => {
                     {/* Preset badges */}
                     {s.rateSource && (
                       <div className="mb-2.5 flex flex-wrap items-center gap-1">
-                        {s.isStub && <span className="text-[10px] bg-orange/10 text-orange rounded px-1.5 py-0.5">estimado</span>}
-                        {s.ticker && <span className="text-[10px] text-text-muted bg-surface2 border border-border rounded px-1.5 py-0.5">{s.ticker}</span>}
-                        <span className="text-[10px] text-text-muted">{s.rateSource}</span>
+                        {s.isStub && <span className="rounded px-1.5 py-0.5 text-[10px] text-[var(--gold)]" style={{ background: "color-mix(in srgb, var(--gold) 12%, transparent)" }}>estimado</span>}
+                        {s.ticker && <span className="rounded border border-[var(--border-color)] bg-[var(--surface2)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-sub)]">{s.ticker}</span>}
+                        <span className="text-[10px] text-[var(--text-sub)]">{s.rateSource}</span>
                       </div>
                     )}
 
                     {/* Inputs */}
-                    <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="mb-3 grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-text-muted mb-1 block text-[11px]">Taxa anual (%)</label>
+                        <label className="mb-1 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Taxa anual (%)</label>
                         <input
                           className={inputCls}
                           value={s.annualRate}
@@ -535,7 +533,7 @@ export const ScenarioComparator = () => {
                         />
                       </div>
                       <div>
-                        <label className="text-text-muted mb-1 block text-[11px]">Tipo (IR)</label>
+                        <label className="mb-1 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Tipo (IR)</label>
                         <AssetCategorySelect
                           value={s.assetCategory}
                           onChange={(v) => updateScenario(s.id, { assetCategory: v })}
@@ -545,9 +543,9 @@ export const ScenarioComparator = () => {
 
                     {/* Final value preview */}
                     {finalVal !== null && (
-                      <div className="border-t pt-2.5 flex items-center justify-between" style={{ borderColor: `color-mix(in srgb, ${s.color} 20%, var(--border))` }}>
-                        <span className="text-text-muted text-[11px]">{showAfterTax ? "Patrimônio líquido" : "Patrimônio bruto"}</span>
-                        <span className="font-money text-[14px] font-semibold" style={{ color: s.color }}>
+                      <div className="flex items-center justify-between border-t pt-2.5" style={{ borderColor: `color-mix(in srgb, ${s.color} 20%, var(--border-color))` }}>
+                        <span className="text-[11px] text-[var(--text-sub)]">{showAfterTax ? "Patrimônio líquido" : "Patrimônio bruto"}</span>
+                        <span className="font-mono text-[14px] font-semibold tabular-nums" style={{ color: s.color }}>
                           {formatCurrency(finalVal / 100)}
                         </span>
                       </div>
@@ -562,44 +560,36 @@ export const ScenarioComparator = () => {
           <div className="flex flex-col gap-4">
 
             {/* Chart card */}
-            <div className="border-border bg-surface rounded-xl border p-5 flex flex-col">
-              <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
+            <Card className="flex flex-col">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <SectionHeader
+                  <CardHead
+                    className="mb-0"
                     title="Evolução Comparada"
                     subtitle={`Projeção de ${yearsLabel}`}
                   />
                   <div className="mt-1 flex items-center gap-1.5">
-                    <BarChart2 size={11} className="text-text-muted" />
-                    <span className="text-text-muted text-[11px]">
+                    <BarChart2 size={11} className="text-[var(--text-sub)]" />
+                    <span className="text-[11px] text-[var(--text-sub)]">
                       {useAnnual ? "Agrupado por ano" : "Mensal"}
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <SegRow className="w-auto">
                   {(["gross", "net"] as const).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setShowAfterTax(m === "net")}
-                      className={cn(
-                        "rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
-                        (showAfterTax ? m === "net" : m === "gross")
-                          ? "bg-green/15 text-green"
-                          : "text-text-muted hover:text-text",
-                      )}
-                    >
+                    <SegOption key={m} active={showAfterTax ? m === "net" : m === "gross"} onClick={() => setShowAfterTax(m === "net")}>
                       {m === "gross" ? "Bruto" : "Líquido"}
-                    </button>
+                    </SegOption>
                   ))}
-                </div>
+                </SegRow>
               </div>
 
               <div style={{ minHeight: 260 }}>
                 <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                    <CartesianGrid stroke="var(--border-chart)" />
-                    <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
                     <Tooltip content={<CustomTooltip />} />
                     {liveScenarios.map((s) => (
                       <Line
@@ -620,34 +610,32 @@ export const ScenarioComparator = () => {
               <div className="mt-3 flex flex-wrap gap-4">
                 {liveScenarios.map((s) => (
                   <div key={s.id} className="flex items-center gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: s.color }} />
-                    <span className="text-text-muted text-[12px]">{s.label}</span>
-                    {s.id === winnerId && <Trophy size={10} className="text-green" />}
+                    <div className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: s.color }} />
+                    <span className="text-[12px] text-[var(--text-sub)]">{s.label}</span>
+                    {s.id === winnerId && <Trophy size={10} className="text-[var(--moss)]" />}
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
 
             {/* Comparison summary table */}
-            <div className="border-border bg-surface rounded-xl border p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <SectionHeader
-                  title="Resultado Final"
-                  subtitle={`Após ${yearsLabel} — ${showAfterTax ? "patrimônio líquido" : "patrimônio bruto"}`}
-                />
-              </div>
+            <Card>
+              <CardHead
+                title="Resultado Final"
+                subtitle={`Após ${yearsLabel} — ${showAfterTax ? "patrimônio líquido" : "patrimônio bruto"}`}
+              />
 
-              <div className="overflow-x-auto rounded-xl border border-border">
-                <table className="w-full text-[12px] min-w-[560px]">
+              <div className="overflow-x-auto rounded-[13px] border border-[var(--border-color)]">
+                <table className="w-full min-w-[560px] text-[12px]">
                   <thead>
-                    <tr className="border-b border-border bg-surface2/60">
-                      <th className="text-text-muted px-4 py-2.5 text-left font-medium">Cenário</th>
-                      <th className="text-text-muted px-4 py-2.5 text-right font-medium">Taxa</th>
-                      <th className="text-text-muted px-4 py-2.5 text-right font-medium">Patrimônio</th>
-                      <th className="text-text-muted px-4 py-2.5 text-right font-medium">Rendimento</th>
-                      <th className="text-text-muted px-4 py-2.5 text-right font-medium">Imposto</th>
-                      <th className="text-text-muted px-4 py-2.5 text-right font-medium">Renda/mês</th>
-                      <th className="text-text-muted px-4 py-2.5 text-right font-medium">Retorno %</th>
+                    <tr className="border-b border-[var(--border-color)] bg-[var(--surface2)]">
+                      <th className="px-4 py-2.5 text-left font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Cenário</th>
+                      <th className="px-4 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Taxa</th>
+                      <th className="px-4 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Patrimônio</th>
+                      <th className="px-4 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Rendimento</th>
+                      <th className="px-4 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Imposto</th>
+                      <th className="px-4 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Renda/mês</th>
+                      <th className="px-4 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Retorno %</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -665,46 +653,46 @@ export const ScenarioComparator = () => {
                         <tr
                           key={scenario.id}
                           className={cn(
-                            "border-b border-border last:border-0 transition-colors",
-                            isWinner ? "bg-surface2/40" : "hover:bg-surface2/20",
+                            "border-b border-[var(--border-color)] transition-colors last:border-0",
+                            isWinner ? "bg-[var(--surface2)]" : "hover:bg-[var(--surface2)]",
                           )}
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: scenario.color }} />
+                              <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: scenario.color }} />
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-text font-medium truncate">{scenario.label}</span>
-                                  {isWinner && <Trophy size={11} className="text-green shrink-0" />}
+                                  <span className="truncate font-medium text-[var(--text)]">{scenario.label}</span>
+                                  {isWinner && <Trophy size={11} className="shrink-0 text-[var(--moss)]" />}
                                 </div>
-                                <div className="flex items-center gap-1 mt-0.5">
+                                <div className="mt-0.5 flex items-center gap-1">
                                   {scenario.ticker && (
-                                    <span className="text-[10px] text-text-muted bg-surface2 border border-border rounded px-1">{scenario.ticker}</span>
+                                    <span className="rounded border border-[var(--border-color)] bg-[var(--surface2)] px-1 font-mono text-[10px] text-[var(--text-sub)]">{scenario.ticker}</span>
                                   )}
                                   {scenario.isStub && (
-                                    <span className="text-[10px] bg-orange/10 text-orange rounded px-1">estimado</span>
+                                    <span className="rounded px-1 text-[10px] text-[var(--gold)]" style={{ background: "color-mix(in srgb, var(--gold) 12%, transparent)" }}>estimado</span>
                                   )}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-right font-mono text-text-muted">
+                          <td className="px-4 py-3 text-right font-mono tabular-nums text-[var(--text-sub)]">
                             {scenario.annualRate.toFixed(2)}% a.a.
                           </td>
-                          <td className="px-4 py-3 text-right font-money font-semibold" style={{ color: scenario.color }}>
+                          <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums" style={{ color: scenario.color }}>
                             {formatCurrency(finalVal / 100)}
                           </td>
-                          <td className="px-4 py-3 text-right font-money text-green">
+                          <td className="px-4 py-3 text-right font-mono tabular-nums text-[var(--moss)]">
                             +{formatCurrency(gain / 100)}
                           </td>
-                          <td className="px-4 py-3 text-right font-money text-orange">
+                          <td className="px-4 py-3 text-right font-mono tabular-nums text-[var(--gold)]">
                             {formatCurrency(last.totalTax / 100)}
-                            <p className="text-[10px] text-text-muted">{(last.irRate * 100).toFixed(1)}% IR</p>
+                            <p className="text-[10px] text-[var(--text-sub)]">{(last.irRate * 100).toFixed(1)}% IR</p>
                           </td>
-                          <td className="px-4 py-3 text-right font-money text-text">
+                          <td className="px-4 py-3 text-right font-mono tabular-nums text-[var(--text)]">
                             {formatCurrency(monthlyIncome / 100)}
                           </td>
-                          <td className="px-4 py-3 text-right font-money text-blue">
+                          <td className="px-4 py-3 text-right font-mono tabular-nums text-[var(--brand-accent)]">
                             {retPct}%
                           </td>
                         </tr>
@@ -718,20 +706,20 @@ export const ScenarioComparator = () => {
               {scenarioResults[0]?.last && (
                 <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px]">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-text-muted">Total aportado (igual a todos):</span>
-                    <span className="font-money text-text">{formatCurrency(scenarioResults[0].last.invested / 100)}</span>
+                    <span className="text-[var(--text-sub)]">Total aportado (igual a todos):</span>
+                    <span className="font-mono tabular-nums text-[var(--text)]">{formatCurrency(scenarioResults[0].last.invested / 100)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-text-muted">Inicial:</span>
-                    <span className="font-money text-text">{formatCurrency(initial / 100)}</span>
+                    <span className="text-[var(--text-sub)]">Inicial:</span>
+                    <span className="font-mono tabular-nums text-[var(--text)]">{formatCurrency(initial / 100)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-text-muted">Mensal:</span>
-                    <span className="font-money text-text">{formatCurrency(monthly / 100)}</span>
+                    <span className="text-[var(--text-sub)]">Mensal:</span>
+                    <span className="font-mono tabular-nums text-[var(--text)]">{formatCurrency(monthly / 100)}</span>
                   </div>
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         </div>
       </div>

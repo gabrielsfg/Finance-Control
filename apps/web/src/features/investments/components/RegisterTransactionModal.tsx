@@ -38,6 +38,8 @@ const ASSET_TYPE_QUANTITY_DECIMALS: Record<AssetType, number> = {
   FundoInvestimento: 2,
   TesouroDireto:     2,
   RendaFixa:         2,
+  Moeda:             2,
+  Index:             2,
   Outro:             2,
   Cripto:            8,
 };
@@ -54,13 +56,15 @@ const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   ETFInternacional:  "ETF Internacional",
   TesouroDireto:     "Tesouro Direto",
   RendaFixa:         "Renda Fixa",
+  Moeda:             "Moeda",
+  Index:             "Índice",
   Outro:             "Outro",
 };
 
 const schema = z.object({
   ticker:     z.string().min(1, "Ticker é obrigatório"),
   name:       z.string().min(1, "Nome é obrigatório"),
-  assetType:  z.enum(["Acao","FundoInvestimento","FII","Cripto","Stock","Reit","BDR","ETF","ETFInternacional","TesouroDireto","RendaFixa","Outro"]),
+  assetType:  z.enum(["Acao","FundoInvestimento","FII","Cripto","Stock","Reit","BDR","ETF","ETFInternacional","TesouroDireto","RendaFixa","Moeda","Index","Outro"]),
   broker:     z.string().optional(),
   operation:  z.enum(["Buy", "Sell"]),
   date:       z.string().min(1, "Data é obrigatória"),
@@ -81,10 +85,10 @@ type Props = {
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const INPUT_CLASS =
-  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-green/60 h-11 rounded-lg px-3.5 text-[15px]";
+  "w-full h-11 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 text-[15px] text-[var(--text)] outline-none transition-colors placeholder:text-[var(--text-sub)] focus:border-[var(--brand-cobalt)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]";
 
 const TRIGGER_CLASS =
-  "border-border bg-surface2 text-text w-full !h-11 rounded-lg px-3.5 text-[15px]";
+  "w-full !h-11 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 text-[15px] text-[var(--text)]";
 
 const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const WEEK_DAYS   = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -649,7 +653,7 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
                 <FormField label={operation === "Buy" ? "Débito da conta" : "Crédito na conta"} error={errors.accountId?.message}>
                   <Select
                     value={accountId ?? ""}
-                    onValueChange={(v) => setValue("accountId", v, { shouldValidate: true })}
+                    onValueChange={(v) => setValue("accountId", v ?? "", { shouldValidate: true })}
                   >
                     <SelectTrigger className={cn(TRIGGER_CLASS, errors.accountId && "border-red/60")}>
                       <SelectValue>

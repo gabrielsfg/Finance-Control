@@ -11,7 +11,7 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { useGoals } from "@/features/goals/hooks/useGoals";
@@ -117,19 +117,19 @@ export function PassiveIncomeChart({ data }: Props) {
 
   if (chartData.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-        <SectionHeader
+      <Card className="flex flex-col">
+        <CardHead
           title="Renda Passiva vs. Custo de Vida"
           subtitle="Evolução dos dividendos e projeção até a independência financeira"
         />
         <ChartEmptyState message="Sem dividendos registrados para exibir" />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Renda Passiva vs. Custo de Vida"
         subtitle="Evolução dos dividendos e projeção até a independência financeira"
       />
@@ -219,16 +219,16 @@ export function PassiveIncomeChart({ data }: Props) {
                 <stop offset="95%" stopColor="var(--red)" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="var(--border-chart)" />
+            <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
-              tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => formatCurrencyCompact(v / 100)}
@@ -236,7 +236,7 @@ export function PassiveIncomeChart({ data }: Props) {
             />
             <Tooltip
               content={<CustomTooltip />}
-              cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }}
+              cursor={{ stroke: "var(--border-color)", strokeWidth: 1, strokeDasharray: "4 4" }}
             />
             <ReferenceLine
               y={monthlyLivingCost}
@@ -285,6 +285,6 @@ export function PassiveIncomeChart({ data }: Props) {
         <LegendItem color="var(--green)" label="Renda passiva (projeção)"  dashed />
         <LegendItem color="var(--red)"   label="Custo de vida"             dashed={false} />
       </div>
-    </div>
+    </Card>
   );
 }

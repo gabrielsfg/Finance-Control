@@ -10,8 +10,8 @@ import {
   CartesianGrid,
   ReferenceDot,
 } from "recharts";
-import { Flag, TrendingUp, Coins, Star, Flame, Trophy } from "lucide-react";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Flag, Coins, Star, Flame, Trophy } from "lucide-react";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { FinancialMilestonesResponse, FinancialMilestone } from "@/lib/types/analytics.types";
@@ -86,19 +86,19 @@ export function FinancialTimelineChart({ data }: Props) {
 
   if (chartData.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-        <SectionHeader
+      <Card className="flex flex-col">
+        <CardHead
           title="Linha da Vida Financeira"
           subtitle="Evolução completa do patrimônio com marcos da sua jornada"
         />
         <ChartEmptyState message="Sem histórico patrimonial para exibir" />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Linha da Vida Financeira"
         subtitle="Evolução completa do patrimônio com marcos da sua jornada"
       />
@@ -108,20 +108,20 @@ export function FinancialTimelineChart({ data }: Props) {
           <AreaChart data={chartData} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="gradTimeline" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="var(--green)" stopOpacity={0.22} />
-                <stop offset="95%" stopColor="var(--green)" stopOpacity={0.02} />
+                <stop offset="5%"  stopColor="var(--moss)" stopOpacity={0.22} />
+                <stop offset="95%" stopColor="var(--moss)" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="var(--border-chart)" />
+            <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "DM Sans" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
-              tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "JetBrains Mono" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => formatCurrencyCompact(v / 100)}
@@ -129,13 +129,13 @@ export function FinancialTimelineChart({ data }: Props) {
             />
             <Tooltip
               content={<CustomTooltip />}
-              cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }}
+              cursor={{ stroke: "var(--border-color)", strokeWidth: 1, strokeDasharray: "4 4" }}
             />
             <Area
               type="monotone"
               dataKey="netWorth"
               name="Patrimônio"
-              stroke="var(--green)"
+              stroke="var(--moss)"
               strokeWidth={2}
               fill="url(#gradTimeline)"
               dot={false}
@@ -159,7 +159,7 @@ export function FinancialTimelineChart({ data }: Props) {
       <div className="mt-3 flex flex-wrap gap-5">
         <div className="flex items-center gap-1.5">
           <svg width="20" height="12">
-            <line x1="0" y1="6" x2="20" y2="6" stroke="var(--green)" strokeWidth="2" />
+            <line x1="0" y1="6" x2="20" y2="6" stroke="var(--moss)" strokeWidth="2" />
           </svg>
           <span className="text-text-muted text-[13px]">Patrimônio líquido histórico</span>
         </div>
@@ -209,6 +209,6 @@ export function FinancialTimelineChart({ data }: Props) {
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

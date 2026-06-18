@@ -47,7 +47,7 @@ type Props = {
 };
 
 const INPUT_CLASS =
-  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-[--brand-cobalt] h-11 rounded-[13px] px-3.5 text-[15px]";
+  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-[var(--brand-cobalt)] h-11 rounded-[13px] px-3.5 text-[15px]";
 
 const TRIGGER_CLASS =
   "border-border bg-surface2 text-text w-full !h-11 rounded-[13px] px-3.5 text-[15px]";
@@ -62,7 +62,6 @@ const ACCOUNT_TYPE_LABELS: Record<AccountItem["type"], string> = {
   Checking: "Conta corrente",
   Savings: "Poupança",
   Credit: "Cartão de crédito",
-  Debit: "Cartão de débito",
   Cash: "Dinheiro",
 };
 
@@ -71,7 +70,6 @@ function AccountIcon({ type }: { type: AccountItem["type"] }) {
     Checking: <Landmark size={14} />,
     Savings: <PiggyBank size={14} />,
     Credit: <CreditCard size={14} />,
-    Debit: <Wallet size={14} />,
     Cash: <Banknote size={14} />,
   };
   return <>{map[type] ?? <Building2 size={14} />}</>;
@@ -505,7 +503,7 @@ export function RecurrenceEditDrawer({ open, target, onClose }: Props) {
         style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
       >
         <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: "var(--border-color)" }}>
-          <h2 className="font-display font-bold text-[--text] text-[17px] tracking-[-0.01em]">{title}</h2>
+          <h2 className="font-display font-bold text-[var(--text)] text-[17px] tracking-[-0.01em]">{title}</h2>
           <button
             onClick={onClose}
             title="Fechar"

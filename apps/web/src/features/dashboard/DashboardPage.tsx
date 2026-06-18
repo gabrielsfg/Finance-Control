@@ -88,7 +88,7 @@ function BigMoney({ cents, className, style }: { cents: number; className?: stri
     <span className={cn("font-mono tabular-nums", className)} style={style}>
       <span className="text-[0.34em] opacity-60 mr-[0.16em] align-[0.42em]">R$</span>
       {int}
-      <span className="text-[0.42em] text-[--panel-muted]">,{dec}</span>
+      <span className="text-[0.42em] text-[var(--panel-muted)]">,{dec}</span>
     </span>
   );
 }
@@ -108,7 +108,7 @@ function Money({
     <span
       className={cn(
         "font-mono tabular-nums font-medium tracking-[-0.01em]",
-        neg ? "text-[--clay]" : sign ? "text-[--moss]" : "text-[--text]",
+        neg ? "text-[var(--clay)]" : sign ? "text-[var(--moss)]" : "text-[var(--text)]",
         className,
       )}
     >
@@ -124,7 +124,7 @@ function Card({ children, className }: { children: React.ReactNode; className?: 
   return (
     <div
       className={cn(
-        "rounded-[20px] border border-[--border-color] bg-[--surface] p-[22px]",
+        "rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)] p-[22px]",
         className,
       )}
       style={{ boxShadow: "var(--shadow-sm)" }}
@@ -146,13 +146,13 @@ function CardHead({
   const router = useRouter();
   return (
     <div className="mb-4 flex items-center gap-2">
-      <h3 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[--text]">
+      <h3 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">
         {title}
       </h3>
       {href && (
         <button
           onClick={() => router.push(href)}
-          className="ml-auto font-mono text-[11px] tracking-[0.1em] uppercase text-[--brand-accent] hover:underline"
+          className="ml-auto font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--brand-accent)] hover:underline"
         >
           {linkLabel}
         </button>
@@ -169,8 +169,8 @@ function FlowBar({ pct, variant }: { pct: number; variant: "in" | "out" }) {
         className={cn(
           "flow-fill h-full rounded-full",
           variant === "in"
-            ? "bg-gradient-to-r from-[--moss] to-[--moss-lift]"
-            : "bg-gradient-to-r from-[--clay] to-[--clay-lift]",
+            ? "bg-gradient-to-r from-[var(--moss)] to-[var(--moss-lift)]"
+            : "bg-gradient-to-r from-[var(--clay)] to-[var(--clay-lift)]",
         )}
         style={{ "--to": to } as React.CSSProperties}
       />
@@ -197,7 +197,7 @@ function AccountsCard({ accounts }: { accounts: AccountItem[] }) {
               key={acct.id}
               className={cn(
                 "flex items-center gap-3 py-3",
-                i < visible.length - 1 && "border-b border-[--border-color]",
+                i < visible.length - 1 && "border-b border-[var(--border-color)]",
               )}
             >
               <div
@@ -207,15 +207,15 @@ function AccountsCard({ accounts }: { accounts: AccountItem[] }) {
                 {abbr}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-[14px] font-semibold text-[--text] truncate">{acct.name}</div>
-                <div className="font-mono text-[11px] text-[--text-sub] tracking-[0.04em]">{label}</div>
+                <div className="text-[14px] font-semibold text-[var(--text)] truncate">{acct.name}</div>
+                <div className="font-mono text-[11px] text-[var(--text-sub)] tracking-[0.04em]">{label}</div>
               </div>
               <div className="text-right">
                 <Money
                   cents={acct.currentAmount}
-                  className={cn("text-[15px]", isCredit && acct.currentAmount < 0 && "text-[--clay]")}
+                  className={cn("text-[15px]", isCredit && acct.currentAmount < 0 && "text-[var(--clay)]")}
                 />
-                <div className="font-mono text-[10.5px] text-[--text-sub] uppercase tracking-[0.1em] mt-0.5">
+                <div className="font-mono text-[10.5px] text-[var(--text-sub)] uppercase tracking-[0.1em] mt-0.5">
                   {isCredit ? "A pagar" : "Disponível"}
                 </div>
               </div>
@@ -223,7 +223,7 @@ function AccountsCard({ accounts }: { accounts: AccountItem[] }) {
           );
         })}
         {accounts.length === 0 && (
-          <p className="py-6 text-center font-mono text-[13px] text-[--text-sub]">
+          <p className="py-6 text-center font-mono text-[13px] text-[var(--text-sub)]">
             Nenhuma conta cadastrada
           </p>
         )}
@@ -250,7 +250,7 @@ function TransactionsCard({ transactions }: { transactions: RecentTransaction[] 
               key={tx.id}
               className={cn(
                 "flex items-center gap-3 py-[11px]",
-                i < visible.length - 1 && "border-b border-[--border-color]",
+                i < visible.length - 1 && "border-b border-[var(--border-color)]",
               )}
             >
               <div
@@ -267,8 +267,8 @@ function TransactionsCard({ transactions }: { transactions: RecentTransaction[] 
                 {tx.subCategoryEmoji ?? (isIncome ? "↑" : isTransfer ? "⇄" : "↓")}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-[14px] font-medium text-[--text] truncate">{tx.description}</div>
-                <div className="font-mono text-[11px] text-[--text-sub]">{tx.categoryName}</div>
+                <div className="text-[14px] font-medium text-[var(--text)] truncate">{tx.description}</div>
+                <div className="font-mono text-[11px] text-[var(--text-sub)]">{tx.categoryName}</div>
               </div>
               <div className="shrink-0 w-[100px] text-right">
                 <Money
@@ -281,7 +281,7 @@ function TransactionsCard({ transactions }: { transactions: RecentTransaction[] 
           );
         })}
         {transactions.length === 0 && (
-          <p className="py-6 text-center font-mono text-[13px] text-[--text-sub]">
+          <p className="py-6 text-center font-mono text-[13px] text-[var(--text-sub)]">
             Nenhuma transação este período
           </p>
         )}
@@ -307,7 +307,7 @@ function InvestmentsCard({ portfolio }: { portfolio: InvestmentPortfolio | undef
             <span
               className={cn(
                 "font-mono text-[13px] font-medium",
-                dayChange >= 0 ? "text-[--moss]" : "text-[--clay]",
+                dayChange >= 0 ? "text-[var(--moss)]" : "text-[var(--clay)]",
               )}
             >
               {dayChange >= 0 ? "+" : "−"} {formatCurrency(Math.abs(dayChange / 100))} hoje
@@ -319,20 +319,20 @@ function InvestmentsCard({ portfolio }: { portfolio: InvestmentPortfolio | undef
               key={inv.id}
               className={cn(
                 "flex items-center gap-3 py-[10px]",
-                i < top.length - 1 && "border-b border-[--border-color]",
+                i < top.length - 1 && "border-b border-[var(--border-color)]",
               )}
             >
-              <span className="font-mono text-[13px] font-semibold text-[--text] w-[64px]">
+              <span className="font-mono text-[13px] font-semibold text-[var(--text)] w-[64px]">
                 {inv.ticker}
               </span>
-              <span className="flex-1 truncate text-[13px] text-[--text-sub]">{inv.name}</span>
-              <span className="font-mono text-[13px] w-[72px] text-right text-[--text]">
+              <span className="flex-1 truncate text-[13px] text-[var(--text-sub)]">{inv.name}</span>
+              <span className="font-mono text-[13px] w-[72px] text-right text-[var(--text)]">
                 {formatCurrency(inv.currentPrice / 100)}
               </span>
               <span
                 className={cn(
                   "font-mono text-[12px] font-medium w-[54px] text-right",
-                  inv.dayChangePct >= 0 ? "text-[--moss]" : "text-[--clay]",
+                  inv.dayChangePct >= 0 ? "text-[var(--moss)]" : "text-[var(--clay)]",
                 )}
               >
                 {inv.dayChangePct >= 0 ? "+" : ""}
@@ -341,14 +341,14 @@ function InvestmentsCard({ portfolio }: { portfolio: InvestmentPortfolio | undef
             </div>
           ))}
           {top.length === 0 && (
-            <p className="py-4 text-center font-mono text-[13px] text-[--text-sub]">
+            <p className="py-4 text-center font-mono text-[13px] text-[var(--text-sub)]">
               Nenhum ativo na carteira
             </p>
           )}
         </>
       ) : (
         <div className="flex flex-col items-center py-6 text-center">
-          <p className="font-mono text-[13px] text-[--text-sub]">Carregando carteira…</p>
+          <p className="font-mono text-[13px] text-[var(--text-sub)]">Carregando carteira…</p>
         </div>
       )}
     </Card>
@@ -365,7 +365,7 @@ function GoalsCard({ goals }: { goals: Goal[] }) {
     <Card>
       <CardHead title="Metas" href="/goals" linkLabel="Todas" />
       {active.length === 0 ? (
-        <p className="py-4 text-center font-mono text-[13px] text-[--text-sub]">Sem metas ativas</p>
+        <p className="py-4 text-center font-mono text-[13px] text-[var(--text-sub)]">Sem metas ativas</p>
       ) : (
         active.map((goal, i) => {
           const current = goal.currentAmount ?? 0;
@@ -378,10 +378,10 @@ function GoalsCard({ goals }: { goals: Goal[] }) {
           return (
             <div
               key={goal.id}
-              className={cn("py-[14px]", i < active.length - 1 && "border-b border-[--border-color]")}
+              className={cn("py-[14px]", i < active.length - 1 && "border-b border-[var(--border-color)]")}
             >
               <div className="mb-[9px] flex items-baseline justify-between">
-                <span className="text-[14px] font-semibold text-[--text]">{goal.name}</span>
+                <span className="text-[14px] font-semibold text-[var(--text)]">{goal.name}</span>
                 <span
                   className="font-mono text-[13px] font-semibold"
                   style={{ color }}
@@ -389,7 +389,7 @@ function GoalsCard({ goals }: { goals: Goal[] }) {
                   {pctDisplay}%
                 </span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-[--surface2]">
+              <div className="h-2 overflow-hidden rounded-full bg-[var(--surface2)]">
                 <div
                   className="flow-fill h-full rounded-full"
                   style={{
@@ -399,13 +399,13 @@ function GoalsCard({ goals }: { goals: Goal[] }) {
                 />
               </div>
               <div className="mt-2 flex justify-between">
-                <span className="font-mono text-[12.5px] text-[--text-sub]">
-                  <strong className="text-[--text]">{formatCurrency(current / 100)}</strong>
+                <span className="font-mono text-[12.5px] text-[var(--text-sub)]">
+                  <strong className="text-[var(--text)]">{formatCurrency(current / 100)}</strong>
                   {" / "}
                   {formatCurrency(target / 100)}
                 </span>
                 {goal.targetDate && (
-                  <span className="font-mono text-[12.5px] text-[--text-sub]">
+                  <span className="font-mono text-[12.5px] text-[var(--text-sub)]">
                     {format(parseLocalDate(goal.targetDate), "MMM/yyyy", { locale: ptBR })}
                   </span>
                 )}
@@ -427,7 +427,7 @@ function BudgetCard({ budget }: { budget: BudgetSummary | null }) {
     return (
       <Card>
         <CardHead title="Orçamento" />
-        <p className="py-4 text-center font-mono text-[13px] text-[--text-sub]">
+        <p className="py-4 text-center font-mono text-[13px] text-[var(--text-sub)]">
           {budget ? "Sem categorias alocadas" : "Nenhum orçamento"}
         </p>
       </Card>
@@ -446,21 +446,21 @@ function BudgetCard({ budget }: { budget: BudgetSummary | null }) {
         return (
           <div
             key={cat.subCategoryName}
-            className={cn("py-3", i < cats.length - 1 && "border-b border-[--border-color]")}
+            className={cn("py-3", i < cats.length - 1 && "border-b border-[var(--border-color)]")}
           >
             <div className="mb-2 flex items-baseline justify-between">
-              <span className="text-[13.5px] font-medium text-[--text]">{cat.subCategoryName}</span>
+              <span className="text-[13.5px] font-medium text-[var(--text)]">{cat.subCategoryName}</span>
               <span
-                className={cn("font-mono text-[12px]", over ? "text-[--clay]" : "text-[--text-sub]")}
+                className={cn("font-mono text-[12px]", over ? "text-[var(--clay)]" : "text-[var(--text-sub)]")}
               >
-                <strong className={over ? "text-[--clay]" : "text-[--text]"}>
+                <strong className={over ? "text-[var(--clay)]" : "text-[var(--text)]"}>
                   {formatCurrency(cat.spent / 100)}
                 </strong>
                 {" / "}
                 {formatCurrency(cat.allocated / 100)}
               </span>
             </div>
-            <div className="h-[7px] overflow-hidden rounded-full bg-[--surface2]">
+            <div className="h-[7px] overflow-hidden rounded-full bg-[var(--surface2)]">
               <div
                 className="flow-fill h-full rounded-full"
                 style={{
@@ -511,7 +511,7 @@ export function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="font-mono text-[13px] text-[--text-sub]">Carregando…</div>
+        <div className="font-mono text-[13px] text-[var(--text-sub)]">Carregando…</div>
       </div>
     );
   }
@@ -557,16 +557,16 @@ export function DashboardPage() {
       {/* ── Topbar ── */}
       <header className="flex items-end gap-5 pt-[26px] pb-[30px]">
         <div>
-          <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[--text-sub]">
+          <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--text-sub)]">
             Demonstrativo · {monthName}
           </div>
-          <h1 className="font-display mt-[6px] text-[clamp(26px,3vw,36px)] font-bold tracking-[-0.025em] leading-[1.02] text-[--text]">
+          <h1 className="font-display mt-[6px] text-[clamp(26px,3vw,36px)] font-bold tracking-[-0.025em] leading-[1.02] text-[var(--text)]">
             Olá, {firstName}
           </h1>
           {savingsRate > 0 && (
-            <p className="mt-[6px] text-[14px] text-[--text-sub]">
+            <p className="mt-[6px] text-[14px] text-[var(--text-sub)]">
               Seu mês está positivo — você guardou{" "}
-              <strong className="text-[--text]">{savingsRate}%</strong> do que entrou.
+              <strong className="text-[var(--text)]">{savingsRate}%</strong> do que entrou.
             </p>
           )}
         </div>
@@ -582,9 +582,9 @@ export function DashboardPage() {
             style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
           >
             {theme === "dark" ? (
-              <Sun size={19} strokeWidth={1.7} className="text-[--text]" />
+              <Sun size={19} strokeWidth={1.7} className="text-[var(--text)]" />
             ) : (
-              <Moon size={19} strokeWidth={1.7} className="text-[--text]" />
+              <Moon size={19} strokeWidth={1.7} className="text-[var(--text)]" />
             )}
           </button>
 
@@ -628,7 +628,7 @@ export function DashboardPage() {
           <div className="grid grid-cols-[1.05fr_1.25fr] gap-[34px]">
             {/* Left — patrimônio */}
             <div>
-              <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[--panel-muted]">
+              <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
                 Patrimônio total
               </div>
               <BigMoney
@@ -641,32 +641,32 @@ export function DashboardPage() {
               {netWorthDelta !== undefined && (
                 <div className="mt-2 inline-flex items-center gap-[7px] font-mono text-[13px] font-medium">
                   <span
-                    className="inline-flex items-center gap-1 rounded-full px-[9px] py-[3px] text-[--moss-lift]"
+                    className="inline-flex items-center gap-1 rounded-full px-[9px] py-[3px] text-[var(--moss-lift)]"
                     style={{ background: "rgba(95,198,160,0.15)" }}
                   >
                     <ArrowUpRight size={13} strokeWidth={2.4} />
                     {netWorthDelta > 0 ? "+" : ""}{netWorthDelta.toFixed(1)}%
                   </span>
-                  <span className="text-[--panel-muted]">vs. mês anterior</span>
+                  <span className="text-[var(--panel-muted)]">vs. mês anterior</span>
                 </div>
               )}
 
               {/* Mini-stats */}
               <div className="mt-6 flex gap-[26px]">
                 <div>
-                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[--panel-muted]">Em conta</div>
+                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Em conta</div>
                   <div className="font-mono mt-[3px] text-[18px] font-medium">
                     {formatCurrency(liquidBalance / 100)}
                   </div>
                 </div>
                 <div>
-                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[--panel-muted]">Investido</div>
+                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Investido</div>
                   <div className="font-mono mt-[3px] text-[18px] font-medium">
                     {formatCurrency(investedValue / 100)}
                   </div>
                 </div>
                 <div>
-                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[--panel-muted]">Saldo do mês</div>
+                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Saldo do mês</div>
                   <div
                     className="font-mono mt-[3px] text-[18px] font-medium"
                     style={{ color: periodBalance >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
@@ -681,7 +681,7 @@ export function DashboardPage() {
             <div className="self-center">
               <div className="mb-[18px] flex items-baseline justify-between">
                 <span className="font-display text-[16px] font-bold">Fluxo do mês</span>
-                <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[--panel-muted]">
+                <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--panel-muted)]">
                   {periodLabel}
                 </span>
               </div>
@@ -693,7 +693,7 @@ export function DashboardPage() {
                     <span className="h-[9px] w-[9px] rounded-[3px]" style={{ background: "var(--moss-lift)" }} />
                     Entradas
                   </span>
-                  <span className="font-mono text-[14px] font-medium text-[--moss-lift]">
+                  <span className="font-mono text-[14px] font-medium text-[var(--moss-lift)]">
                     + {formatCurrency(totalIncome / 100)}
                   </span>
                 </div>
@@ -707,7 +707,7 @@ export function DashboardPage() {
                     <span className="h-[9px] w-[9px] rounded-[3px]" style={{ background: "var(--clay-lift)" }} />
                     Saídas
                   </span>
-                  <span className="font-mono text-[14px] font-medium text-[--clay-lift]">
+                  <span className="font-mono text-[14px] font-medium text-[var(--clay-lift)]">
                     − {formatCurrency(totalExpenses / 100)}
                   </span>
                 </div>
@@ -719,7 +719,7 @@ export function DashboardPage() {
                 className="mt-5 flex items-center justify-between border-t pt-4"
                 style={{ borderColor: "rgba(255,255,255,0.12)" }}
               >
-                <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[--panel-muted]">
+                <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">
                   Saldo do mês
                 </span>
                 <span

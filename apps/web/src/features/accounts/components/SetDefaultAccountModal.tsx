@@ -25,6 +25,7 @@ export const SetDefaultAccountModal = ({ account, onClose }: Props) => {
     await mutateAsync({
       id: account.id,
       data: {
+        id: account.id,
         name: account.name,
         type: account.type,
         isDefaultAccount: true,

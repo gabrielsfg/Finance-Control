@@ -6,14 +6,20 @@ import {
   ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip,
   CartesianGrid, ReferenceLine,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import { simulateMonthly, aggregateAnnual } from "../utils/taxCalc";
 import type { AssetCategory } from "@/lib/types/simulation";
 import { ASSET_CATEGORY_LABELS } from "@/lib/types/simulation";
+import {
+  CHART_GRID, axisTick, SERIES, FieldLabel, FieldShell, MoneyPrefix, UnitSuffix, fieldMono,
+  SegRow, SegOption, LegendItem,
+} from "./simShared";
 
-const inputCls = "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-green/60 transition-colors";
+/** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
+const inputCls =
+  "h-11 w-full rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 font-mono text-[14px] tabular-nums text-[var(--text)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--text-sub)]/60 focus:border-[var(--brand-cobalt)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]";
 
 // ── Dropdown customizado (mesmo padrão de CompoundInterestSimulator) ────────
 const AssetCategorySelect = ({
@@ -38,21 +44,21 @@ const AssetCategorySelect = ({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="border-border bg-surface2 text-text flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-[13px] transition-colors hover:border-green/40"
+        className="flex h-[42px] w-full items-center justify-between gap-2 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 text-[14px] text-[var(--text)] transition-colors hover:border-[var(--brand-accent)]/50"
       >
         <span>{ASSET_CATEGORY_LABELS[value]}</span>
-        <ChevronDown size={14} className={cn("text-text-muted transition-transform shrink-0", open && "rotate-180")} />
+        <ChevronDown size={14} className={cn("text-[var(--text-sub)] transition-transform shrink-0", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="border-border bg-surface absolute left-0 top-10 z-50 flex flex-col gap-px rounded-xl border p-1.5 shadow-lg w-full min-w-[220px]">
+        <div className="absolute left-0 top-[46px] z-50 flex w-full min-w-[220px] flex-col gap-px rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] p-1.5 shadow-lg">
           {(Object.entries(ASSET_CATEGORY_LABELS) as [AssetCategory, string][]).map(([k, v]) => (
             <button
               key={k}
               onClick={() => { onChange(k); setOpen(false); }}
-              className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-surface2"
+              className="flex items-center justify-between gap-2 rounded-[9px] px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--surface2)]"
             >
-              <span className={cn("text-text-sub", value === k && "text-text")}>{v}</span>
-              {value === k && <Check size={12} className="text-green shrink-0" />}
+              <span className={cn("text-[var(--text-sub)]", value === k && "text-[var(--text)]")}>{v}</span>
+              {value === k && <Check size={12} className="shrink-0 text-[var(--brand-accent)]" />}
             </button>
           ))}
         </div>
@@ -61,33 +67,36 @@ const AssetCategorySelect = ({
   );
 };
 
-// ── Tooltip ──────────────────────────────────────────────────────────────────
-const CustomTooltip = ({ active, payload, label, goalCents }: any) => {
+// ── Cores das séries ─────────────────────────────────────────────────────────
+const GOAL_SERIES = {
+  gross:    SERIES.moss,
+  net:      SERIES.violet,
+  invested: SERIES.gold,
+} as const;
+
+// ── Tooltip tokenizado com rodapé "% da meta atingida" (dinâmico por hover) ───
+const GoalTooltip = ({ active, payload, label, goalCents }: any) => {
   if (!active || !payload?.length) return null;
   const gross = payload.find((p: any) => p.dataKey === "grossValue")?.value ?? 0;
-  const pct = goalCents > 0 ? Math.min(100, (gross / goalCents) * 100).toFixed(1) : 0;
+  const pct = goalCents > 0 ? Math.min(100, (gross / goalCents) * 100).toFixed(1) : "0";
   return (
-    <div className="border-border bg-surface rounded-lg border px-3 py-2.5 shadow-md min-w-[210px]">
-      <p className="text-text-muted mb-2 text-[11px]">{label}</p>
+    <div
+      className="min-w-[210px] rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5"
+      style={{ boxShadow: "var(--shadow-md)" }}
+    >
+      <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-sub)]">{label}</p>
       {payload.map((e: any) => (
-        <div key={e.name} className="flex justify-between gap-4 mb-0.5">
+        <div key={e.name} className="mb-0.5 flex justify-between gap-4">
           <span className="text-[12px]" style={{ color: e.stroke ?? e.color }}>{e.name}</span>
-          <span className="font-money text-[12px]" style={{ color: e.stroke ?? e.color }}>
+          <span className="font-mono text-[12px] tabular-nums" style={{ color: e.stroke ?? e.color }}>
             {formatCurrency(e.value / 100)}
           </span>
         </div>
       ))}
-      <p className="text-text-muted mt-1.5 border-t border-border pt-1.5 text-[11px]">{pct}% da meta atingida</p>
+      <p className="mt-1.5 border-t border-[var(--border-color)] pt-1.5 text-[11px] text-[var(--text-sub)]">{pct}% da meta atingida</p>
     </div>
   );
 };
-
-// ── Cores das séries (mesmo padrão do CompoundInterestSimulator) ─────────────
-const SERIES = {
-  gross:   "var(--green)",
-  net:     "var(--purple)",
-  invested:"var(--yellow)",
-} as const;
 
 // ── Modo: calcular prazo ou calcular aporte ───────────────────────────────────
 type GoalMode = "prazo" | "aporte";
@@ -187,73 +196,76 @@ export const GoalProjection = () => {
         <div className="flex flex-col gap-4">
 
           {/* Parâmetros */}
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <SectionHeader title="Parâmetros" />
+          <Card>
+            <CardHead title="Parâmetros" />
 
             {/* Mode toggle */}
-            <div className="mt-4 flex rounded-lg overflow-hidden border border-border bg-surface2 p-0.5 gap-0.5 mb-4">
+            <SegRow className="mb-4">
               {([["prazo", "⏱ Calcular prazo"], ["aporte", "💰 Calcular aporte"]] as [GoalMode, string][]).map(([m, lbl]) => (
-                <button
-                  key={m}
-                  onClick={() => setMode(m)}
-                  className={cn(
-                    "flex-1 rounded-md py-1.5 text-[12px] font-medium transition-all",
-                    mode === m ? "bg-green text-white shadow-sm" : "text-text-muted hover:text-text"
-                  )}
-                >
+                <SegOption key={m} active={mode === m} onClick={() => setMode(m)}>
                   {lbl}
-                </button>
+                </SegOption>
               ))}
-            </div>
+            </SegRow>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3.5">
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Valor da meta (R$)</label>
-                <input className={inputCls} value={goalAmount} onChange={(e) => setGoalAmount(e.target.value)} placeholder="50000" />
+                <FieldLabel>Valor da meta</FieldLabel>
+                <FieldShell prefix={<MoneyPrefix />}>
+                  <input className={fieldMono} value={goalAmount} onChange={(e) => setGoalAmount(e.target.value)} placeholder="50.000,00" inputMode="decimal" />
+                </FieldShell>
               </div>
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Já tenho (R$)</label>
-                <input className={inputCls} value={currentSavings} onChange={(e) => setCurrentSavings(e.target.value)} placeholder="5000" />
+                <FieldLabel>Já tenho</FieldLabel>
+                <FieldShell prefix={<MoneyPrefix />}>
+                  <input className={fieldMono} value={currentSavings} onChange={(e) => setCurrentSavings(e.target.value)} placeholder="5.000,00" inputMode="decimal" />
+                </FieldShell>
               </div>
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Taxa anual (%)</label>
-                <input className={inputCls} value={annualRate} onChange={(e) => setAnnualRate(e.target.value)} placeholder="10" />
+                <FieldLabel>Taxa anual</FieldLabel>
+                <FieldShell suffix={<UnitSuffix>%</UnitSuffix>}>
+                  <input className={fieldMono} value={annualRate} onChange={(e) => setAnnualRate(e.target.value)} placeholder="10" inputMode="decimal" />
+                </FieldShell>
               </div>
 
               {mode === "prazo" ? (
                 <div>
-                  <label className="text-text-muted mb-1.5 block text-[12px]">Aporte mensal (R$)</label>
-                  <input className={inputCls} value={monthlyContrib} onChange={(e) => setMonthlyContrib(e.target.value)} placeholder="1000" />
+                  <FieldLabel>Aporte mensal</FieldLabel>
+                  <FieldShell prefix={<MoneyPrefix />}>
+                    <input className={fieldMono} value={monthlyContrib} onChange={(e) => setMonthlyContrib(e.target.value)} placeholder="1.000,00" inputMode="decimal" />
+                  </FieldShell>
                 </div>
               ) : (
                 <div>
-                  <label className="text-text-muted mb-1.5 block text-[12px]">Prazo desejado (meses)</label>
-                  <input className={inputCls} value={desiredMonths} onChange={(e) => setDesiredMonths(e.target.value)} placeholder="36" />
+                  <FieldLabel>Prazo desejado (meses)</FieldLabel>
+                  <FieldShell suffix={<UnitSuffix>meses</UnitSuffix>}>
+                    <input className={fieldMono} value={desiredMonths} onChange={(e) => setDesiredMonths(e.target.value)} placeholder="36" inputMode="numeric" />
+                  </FieldShell>
                 </div>
               )}
 
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Tipo de ativo (para IR)</label>
+                <FieldLabel>Tipo de ativo (para IR)</FieldLabel>
                 <AssetCategorySelect value={assetCategory} onChange={setAssetCategory} />
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Resultado */}
           {result ? (
             <div
-              className="rounded-xl border p-5"
+              className="rounded-[20px] border p-5"
               style={{
-                background: `linear-gradient(135deg, color-mix(in srgb, var(--green) 12%, transparent), color-mix(in srgb, var(--green) 5%, transparent))`,
-                borderColor: "color-mix(in srgb, var(--green) 30%, transparent)",
+                background: `linear-gradient(135deg, color-mix(in srgb, var(--moss) 14%, transparent), color-mix(in srgb, var(--moss) 5%, transparent))`,
+                borderColor: "color-mix(in srgb, var(--moss) 30%, transparent)",
               }}
             >
-              <div className="text-[11px] font-semibold tracking-widest mb-3" style={{ color: "var(--green)" }}>
-                {mode === "prazo" ? "PRAZO NECESSÁRIO" : "APORTE NECESSÁRIO"}
+              <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: "var(--moss)" }}>
+                {mode === "prazo" ? "Prazo necessário" : "Aporte necessário"}
               </div>
 
               {/* Valor principal */}
-              <p className="font-money text-[34px] font-bold text-text leading-none">
+              <p className="font-mono text-[34px] font-bold leading-none tabular-nums text-[var(--text)]">
                 {mode === "prazo"
                   ? result.years > 0
                     ? `${result.years} anos`
@@ -261,47 +273,47 @@ export const GoalProjection = () => {
                   : formatCurrency(result.monthly / 100)}
               </p>
               {mode === "prazo" && result.years > 0 && result.remainingMonths > 0 && (
-                <p className="text-text-muted text-[12px] mt-1">e {result.remainingMonths} {result.remainingMonths === 1 ? "mês" : "meses"} · {result.months} meses no total</p>
+                <p className="mt-1 text-[12px] text-[var(--text-sub)]">e {result.remainingMonths} {result.remainingMonths === 1 ? "mês" : "meses"} · {result.months} meses no total</p>
               )}
               {mode === "prazo" && result.years === 0 && (
-                <p className="text-text-muted text-[12px] mt-1">{result.months} meses no total</p>
+                <p className="mt-1 text-[12px] text-[var(--text-sub)]">{result.months} meses no total</p>
               )}
               {mode === "aporte" && (
-                <p className="text-text-muted text-[12px] mt-1">por mês durante {result.months} meses ({result.years > 0 ? `${result.years}a ` : ""}{result.remainingMonths > 0 ? `${result.remainingMonths}m` : ""})</p>
+                <p className="mt-1 text-[12px] text-[var(--text-sub)]">por mês durante {result.months} meses ({result.years > 0 ? `${result.years}a ` : ""}{result.remainingMonths > 0 ? `${result.remainingMonths}m` : ""})</p>
               )}
 
               <div className="mt-4 flex flex-col gap-2.5">
                 {[
                   { label: "Meta",              value: formatCurrency(result.goalCents / 100),       color: "var(--text-sub)"  },
                   { label: "Já guardado",        value: formatCurrency(result.current / 100),         color: "var(--text-sub)"  },
-                  { label: "Total aportado",     value: formatCurrency(result.last.invested / 100),   color: "var(--yellow)"    },
-                  { label: "Ganho líquido",      value: `+${formatCurrency(result.last.netGain / 100)}`, color: "var(--green)"  },
-                  { label: "Imposto total",      value: formatCurrency(result.last.totalTax / 100),   color: "var(--orange)"    },
+                  { label: "Total aportado",     value: formatCurrency(result.last.invested / 100),   color: "var(--gold)"      },
+                  { label: "Ganho líquido",      value: `+${formatCurrency(result.last.netGain / 100)}`, color: "var(--moss)"   },
+                  { label: "Imposto total",      value: formatCurrency(result.last.totalTax / 100),   color: "var(--clay)"      },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="flex justify-between text-[12px]">
-                    <span className="text-text-muted">{label}</span>
-                    <span className="font-money" style={{ color }}>{value}</span>
+                    <span className="text-[var(--text-sub)]">{label}</span>
+                    <span className="font-mono tabular-nums" style={{ color }}>{value}</span>
                   </div>
                 ))}
 
                 {/* Barra de progresso */}
                 <div className="mt-1">
-                  <div className="flex justify-between text-[11px] mb-1">
-                    <span className="text-text-muted">Progresso atual</span>
-                    <span className="font-money" style={{ color: "var(--green)" }}>{result.progressPct.toFixed(1)}%</span>
+                  <div className="mb-1 flex justify-between text-[11px]">
+                    <span className="text-[var(--text-sub)]">Progresso atual</span>
+                    <span className="font-mono tabular-nums" style={{ color: "var(--moss)" }}>{result.progressPct.toFixed(1)}%</span>
                   </div>
-                  <div className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: "color-mix(in srgb, var(--green) 20%, transparent)" }}>
+                  <div className="h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: "color-mix(in srgb, var(--moss) 20%, transparent)" }}>
                     <div
                       className="h-full rounded-full transition-all"
-                      style={{ width: `${result.progressPct}%`, backgroundColor: "var(--green)" }}
+                      style={{ width: `${result.progressPct}%`, backgroundColor: "var(--moss)" }}
                     />
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-border">
-              <p className="text-text-muted text-[12px]">Preencha os campos para ver a projeção</p>
+            <div className="flex h-28 items-center justify-center rounded-[20px] border border-dashed border-[var(--border-color)]">
+              <p className="text-[12px] text-[var(--text-sub)]">Preencha os campos para ver a projeção</p>
             </div>
           )}
         </div>
@@ -310,10 +322,8 @@ export const GoalProjection = () => {
         <div className="flex flex-col gap-4">
 
           {/* Gráfico */}
-          <div className="border-border bg-surface rounded-xl border p-5 flex flex-col">
-            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-              <SectionHeader title="Curva até a Meta" subtitle={result?.useAnnual ? "Agrupado por ano" : "Mensal"} />
-            </div>
+          <Card className="flex flex-col">
+            <CardHead title="Curva até a meta" subtitle={result?.useAnnual ? "Agrupado por ano" : "Mensal"} />
 
             {result ? (
               <>
@@ -322,141 +332,134 @@ export const GoalProjection = () => {
                     <ComposedChart data={result.chart} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="gp_gradGross" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor={SERIES.gross}    stopOpacity={0.2}  />
-                          <stop offset="95%" stopColor={SERIES.gross}    stopOpacity={0}    />
+                          <stop offset="5%"  stopColor={GOAL_SERIES.gross}    stopOpacity={0.2}  />
+                          <stop offset="95%" stopColor={GOAL_SERIES.gross}    stopOpacity={0}    />
                         </linearGradient>
                         <linearGradient id="gp_gradNet" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor={SERIES.net}      stopOpacity={0.15} />
-                          <stop offset="95%" stopColor={SERIES.net}      stopOpacity={0}    />
+                          <stop offset="5%"  stopColor={GOAL_SERIES.net}      stopOpacity={0.15} />
+                          <stop offset="95%" stopColor={GOAL_SERIES.net}      stopOpacity={0}    />
                         </linearGradient>
                         <linearGradient id="gp_gradInv" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor={SERIES.invested} stopOpacity={0.12} />
-                          <stop offset="95%" stopColor={SERIES.invested} stopOpacity={0}    />
+                          <stop offset="5%"  stopColor={GOAL_SERIES.invested} stopOpacity={0.12} />
+                          <stop offset="95%" stopColor={GOAL_SERIES.invested} stopOpacity={0}    />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid stroke="var(--border-chart)" />
-                      <XAxis dataKey="shortLabel" tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                      <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
-                      <Tooltip content={<CustomTooltip goalCents={result.goalCents} />} />
+                      <CartesianGrid {...CHART_GRID} />
+                      <XAxis dataKey="shortLabel" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                      <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
+                      <Tooltip content={<GoalTooltip goalCents={result.goalCents} />} />
                       <ReferenceLine
                         y={result.goalCents}
-                        stroke="var(--orange)"
+                        stroke={SERIES.gold}
                         strokeDasharray="5 3"
                         strokeWidth={1.5}
-                        label={{ value: "Meta", fill: "var(--orange)", fontSize: 11, position: "insideTopRight" }}
+                        label={{ value: "Meta", fill: SERIES.gold, fontSize: 11, position: "insideTopRight" }}
                       />
-                      <Area type="monotone" dataKey="invested"   name="Investido"           stroke={SERIES.invested} strokeWidth={2}   fill="url(#gp_gradInv)"   dot={{ r: 5, fill: SERIES.invested, stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES.invested, stroke: "var(--surface)", strokeWidth: 2 }} />
-                      <Area type="monotone" dataKey="grossValue" name="Patrimônio bruto"    stroke={SERIES.gross}    strokeWidth={2}   fill="url(#gp_gradGross)" dot={{ r: 5, fill: SERIES.gross,    stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES.gross,    stroke: "var(--surface)", strokeWidth: 2 }} />
-                      <Line  type="monotone" dataKey="netValue"   name="Patrimônio líquido" stroke={SERIES.net}      strokeWidth={1.5} strokeDasharray="4 2"      dot={{ r: 5, fill: SERIES.net,      stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES.net,      stroke: "var(--surface)", strokeWidth: 2 }} />
+                      <Area type="monotone" dataKey="invested"   name="Investido"           stroke={GOAL_SERIES.invested} strokeWidth={2}   fill="url(#gp_gradInv)"   dot={{ r: 5, fill: GOAL_SERIES.invested, stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: GOAL_SERIES.invested, stroke: "var(--surface)", strokeWidth: 2 }} />
+                      <Area type="monotone" dataKey="grossValue" name="Patrimônio bruto"    stroke={GOAL_SERIES.gross}    strokeWidth={2.5} fill="url(#gp_gradGross)" dot={{ r: 5, fill: GOAL_SERIES.gross,    stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: GOAL_SERIES.gross,    stroke: "var(--surface)", strokeWidth: 2 }} />
+                      <Line  type="monotone" dataKey="netValue"   name="Patrimônio líquido" stroke={GOAL_SERIES.net}      strokeWidth={2.5} strokeDasharray="4 2"      dot={{ r: 5, fill: GOAL_SERIES.net,      stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: GOAL_SERIES.net,      stroke: "var(--surface)", strokeWidth: 2 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
 
                 {/* Legenda */}
                 <div className="mt-3 flex flex-wrap gap-4">
-                  {[
-                    [SERIES.gross,    "Patrimônio bruto"],
-                    [SERIES.net,      "Patrimônio líquido"],
-                    [SERIES.invested, "Investido"],
-                    ["var(--orange)", "Meta"],
-                  ].map(([color, label]) => (
-                    <div key={label} className="flex items-center gap-1.5">
-                      <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: color }} />
-                      <span className="text-text-muted text-[12px]">{label}</span>
-                    </div>
-                  ))}
+                  <LegendItem color={GOAL_SERIES.gross}>Patrimônio bruto</LegendItem>
+                  <LegendItem color={GOAL_SERIES.net}>Patrimônio líquido</LegendItem>
+                  <LegendItem color={GOAL_SERIES.invested}>Investido</LegendItem>
+                  <LegendItem color={SERIES.gold}>Meta</LegendItem>
                 </div>
               </>
             ) : (
               <div className="flex flex-1 items-center justify-center py-16">
-                <p className="text-text-muted text-[13px]">Preencha os parâmetros para ver a projeção</p>
+                <p className="text-[13px] text-[var(--text-sub)]">Preencha os parâmetros para ver a projeção</p>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Fluxo financeiro completo */}
           {result && (
-            <div className="border-border bg-surface rounded-xl border p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp size={15} className="text-green shrink-0" />
-                <p className="text-text text-[13px] font-semibold">Fluxo financeiro completo</p>
+            <Card>
+              <div className="mb-4 flex items-center gap-2">
+                <TrendingUp size={15} className="shrink-0 text-[var(--moss)]" />
+                <p className="font-display text-[15px] font-bold tracking-[-0.01em] text-[var(--text)]">Fluxo financeiro completo</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4 text-[12px] mb-4">
+              <div className="mb-4 grid grid-cols-2 gap-x-6 gap-y-3 text-[12px] sm:grid-cols-4">
                 {[
                   { label: "Aporte inicial",         value: result.current,                                                  color: "var(--text-sub)"  },
                   { label: "Aportes mensais totais", value: result.last.invested - result.current,                           color: "var(--text-sub)"  },
-                  { label: "Total aportado",          value: result.last.invested,                                            color: "var(--yellow)"    },
+                  { label: "Total aportado",          value: result.last.invested,                                            color: "var(--gold)"      },
                   { label: "Patrimônio bruto",        value: result.last.grossValue,                                          color: "var(--text)"      },
-                  { label: "Rendimento bruto",        value: result.last.grossGain,                                           color: "var(--green)"     },
-                  { label: "IR a pagar",              value: result.last.irAmount,                                            color: "var(--orange)"    },
-                  { label: "IOF a pagar",             value: result.last.iofAmount,                                           color: "var(--red)"       },
-                  { label: "Patrimônio líquido",      value: result.last.netValue,                                            color: "var(--purple)"    },
+                  { label: "Rendimento bruto",        value: result.last.grossGain,                                           color: "var(--moss)"      },
+                  { label: "IR a pagar",              value: result.last.irAmount,                                            color: "var(--gold)"      },
+                  { label: "IOF a pagar",             value: result.last.iofAmount,                                           color: "var(--clay)"      },
+                  { label: "Patrimônio líquido",      value: result.last.netValue,                                            color: "var(--brand-accent)" },
                 ].map(({ label, value, color }) => (
                   <div key={label}>
-                    <p className="text-text-muted text-[11px] mb-0.5">{label}</p>
-                    <p className="font-money font-600 text-[14px]" style={{ color }}>{formatCurrency(value / 100)}</p>
+                    <p className="mb-0.5 font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">{label}</p>
+                    <p className="font-mono text-[14px] font-semibold tabular-nums" style={{ color }}>{formatCurrency(value / 100)}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t border-border pt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-[12px]">
+              <div className="flex flex-wrap gap-x-6 gap-y-1.5 border-t border-[var(--border-color)] pt-3 text-[12px]">
                 <div className="flex items-center gap-2">
-                  <Clock size={12} className="text-text-muted shrink-0" />
-                  <span className="text-text-muted">Renda bruta no último mês:</span>
-                  <span className="font-money text-text">{formatCurrency(result.last.monthlyGrossIncome / 100)}/mês</span>
+                  <Clock size={12} className="shrink-0 text-[var(--text-sub)]" />
+                  <span className="text-[var(--text-sub)]">Renda bruta no último mês:</span>
+                  <span className="font-mono tabular-nums text-[var(--text)]">{formatCurrency(result.last.monthlyGrossIncome / 100)}/mês</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Percent size={12} className="text-green shrink-0" />
-                  <span className="text-text-muted">Renda líquida:</span>
-                  <span className="font-money text-green">{formatCurrency(result.last.monthlyNetIncome / 100)}/mês</span>
+                  <Percent size={12} className="shrink-0 text-[var(--moss)]" />
+                  <span className="text-[var(--text-sub)]">Renda líquida:</span>
+                  <span className="font-mono tabular-nums text-[var(--moss)]">{formatCurrency(result.last.monthlyNetIncome / 100)}/mês</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <TrendingUp size={12} className="text-text-muted shrink-0" />
-                  <span className="text-text-muted">Alíquota IR:</span>
-                  <span className="font-money text-orange">{(result.last.irRate * 100).toFixed(1)}% — {result.last.irRateLabel}</span>
+                  <TrendingUp size={12} className="shrink-0 text-[var(--text-sub)]" />
+                  <span className="text-[var(--text-sub)]">Alíquota IR:</span>
+                  <span className="font-mono tabular-nums text-[var(--gold)]">{(result.last.irRate * 100).toFixed(1)}% — {result.last.irRateLabel}</span>
                 </div>
               </div>
-            </div>
+            </Card>
           )}
 
           {/* Detalhamento mensal paginado */}
           {result && allMonths.length > 0 && (
-            <div className="border-border bg-surface rounded-xl border p-5">
-              <div className="flex items-center justify-between mb-3">
-                <SectionHeader title="Detalhamento por Mês" subtitle="Evolução mês a mês até a meta" />
-                <span className="text-text-muted text-[11px]">{totalItems} meses projetados</span>
+            <Card>
+              <div className="mb-3 flex items-center justify-between">
+                <CardHead className="mb-0" title="Detalhamento por mês" subtitle="Evolução mês a mês até a meta" />
+                <span className="font-mono text-[11px] tabular-nums text-[var(--text-sub)]">{totalItems} meses projetados</span>
               </div>
-              <div className="overflow-x-auto rounded-xl border border-border">
-                <table className="w-full text-[12px] min-w-[560px]">
+              <div className="overflow-x-auto rounded-[13px] border border-[var(--border-color)]">
+                <table className="w-full min-w-[560px] text-[12px]">
                   <thead>
-                    <tr className="border-b border-border bg-surface2/60">
-                      <th className="text-text-muted px-3 py-2.5 text-left font-medium">Mês</th>
-                      <th className="text-text-muted px-3 py-2.5 text-right font-medium">Aportes acum.</th>
-                      <th className="text-text-muted px-3 py-2.5 text-right font-medium">Rendimento/mês</th>
-                      <th className="text-text-muted px-3 py-2.5 text-right font-medium">Patrimônio bruto</th>
-                      <th className="text-text-muted px-3 py-2.5 text-right font-medium">IR acum.</th>
-                      <th className="text-text-muted px-3 py-2.5 text-right font-medium">Patrimônio líquido</th>
-                      <th className="text-text-muted px-3 py-2.5 text-right font-medium">% da meta</th>
+                    <tr className="border-b border-[var(--border-color)] bg-[var(--surface2)]">
+                      <th className="px-3 py-2.5 text-left font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Mês</th>
+                      <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Aportes acum.</th>
+                      <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Rendimento/mês</th>
+                      <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Patrimônio bruto</th>
+                      <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">IR acum.</th>
+                      <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Patrimônio líquido</th>
+                      <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">% da meta</th>
                     </tr>
                   </thead>
                   <tbody>
                     {visibleRows.map((r) => {
                       const pct = Math.min(100, (r.grossValue / result.goalCents) * 100);
                       return (
-                        <tr key={r.month} className="border-b border-border last:border-0 hover:bg-surface2/30 transition-colors">
-                          <td className="px-3 py-2.5 font-medium text-text">{r.label}</td>
-                          <td className="px-3 py-2.5 text-right font-money text-text-muted">{formatCurrency(r.invested / 100)}</td>
-                          <td className="px-3 py-2.5 text-right font-money text-green">+{formatCurrency(r.monthlyGrossIncome / 100)}</td>
-                          <td className="px-3 py-2.5 text-right font-money text-text">{formatCurrency(r.grossValue / 100)}</td>
-                          <td className="px-3 py-2.5 text-right font-money text-orange">{formatCurrency(r.irAmount / 100)}</td>
-                          <td className="px-3 py-2.5 text-right font-money text-purple">{formatCurrency(r.netValue / 100)}</td>
+                        <tr key={r.month} className="border-b border-[var(--border-color)] transition-colors last:border-0 hover:bg-[var(--surface2)]">
+                          <td className="px-3 py-2.5 font-medium text-[var(--text)]">{r.label}</td>
+                          <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--text-sub)]">{formatCurrency(r.invested / 100)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--moss)]">+{formatCurrency(r.monthlyGrossIncome / 100)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--text)]">{formatCurrency(r.grossValue / 100)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--gold)]">{formatCurrency(r.irAmount / 100)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--brand-accent)]">{formatCurrency(r.netValue / 100)}</td>
                           <td className="px-3 py-2.5 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-surface2">
-                                <div className="h-full rounded-full bg-green/70" style={{ width: `${pct}%` }} />
+                              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[var(--surface2)]">
+                                <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: "color-mix(in srgb, var(--moss) 70%, transparent)" }} />
                               </div>
-                              <span className={cn("font-mono text-[11px]", pct >= 100 ? "text-green font-semibold" : "text-text-muted")}>
+                              <span className={cn("font-mono text-[11px] tabular-nums", pct >= 100 ? "font-semibold text-[var(--moss)]" : "text-[var(--text-sub)]")}>
                                 {pct.toFixed(0)}%
                               </span>
                             </div>
@@ -470,7 +473,7 @@ export const GoalProjection = () => {
 
               {/* Paginação — mesmo padrão de TransactionsPagination */}
               <div className="mt-3 flex items-center justify-end gap-3">
-                <p className="text-text-muted shrink-0 text-[13px]">
+                <p className="shrink-0 text-[13px] text-[var(--text-sub)]">
                   {totalItems === 0
                     ? "Nenhum mês"
                     : `${tableFrom}–${tableTo} de ${totalItems} mes${totalItems !== 1 ? "es" : ""}`}
@@ -479,7 +482,7 @@ export const GoalProjection = () => {
                 <button
                   onClick={() => setTablePage((p) => Math.max(1, p - 1))}
                   disabled={safePage === 1}
-                  className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-40"
+                  className="flex h-8 w-8 items-center justify-center rounded-[9px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--text)] disabled:opacity-40"
                 >
                   <ChevronLeft size={15} />
                 </button>
@@ -487,16 +490,16 @@ export const GoalProjection = () => {
                 <div className="flex items-center gap-1">
                   {pageNumbers.map((p, i) =>
                     p === "..." ? (
-                      <span key={`dots-${i}`} className="text-text-muted px-1 text-[13px]">…</span>
+                      <span key={`dots-${i}`} className="px-1 text-[13px] text-[var(--text-sub)]">…</span>
                     ) : (
                       <button
                         key={p}
                         onClick={() => setTablePage(p as number)}
                         className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-lg text-[13px] transition-colors",
+                          "flex h-8 w-8 items-center justify-center rounded-[9px] text-[13px] transition-colors",
                           safePage === p
-                            ? "bg-green/15 text-green font-medium"
-                            : "text-text-sub hover:bg-surface2 hover:text-text",
+                            ? "bg-[color-mix(in_srgb,var(--brand-accent)_14%,transparent)] font-medium text-[var(--brand-accent)]"
+                            : "text-[var(--text-sub)] hover:bg-[var(--surface2)] hover:text-[var(--text)]",
                         )}
                       >
                         {p}
@@ -508,7 +511,7 @@ export const GoalProjection = () => {
                 <button
                   onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))}
                   disabled={safePage === totalPages}
-                  className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-40"
+                  className="flex h-8 w-8 items-center justify-center rounded-[9px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--text)] disabled:opacity-40"
                 >
                   <ChevronRight size={15} />
                 </button>
@@ -517,15 +520,15 @@ export const GoalProjection = () => {
                   <button
                     onClick={() => setPageSizeOpen((o) => !o)}
                     className={cn(
-                      "border-border bg-surface2 hover:bg-surface3 flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[13px] transition-colors",
-                      pageSizeOpen ? "border-green/40 text-text" : "text-text-sub",
+                      "flex h-8 items-center gap-1.5 rounded-[9px] border border-[var(--border-color)] bg-[var(--surface)] px-3 text-[13px] transition-colors hover:bg-[var(--surface2)]",
+                      pageSizeOpen ? "text-[var(--text)]" : "text-[var(--text-sub)]",
                     )}
                   >
                     {tablePageSize} / pág.
                     <ChevronDown size={13} className={cn("transition-transform", pageSizeOpen && "rotate-180")} />
                   </button>
                   {pageSizeOpen && (
-                    <div className="border-border bg-surface absolute bottom-full right-0 mb-1.5 min-w-[110px] overflow-hidden rounded-lg border shadow-lg">
+                    <div className="absolute bottom-full right-0 mb-1.5 min-w-[110px] overflow-hidden rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] shadow-lg">
                       {[10, 20, 50, 100].map((size) => (
                         <button
                           key={size}
@@ -533,8 +536,8 @@ export const GoalProjection = () => {
                           className={cn(
                             "flex w-full items-center px-3 py-2 text-left text-[13px] transition-colors",
                             tablePageSize === size
-                              ? "bg-green/10 text-green font-medium"
-                              : "text-text-sub hover:bg-surface2 hover:text-text",
+                              ? "bg-[color-mix(in_srgb,var(--brand-accent)_12%,transparent)] font-medium text-[var(--brand-accent)]"
+                              : "text-[var(--text-sub)] hover:bg-[var(--surface2)] hover:text-[var(--text)]",
                           )}
                         >
                           {size} / pág.
@@ -544,7 +547,7 @@ export const GoalProjection = () => {
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
           )}
         </div>
       </div>

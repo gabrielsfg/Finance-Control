@@ -1,8 +1,9 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { Wallet } from "lucide-react";
+import { Card, CardHead } from "@/components/shared/Card";
+import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { cn } from "@/lib/utils";
 
 export const ProfileDefaultAccountCard = () => {
   const { data, isLoading } = useAccounts();
@@ -13,11 +14,8 @@ export const ProfileDefaultAccountCard = () => {
   if (isLoading || accounts.length === 0) return null;
 
   return (
-    <div className="border-border bg-surface rounded-2xl border p-5">
-      <p className="font-display font-600 text-text mb-1 text-[15px]">Conta padrão para transações</p>
-      <p className="text-text-muted mb-4 text-[12px]">
-        Conta pré-selecionada ao criar uma nova transação
-      </p>
+    <Card>
+      <CardHead title="Conta padrão" subtitle="Pré-selecionada ao criar uma nova transação" />
 
       <div className="flex flex-wrap gap-2">
         {accounts.map((acc) => {
@@ -26,25 +24,31 @@ export const ProfileDefaultAccountCard = () => {
             <button
               key={acc.id}
               className={cn(
-                "flex items-center gap-2 rounded-xl border px-3 py-2 text-[12px] font-medium transition-all",
+                "flex items-center gap-2 rounded-[13px] border px-3 py-2 text-[13px] font-medium transition-colors",
                 isActive
-                  ? "border-green/45 bg-green/10 text-green"
-                  : "border-border bg-surface2 text-text-sub hover:text-text",
+                  ? "border-[var(--brand-cobalt)] text-[var(--brand-accent)]"
+                  : "border-[var(--border-color)] bg-[var(--surface2)] text-[var(--text-sub)] hover:text-[var(--text)]",
               )}
+              style={
+                isActive ? { background: "color-mix(in srgb, var(--brand-accent) 12%, transparent)" } : undefined
+              }
             >
-              <div
+              <span
                 className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-md",
-                  isActive ? "bg-green/20" : "bg-surface3",
+                  "grid h-6 w-6 place-items-center rounded-[9px]",
+                  isActive ? "text-[var(--brand-accent)]" : "bg-[var(--surface)] text-[var(--text-sub)]",
                 )}
+                style={
+                  isActive ? { background: "color-mix(in srgb, var(--brand-accent) 18%, transparent)" } : undefined
+                }
               >
-                <Wallet size={12} className={isActive ? "text-green" : "text-text-muted"} />
-              </div>
+                <Wallet size={12} />
+              </span>
               {acc.name.split(" ").slice(0, 2).join(" ")}
             </button>
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import { TrendingUp, TrendingDown, Calendar, AlertTriangle } from "lucide-react";
+import { Card } from "@/components/shared/Card";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { AnalyticsSummaryResponse } from "@/lib/types/analytics.types";
 
@@ -14,8 +15,7 @@ export const AnalyticsSummaryCards = ({ summary }: Props) => {
       sub: null,
       subColor: undefined,
       icon: TrendingUp,
-      color: "var(--green)",
-      bg: "bg-green/10",
+      color: "var(--moss)",
     },
     {
       label: "Despesa Média Mensal",
@@ -23,44 +23,44 @@ export const AnalyticsSummaryCards = ({ summary }: Props) => {
       sub: null,
       subColor: undefined,
       icon: TrendingDown,
-      color: "var(--red)",
-      bg: "bg-red/10",
+      color: "var(--clay)",
     },
     {
       label: "Melhor Mês",
       value: summary.bestMonth.label,
       sub: `Saldo ${summary.bestMonth.balance < 0 ? "-" : ""}${formatCurrency(Math.abs(summary.bestMonth.balance) / 100)}`,
-      subColor: summary.bestMonth.balance < 0 ? "var(--red)" : "var(--text)",
+      subColor: summary.bestMonth.balance < 0 ? "var(--clay)" : "var(--text)",
       icon: Calendar,
-      color: "var(--blue)",
-      bg: "bg-blue/10",
+      color: "var(--brand-cobalt)",
     },
     {
       label: "Pior Mês",
       value: summary.worstMonth.label,
       sub: `Saldo ${summary.worstMonth.balance < 0 ? "-" : ""}${formatCurrency(Math.abs(summary.worstMonth.balance) / 100)}`,
-      subColor: summary.worstMonth.balance < 0 ? "var(--red)" : "var(--text)",
+      subColor: summary.worstMonth.balance < 0 ? "var(--clay)" : "var(--text)",
       icon: AlertTriangle,
-      color: "var(--orange)",
-      bg: "bg-orange/10",
+      color: "var(--gold)",
     },
   ];
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {items.map(({ label, value, sub, subColor, icon: Icon, color, bg }) => (
-        <div key={label} className="border-border bg-surface rounded-xl border p-5">
-          <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-[10px] ${bg}`}>
+      {items.map(({ label, value, sub, subColor, icon: Icon, color }) => (
+        <Card key={label}>
+          <div
+            className="mb-3 flex h-9 w-9 items-center justify-center rounded-[13px]"
+            style={{ backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)` }}
+          >
             <Icon size={18} style={{ color }} strokeWidth={1.75} />
           </div>
-          <p className="font-display font-700 text-text text-[16px]">{value}</p>
-          <p className="text-text-muted mt-0.5 text-[12px]">{label}</p>
+          <p className="font-display text-[16px] font-bold text-[var(--text)]">{value}</p>
+          <p className="mt-0.5 text-[12px] text-[var(--text-sub)]">{label}</p>
           {sub && (
-            <p className="font-money mt-0.5 text-[12px]" style={{ color: subColor }}>
+            <p className="mt-0.5 font-mono text-[12px] tabular-nums" style={{ color: subColor }}>
               {sub}
             </p>
           )}
-        </div>
+        </Card>
       ))}
     </div>
   );

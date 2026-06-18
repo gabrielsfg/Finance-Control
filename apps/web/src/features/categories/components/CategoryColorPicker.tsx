@@ -28,7 +28,10 @@ export const CategoryColorPicker = ({ value, onChange }: Props) => (
         type="button"
         onClick={() => onChange(color)}
         className="h-6 w-6 rounded-full transition-transform hover:scale-110 focus:outline-none"
-        style={{ backgroundColor: color, boxShadow: value === color ? `0 0 0 2px #0e1117, 0 0 0 4px ${color}` : undefined }}
+        style={{
+          backgroundColor: color,
+          boxShadow: value === color ? `0 0 0 2px var(--surface), 0 0 0 4px ${color}` : undefined,
+        }}
         aria-label={color}
       />
     ))}

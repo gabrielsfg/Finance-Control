@@ -3,7 +3,7 @@
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { InvestmentEvolutionResponse } from "@/lib/types/analytics.types";
@@ -38,16 +38,16 @@ export const AnalyticsInvestmentEvolutionChart = ({ data: response }: Props) => 
 
   if (data.length === 0) {
     return (
-      <div className="border-border bg-surface rounded-xl border p-5">
-        <SectionHeader title="Evolução dos Investimentos" subtitle="Capital investido, valor atual, rendimento e dividendos (últimos 7 meses)" />
+      <Card>
+        <CardHead title="Evolução dos Investimentos" subtitle="Capital investido, valor atual, rendimento e dividendos (últimos 7 meses)" />
         <ChartEmptyState message="Sem movimentações de investimento no período" />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border-border bg-surface rounded-xl border p-5">
-      <SectionHeader title="Evolução dos Investimentos" subtitle="Capital investido, valor atual, rendimento e dividendos (últimos 7 meses)" />
+    <Card>
+      <CardHead title="Evolução dos Investimentos" subtitle="Capital investido, valor atual, rendimento e dividendos (últimos 7 meses)" />
 
       {latest && (
         <div className="bg-surface2 mb-5 grid grid-cols-4 gap-3 rounded-xl p-4">
@@ -80,21 +80,21 @@ export const AnalyticsInvestmentEvolutionChart = ({ data: response }: Props) => 
       <div className="w-full" style={{ height: 280 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--border-chart)" />
+            <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "JetBrains Mono" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => formatCurrencyCompact(v / 100)}
               width={70}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border-color)", strokeWidth: 1, strokeDasharray: "4 4" }} />
             {SERIES.map(({ key, name, color }) => (
               <Line
                 key={key}
@@ -119,6 +119,6 @@ export const AnalyticsInvestmentEvolutionChart = ({ data: response }: Props) => 
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 };

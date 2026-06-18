@@ -8,7 +8,7 @@ import { GlobalSearch } from "./GlobalSearch";
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 
 type Props = {
-  title: string;
+  title: ReactNode;
   subtitle?: ReactNode;
 };
 
@@ -19,7 +19,7 @@ export function PageTopbar({ title, subtitle }: Props) {
   return (
     <header className="flex items-end gap-5 pt-[26px] pb-[30px]">
       <div>
-        <h1 className="font-display font-bold text-[--text] text-[clamp(22px,2.5vw,30px)] tracking-[-0.025em] leading-[1.02]">
+        <h1 className="font-display font-bold text-[var(--text)] text-[clamp(22px,2.5vw,30px)] tracking-[-0.025em] leading-[1.02]">
           {title}
         </h1>
         {subtitle && (
@@ -54,9 +54,9 @@ export function PageTopbar({ title, subtitle }: Props) {
           style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
         >
           {theme === "dark" ? (
-            <Sun size={19} strokeWidth={1.7} className="text-[--text]" />
+            <Sun size={19} strokeWidth={1.7} className="text-[var(--text)]" />
           ) : (
-            <Moon size={19} strokeWidth={1.7} className="text-[--text]" />
+            <Moon size={19} strokeWidth={1.7} className="text-[var(--text)]" />
           )}
         </button>
 

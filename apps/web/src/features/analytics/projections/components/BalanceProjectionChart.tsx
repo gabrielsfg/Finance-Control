@@ -3,7 +3,7 @@
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { BalanceProjectionResponse } from "@/lib/types/analytics.types";
@@ -45,50 +45,50 @@ export function BalanceProjectionChart({ data }: Props) {
 
   if (chartData.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-        <SectionHeader title="Projeção de Saldo" subtitle="Tendência baseada nos últimos 30 dias" />
+      <Card className="flex flex-col">
+        <CardHead title="Projeção de Saldo" subtitle="Tendência baseada nos últimos 30 dias" />
         <ChartEmptyState message="Sem transações suficientes para gerar projeção" />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <SectionHeader
-          title="Projeção de Saldo"
-          subtitle="Tendência baseada nos últimos 30 dias"
-        />
-        <div className="flex flex-col items-end gap-1">
-          <span className="text-text-muted text-[11px]">Saldo projetado</span>
-          <span className={`font-money text-[16px] font-600 ${data.projectedBalance >= 0 ? "text-green" : "text-red"}`}>
-            {formatCurrency(data.projectedBalance / 100)}
-          </span>
-        </div>
-      </div>
+    <Card className="flex flex-col">
+      <CardHead
+        title="Projeção de Saldo"
+        subtitle="Tendência baseada nos últimos 30 dias"
+        right={
+          <div className="flex flex-col items-end gap-1">
+            <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--text-sub)]">Saldo projetado</span>
+            <span className={`font-mono text-[16px] font-semibold tabular-nums ${data.projectedBalance >= 0 ? "text-[var(--moss)]" : "text-[var(--clay)]"}`}>
+              {formatCurrency(data.projectedBalance / 100)}
+            </span>
+          </div>
+        }
+      />
 
       <div className="w-full" style={{ height: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--border-chart)" />
+            <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false} tickLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
               tickFormatter={(v) => formatCurrencyCompact(v / 100)}
-              tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false} tickLine={false} width={56}
             />
             <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine y={0} stroke="var(--border)" strokeDasharray="4 4" />
+            <ReferenceLine y={0} stroke="var(--border-color)" strokeDasharray="4 4" />
             <Line
               type="monotone"
               dataKey="actual"
               name="Real"
-              stroke="var(--blue)"
+              stroke="var(--brand-cobalt)"
               strokeWidth={2}
               dot={false}
               connectNulls={false}
@@ -106,6 +106,6 @@ export function BalanceProjectionChart({ data }: Props) {
           </LineChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </Card>
   );
 }

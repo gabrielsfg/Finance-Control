@@ -17,15 +17,15 @@ export const AiInsightCard = () => {
         >
           <Zap size={14} style={{ color: "var(--brand-accent)" }} />
         </div>
-        <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[--brand-accent]">
+        <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--brand-accent)]">
           Insight da IA
         </span>
       </div>
 
-      <p className="font-display font-bold text-[--text] mb-1.5 text-[17px] tracking-[-0.01em]">
+      <p className="font-display font-bold text-[var(--text)] mb-1.5 text-[17px] tracking-[-0.01em]">
         Análise financeira indisponível
       </p>
-      <p className="text-[--text-sub] mb-4 text-[13px] leading-relaxed">
+      <p className="text-[var(--text-sub)] mb-4 text-[13px] leading-relaxed">
         O insight diário com IA estará disponível em breve para usuários Premium. Acompanhe suas
         finanças de forma mais inteligente.
       </p>

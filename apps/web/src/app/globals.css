@@ -9,6 +9,7 @@
   --font-display: var(--font-bricolage);
   --font-sans: var(--font-hanken);
   --font-mono: var(--font-ibm-plex-mono);
+  --font-money: var(--font-ibm-plex-mono);
 
   /* shadcn semantic tokens */
   --color-background: var(--bg);
@@ -106,6 +107,17 @@
   --clay: #b0451f;
   --clay-lift: #ff8a5b;
   --gold: #c8932b;
+
+  /* Legacy raw-var aliases — keep pre-rebrand chart/number code rendering in the
+     new palette (they resolve through the brand tokens, so dark mode follows too). */
+  --blue: var(--brand-cobalt);
+  --green: var(--moss);
+  --red: var(--clay);
+  --orange: var(--gold);
+  --yellow: var(--gold);
+  --cyan: var(--moss-lift);
+  --purple: #7c6fe0;
+  --border-chart: var(--border-color);
 
   /* Panel-hero — always dark, tokens own both themes */
   --panel: #17211d;

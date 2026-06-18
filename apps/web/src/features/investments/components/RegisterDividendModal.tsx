@@ -311,7 +311,7 @@ export const RegisterDividendModal = ({ open, onClose, investmentId, ticker, acc
             <FormField label="Conta de destino" error={errors.accountId?.message}>
               <Select
                 value={accountId ?? ""}
-                onValueChange={(v) => setValue("accountId", v, { shouldValidate: true })}
+                onValueChange={(v) => setValue("accountId", v ?? "", { shouldValidate: true })}
               >
                 <SelectTrigger className={cn(TRIGGER_CLASS, errors.accountId && "border-red/60")}>
                   <SelectValue>

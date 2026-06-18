@@ -22,14 +22,14 @@ export function SavingsSummaryCards({ detail }: Props) {
         value={detail.income / 100}
         subText={`Planejado: ${formatCurrency(detail.plannedIncome / 100)}`}
         icon={TrendingUp}
-        iconColor="var(--green)"
+        iconColor="var(--moss)"
       />
       <StatCard
         label="Gasto"
         value={detail.expense / 100}
         subText={`Planejado: ${formatCurrency(detail.plannedExpense / 100)}`}
         icon={TrendingDown}
-        iconColor="var(--red)"
+        iconColor="var(--clay)"
       />
       <StatCard
         label="Economizado"
@@ -50,7 +50,7 @@ export function SavingsSummaryCards({ detail }: Props) {
               : undefined
         }
         icon={Percent}
-        iconColor="var(--blue)"
+        iconColor="var(--brand-cobalt)"
       />
     </div>
   );

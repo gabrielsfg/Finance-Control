@@ -42,8 +42,8 @@ function fmtDate(iso: string): string {
 }
 
 function pctColor(n: number | null | undefined): string {
-  if (n == null) return "text-text-sub";
-  return (n >= 0) ? "text-green" : "text-red";
+  if (n == null) return "text-[var(--text-sub)]";
+  return (n >= 0) ? "text-[var(--moss)]" : "text-[var(--clay)]";
 }
 
 type Item = { label: string; value: string | null; valueClass?: string };
@@ -54,9 +54,9 @@ function MetricGrid({ items }: { items: Item[] }) {
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {present.map((i) => (
-        <div key={i.label} className="bg-surface2 flex flex-col gap-0.5 rounded-xl px-4 py-3">
-          <p className="text-text-muted text-[10px] uppercase tracking-[0.06em]">{i.label}</p>
-          <p className={cn("font-money text-text text-[15px] font-semibold", i.valueClass)}>{i.value}</p>
+        <div key={i.label} className="flex flex-col gap-0.5 rounded-[13px] bg-[var(--surface2)] px-4 py-3">
+          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--text-sub)]">{i.label}</p>
+          <p className={cn("font-mono text-[15px] font-semibold tabular-nums text-[var(--text)]", i.valueClass)}>{i.value}</p>
         </div>
       ))}
     </div>
@@ -67,12 +67,12 @@ function RowsCard({ title, rows }: { title: string; rows: Item[] }) {
   const present = rows.filter((r) => r.value !== null);
   if (present.length === 0) return null;
   return (
-    <div className="border-border rounded-xl border px-4 py-2">
-      <p className="text-text-muted mb-1 text-[11px] uppercase tracking-[0.06em]">{title}</p>
+    <div className="rounded-[13px] border border-[var(--border-color)] px-4 py-2">
+      <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-sub)]">{title}</p>
       {present.map((r) => (
-        <div key={r.label} className="border-border flex items-center justify-between border-b py-2.5 last:border-0">
-          <span className="text-text-muted text-[13px]">{r.label}</span>
-          <span className={cn("font-money text-text text-[13px] font-medium", r.valueClass)}>{r.value}</span>
+        <div key={r.label} className="flex items-center justify-between border-b border-[var(--border-color)] py-2.5 last:border-0">
+          <span className="text-[13px] text-[var(--text-sub)]">{r.label}</span>
+          <span className={cn("font-mono text-[13px] font-medium tabular-nums text-[var(--text)]", r.valueClass)}>{r.value}</span>
         </div>
       ))}
     </div>
@@ -82,18 +82,18 @@ function RowsCard({ title, rows }: { title: string; rows: Item[] }) {
 function DividendsBlock({ f }: { f: Fundamentals }) {
   if (!f.recentDividends || f.recentDividends.length === 0) return null;
   return (
-    <div className="border-border rounded-xl border px-4 py-2">
+    <div className="rounded-[13px] border border-[var(--border-color)] px-4 py-2">
       <div className="mb-1 flex items-center gap-1.5">
-        <Coins size={12} className="text-green" />
-        <p className="text-text-muted text-[11px] uppercase tracking-[0.06em]">Proventos recentes</p>
+        <Coins size={12} className="text-[var(--moss)]" />
+        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Proventos recentes</p>
       </div>
       {f.recentDividends.map((d, i) => (
-        <div key={i} className="border-border flex items-center justify-between border-b py-2 last:border-0">
+        <div key={i} className="flex items-center justify-between border-b border-[var(--border-color)] py-2 last:border-0">
           <div className="flex flex-col">
-            <span className="text-text text-[13px]">{d.paymentDate ? fmtDate(d.paymentDate) : "—"}</span>
-            <span className="text-text-muted text-[10px]">{d.label}</span>
+            <span className="text-[13px] text-[var(--text)]">{d.paymentDate ? fmtDate(d.paymentDate) : "—"}</span>
+            <span className="font-mono text-[10px] tracking-[0.04em] text-[var(--text-sub)]">{d.label}</span>
           </div>
-          <span className="font-money text-green text-[13px]">{formatCurrency(d.rate)}</span>
+          <span className="font-mono text-[13px] tabular-nums text-[var(--moss)]">{formatCurrency(d.rate)}</span>
         </div>
       ))}
     </div>
@@ -119,7 +119,7 @@ function IndicatorsTab({ f }: { f: Fundamentals }) {
         { label: "P/VP",    value: fmt(f.priceToBook) },
         { label: "ROE",     value: fmtPct(f.returnOnEquity), valueClass: pctColor(f.returnOnEquity) },
         { label: "ROA",     value: fmtPct(f.returnOnAssets), valueClass: pctColor(f.returnOnAssets) },
-        { label: "DY (12m)", value: fmtPct(f.dividendYield), valueClass: "text-green" },
+        { label: "DY (12m)", value: fmtPct(f.dividendYield), valueClass: "text-[var(--moss)]" },
         { label: "LPA",     value: fmt(f.earningsPerShare) },
         { label: "VPA",     value: f.bookValue != null ? formatCurrency(f.bookValue) : null },
         { label: "Beta",    value: fmt(f.beta) },
@@ -191,11 +191,11 @@ function CompanyTab({ f }: { f: Fundamentals }) {
         { label: "Cotas/ações",   value: fmtInt(f.sharesOutstanding) },
       ]} />
       {f.website && (
-        <div className="border-border rounded-xl border px-4 py-2">
+        <div className="rounded-[13px] border border-[var(--border-color)] px-4 py-2">
           <div className="flex items-center justify-between py-2.5">
-            <span className="text-text-muted text-[13px]">Website</span>
+            <span className="text-[13px] text-[var(--text-sub)]">Website</span>
             <a href={f.website} target="_blank" rel="noopener noreferrer"
-              className="text-blue flex items-center gap-1 text-[13px] hover:underline">
+              className="flex items-center gap-1 text-[13px] text-[var(--brand-accent)] hover:underline">
               {f.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
               <ExternalLink size={11} />
             </a>
@@ -203,9 +203,9 @@ function CompanyTab({ f }: { f: Fundamentals }) {
         </div>
       )}
       {f.businessSummary && (
-        <div className="border-border rounded-xl border p-4">
-          <p className="text-text-muted mb-2 text-[11px] uppercase tracking-[0.06em]">Sobre</p>
-          <p className="text-text-sub text-[12px] leading-relaxed">{f.businessSummary}</p>
+        <div className="rounded-[13px] border border-[var(--border-color)] p-4">
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Sobre</p>
+          <p className="text-[12px] leading-relaxed text-[var(--text-sub)]">{f.businessSummary}</p>
         </div>
       )}
     </div>
@@ -219,17 +219,20 @@ export function FundamentalsPanel({ ticker, bare = false }: { ticker: string; ba
   const { data, isLoading, isError } = useFundamentals(ticker);
 
   return (
-    <div className={cn(!bare && "border-border bg-surface rounded-2xl border")}>
-      <div className="border-border flex gap-0.5 border-b px-3 pt-2">
+    <div
+      className={cn(!bare && "rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)]")}
+      style={!bare ? { boxShadow: "var(--shadow-sm)" } : undefined}
+    >
+      <div className="flex gap-0.5 border-b border-[var(--border-color)] px-3 pt-2">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
             className={cn(
-              "flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-[12px] font-medium transition-colors",
+              "flex items-center gap-1.5 rounded-t-[9px] border border-transparent px-3 py-2 text-[12px] font-medium transition-colors",
               tab === id
-                ? "bg-surface2 text-text border-border border border-b-0"
-                : "text-text-muted hover:text-text-sub",
+                ? "border-[var(--border-color)] border-b-0 bg-[var(--surface2)] text-[var(--text)]"
+                : "text-[var(--text-sub)] hover:text-[var(--text)]",
             )}
           >
             <Icon size={12} />
@@ -241,14 +244,14 @@ export function FundamentalsPanel({ ticker, bare = false }: { ticker: string; ba
       <div className="px-5 py-5">
         {isLoading && (
           <div className="flex h-48 items-center justify-center">
-            <Loader2 size={22} className="text-green animate-spin" />
+            <Loader2 size={22} className="animate-spin text-[var(--brand-accent)]" />
           </div>
         )}
         {isError && (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <AlertCircle size={28} className="text-red" />
-            <p className="text-text-sub text-[14px]">Não foi possível carregar os fundamentos.</p>
-            <p className="text-text-muted text-[12px]">
+            <AlertCircle size={28} className="text-[var(--clay)]" />
+            <p className="text-[14px] text-[var(--text-sub)]">Não foi possível carregar os fundamentos.</p>
+            <p className="text-[12px] text-[var(--text-sub)]">
               Verifique se a conta Brapi tem plano Pro ativo e se o token está configurado.
             </p>
           </div>
@@ -259,7 +262,7 @@ export function FundamentalsPanel({ ticker, bare = false }: { ticker: string; ba
             {tab === "balance"    && <BalanceTab f={data} />}
             {tab === "income"     && <IncomeTab f={data} />}
             {tab === "company"    && <CompanyTab f={data} />}
-            <p className="text-text-muted mt-6 text-center text-[10px]">
+            <p className="mt-6 text-center font-mono text-[10px] tracking-[0.04em] text-[var(--text-sub)]">
               Fonte: Brapi · Atualizado às {new Date(data.fetchedAt).toLocaleString("pt-BR")}
             </p>
           </>

@@ -49,7 +49,7 @@ export function TagInput({ value, onChange }: Props) {
   return (
     <div className="relative">
       <div
-        className="border-border bg-surface2 flex min-h-11 cursor-text flex-wrap items-center gap-1.5 rounded-[13px] border px-3 py-2 focus-within:border-[--brand-cobalt]"
+        className="border-border bg-surface2 flex min-h-11 cursor-text flex-wrap items-center gap-1.5 rounded-[13px] border px-3 py-2 focus-within:border-[var(--brand-cobalt)]"
         onClick={() => inputRef.current?.focus()}
       >
         <TagIcon size={13} className="text-text-muted shrink-0" />

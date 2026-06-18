@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2, ChevronRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import type { ReactNode } from "react";
+import { Card } from "@/components/shared/Card";
 import { useMarketList } from "@/features/market/hooks/useMarket";
 import { MarketAssetRow, type RowMetric } from "@/features/market/components/MarketAssetRow";
 
 type Props = {
   title: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   sort: string;
   type?: string;
   metric: RowMetric;
@@ -20,34 +22,31 @@ export function RankingCard({ title, icon, sort, type, metric, limit = 6 }: Prop
   const rankingHref = `/market/ranking/${sort}${type ? `?type=${type}` : ""}`;
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-2xl border">
-      <div className="border-border flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          {icon}
-          <h3 className="text-text text-[14px] font-semibold">{title}</h3>
-        </div>
+    <Card className="flex flex-col">
+      <div className="mb-4 flex items-center gap-2.5">
+        {icon && <span className="flex items-center">{icon}</span>}
+        <h3 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">{title}</h3>
         <Link
           href={rankingHref}
-          className="text-text-muted hover:text-green flex items-center gap-0.5 text-[12px] font-medium transition-colors"
+          className="ml-auto font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--brand-accent)] hover:underline"
         >
           Ver ranking
-          <ChevronRight size={13} />
         </Link>
       </div>
 
-      <div className="flex flex-col gap-1 p-2.5">
+      <div className="flex flex-col">
         {isLoading ? (
           <div className="flex items-center justify-center py-10">
-            <Loader2 size={18} className="text-green animate-spin" />
+            <Loader2 size={18} className="animate-spin text-[var(--brand-accent)]" />
           </div>
         ) : assets.length === 0 ? (
-          <p className="text-text-muted py-10 text-center text-[12px]">Sem dados ainda.</p>
+          <p className="py-10 text-center font-mono text-[12px] text-[var(--text-sub)]">Sem dados ainda.</p>
         ) : (
           assets.map((asset, i) => (
             <MarketAssetRow key={asset.id} asset={asset} metric={metric} rank={i + 1} />
           ))
         )}
       </div>
-    </div>
+    </Card>
   );
 }

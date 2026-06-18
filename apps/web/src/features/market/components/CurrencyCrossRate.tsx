@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ArrowLeftRight, ChevronDown, Check, Search } from "lucide-react";
+import { Card } from "@/components/shared/Card";
 import { useMarketList } from "@/features/market/hooks/useMarket";
 import type { MarketAsset, MarketAssetDetail } from "@/lib/types/market.types";
 import { cn } from "@/lib/utils";
@@ -75,39 +76,42 @@ function CurrencyDropdown({
       <button
         onClick={() => (open ? closeDropdown() : openDropdown())}
         className={cn(
-          "border-border bg-surface2 hover:border-green/40 flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-colors",
-          open && "border-green/50",
+          "flex items-center gap-2 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 transition-colors hover:border-[var(--brand-cobalt)]",
+          open && "border-[var(--brand-cobalt)]",
         )}
       >
-        <span className="text-text text-[13px] font-semibold">{selected?.code ?? "—"}</span>
-        <span className="text-text-muted max-w-[130px] truncate text-[12px]">
+        <span className="font-mono text-[13px] font-semibold text-[var(--text)]">{selected?.code ?? "—"}</span>
+        <span className="max-w-[130px] truncate text-[12px] text-[var(--text-sub)]">
           {selected?.name.split("/")[0]}
         </span>
         <ChevronDown
           size={13}
-          className={cn("text-text-muted shrink-0 transition-transform", open && "rotate-180")}
+          className={cn("shrink-0 text-[var(--text-sub)] transition-transform", open && "rotate-180")}
         />
       </button>
 
       {open && (
-        <div className="border-border bg-surface absolute right-0 top-[calc(100%+6px)] z-30 flex w-[230px] flex-col rounded-xl border shadow-2xl">
+        <div
+          className="absolute right-0 top-[calc(100%+6px)] z-30 flex w-[230px] flex-col rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)]"
+          style={{ boxShadow: "var(--shadow-sm)" }}
+        >
           {/* Search input */}
-          <div className="border-border flex items-center gap-2 border-b px-3 py-2">
-            <Search size={13} className="text-text-muted shrink-0" />
+          <div className="flex items-center gap-2 border-b border-[var(--border-color)] px-3 py-2">
+            <Search size={13} className="shrink-0 text-[var(--text-sub)]" />
             <input
               ref={inputRef}
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar moeda..."
-              className="text-text placeholder:text-text-muted flex-1 bg-transparent text-[12px] outline-none"
+              className="flex-1 bg-transparent text-[12px] text-[var(--text)] outline-none placeholder:text-[var(--text-sub)]"
             />
           </div>
 
           {/* Options list */}
           <div className="max-h-[200px] overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="text-text-muted px-3 py-4 text-center text-[12px]">
+              <p className="px-3 py-4 text-center text-[12px] text-[var(--text-sub)]">
                 Nenhuma moeda encontrada
               </p>
             ) : (
@@ -119,15 +123,15 @@ function CurrencyDropdown({
                     closeDropdown();
                   }}
                   className={cn(
-                    "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-surface2",
-                    o.ticker === value && "bg-surface2",
+                    "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-[var(--surface2)]",
+                    o.ticker === value && "bg-[var(--surface2)]",
                   )}
                 >
-                  <span className="text-text w-8 shrink-0 text-[13px] font-semibold">{o.code}</span>
-                  <span className="text-text-muted min-w-0 flex-1 truncate text-[11px]">
+                  <span className="w-8 shrink-0 font-mono text-[13px] font-semibold text-[var(--text)]">{o.code}</span>
+                  <span className="min-w-0 flex-1 truncate text-[11px] text-[var(--text-sub)]">
                     {o.name.split("/")[0]}
                   </span>
-                  {o.ticker === value && <Check size={12} className="text-green shrink-0" />}
+                  {o.ticker === value && <Check size={12} className="shrink-0 text-[var(--brand-accent)]" />}
                 </button>
               ))
             )}
@@ -168,11 +172,11 @@ export function CurrencyCrossRate({ asset }: Props) {
   if (isLoading || options.length === 0) return null;
 
   return (
-    <div className="border-border bg-surface rounded-2xl border p-5">
+    <Card>
       <div className="mb-4 flex items-center gap-3">
         <div className="flex flex-1 items-center gap-2">
-          <ArrowLeftRight size={14} className="text-text-muted" />
-          <h3 className="text-text text-[14px] font-semibold">Câmbio cruzado</h3>
+          <ArrowLeftRight size={15} className="text-[var(--text-sub)]" />
+          <h3 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">Câmbio cruzado</h3>
         </div>
         <CurrencyDropdown
           options={options}
@@ -182,8 +186,8 @@ export function CurrencyCrossRate({ asset }: Props) {
       </div>
 
       {crossRate !== null && (
-        <div className="bg-surface2 rounded-xl p-4">
-          <p className="font-money text-text text-[28px] font-semibold leading-none">
+        <div className="rounded-[13px] bg-[var(--surface2)] p-4">
+          <p className="font-mono text-[28px] font-semibold leading-none tracking-[-0.01em] tabular-nums text-[var(--text)]">
             1 {fromCode} ={" "}
             {crossRate.toLocaleString("pt-BR", {
               minimumFractionDigits: 4,
@@ -191,7 +195,7 @@ export function CurrencyCrossRate({ asset }: Props) {
             })}{" "}
             {toCode}
           </p>
-          <p className="text-text-muted mt-2 font-mono text-[12px]">
+          <p className="mt-2 font-mono text-[12px] tabular-nums text-[var(--text-sub)]">
             1 {toCode} ={" "}
             {(1 / crossRate).toLocaleString("pt-BR", {
               minimumFractionDigits: 4,
@@ -201,6 +205,6 @@ export function CurrencyCrossRate({ asset }: Props) {
           </p>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

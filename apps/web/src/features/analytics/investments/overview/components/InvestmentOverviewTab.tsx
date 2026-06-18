@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
 import { TrendingUp, Wallet, BarChart2, ArrowUpRight } from "lucide-react";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
-import { PieChart, Pie, Cell, Sector, Tooltip, ResponsiveContainer } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { Card, CardHead } from "@/components/shared/Card";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import { useInvestments } from "@/features/investments/hooks/useInvestments";
@@ -12,13 +11,6 @@ import { useAnalyticsInvestmentEvolution } from "@/features/analytics/hooks/useA
 import { AnalyticsInvestmentEvolutionChart } from "./AnalyticsInvestmentEvolutionChart";
 
 const ASSET_CLASS_ORDER = ["Renda Fixa", "Renda Variável", "FII", "Internacional", "Cripto"];
-
-const renderActiveShape = (props: any) => {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-  return (
-    <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 8} startAngle={startAngle} endAngle={endAngle} fill={fill} />
-  );
-};
 
 const DonutTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
@@ -37,9 +29,6 @@ const DonutTooltip = ({ active, payload }: any) => {
 export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: string; finishDate: string }) {
   const portfolio = useInvestments();
   const evolution = useAnalyticsInvestmentEvolution(startDate, finishDate);
-  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
-  const onMouseEnter = useCallback((_: any, i: number) => setActiveIndex(i), []);
-  const onMouseLeave = useCallback(() => setActiveIndex(undefined), []);
 
   const data = portfolio.data;
 
@@ -48,53 +37,65 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
       {/* KPI cards */}
       {data && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <div className="bg-green/10 mb-3 flex h-9 w-9 items-center justify-center rounded-[10px]">
-              <Wallet size={18} className="text-green" strokeWidth={1.75} />
+          <Card>
+            <div
+              className="mb-3 flex h-9 w-9 items-center justify-center rounded-[13px]"
+              style={{ backgroundColor: "color-mix(in srgb, var(--moss) 14%, transparent)" }}
+            >
+              <Wallet size={18} className="text-[var(--moss)]" strokeWidth={1.75} />
             </div>
-            <p className="font-display font-700 text-text text-[16px]">Patrimônio atual</p>
-            <p className="font-money font-700 text-text mt-1 text-[20px]">
+            <p className="font-display text-[16px] font-bold text-[var(--text)]">Patrimônio atual</p>
+            <p className="mt-1 font-mono text-[20px] font-bold tabular-nums text-[var(--text)]">
               {formatCurrency(data.currentValue / 100)}
             </p>
-          </div>
+          </Card>
 
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <div className="bg-blue/10 mb-3 flex h-9 w-9 items-center justify-center rounded-[10px]">
-              <BarChart2 size={18} className="text-blue" strokeWidth={1.75} />
+          <Card>
+            <div
+              className="mb-3 flex h-9 w-9 items-center justify-center rounded-[13px]"
+              style={{ backgroundColor: "color-mix(in srgb, var(--brand-cobalt) 14%, transparent)" }}
+            >
+              <BarChart2 size={18} className="text-[var(--brand-cobalt)]" strokeWidth={1.75} />
             </div>
-            <p className="font-display font-700 text-text text-[16px]">Capital investido</p>
-            <p className="font-money font-700 text-text mt-1 text-[20px]">
+            <p className="font-display text-[16px] font-bold text-[var(--text)]">Capital investido</p>
+            <p className="mt-1 font-mono text-[20px] font-bold tabular-nums text-[var(--text)]">
               {formatCurrency(data.totalInvested / 100)}
             </p>
-          </div>
+          </Card>
 
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <div className={cn("mb-3 flex h-9 w-9 items-center justify-center rounded-[10px]", data.totalReturn >= 0 ? "bg-cyan/10" : "bg-red/10")}>
-              <TrendingUp size={18} className={data.totalReturn >= 0 ? "text-cyan" : "text-red"} strokeWidth={1.75} />
+          <Card>
+            <div
+              className="mb-3 flex h-9 w-9 items-center justify-center rounded-[13px]"
+              style={{ backgroundColor: `color-mix(in srgb, ${data.totalReturn >= 0 ? "var(--cyan)" : "var(--clay)"} 14%, transparent)` }}
+            >
+              <TrendingUp size={18} className={data.totalReturn >= 0 ? "text-[var(--cyan)]" : "text-[var(--clay)]"} strokeWidth={1.75} />
             </div>
-            <p className="font-display font-700 text-text text-[16px]">Retorno total</p>
-            <p className={cn("font-money font-700 mt-1 text-[20px]", data.totalReturn >= 0 ? "text-cyan" : "text-red")}>
+            <p className="font-display text-[16px] font-bold text-[var(--text)]">Retorno total</p>
+            <p className={cn("mt-1 font-mono text-[20px] font-bold tabular-nums", data.totalReturn >= 0 ? "text-[var(--cyan)]" : "text-[var(--clay)]")}>
               {data.totalReturn >= 0 ? "+" : ""}{formatCurrency(data.totalReturn / 100)}
             </p>
-            <p className={cn("font-mono mt-0.5 text-[12px]", data.totalReturnPercent >= 0 ? "text-cyan" : "text-red")}>
+            <p className={cn("mt-0.5 font-mono text-[12px]", data.totalReturnPercent >= 0 ? "text-[var(--cyan)]" : "text-[var(--clay)]")}>
               {data.totalReturnPercent >= 0 ? "+" : ""}{data.totalReturnPercent.toFixed(2)}%
             </p>
-          </div>
+          </Card>
 
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <div className="bg-orange/10 mb-3 flex h-9 w-9 items-center justify-center rounded-[10px]">
-              <ArrowUpRight size={18} className="text-orange" strokeWidth={1.75} />
+          <Card>
+            <div
+              className="mb-3 flex h-9 w-9 items-center justify-center rounded-[13px]"
+              style={{ backgroundColor: "color-mix(in srgb, var(--gold) 14%, transparent)" }}
+            >
+              <ArrowUpRight size={18} className="text-[var(--gold)]" strokeWidth={1.75} />
             </div>
-            <p className="font-display font-700 text-text text-[16px]">Ativos na carteira</p>
-            <p className="font-display font-700 text-text mt-1 text-[20px]">{data.investments.length}</p>
-            <p className="text-text-muted mt-0.5 text-[12px]">{data.allocations.length} classes de ativos</p>
-          </div>
+            <p className="font-display text-[16px] font-bold text-[var(--text)]">Ativos na carteira</p>
+            <p className="mt-1 font-display text-[20px] font-bold text-[var(--text)]">{data.investments.length}</p>
+            <p className="mt-0.5 text-[12px] text-[var(--text-sub)]">{data.allocations.length} classes de ativos</p>
+          </Card>
         </div>
       )}
 
       {/* Allocation breakdown */}
-      <div className="border-border bg-surface rounded-xl border p-5">
-        <SectionHeader title="Alocação por classe" subtitle="Distribuição do patrimônio entre classes de ativos" />
+      <Card>
+        <CardHead title="Alocação por classe" subtitle="Distribuição do patrimônio entre classes de ativos" />
         {!data || data.allocations.length === 0 ? (
           <ChartEmptyState message="Nenhuma posição em carteira" />
         ) : (
@@ -112,10 +113,6 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
                     outerRadius={95}
                     paddingAngle={2}
                     strokeWidth={0}
-                    activeIndex={activeIndex}
-                    activeShape={renderActiveShape}
-                    onMouseEnter={onMouseEnter}
-                    onMouseLeave={onMouseLeave}
                   >
                     {data.allocations.map((alloc) => (
                       <Cell key={alloc.assetClass} fill={alloc.color} />
@@ -152,7 +149,7 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Evolution chart */}
       <AnalyticsInvestmentEvolutionChart data={evolution.data ?? { data: [], returnPct: null, cumulativeDividends: 0 }} />

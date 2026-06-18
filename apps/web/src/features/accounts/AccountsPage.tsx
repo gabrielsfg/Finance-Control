@@ -33,11 +33,6 @@ export function AccountsPage() {
 
   const closeDrawer = () => setDrawerOpen(false);
 
-  const netWorth = accounts?.filter((a) => a.type !== "Credit").reduce((sum, a) => sum + a.currentAmount, 0) ?? 0;
-  const totalInvoice = accounts?.filter((a) => a.type === "Credit").reduce((sum, a) => sum + Math.abs(a.currentAmount), 0) ?? 0;
-  const totalCreditAvailable = accounts?.filter((a) => a.type === "Credit" && a.creditLimit).reduce((sum, a) => sum + (a.creditLimit! - Math.abs(a.currentAmount)), 0) ?? 0;
-
-
   const hasAccounts = !!accounts?.length;
 
   if (isLoading) {
@@ -66,13 +61,7 @@ export function AccountsPage() {
         <PageTopbar title="Contas" subtitle={subtitle} />
       <div className="flex flex-col gap-5">
 
-        {hasAccounts && (
-          <AccountsNetWorthHero
-            netWorth={netWorth}
-            totalInvoice={totalInvoice}
-            totalCreditAvailable={totalCreditAvailable}
-          />
-        )}
+        {hasAccounts && <AccountsNetWorthHero accounts={accounts!} />}
 
         {hasAccounts ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -104,7 +93,7 @@ export function AccountsPage() {
         <div className="rounded-[20px] border p-5" style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}>
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="font-display font-semibold text-[--text] text-[15px]">Open Finance</p>
+              <p className="font-display font-semibold text-[var(--text)] text-[15px]">Open Finance</p>
               <p className="text-text-muted mt-0.5 text-[12px]">Conecte seus bancos para importar transações automaticamente</p>
             </div>
             <span className="bg-orange/10 text-orange border-orange/30 rounded-full border px-2.5 py-1 text-[11px] font-medium">

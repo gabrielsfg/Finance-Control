@@ -11,8 +11,9 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Money } from "@/components/shared/Money";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatPercentNeutral } from "@/lib/utils/formatNumber";
 import { cn } from "@/lib/utils";
 import {
   useInvestmentTransactions,
@@ -72,52 +73,49 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="font-display font-600 text-text text-[16px]">
-            {investment.ticker} — {investment.name}
+          <DialogTitle className="font-display text-[16px] font-bold tracking-[-0.01em] text-[var(--text)]">
+            <span className="font-mono">{investment.ticker}</span>
+            <span className="text-[var(--text-sub)]"> · {investment.name}</span>
           </DialogTitle>
         </DialogHeader>
 
         {/* Summary strip */}
-        <div className="bg-surface2 grid grid-cols-4 gap-3 rounded-xl p-4">
-          <div>
-            <p className="text-text-muted text-[12px]">Qtd. atual</p>
-            <p className="font-money font-600 text-text text-[16px]">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[13px] border border-[var(--border-color)] bg-[var(--border-color)] sm:grid-cols-4">
+          <div className="bg-[var(--surface2)] p-3.5">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Qtd. atual</p>
+            <p className="mt-1 font-mono text-[16px] font-medium tabular-nums text-[var(--text)]">
               {investment.currentQuantity % 1 === 0
-                ? investment.currentQuantity
+                ? investment.currentQuantity.toLocaleString("pt-BR")
                 : investment.currentQuantity.toFixed(6)}
             </p>
           </div>
-          <div>
-            <p className="text-text-muted text-[12px]">Preço médio</p>
-            <p className="font-money font-600 text-text text-[16px]">
-              {formatCurrency(investment.averagePrice / 100)}
-            </p>
+          <div className="bg-[var(--surface2)] p-3.5">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Preço médio</p>
+            <Money cents={investment.averagePrice} className="mt-1 block text-[16px]" />
           </div>
-          <div>
-            <p className="text-text-muted text-[12px]">Preço atual</p>
-            <p className="font-money font-600 text-text text-[16px]">
-              {formatCurrency(investment.currentPrice / 100)}
-            </p>
+          <div className="bg-[var(--surface2)] p-3.5">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Preço atual</p>
+            <Money cents={investment.currentPrice} className="mt-1 block text-[16px]" />
           </div>
-          <div>
-            <p className="text-text-muted text-[12px]">Retorno</p>
-            <p className={cn("font-money font-600 text-[16px]", isPositive ? "text-green" : "text-red")}>
-              {isPositive ? "+" : ""}{investment.totalReturnPercent.toFixed(2)}%
+          <div className="bg-[var(--surface2)] p-3.5">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Retorno</p>
+            <p className={cn("mt-1 font-mono text-[16px] font-semibold tabular-nums", isPositive ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
+              {formatPercentNeutral(Math.abs(investment.totalReturnPercent))}
             </p>
           </div>
         </div>
 
         {/* Sub-tabs */}
-        <div className="border-border flex gap-1 rounded-xl border bg-surface p-1">
+        <div className="inline-flex gap-[3px] rounded-[13px] border border-[var(--border-color)] bg-[var(--surface2)] p-[4px]">
           {(["transactions", "dividends"] as SubTab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setSubTab(tab)}
               className={cn(
-                "flex-1 rounded-[9px] py-1.5 text-[13px] font-medium transition-all",
+                "flex-1 rounded-[9px] px-4 py-1.5 text-[13px] transition-all",
                 subTab === tab
-                  ? "bg-surface2 text-text shadow-sm"
-                  : "text-text-muted hover:text-text-sub",
+                  ? "bg-[var(--surface)] font-semibold text-[var(--text)] shadow-sm"
+                  : "font-medium text-[var(--text-sub)] hover:text-[var(--text)]",
               )}
             >
               {tab === "transactions" ? "Operações" : "Rendimentos"}
@@ -130,36 +128,37 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
           <div className="max-h-72 overflow-y-auto">
             {transactions.isLoading && (
               <div className="flex h-20 items-center justify-center">
-                <Loader2 size={18} className="text-green animate-spin" />
+                <Loader2 size={18} className="animate-spin text-[var(--brand-accent)]" />
               </div>
             )}
             {!transactions.isLoading && (transactions.data ?? []).length === 0 && (
-              <p className="text-text-muted py-6 text-center text-[13px]">Nenhuma operação registrada.</p>
+              <p className="py-6 text-center text-[13px] text-[var(--text-sub)]">Nenhuma operação registrada.</p>
             )}
             {(transactions.data ?? []).map((tx) => {
               const isBuy = tx.operation === "Buy";
               return (
-                <div key={tx.id} className="border-border flex items-center gap-3 border-b py-3 last:border-0">
-                  <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px]", isBuy ? "bg-green/10" : "bg-red/10")}>
+                <div key={tx.id} className="flex items-center gap-3 border-b border-[var(--border-color)] py-3 last:border-0">
+                  <div
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px]"
+                    style={{ background: isBuy ? "color-mix(in srgb, var(--moss) 14%, transparent)" : "color-mix(in srgb, var(--clay) 14%, transparent)" }}
+                  >
                     {isBuy
-                      ? <ArrowDownLeft size={15} className="text-green" />
-                      : <ArrowUpRight  size={15} className="text-red" />}
+                      ? <ArrowDownLeft size={15} className="text-[var(--moss)]" />
+                      : <ArrowUpRight  size={15} className="text-[var(--clay)]" />}
                   </div>
                   <div className="flex-1">
-                    <p className="text-text text-[14px] font-medium">{isBuy ? "Compra" : "Venda"}</p>
-                    <p className="text-text-muted text-[12px]">
+                    <p className="text-[14px] font-medium text-[var(--text)]">{isBuy ? "Compra" : "Venda"}</p>
+                    <p className="font-mono text-[12px] text-[var(--text-sub)]">
                       {formatDate(tx.date)} · {tx.quantity % 1 === 0 ? tx.quantity : tx.quantity.toFixed(4)} × {formatCurrency(tx.unitPrice / 100)}
                       {tx.otherCosts > 0 && ` + ${formatCurrency(tx.otherCosts / 100)} custos`}
                     </p>
                   </div>
-                  <p className={cn("font-money font-600 text-[14px]", isBuy ? "text-green" : "text-red")}>
-                    {isBuy ? "+" : "-"}{formatCurrency(tx.totalValue / 100)}
-                  </p>
+                  <Money cents={isBuy ? tx.totalValue : -tx.totalValue} sign className="text-[14px]" />
                   <button
                     onClick={() => setConfirmDeleteId(tx.id)}
                     disabled={deleteOp.isPending}
                     title="Excluir operação"
-                    className="text-text-muted hover:text-red ml-1 transition-colors"
+                    className="ml-1 text-[var(--text-sub)] transition-colors hover:text-[var(--clay)]"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -174,26 +173,27 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
           <div className="max-h-72 overflow-y-auto">
             {dividends.isLoading && (
               <div className="flex h-20 items-center justify-center">
-                <Loader2 size={18} className="text-green animate-spin" />
+                <Loader2 size={18} className="animate-spin text-[var(--brand-accent)]" />
               </div>
             )}
             {!dividends.isLoading && (dividends.data ?? []).length === 0 && (
-              <p className="text-text-muted py-6 text-center text-[13px]">Nenhum rendimento registrado.</p>
+              <p className="py-6 text-center text-[13px] text-[var(--text-sub)]">Nenhum rendimento registrado.</p>
             )}
             {(dividends.data ?? []).map((div) => (
-              <div key={div.id} className="border-border flex items-center gap-3 border-b py-3 last:border-0">
-                <div className="bg-purple/10 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px]">
-                  <ArrowDownLeft size={15} className="text-purple" />
+              <div key={div.id} className="flex items-center gap-3 border-b border-[var(--border-color)] py-3 last:border-0">
+                <div
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px]"
+                  style={{ background: "color-mix(in srgb, var(--gold) 16%, transparent)" }}
+                >
+                  <ArrowDownLeft size={15} className="text-[var(--gold)]" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-text text-[14px] font-medium">
+                  <p className="text-[14px] font-medium text-[var(--text)]">
                     {DIVIDEND_TYPE_LABELS[div.type] ?? div.type}
                   </p>
-                  <p className="text-text-muted text-[12px]">{formatDate(div.date)}</p>
+                  <p className="font-mono text-[12px] text-[var(--text-sub)]">{formatDate(div.date)}</p>
                 </div>
-                <p className="font-money font-600 text-purple text-[14px]">
-                  +{formatCurrency(div.amount / 100)}
-                </p>
+                <Money cents={div.amount} sign className="text-[14px]" />
               </div>
             ))}
           </div>
@@ -203,7 +203,7 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
           {hasFundamentals ? (
             <button
               onClick={() => setShowFundamentals(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12px] text-text-sub transition-colors hover:border-blue/40 hover:text-blue"
+              className="flex items-center gap-1.5 rounded-[13px] border border-[var(--border-color)] px-3 py-1.5 text-[12px] text-[var(--text-sub)] transition-colors hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]"
             >
               <Building2 size={13} />
               Fundamentos da empresa

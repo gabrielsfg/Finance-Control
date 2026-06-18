@@ -105,7 +105,7 @@ export const NotificationBell = () => {
         className="relative flex h-[42px] w-[42px] items-center justify-center rounded-[13px] border transition-all hover:-translate-y-[1px]"
         style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
       >
-        <Bell size={19} strokeWidth={1.7} className="text-[--text]" />
+        <Bell size={19} strokeWidth={1.7} className="text-[var(--text)]" />
         {unread > 0 && (
           <span className="bg-red text-[9px] font-bold text-white absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 leading-none">
             {unread > 9 ? "9+" : unread}

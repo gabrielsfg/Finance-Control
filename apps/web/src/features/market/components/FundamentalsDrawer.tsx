@@ -33,21 +33,22 @@ export const FundamentalsDrawer = ({ ticker, assetName, onClose }: Props) => {
 
       {/* Drawer */}
       <div
+        style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
         className={cn(
-          "bg-surface fixed right-0 top-0 z-50 flex h-full w-full max-w-[480px] flex-col shadow-2xl transition-transform duration-300 ease-out",
+          "fixed right-0 top-0 z-50 flex h-full w-full max-w-[480px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
         {/* Header */}
-        <div className="border-border flex shrink-0 items-start justify-between gap-3 border-b px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--border-color)] px-5 py-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <Building2 size={16} className="text-blue shrink-0" />
-              <p className="font-display text-text text-[16px] font-semibold">{ticker ?? "—"}</p>
+              <Building2 size={16} className="shrink-0 text-[var(--brand-accent)]" />
+              <p className="font-display text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">{ticker ?? "—"}</p>
             </div>
-            {assetName && <p className="text-text-muted mt-0.5 truncate text-[12px]">{assetName}</p>}
+            {assetName && <p className="mt-0.5 truncate text-[12px] text-[var(--text-sub)]">{assetName}</p>}
           </div>
-          <button onClick={onClose} className="text-text-muted hover:text-text mt-0.5 shrink-0 transition-colors">
+          <button onClick={onClose} className="mt-0.5 shrink-0 text-[var(--text-sub)] transition-colors hover:text-[var(--text)]">
             <X size={18} />
           </button>
         </div>

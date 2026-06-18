@@ -156,15 +156,15 @@ export const Sidebar = () => {
   const isDark = theme === "dark";
 
   return (
-    <aside className="relative flex h-full w-[252px] shrink-0 flex-col border-r border-[--border-color] bg-gradient-to-b from-[--surface] to-[--surface2]">
+    <aside className="relative flex h-full w-[252px] shrink-0 flex-col border-r border-[var(--border-color)] bg-gradient-to-b from-[var(--surface)] to-[var(--surface2)]">
       {/* Brand */}
       <div className="flex items-center gap-[11px] px-[18px] pt-[26px] pb-4">
         <BrandGlyph />
         <div>
-          <div className="font-display text-[22px] font-extrabold tracking-[-0.02em] text-[--text]">
-            Quan<span className="text-[--brand-accent]">tia</span>
+          <div className="font-display text-[22px] font-extrabold tracking-[-0.02em] text-[var(--text)]">
+            Quan<span className="text-[var(--brand-accent)]">tia</span>
           </div>
-          <span className="font-mono text-[9.5px] tracking-[0.22em] uppercase text-[--text-sub] mt-[-3px] block">
+          <span className="font-mono text-[9.5px] tracking-[0.22em] uppercase text-[var(--text-sub)] mt-[-3px] block">
             controle financeiro
           </span>
         </div>
@@ -175,7 +175,7 @@ export const Sidebar = () => {
         {navGroups.map((group) => (
           <div key={group.label} className="flex flex-col gap-[2px]">
             {/* Group label */}
-            <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[--text-sub] px-3 py-[6px]">
+            <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--text-sub)] px-3 py-[6px]">
               {group.label}
             </div>
 
@@ -194,12 +194,12 @@ export const Sidebar = () => {
                       className={cn(
                         "relative flex w-full items-center gap-[11px] rounded-[13px] px-3 py-[9px] text-[14px] font-medium transition-colors duration-150",
                         active
-                          ? "bg-[--text] text-[--bg]"
-                          : "text-[--text] hover:bg-[--surface2]",
+                          ? "bg-[var(--text)] text-[var(--bg)]"
+                          : "text-[var(--text)] hover:bg-[var(--surface2)]",
                       )}
                     >
                       {active && (
-                        <span className="absolute -left-[18px] top-1/2 -translate-y-1/2 w-1 h-[22px] rounded-r-[4px] bg-[--brand-accent]" />
+                        <span className="absolute -left-[18px] top-1/2 -translate-y-1/2 w-1 h-[22px] rounded-r-[4px] bg-[var(--brand-accent)]" />
                       )}
                       <Icon
                         size={18}
@@ -214,7 +214,7 @@ export const Sidebar = () => {
                     </button>
 
                     {open && (
-                      <div className="ml-[22px] mt-[2px] flex flex-col gap-[1px] border-l border-[--border-color] pl-3">
+                      <div className="ml-[22px] mt-[2px] flex flex-col gap-[1px] border-l border-[var(--border-color)] pl-3">
                         {item.children.map((child) => {
                           const ChildIcon = child.icon;
                           const childActive =
@@ -228,8 +228,8 @@ export const Sidebar = () => {
                               className={cn(
                                 "flex items-center gap-2 rounded-[9px] px-2 py-[6px] text-[13px] transition-colors duration-150",
                                 childActive
-                                  ? "text-[--brand-accent] font-semibold"
-                                  : "text-[--text-sub] hover:bg-[--surface2] hover:text-[--text]",
+                                  ? "text-[var(--brand-accent)] font-semibold"
+                                  : "text-[var(--text-sub)] hover:bg-[var(--surface2)] hover:text-[var(--text)]",
                               )}
                             >
                               {ChildIcon && (
@@ -252,12 +252,12 @@ export const Sidebar = () => {
                   className={cn(
                     "relative flex items-center gap-[11px] rounded-[13px] px-3 py-[9px] text-[14px] font-medium transition-colors duration-150",
                     active
-                      ? "bg-[--text] text-[--bg]"
-                      : "text-[--text] hover:bg-[--surface2]",
+                      ? "bg-[var(--text)] text-[var(--bg)]"
+                      : "text-[var(--text)] hover:bg-[var(--surface2)]",
                   )}
                 >
                   {active && (
-                    <span className="absolute -left-[18px] top-1/2 -translate-y-1/2 w-1 h-[22px] rounded-r-[4px] bg-[--brand-accent]" />
+                    <span className="absolute -left-[18px] top-1/2 -translate-y-1/2 w-1 h-[22px] rounded-r-[4px] bg-[var(--brand-accent)]" />
                   )}
                   <Icon
                     size={18}
@@ -266,7 +266,7 @@ export const Sidebar = () => {
                   />
                   <span>{item.label}</span>
                   {active && (
-                    <span className="ml-auto h-[7px] w-[7px] rounded-full bg-[--clay]" />
+                    <span className="ml-auto h-[7px] w-[7px] rounded-full bg-[var(--clay)]" />
                   )}
                 </Link>
               );
@@ -277,22 +277,22 @@ export const Sidebar = () => {
 
       {/* User chip */}
       <div className="px-[18px] pb-5">
-        <div className="flex items-center gap-[11px] rounded-[13px] border border-[--border-color] bg-[--surface] p-[10px]">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-[--brand-cobalt] to-[#0c1f9c] font-display text-[15px] font-bold text-white">
+        <div className="flex items-center gap-[11px] rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] p-[10px]">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-[var(--brand-cobalt)] to-[#0c1f9c] font-display text-[15px] font-bold text-white">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[13.5px] font-semibold text-[--text] leading-[1.2] truncate">
+            <div className="text-[13.5px] font-semibold text-[var(--text)] leading-[1.2] truncate">
               {user?.name ?? "Usuário"}
             </div>
-            <div className="font-mono text-[10.5px] text-[--text-sub] truncate">plano pessoal</div>
+            <div className="font-mono text-[10.5px] text-[var(--text-sub)] truncate">plano pessoal</div>
           </div>
           <Link
             href="/profile"
             className="opacity-55 hover:opacity-100 transition-opacity"
             aria-label="Perfil"
           >
-            <Settings size={18} strokeWidth={1.7} className="text-[--text]" />
+            <Settings size={18} strokeWidth={1.7} className="text-[var(--text)]" />
           </Link>
         </div>
       </div>

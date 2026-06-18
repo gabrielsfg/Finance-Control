@@ -50,8 +50,10 @@ function PresetPill({ active, onClick, children }: { active: boolean; onClick: (
     <button
       onClick={onClick}
       className={cn(
-        "h-7 rounded-full px-3 text-[12px] font-medium transition-all whitespace-nowrap",
-        active ? "bg-green/15 text-green ring-1 ring-green/30" : "bg-surface3 text-text-sub hover:text-text",
+        "h-7 rounded-full border px-3 text-[12px] font-medium transition-all whitespace-nowrap",
+        active
+          ? "border-[var(--brand-accent)] bg-[color-mix(in_srgb,var(--brand-accent)_12%,transparent)] text-[var(--brand-accent)]"
+          : "border-[var(--border-color)] bg-[var(--surface2)] text-[var(--text-sub)] hover:text-[var(--text)]",
       )}
     >
       {children}
@@ -64,16 +66,18 @@ function CheckRow({ checked, onClick, label, color }: { checked: boolean; onClic
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface3"
+      className="flex w-full items-center gap-2.5 rounded-[9px] px-2 py-1.5 text-left transition-colors hover:bg-[var(--surface2)]"
     >
       <span className={cn(
         "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
-        checked ? "border-green bg-green/15 text-green" : "border-border text-transparent",
+        checked
+          ? "border-[var(--brand-accent)] bg-[color-mix(in_srgb,var(--brand-accent)_14%,transparent)] text-[var(--brand-accent)]"
+          : "border-[var(--border-color)] text-transparent",
       )}>
         <Check size={10} strokeWidth={3} />
       </span>
       {color && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />}
-      <span className={cn("text-[13px]", checked ? "text-text font-medium" : "text-text-sub")}>{label}</span>
+      <span className={cn("text-[13px]", checked ? "text-[var(--text)] font-medium" : "text-[var(--text-sub)]")}>{label}</span>
     </button>
   );
 }
@@ -96,7 +100,7 @@ function SectionContent({
     return (
       <div className="flex flex-col gap-4">
         <div>
-          <p className="text-text-muted mb-2 text-[11px] font-medium uppercase tracking-wide">Presets</p>
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Presets</p>
           <div className="flex flex-wrap gap-1.5">
             {DATE_PRESETS.map(p => (
               <PresetPill key={p.id} active={draft.preset === p.id} onClick={() => setDraft(d => ({ ...d, preset: p.id }))}>
@@ -106,7 +110,7 @@ function SectionContent({
           </div>
         </div>
         <div>
-          <p className="text-text-muted mb-2 text-[11px] font-medium uppercase tracking-wide">Ano</p>
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Ano</p>
           <div className="flex flex-wrap gap-1.5">
             {years.map(y => (
               <PresetPill
@@ -120,7 +124,7 @@ function SectionContent({
           </div>
         </div>
         <div>
-          <p className="text-text-muted mb-2 text-[11px] font-medium uppercase tracking-wide">Período personalizado</p>
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Período personalizado</p>
           <DateRangePicker
             startDate={draft.preset === "custom-range" ? draft.startDate : ""}
             finishDate={draft.preset === "custom-range" ? draft.finishDate : ""}
@@ -313,16 +317,20 @@ export function AnalyticsFilters({ filter, onChange, mode }: Props) {
       <button
         onClick={() => { setOpen(o => !o); setDraft(filter); setSection("date"); }}
         className={cn(
-          "flex h-8 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-all",
+          "flex h-[42px] items-center gap-2 rounded-[13px] border px-3.5 text-[13px] font-medium transition-all hover:-translate-y-[1px]",
           open || active > 0
-            ? "border-green/40 bg-green/15 text-green"
-            : "border-border bg-surface2 text-text hover:bg-surface3",
+            ? "border-[var(--brand-accent)] text-[var(--brand-accent)]"
+            : "border-[var(--border-color)] text-[var(--text-sub)] hover:text-[var(--text)]",
         )}
+        style={{ background: "var(--surface)" }}
       >
-        <SlidersHorizontal size={13} />
-        Filtros
+        <SlidersHorizontal size={15} strokeWidth={1.75} />
+        <span className="hidden sm:inline">Filtros</span>
         {active > 0 && (
-          <span className="bg-green flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-black">
+          <span
+            className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[10px] font-bold text-white"
+            style={{ background: "var(--brand-accent)" }}
+          >
             {active}
           </span>
         )}

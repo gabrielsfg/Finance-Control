@@ -10,8 +10,9 @@ import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { Category } from "@/lib/types/categories.types";
 import { cn, includesNormalized } from "@/lib/utils";
 
+const labelCls = "font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-sub)]";
 const inputCls =
-  "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-10 px-3.5 text-[14px] outline-none focus:border-green/60 transition-colors";
+  "w-full rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 py-2.5 text-[14px] text-[var(--text)] placeholder:text-[var(--text-muted)] outline-none transition-shadow focus:border-[var(--brand-cobalt)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]";
 
 type Props = {
   open: boolean;
@@ -94,19 +95,19 @@ export function CreateSubCategoryModal({ open, onClose, categories, defaultCateg
       />
 
       <div
-        style={{ zIndex: drawerZ }}
+        style={{ zIndex: drawerZ, background: "var(--surface)", borderColor: "var(--border-color)" }}
         className={cn(
-          "bg-surface border-border fixed inset-y-0 right-0 flex w-full max-w-[420px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
+          "fixed inset-y-0 right-0 flex w-full max-w-[420px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
         {/* Header */}
-        <div className="border-border flex items-center justify-between border-b px-6 py-5">
-          <h2 className="font-display font-600 text-text text-[17px]">Nova subcategoria</h2>
+        <div className="flex items-center justify-between border-b border-[var(--border-color)] px-6 py-5">
+          <h2 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">Nova subcategoria</h2>
           <button
             onClick={handleClose}
             title="Fechar"
-            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-[9px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--text)]"
           >
             <X size={16} />
           </button>
@@ -116,11 +117,11 @@ export function CreateSubCategoryModal({ open, onClose, categories, defaultCateg
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <label className="text-text-sub text-[14px]">Categoria pai</label>
+              <label className={labelCls}>Categoria pai</label>
               <button
                 type="button"
                 onClick={() => setShowCreateCategory(true)}
-                className="text-text-muted hover:text-green flex items-center gap-1 text-[13px] transition-colors"
+                className="flex items-center gap-1 text-[13px] text-[var(--text-sub)] transition-colors hover:text-[var(--brand-accent)]"
               >
                 <Plus size={13} />
                 Nova categoria
@@ -130,7 +131,11 @@ export function CreateSubCategoryModal({ open, onClose, categories, defaultCateg
               <button
                 type="button"
                 onClick={() => setCategoryDropdownOpen((o) => !o)}
-                className={cn(inputCls, "flex items-center gap-2.5 text-left", categoryDropdownOpen && "border-green/60")}
+                className={cn(
+                  inputCls,
+                  "flex items-center gap-2.5 text-left",
+                  categoryDropdownOpen && "border-[var(--brand-cobalt)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]",
+                )}
               >
                 {selectedCategory && !categoryDropdownOpen ? (
                   <>
@@ -156,19 +161,19 @@ export function CreateSubCategoryModal({ open, onClose, categories, defaultCateg
                       }
                     }}
                     placeholder="Buscar categoria..."
-                    className="flex-1 bg-transparent text-[14px] text-text placeholder:text-text-muted outline-none"
+                    className="flex-1 bg-transparent text-[14px] text-[var(--text)] placeholder:text-[var(--text-muted)] outline-none"
                   />
                 ) : (
-                  <span className="flex-1 text-text-muted">Selecionar categoria</span>
+                  <span className="flex-1 text-[var(--text-muted)]">Selecionar categoria</span>
                 )}
-                <ChevronDown size={14} className={cn("text-text-muted shrink-0 transition-transform", categoryDropdownOpen && "rotate-180")} />
+                <ChevronDown size={14} className={cn("shrink-0 text-[var(--text-sub)] transition-transform", categoryDropdownOpen && "rotate-180")} />
               </button>
 
               {categoryDropdownOpen && (
-                <div className="border-border bg-surface absolute left-0 top-[calc(100%+4px)] z-10 w-full rounded-xl border shadow-xl overflow-hidden">
+                <div className="absolute left-0 top-[calc(100%+4px)] z-10 w-full overflow-hidden rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] shadow-xl">
                   <div className="max-h-48 overflow-y-auto py-1">
                     {filteredCategories.length === 0 ? (
-                      <p className="text-text-muted px-3.5 py-4 text-center text-[13px]">Nenhuma encontrada</p>
+                      <p className="px-3.5 py-4 text-center text-[13px] text-[var(--text-muted)]">Nenhuma encontrada</p>
                     ) : (
                       filteredCategories.map((c) => {
                         const color = getCategoryColor(c.color, c.name);
@@ -180,12 +185,12 @@ export function CreateSubCategoryModal({ open, onClose, categories, defaultCateg
                             onClick={() => { setCategoryId(c.id); setCategoryDropdownOpen(false); }}
                             className={cn(
                               "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] transition-colors",
-                              isSelected ? "bg-surface2 text-text" : "text-text-sub hover:bg-surface2/60 hover:text-text",
+                              isSelected ? "bg-[var(--surface2)] text-[var(--text)]" : "text-[var(--text-sub)] hover:bg-[var(--surface2)] hover:text-[var(--text)]",
                             )}
                           >
-                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                             <span className="flex-1 truncate">{c.name}</span>
-                            {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-green shrink-0" />}
+                            {isSelected && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-accent)]" />}
                           </button>
                         );
                       })
@@ -197,10 +202,10 @@ export function CreateSubCategoryModal({ open, onClose, categories, defaultCateg
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-text-sub text-[14px]">Nome</label>
+            <label className={labelCls}>Nome</label>
             <div className="flex items-center gap-2">
               {emoji && (
-                <span className="border-border bg-surface2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-[20px]">
+                <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[13px] border border-[var(--border-color)] bg-[var(--surface2)] text-[20px]">
                   {emoji}
                 </span>
               )}
@@ -217,12 +222,12 @@ export function CreateSubCategoryModal({ open, onClose, categories, defaultCateg
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <label className="text-text-sub text-[14px]">Ícone</label>
+              <label className={labelCls}>Ícone</label>
               {emoji && (
                 <button
                   type="button"
                   onClick={() => setEmoji("")}
-                  className="text-text-muted hover:text-red text-[12px] transition-colors"
+                  className="text-[12px] text-[var(--text-sub)] transition-colors hover:text-[var(--clay)]"
                 >
                   Remover
                 </button>
@@ -233,7 +238,7 @@ export function CreateSubCategoryModal({ open, onClose, categories, defaultCateg
         </div>
 
         {/* Footer */}
-        <div className="border-border shrink-0 border-t px-6 py-4">
+        <div className="shrink-0 border-t border-[var(--border-color)] px-6 py-4">
           <div className="flex gap-3">
             <Button variant="outline" className="flex-1" onClick={handleClose}>Cancelar</Button>
             <Button className="flex-1" disabled={!name.trim() || !categoryId || isPending} onClick={handleSubmit}>

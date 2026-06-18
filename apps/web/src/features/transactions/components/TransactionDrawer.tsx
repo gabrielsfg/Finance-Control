@@ -93,7 +93,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 };
 
 const INPUT_CLASS =
-  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-[--brand-cobalt] h-11 rounded-[13px] px-3.5 text-[15px]";
+  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-[var(--brand-cobalt)] h-11 rounded-[13px] px-3.5 text-[15px]";
 
 // !h-11 overrides data-[size=default]:h-8 baked into SelectTrigger base styles
 const TRIGGER_CLASS =
@@ -1227,7 +1227,7 @@ export function TransactionDrawer({
                 ←
               </button>
             )}
-            <h2 className="font-display font-bold text-[--text] text-[17px] tracking-[-0.01em]">{titles[innerMode]}</h2>
+            <h2 className="font-display font-bold text-[var(--text)] text-[17px] tracking-[-0.01em]">{titles[innerMode]}</h2>
           </div>
           <button
             onClick={onClose}

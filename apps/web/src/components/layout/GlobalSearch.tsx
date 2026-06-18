@@ -367,7 +367,7 @@ export const GlobalSearch = () => {
     <div className="relative flex-1">
       {/* Input */}
       <div
-        className="flex items-center gap-[9px] rounded-full border px-[15px] py-[9px] text-[--text-sub] transition-all"
+        className="flex items-center gap-[9px] rounded-full border px-[15px] py-[9px] text-[var(--text-sub)] transition-all"
         style={{
           background: "var(--surface)",
           borderColor: open ? "var(--brand-cobalt)" : "var(--border-color)",
@@ -396,9 +396,9 @@ export const GlobalSearch = () => {
           }}
           onKeyDown={handleKeyDown}
           placeholder={isLocalSearch ? (searchPlaceholder ?? "Buscar...") : "Buscar páginas, transações, investimentos..."}
-          className="text-[--text] placeholder:text-[--text-sub] flex-1 bg-transparent font-sans text-[13.5px] focus:outline-none"
+          className="text-[var(--text)] placeholder:text-[var(--text-sub)] flex-1 bg-transparent font-sans text-[13.5px] focus:outline-none"
         />
-        <kbd className="hidden rounded border px-1 py-0.5 font-mono text-[10px] text-[--text-sub] sm:inline-flex items-center gap-0.5" style={{ borderColor: "var(--border-color)" }}>
+        <kbd className="hidden rounded border px-1 py-0.5 font-mono text-[10px] text-[var(--text-sub)] sm:inline-flex items-center gap-0.5" style={{ borderColor: "var(--border-color)" }}>
           <span>⌘</span>K
         </kbd>
       </div>

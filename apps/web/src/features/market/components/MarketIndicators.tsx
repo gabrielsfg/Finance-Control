@@ -33,39 +33,54 @@ type IndicatorItem = {
   href?: string;
 };
 
-function IndicatorChip({ item }: { item: IndicatorItem }) {
-  const up = (item.changePct ?? 0) >= 0;
+function TrendChip({ pct }: { pct: number }) {
+  const up = pct >= 0;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-[7px] py-[2px] font-mono text-[12px] font-semibold tabular-nums",
+        up ? "text-[var(--moss)]" : "text-[var(--clay)]",
+      )}
+      style={{
+        background: up
+          ? "color-mix(in srgb, var(--moss) 14%, transparent)"
+          : "color-mix(in srgb, var(--clay) 14%, transparent)",
+      }}
+    >
+      {up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+      {up ? "+" : ""}{pct.toFixed(2)}%
+    </span>
+  );
+}
 
+function IndicatorStat({ item }: { item: IndicatorItem }) {
   const inner = (
-    <div className="flex w-full flex-col gap-1 px-2.5 py-2">
-      <span className="text-text-muted text-[11px] font-medium uppercase tracking-[0.04em]">
+    <div className="flex h-full flex-col rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)] p-[18px_18px_16px] transition-colors" style={{ boxShadow: "var(--shadow-sm)" }}>
+      <span className="mb-[10px] font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-sub)]">
         {item.label}
       </span>
-      <span className="font-money text-text text-[15px] font-semibold leading-none">
+      <span className="font-mono text-[22px] font-semibold leading-[1.05] tracking-[-0.02em] tabular-nums text-[var(--text)]">
         {item.value}
       </span>
-      {item.changePct != null ? (
-        <span
-          className={cn(
-            "flex items-center gap-0.5 font-mono text-[11px] font-medium",
-            up ? "text-green" : "text-red",
-          )}
-        >
-          {up ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-          {up ? "+" : ""}{item.changePct.toFixed(2)}%
-        </span>
-      ) : (
-        <span className="text-text-muted font-mono text-[11px]">{item.sub ?? ""}</span>
-      )}
+      <div className="mt-[10px] flex items-center gap-2 font-mono text-[12px] text-[var(--text-sub)]">
+        {item.changePct != null ? (
+          <>
+            <TrendChip pct={item.changePct} />
+            <span>hoje</span>
+          </>
+        ) : (
+          <span>{item.sub ?? ""}</span>
+        )}
+      </div>
     </div>
   );
 
   return item.href ? (
-    <Link href={item.href} className="hover:bg-surface2 block h-full w-full rounded-lg transition-colors">
+    <Link href={item.href} className="block h-full transition-transform hover:-translate-y-[1px]">
       {inner}
     </Link>
   ) : (
-    <div className="h-full w-full">{inner}</div>
+    inner
   );
 }
 
@@ -108,25 +123,16 @@ export function MarketIndicators() {
   const items = [...indexItems, ...currencyItems, ...macroItems];
 
   if (macroLoading && items.length === 0) {
-    return (
-      <div className="border-border bg-surface h-[68px] animate-pulse rounded-2xl border" />
-    );
+    return <div className="h-[110px] animate-pulse rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)]" />;
   }
 
   if (items.length === 0) return null;
 
   return (
-    <div className="border-border bg-surface rounded-2xl border">
-      <div className="flex items-stretch overflow-x-auto">
-        {items.map((item, i) => (
-          <div key={item.key} className="flex min-w-0 flex-1 items-stretch">
-            {i > 0 && <div className="border-border/50 my-3 w-px shrink-0 border-l" />}
-            <div className="min-w-0 flex-1">
-              <IndicatorChip item={item} />
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="grid grid-cols-2 gap-[22px] sm:grid-cols-3 lg:grid-cols-4">
+      {items.map((item) => (
+        <IndicatorStat key={item.key} item={item} />
+      ))}
     </div>
   );
 }

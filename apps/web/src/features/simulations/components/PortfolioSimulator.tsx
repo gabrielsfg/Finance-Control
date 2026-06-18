@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from "react";
 import {
   ResponsiveContainer, ComposedChart, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { TabChips } from "@/components/shared/TabChips";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
@@ -14,8 +14,11 @@ import { simulateMonthly } from "../utils/taxCalc";
 import type { PortfolioAsset } from "@/lib/types/simulation";
 import { PortfolioBuilder, PORTFOLIO_COLORS, makeEmptyAsset, MIN_ASSETS } from "./PortfolioBuilder";
 import { MonthRangePicker } from "@/components/shared/MonthRangePicker";
+import { CHART_GRID, axisTick, SERIES, PresetPill, PrimaryButton, ChartTooltip, LegendItem } from "./simShared";
 
-const inputCls = "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-green/60 transition-colors";
+/** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
+const inputCls =
+  "h-11 w-full rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 font-mono text-[14px] tabular-nums text-[var(--text)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--text-sub)]/60 focus:border-[var(--brand-cobalt)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]";
 
 type SubTab = "backtest" | "projection";
 
@@ -51,41 +54,6 @@ function defaultAssets(): PortfolioAsset[] {
   return [a, b];
 }
 
-const BacktestTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="border-border bg-surface rounded-lg border px-3 py-2.5 shadow-md min-w-[190px]">
-      <p className="text-text-muted mb-2 text-[11px]">{label}</p>
-      {payload.map((e: any) => (
-        <div key={e.name} className="flex justify-between gap-4 mb-0.5">
-          <span className="text-[12px]" style={{ color: e.stroke ?? e.color }}>{e.name}</span>
-          <span className="font-money text-[12px]" style={{ color: e.stroke ?? e.color }}>
-            {formatCurrency(e.value / 100)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// Tooltip da projeção empilhada — cada série tem name = ticker do ativo
-const StackTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="border-border bg-surface rounded-lg border px-3 py-2.5 shadow-md min-w-[200px]">
-      <p className="text-text-muted mb-2 text-[11px]">{label}</p>
-      {payload.map((e: any) => (
-        <div key={e.dataKey} className="flex justify-between gap-4 mb-0.5">
-          <span className="text-[12px]" style={{ color: e.fill ?? e.color }}>{e.name}</span>
-          <span className="font-money text-[12px]" style={{ color: e.fill ?? e.color }}>
-            {formatCurrency(e.value / 100)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
 export const PortfolioSimulator = () => {
   const [subTab, setSubTab]               = useState<SubTab>("backtest");
   const [assets, setAssets]               = useState<PortfolioAsset[]>(defaultAssets);
@@ -111,24 +79,22 @@ export const PortfolioSimulator = () => {
       <TabChips items={SUB_TABS} value={subTab} onChange={(v) => { setSubTab(v); setSuggestedPeriodLabel(null); }} size="sm" />
 
       {/* Montagem da carteira — compartilhada entre sub-abas */}
-      <div className="border-border bg-surface rounded-xl border p-5">
-        <SectionHeader
+      <Card>
+        <CardHead
           title="Montagem da Carteira"
           subtitle={subTab === "backtest"
             ? "Defina os ativos e pesos para simular o desempenho histórico real"
             : "Defina os ativos, pesos e taxas para projetar o crescimento futuro"}
         />
-        <div className="mt-4">
-          <PortfolioBuilder
-            assets={assets}
-            onChange={handleAssetsChange}
-            mode={subTab}
-            availableBenchmarks={availableBenchmarks}
-            loadingBenchmarks={loadingBenchmarks}
-            suggestedPeriod={subTab === "projection" ? suggestedPeriodLabel : null}
-          />
-        </div>
-      </div>
+        <PortfolioBuilder
+          assets={assets}
+          onChange={handleAssetsChange}
+          mode={subTab}
+          availableBenchmarks={availableBenchmarks}
+          loadingBenchmarks={loadingBenchmarks}
+          suggestedPeriod={subTab === "projection" ? suggestedPeriodLabel : null}
+        />
+      </Card>
 
       {subTab === "backtest" ? (
         <PortfolioBacktest
@@ -211,20 +177,20 @@ function PortfolioBacktest({
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]">
       {/* Params */}
       <div className="flex flex-col gap-4">
-        <div className="border-border bg-surface rounded-xl border p-5">
-          <SectionHeader title="Parâmetros" />
-          <div className="flex flex-col gap-3 mt-4">
+        <Card>
+          <CardHead title="Parâmetros" />
+          <div className="flex flex-col gap-3.5">
             <div>
-              <label className="text-text-muted mb-1.5 block text-[12px]">Aporte inicial (R$)</label>
+              <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Aporte inicial (R$)</label>
               <input className={inputCls} value={initialAmount} onChange={(e) => setInitialAmount(e.target.value)} placeholder="10000" />
             </div>
             <div>
-              <label className="text-text-muted mb-1.5 block text-[12px]">Aporte mensal (R$)</label>
+              <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Aporte mensal (R$)</label>
               <input className={inputCls} value={monthlyContrib} onChange={(e) => setMonthlyContrib(e.target.value)} placeholder="500" />
             </div>
             <div>
-              <label className="text-text-muted mb-1.5 block text-[12px]">Período</label>
-              <div className="rounded-xl border border-border bg-surface2/50 p-3">
+              <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Período</label>
+              <div className="rounded-[13px] border border-[var(--border-color)] bg-[var(--surface2)] p-3">
                 <MonthRangePicker
                   start={start}
                   end={end}
@@ -234,81 +200,76 @@ function PortfolioBacktest({
               </div>
             </div>
 
-            <button
+            <PrimaryButton
               onClick={handleRun}
               disabled={isPending || !canRun}
               title={!canRun ? "Verifique os ativos e a soma dos pesos (100%)" : undefined}
-              className={cn(
-                "mt-1 flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-[13px] font-medium transition-colors",
-                isPending || !canRun
-                  ? "bg-green/20 text-green/50 cursor-not-allowed"
-                  : "bg-green/15 text-green hover:bg-green/25",
-              )}
+              className="mt-1"
             >
               <Play size={13} className={isPending ? "animate-pulse" : ""} />
               {isPending ? "Calculando..." : "Simular carteira"}
-            </button>
+            </PrimaryButton>
 
             {isError && (
-              <div className="flex items-center gap-2 rounded-lg bg-red/10 px-3 py-2.5">
-                <AlertCircle size={14} className="text-red shrink-0" />
-                <p className="text-red text-[12px]">Não foi possível simular. Tente novamente.</p>
+              <div className="flex items-center gap-2 rounded-[13px] px-3 py-2.5" style={{ background: "color-mix(in srgb, var(--clay) 10%, transparent)" }}>
+                <AlertCircle size={14} className="shrink-0 text-[var(--clay)]" />
+                <p className="text-[12px] text-[var(--clay)]">Não foi possível simular. Tente novamente.</p>
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* Result card */}
         {data && data.points.length > 0 && (
           <div
-            className="rounded-xl border p-5"
+            className="rounded-[20px] border p-5"
             style={{
-              background: "linear-gradient(135deg, color-mix(in srgb, var(--blue) 12%, transparent), color-mix(in srgb, var(--blue) 5%, transparent))",
-              borderColor: "color-mix(in srgb, var(--blue) 30%, transparent)",
+              background: "linear-gradient(135deg, color-mix(in srgb, var(--brand-cobalt) 12%, transparent), color-mix(in srgb, var(--brand-cobalt) 5%, transparent))",
+              borderColor: "color-mix(in srgb, var(--brand-cobalt) 30%, transparent)",
             }}
           >
-            <div className="text-[11px] font-semibold tracking-widest mb-3" style={{ color: "var(--blue)" }}>
+            <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: "var(--brand-cobalt)" }}>
               CARTEIRA · BACKTEST
             </div>
-            <p className="font-money text-[32px] font-bold text-text leading-none">
+            <p className="font-mono text-[32px] font-bold leading-none tabular-nums text-[var(--text)]">
               {formatCurrency(data.finalValue / 100)}
             </p>
-            <p className="text-text-muted text-[12px] mt-1.5">patrimônio final da carteira</p>
+            <p className="mt-1.5 text-[12px] text-[var(--text-sub)]">patrimônio final da carteira</p>
 
             <div className="mt-4 flex flex-col gap-2.5">
               {[
                 { label: "Total investido",   value: formatCurrency(data.totalInvested / 100), color: "var(--text-sub)" },
-                { label: "Rendimento total",  value: `${isPositive ? "+" : ""}${formatCurrency(gain / 100)}`, color: isPositive ? "var(--green)" : "var(--red)" },
-                { label: "Retorno anualizado", value: `${data.annualizedReturnPct >= 0 ? "+" : ""}${data.annualizedReturnPct.toFixed(2)}% a.a.`, color: "var(--blue)" },
-                { label: "Multiplicador",     value: `${(data.finalValue / Math.max(data.totalInvested, 1)).toFixed(2)}×`, color: "var(--purple)" },
+                { label: "Rendimento total",  value: `${isPositive ? "+" : ""}${formatCurrency(gain / 100)}`, color: isPositive ? "var(--moss)" : "var(--clay)" },
+                { label: "Retorno anualizado", value: `${data.annualizedReturnPct >= 0 ? "+" : ""}${data.annualizedReturnPct.toFixed(2)}% a.a.`, color: "var(--brand-accent)" },
+                { label: "Multiplicador",     value: `${(data.finalValue / Math.max(data.totalInvested, 1)).toFixed(2)}×`, color: "var(--gold)" },
               ].map(({ label, value, color }) => (
                 <div key={label} className="flex justify-between text-[12px]">
-                  <span className="text-text-muted">{label}</span>
-                  <span className="font-money" style={{ color }}>{value}</span>
+                  <span className="text-[var(--text-sub)]">{label}</span>
+                  <span className="font-mono tabular-nums" style={{ color }}>{value}</span>
                 </div>
               ))}
             </div>
 
             {data.dataNote && (
-              <div className="mt-3 flex items-start gap-1.5 rounded-lg bg-orange/10 px-2.5 py-2">
-                <Info size={12} className="text-orange shrink-0 mt-0.5" />
-                <p className="text-orange text-[11px] leading-relaxed">{data.dataNote}</p>
+              <div className="mt-3 flex items-start gap-1.5 rounded-[13px] px-2.5 py-2" style={{ background: "color-mix(in srgb, var(--gold) 12%, transparent)" }}>
+                <Info size={12} className="mt-0.5 shrink-0 text-[var(--gold)]" />
+                <p className="text-[11px] leading-relaxed text-[var(--gold)]">{data.dataNote}</p>
               </div>
             )}
           </div>
         )}
 
         {!data && !isPending && (
-          <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-border">
-            <p className="text-text-muted text-[12px] text-center px-4">Monte a carteira e clique em Simular</p>
+          <div className="flex h-28 items-center justify-center rounded-[20px] border border-dashed border-[var(--border-color)]">
+            <p className="px-4 text-center text-[12px] text-[var(--text-sub)]">Monte a carteira e clique em Simular</p>
           </div>
         )}
       </div>
 
       {/* Chart + asset returns + table */}
       <div className="flex flex-col gap-4">
-        <div className="border-border bg-surface rounded-xl border p-5 flex flex-col">
-          <SectionHeader title="Evolução da Carteira" subtitle="Patrimônio da carteira vs total aportado" />
+        <Card className="flex flex-col">
+          <CardHead title="Evolução da Carteira" subtitle="Patrimônio da carteira vs total aportado" />
           {data && chartData.length > 0 ? (
             <>
               <div className="mt-4 flex-1" style={{ minHeight: 260 }}>
@@ -316,67 +277,63 @@ function PortfolioBacktest({
                   <ComposedChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="pf_gradV" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="var(--green)" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="var(--green)" stopOpacity={0}   />
+                        <stop offset="5%"  stopColor={SERIES.moss} stopOpacity={0.2} />
+                        <stop offset="95%" stopColor={SERIES.moss} stopOpacity={0}   />
                       </linearGradient>
                       <linearGradient id="pf_gradI" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="var(--yellow)" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="var(--yellow)" stopOpacity={0}    />
+                        <stop offset="5%"  stopColor={SERIES.gold} stopOpacity={0.15} />
+                        <stop offset="95%" stopColor={SERIES.gold} stopOpacity={0}    />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid stroke="var(--border-chart)" />
-                    <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
-                    <Tooltip content={<BacktestTooltip />} />
-                    <Area type="monotone" dataKey="invested" name="Total aportado" stroke="var(--yellow)" strokeWidth={2} fill="url(#pf_gradI)" dot={false} activeDot={{ r: 5 }} />
-                    <Area type="monotone" dataKey="value"    name="Carteira"        stroke="var(--green)"  strokeWidth={2} fill="url(#pf_gradV)" dot={false} activeDot={{ r: 5 }} />
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Area type="monotone" dataKey="invested" name="Total aportado" stroke={SERIES.gold} strokeWidth={2} fill="url(#pf_gradI)" dot={false} activeDot={{ r: 5 }} />
+                    <Area type="monotone" dataKey="value"    name="Carteira"        stroke={SERIES.moss} strokeWidth={2} fill="url(#pf_gradV)" dot={false} activeDot={{ r: 5 }} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
               <div className="mt-3 flex flex-wrap gap-4">
-                {[["var(--green)", "Carteira"], ["var(--yellow)", "Total aportado"]].map(([color, label]) => (
-                  <div key={label} className="flex items-center gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: color }} />
-                    <span className="text-text-muted text-[12px]">{label}</span>
-                  </div>
-                ))}
+                <LegendItem color={SERIES.moss}>Carteira</LegendItem>
+                <LegendItem color={SERIES.gold}>Total aportado</LegendItem>
               </div>
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center py-20">
-              <p className="text-text-muted text-[13px]">
+              <p className="text-[13px] text-[var(--text-sub)]">
                 {isPending ? "Calculando simulação..." : "Monte a carteira e clique em Simular carteira"}
               </p>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Retorno por ativo */}
         {data && data.assetReturns.length > 0 && (
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <SectionHeader title="Retorno por Ativo" subtitle={`Período ${data.effectiveStartDate.slice(0, 7)} → ${data.effectiveEndDate.slice(0, 7)}`} />
-            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Card>
+            <CardHead title="Retorno por Ativo" subtitle={`Período ${data.effectiveStartDate.slice(0, 7)} → ${data.effectiveEndDate.slice(0, 7)}`} />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {data.assetReturns.map((ar, i) => {
                 const weight = assets.find(a => a.ticker.toUpperCase() === ar.ticker.toUpperCase())?.weightPct ?? 0;
                 return (
-                  <div key={ar.ticker} className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface2/40 px-3 py-2.5">
+                  <div key={ar.ticker} className="flex items-center justify-between gap-2 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface2)] px-3 py-2.5">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length] }} />
-                      <span className="text-text text-[13px] font-medium truncate">{ar.ticker}</span>
-                      <span className="text-text-muted text-[11px] shrink-0">{weight.toFixed(0)}%</span>
+                      <span className="truncate text-[13px] font-medium text-[var(--text)]">{ar.ticker}</span>
+                      <span className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--text-sub)]">{weight.toFixed(0)}%</span>
                     </div>
-                    <span className={cn("font-money text-[13px] font-semibold shrink-0", ar.totalReturnPct >= 0 ? "text-green" : "text-red")}>
+                    <span className="shrink-0 font-mono text-[13px] font-semibold tabular-nums" style={{ color: ar.totalReturnPct >= 0 ? "var(--moss)" : "var(--clay)" }}>
                       {ar.totalReturnPct >= 0 ? "+" : ""}{ar.totalReturnPct.toFixed(2)}%
                     </span>
                   </div>
                 );
               })}
             </div>
-            <p className="text-text-muted mt-3 flex items-start gap-1.5 text-[11px]">
-              <Info size={11} className="text-blue/70 mt-0.5 shrink-0" />
+            <p className="mt-3 flex items-start gap-1.5 text-[11px] text-[var(--text-sub)]">
+              <Info size={11} className="mt-0.5 shrink-0 text-[var(--brand-accent)]" />
               Retorno bruto no período (somente variação de preço, sem dividendos nem impostos). Rebalanceamento mensal implícito pelos pesos.
             </p>
-          </div>
+          </Card>
         )}
 
         {/* Tabela mês a mês */}
@@ -398,30 +355,30 @@ function PortfolioBacktestTable({ points }: { points: { label: string; month: nu
   const visible = rows.slice(from, from + pageSize);
 
   return (
-    <div className="border-border bg-surface rounded-xl border p-5">
-      <div className="flex items-center justify-between mb-3">
-        <SectionHeader title="Detalhe Mês a Mês" />
-        <span className="text-text-muted text-[11px]">{points.length} meses</span>
+    <Card>
+      <div className="mb-3 flex items-center justify-between">
+        <CardHead className="mb-0" title="Detalhe Mês a Mês" />
+        <span className="font-mono text-[11px] tabular-nums text-[var(--text-sub)]">{points.length} meses</span>
       </div>
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full text-[12px] min-w-[420px]">
+      <div className="overflow-x-auto rounded-[13px] border border-[var(--border-color)]">
+        <table className="w-full min-w-[420px] text-[12px]">
           <thead>
-            <tr className="border-b border-border bg-surface2/60">
-              <th className="text-text-muted px-3 py-2.5 text-left font-medium">Mês</th>
-              <th className="text-text-muted px-3 py-2.5 text-right font-medium">Retorno carteira</th>
-              <th className="text-text-muted px-3 py-2.5 text-right font-medium">Total aportado</th>
-              <th className="text-text-muted px-3 py-2.5 text-right font-medium">Patrimônio</th>
+            <tr className="border-b border-[var(--border-color)] bg-[var(--surface2)]">
+              <th className="px-3 py-2.5 text-left font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Mês</th>
+              <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Retorno carteira</th>
+              <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Total aportado</th>
+              <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Patrimônio</th>
             </tr>
           </thead>
           <tbody>
             {visible.map((p) => (
-              <tr key={`${p.year}-${p.month}`} className="border-b border-border last:border-0 hover:bg-surface2/30 transition-colors">
-                <td className="text-text px-3 py-2.5 font-medium">{p.label}</td>
-                <td className={cn("px-3 py-2.5 text-right font-money", p.monthlyReturnPct >= 0 ? "text-green" : "text-red")}>
+              <tr key={`${p.year}-${p.month}`} className="border-b border-[var(--border-color)] transition-colors last:border-0 hover:bg-[var(--surface2)]">
+                <td className="px-3 py-2.5 font-medium text-[var(--text)]">{p.label}</td>
+                <td className="px-3 py-2.5 text-right font-mono tabular-nums" style={{ color: p.monthlyReturnPct >= 0 ? "var(--moss)" : "var(--clay)" }}>
                   {p.monthlyReturnPct >= 0 ? "+" : ""}{p.monthlyReturnPct.toFixed(2)}%
                 </td>
-                <td className="text-text-muted px-3 py-2.5 text-right font-money">{formatCurrency(p.invested / 100)}</td>
-                <td className="text-text px-3 py-2.5 text-right font-money">{formatCurrency(p.value / 100)}</td>
+                <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--text-sub)]">{formatCurrency(p.invested / 100)}</td>
+                <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--text)]">{formatCurrency(p.value / 100)}</td>
               </tr>
             ))}
           </tbody>
@@ -429,12 +386,12 @@ function PortfolioBacktestTable({ points }: { points: { label: string; month: nu
       </div>
       {totalPages > 1 && (
         <div className="mt-3 flex items-center justify-between px-1">
-          <button disabled={safePage === 1} onClick={() => setPage(p => p - 1)} className="text-[11px] text-blue disabled:opacity-30 hover:underline">← Anterior</button>
-          <span className="text-text-muted text-[11px]">Página {safePage} / {totalPages}</span>
-          <button disabled={safePage >= totalPages} onClick={() => setPage(p => p + 1)} className="text-[11px] text-blue disabled:opacity-30 hover:underline">Próxima →</button>
+          <button disabled={safePage === 1} onClick={() => setPage(p => p - 1)} className="text-[11px] text-[var(--brand-accent)] disabled:opacity-30 hover:underline">← Anterior</button>
+          <span className="font-mono text-[11px] tabular-nums text-[var(--text-sub)]">Página {safePage} / {totalPages}</span>
+          <button disabled={safePage >= totalPages} onClick={() => setPage(p => p + 1)} className="text-[11px] text-[var(--brand-accent)] disabled:opacity-30 hover:underline">Próxima →</button>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -568,64 +525,49 @@ function PortfolioProjection({
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]">
       {/* Params */}
       <div className="flex flex-col gap-4">
-        <div className="border-border bg-surface rounded-xl border p-5">
-          <SectionHeader title="Parâmetros" />
-          <div className="flex flex-col gap-3 mt-4">
+        <Card>
+          <CardHead title="Parâmetros" />
+          <div className="flex flex-col gap-3.5">
             <div>
-              <label className="text-text-muted mb-1.5 block text-[12px]">Aporte inicial total (R$)</label>
+              <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Aporte inicial total (R$)</label>
               <input className={inputCls} value={initialAmount} onChange={(e) => setInitialAmount(e.target.value)} placeholder="10000" />
             </div>
             <div>
-              <label className="text-text-muted mb-1.5 block text-[12px]">Aporte mensal total (R$)</label>
+              <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Aporte mensal total (R$)</label>
               <input className={inputCls} value={monthlyContrib} onChange={(e) => setMonthlyContrib(e.target.value)} placeholder="500" />
-              <p className="text-text-muted mt-1.5 text-[11px]">Distribuído entre os ativos pelos pesos definidos.</p>
+              <p className="mt-1.5 text-[11px] text-[var(--text-sub)]">Distribuído entre os ativos pelos pesos definidos.</p>
             </div>
             <div>
-              <label className="text-text-muted mb-1.5 block text-[12px]">Período</label>
+              <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Período</label>
               <div className="flex gap-1">
                 {PERIOD_PRESETS.map((p) => (
-                  <button
-                    key={p.months}
-                    onClick={() => { setPresetMonths(p.months); setCustomMonths(""); }}
-                    className={cn(
-                      "flex-1 rounded-lg border px-1.5 py-1 text-[11px] font-medium transition-colors whitespace-nowrap",
-                      (!customMonths && presetMonths === p.months)
-                        ? "bg-green/15 text-green border-green/30"
-                        : "text-text-muted border-border hover:text-text",
-                    )}
-                  >
+                  <PresetPill key={p.months} active={!customMonths && presetMonths === p.months} onClick={() => { setPresetMonths(p.months); setCustomMonths(""); }}>
                     {p.label}
-                  </button>
+                  </PresetPill>
                 ))}
               </div>
               <input className={cn(inputCls, "mt-2")} value={customMonths} onChange={(e) => setCustomMonths(e.target.value)} placeholder="Ou digite os meses (ex: 84)" inputMode="numeric" />
             </div>
 
             {/* Sugestão de taxa via histórico */}
-            <div className="rounded-lg border border-blue/20 bg-blue/5 p-3 flex flex-col gap-2.5">
+            <div
+              className="flex flex-col gap-2.5 rounded-[13px] border p-3"
+              style={{ borderColor: "color-mix(in srgb, var(--brand-accent) 20%, transparent)", background: "color-mix(in srgb, var(--brand-accent) 5%, transparent)" }}
+            >
               <div className="flex items-center gap-1.5">
-                <Sparkles size={12} className="text-blue shrink-0" />
-                <span className="text-[12px] font-medium text-blue">Sugerir taxas pelo histórico</span>
+                <Sparkles size={12} className="shrink-0 text-[var(--brand-accent)]" />
+                <span className="text-[12px] font-medium text-[var(--brand-accent)]">Sugerir taxas pelo histórico</span>
               </div>
-              <p className="text-[11px] text-text-muted leading-relaxed">
+              <p className="text-[11px] leading-relaxed text-[var(--text-sub)]">
                 Roda o backtest da carteira atual e preenche o CAGR real de cada ativo como taxa de projeção.
               </p>
               <div>
-                <p className="text-[10px] text-text-muted mb-1.5 font-medium uppercase tracking-wider">Período de referência</p>
+                <p className="mb-1.5 font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--text-sub)]">Período de referência</p>
                 <div className="flex gap-1">
                   {SUGGESTION_PERIODS.map((p) => (
-                    <button
-                      key={p.label}
-                      onClick={() => setSuggestionPeriod(p.label)}
-                      className={cn(
-                        "flex-1 rounded-lg border px-1 py-1 text-[10px] font-medium transition-colors whitespace-nowrap",
-                        suggestionPeriod === p.label
-                          ? "bg-blue/15 text-blue border-blue/30"
-                          : "text-text-muted border-border hover:text-text",
-                      )}
-                    >
+                    <PresetPill key={p.label} active={suggestionPeriod === p.label} onClick={() => setSuggestionPeriod(p.label)}>
                       {p.label}
-                    </button>
+                    </PresetPill>
                   ))}
                 </div>
               </div>
@@ -634,64 +576,67 @@ function PortfolioProjection({
                 disabled={isSuggesting || !canRun}
                 title={!canRun ? "Verifique os ativos e pesos (soma 100%)" : undefined}
                 className={cn(
-                  "flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[12px] font-medium transition-colors",
-                  isSuggesting || !canRun
-                    ? "bg-blue/10 text-blue/40 cursor-not-allowed"
-                    : "bg-blue/15 text-blue hover:bg-blue/25",
+                  "flex w-full items-center justify-center gap-1.5 rounded-[13px] py-2 text-[12px] font-medium transition-colors",
+                  isSuggesting || !canRun ? "cursor-not-allowed" : "hover:opacity-90",
                 )}
+                style={{
+                  background: "color-mix(in srgb, var(--brand-accent) 15%, transparent)",
+                  color: "var(--brand-accent)",
+                  opacity: isSuggesting || !canRun ? 0.5 : 1,
+                }}
               >
                 <Sparkles size={12} className={isSuggesting ? "animate-pulse" : ""} />
                 {isSuggesting ? "Buscando histórico..." : "Sugerir taxas"}
               </button>
               {suggestedPeriodLabel && !isSuggesting && (
-                <p className="text-[10px] text-blue/70 text-center">
+                <p className="text-center text-[10px] text-[var(--brand-accent)]">
                   Taxas baseadas em {suggestedPeriodLabel} de histórico. Edite manualmente se preferir.
                 </p>
               )}
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Result card */}
         {projection ? (
           <div
-            className="rounded-xl border p-5"
+            className="rounded-[20px] border p-5"
             style={{
-              background: "linear-gradient(135deg, color-mix(in srgb, var(--purple) 12%, transparent), color-mix(in srgb, var(--purple) 5%, transparent))",
-              borderColor: "color-mix(in srgb, var(--purple) 30%, transparent)",
+              background: "linear-gradient(135deg, color-mix(in srgb, var(--brand-cobalt) 12%, transparent), color-mix(in srgb, var(--brand-cobalt) 5%, transparent))",
+              borderColor: "color-mix(in srgb, var(--brand-cobalt) 30%, transparent)",
             }}
           >
-            <div className="text-[11px] font-semibold tracking-widest mb-3" style={{ color: "var(--purple)" }}>
+            <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: "var(--brand-cobalt)" }}>
               CARTEIRA · PROJEÇÃO
             </div>
-            <p className="font-money text-[32px] font-bold text-text leading-none">
+            <p className="font-mono text-[32px] font-bold leading-none tabular-nums text-[var(--text)]">
               {formatCurrency(projection.finalNet / 100)}
             </p>
-            <p className="text-text-muted text-[12px] mt-1.5">
+            <p className="mt-1.5 text-[12px] text-[var(--text-sub)]">
               patrimônio líquido em {totalMonths >= 12 ? `${Math.round(totalMonths / 12)} anos` : `${totalMonths} meses`}
             </p>
 
             <div className="mt-4 flex flex-col gap-2.5">
               {[
-                { label: "Patrimônio bruto",   value: formatCurrency(projection.finalGross / 100), color: "var(--green)" },
+                { label: "Patrimônio bruto",   value: formatCurrency(projection.finalGross / 100), color: "var(--moss)" },
                 { label: "Total investido",    value: formatCurrency(projection.investedTotal / 100), color: "var(--text-sub)" },
-                { label: "Imposto estimado",   value: formatCurrency(projection.totalTax / 100), color: "var(--orange)" },
-                { label: "Taxa ponderada",     value: `${weightedRate.toFixed(2)}% a.a.`, color: "var(--purple)" },
+                { label: "Imposto estimado",   value: formatCurrency(projection.totalTax / 100), color: "var(--gold)" },
+                { label: "Taxa ponderada",     value: `${weightedRate.toFixed(2)}% a.a.`, color: "var(--brand-cobalt)" },
               ].map(({ label, value, color }) => (
                 <div key={label} className="flex justify-between text-[12px]">
-                  <span className="text-text-muted">{label}</span>
-                  <span className="font-money" style={{ color }}>{value}</span>
+                  <span className="text-[var(--text-sub)]">{label}</span>
+                  <span className="font-mono tabular-nums" style={{ color }}>{value}</span>
                 </div>
               ))}
             </div>
-            <p className="text-text-muted mt-3 flex items-start gap-1.5 text-[11px]">
-              <Info size={11} className="text-purple/70 mt-0.5 shrink-0" />
+            <p className="mt-3 flex items-start gap-1.5 text-[11px] text-[var(--text-sub)]">
+              <Info size={11} className="mt-0.5 shrink-0 text-[var(--brand-cobalt)]" />
               Impostos calculados por ativo conforme a categoria fiscal selecionada.
             </p>
           </div>
         ) : (
-          <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-border">
-            <p className="text-text-muted text-[12px] text-center px-4">
+          <div className="flex h-28 items-center justify-center rounded-[20px] border border-dashed border-[var(--border-color)]">
+            <p className="px-4 text-center text-[12px] text-[var(--text-sub)]">
               {canRun ? "Defina o período e as taxas" : "Ajuste os ativos e pesos (soma 100%)"}
             </p>
           </div>
@@ -700,17 +645,17 @@ function PortfolioProjection({
 
       {/* Chart + table */}
       <div className="flex flex-col gap-4">
-        <div className="border-border bg-surface rounded-xl border p-5 flex flex-col">
-          <SectionHeader title="Composição ao Longo do Tempo" subtitle={useAnnual ? "Agrupado por ano" : "Mensal"} />
+        <Card className="flex flex-col">
+          <CardHead title="Composição ao Longo do Tempo" subtitle={useAnnual ? "Agrupado por ano" : "Mensal"} />
           {projection && chartRows.length > 0 ? (
             <>
               <div className="mt-4 flex-1" style={{ minHeight: 260 }}>
                 <ResponsiveContainer width="100%" height={260}>
                   <AreaChart data={chartRows} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                    <CartesianGrid stroke="var(--border-chart)" />
-                    <XAxis dataKey="shortLabel" tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
-                    <Tooltip content={<StackTooltip />} />
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="shortLabel" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
+                    <Tooltip content={<ChartTooltip colorKey="fill" />} />
                     {projection.perAsset.map((pa, i) => (
                       <Area
                         key={pa.asset.id}
@@ -729,62 +674,61 @@ function PortfolioProjection({
               </div>
               <div className="mt-3 flex flex-wrap gap-3">
                 {projection.perAsset.map((pa, i) => (
-                  <div key={pa.asset.id} className="flex items-center gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length] }} />
-                    <span className="text-text-muted text-[12px]">{pa.asset.ticker} ({pa.asset.weightPct.toFixed(0)}% · {(pa.asset.annualRatePct ?? 10).toFixed(1)}% a.a.)</span>
-                  </div>
+                  <LegendItem key={pa.asset.id} color={PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length]}>
+                    {pa.asset.ticker} ({pa.asset.weightPct.toFixed(0)}% · {(pa.asset.annualRatePct ?? 10).toFixed(1)}% a.a.)
+                  </LegendItem>
                 ))}
               </div>
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center py-20">
-              <p className="text-text-muted text-[13px] text-center px-6">
+              <p className="px-6 text-center text-[13px] text-[var(--text-sub)]">
                 {canRun ? "Defina o período para ver a projeção" : "Ajuste os ativos e pesos da carteira (soma 100%)"}
               </p>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Tabela anual por ativo */}
         {projection && annualRows.length > 0 && (
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <SectionHeader title="Detalhamento Anual" subtitle="Patrimônio bruto por ativo, total e imposto estimado" />
-            <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+          <Card>
+            <CardHead title="Detalhamento Anual" subtitle="Patrimônio bruto por ativo, total e imposto estimado" />
+            <div className="overflow-x-auto rounded-[13px] border border-[var(--border-color)]">
               <table className="w-full text-[12px]" style={{ minWidth: Math.max(440, 160 + projection.perAsset.length * 110) }}>
                 <thead>
-                  <tr className="border-b border-border bg-surface2/60">
-                    <th className="text-text-muted px-3 py-2.5 text-left font-medium">Ano</th>
+                  <tr className="border-b border-[var(--border-color)] bg-[var(--surface2)]">
+                    <th className="px-3 py-2.5 text-left font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Ano</th>
                     {projection.perAsset.map((pa, i) => (
-                      <th key={pa.asset.id} className="px-3 py-2.5 text-right font-medium" style={{ color: PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length] }}>
+                      <th key={pa.asset.id} className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em]" style={{ color: PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length] }}>
                         {pa.asset.ticker}
                       </th>
                     ))}
-                    <th className="text-text-muted px-3 py-2.5 text-right font-medium">Total bruto</th>
-                    <th className="text-text-muted px-3 py-2.5 text-right font-medium">Imposto est.</th>
-                    <th className="text-text-muted px-3 py-2.5 text-right font-medium">Líquido</th>
+                    <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Total bruto</th>
+                    <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Imposto est.</th>
+                    <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Líquido</th>
                   </tr>
                 </thead>
                 <tbody>
                   {annualRows.map((r) => {
                     const yr = Math.ceil((r.month as number) / 12);
                     return (
-                      <tr key={r.month as number} className="border-b border-border last:border-0 hover:bg-surface2/30 transition-colors">
-                        <td className="px-3 py-2.5 font-medium text-text">Ano {yr}</td>
+                      <tr key={r.month as number} className="border-b border-[var(--border-color)] transition-colors last:border-0 hover:bg-[var(--surface2)]">
+                        <td className="px-3 py-2.5 font-medium text-[var(--text)]">Ano {yr}</td>
                         {projection.perAsset.map((pa) => (
-                          <td key={pa.asset.id} className="px-3 py-2.5 text-right font-money text-text-sub">
+                          <td key={pa.asset.id} className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--text-sub)]">
                             {formatCurrency((r[pa.asset.id] as number) / 100)}
                           </td>
                         ))}
-                        <td className="px-3 py-2.5 text-right font-money text-text">{formatCurrency((r.total as number) / 100)}</td>
-                        <td className="px-3 py-2.5 text-right font-money text-orange">{formatCurrency((r.totalTax as number) / 100)}</td>
-                        <td className="px-3 py-2.5 text-right font-money text-green">{formatCurrency((r.totalNet as number) / 100)}</td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--text)]">{formatCurrency((r.total as number) / 100)}</td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--gold)]">{formatCurrency((r.totalTax as number) / 100)}</td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--moss)]">{formatCurrency((r.totalNet as number) / 100)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>

@@ -40,11 +40,11 @@ function AssetLogo({ asset, size = 36 }: { asset: MarketAsset; size?: number }) 
 }
 
 function ChangePill({ pct }: { pct: number | null }) {
-  if (pct == null) return <span className="text-text-muted text-[11px]">—</span>;
+  if (pct == null) return <span className="font-mono text-[11px] text-[var(--text-sub)]">—</span>;
   const up = pct >= 0;
   return (
-    <span className={cn("flex items-center gap-0.5 font-mono text-[11px] font-medium", up ? "text-green" : "text-red")}>
-      {up ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+    <span className={cn("flex items-center justify-end gap-0.5 font-mono text-[12px] font-medium tabular-nums", up ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
+      {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
       {up ? "+" : ""}{pct.toFixed(2)}%
     </span>
   );
@@ -52,42 +52,42 @@ function ChangePill({ pct }: { pct: number | null }) {
 
 function MetricValue({ asset, metric }: { asset: MarketAsset; metric: RowMetric }) {
   const price = (
-    <span className="font-money text-text text-[13px]">{formatCurrency(asset.currentPrice / 100)}</span>
+    <span className="font-mono text-[13px] tabular-nums text-[var(--text)]">{formatCurrency(asset.currentPrice / 100)}</span>
   );
 
   switch (metric) {
     case "dy":
       return (
         <div className="flex flex-col items-end gap-0.5">
-          <span className="text-green font-mono text-[13px] font-semibold">{formatYieldFraction(asset.dividendYield)}</span>
+          <span className="font-mono text-[13px] font-semibold tabular-nums text-[var(--moss)]">{formatYieldFraction(asset.dividendYield)}</span>
           {price}
         </div>
       );
     case "marketcap":
       return (
         <div className="flex flex-col items-end gap-0.5">
-          <span className="font-money text-text text-[13px] font-semibold">{formatBigMoney(asset.marketCap)}</span>
+          <span className="font-mono text-[13px] font-semibold tabular-nums text-[var(--text)]">{formatBigMoney(asset.marketCap)}</span>
           {price}
         </div>
       );
     case "revenue":
       return (
         <div className="flex flex-col items-end gap-0.5">
-          <span className="font-money text-text text-[13px] font-semibold">{formatBigMoney(asset.totalRevenue)}</span>
+          <span className="font-mono text-[13px] font-semibold tabular-nums text-[var(--text)]">{formatBigMoney(asset.totalRevenue)}</span>
           {price}
         </div>
       );
     case "pl":
       return (
         <div className="flex flex-col items-end gap-0.5">
-          <span className="font-mono text-text text-[13px] font-semibold">{formatRatio(asset.priceToEarnings)}</span>
+          <span className="font-mono text-[13px] font-semibold tabular-nums text-[var(--text)]">{formatRatio(asset.priceToEarnings)}</span>
           {price}
         </div>
       );
     case "pvp":
       return (
         <div className="flex flex-col items-end gap-0.5">
-          <span className="font-mono text-text text-[13px] font-semibold">{formatRatio(asset.priceToBook)}</span>
+          <span className="font-mono text-[13px] font-semibold tabular-nums text-[var(--text)]">{formatRatio(asset.priceToBook)}</span>
           {price}
         </div>
       );
@@ -114,15 +114,15 @@ export function MarketAssetRow({ asset, metric = "change", rank }: Props) {
   return (
     <Link
       href={`/market/${encodeURIComponent(asset.ticker)}`}
-      className="border-border bg-surface2 hover:bg-surface hover:border-border/80 flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors"
+      className="flex w-full items-center gap-3 rounded-[13px] border border-transparent px-3.5 py-2.5 text-left transition-colors hover:border-[var(--border-color)] hover:bg-[var(--surface2)]"
     >
       {rank != null && (
-        <span className="text-text-muted w-4 shrink-0 text-center font-mono text-[12px]">{rank}</span>
+        <span className="w-4 shrink-0 text-center font-mono text-[12px] tabular-nums text-[var(--text-sub)]">{rank}</span>
       )}
       <AssetLogo asset={asset} />
       <div className="min-w-0 flex-1">
-        <p className="text-text truncate text-[13px] font-semibold">{asset.coinName ?? asset.ticker}</p>
-        <p className="text-text-muted truncate text-[11px]">{asset.coinName ? asset.ticker : asset.name}</p>
+        <p className="truncate font-mono text-[13px] font-semibold text-[var(--text)]">{asset.coinName ?? asset.ticker}</p>
+        <p className="truncate text-[12px] text-[var(--text-sub)]">{asset.coinName ? asset.ticker : asset.name}</p>
       </div>
       <div className="shrink-0">
         <MetricValue asset={asset} metric={metric} />

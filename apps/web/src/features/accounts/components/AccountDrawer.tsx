@@ -38,7 +38,7 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = Object.fromEntries(
 ) as Record<AccountType, string>;
 
 const INPUT_CLASS =
-  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-[--brand-cobalt] h-11 rounded-[13px] px-3.5 text-[15px]";
+  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-[var(--brand-cobalt)] h-11 rounded-[13px] px-3.5 text-[15px]";
 
 const TRIGGER_CLASS =
   "border-border bg-surface2 text-text w-full !h-11 rounded-[13px] px-3.5 text-[15px]";
@@ -581,7 +581,7 @@ export function AccountDrawer({ open, mode, account, onClose, onDeleteRequest }:
                 ←
               </button>
             )}
-            <h2 className="font-display font-bold text-[--text] text-[17px] tracking-[-0.01em]">{titles[innerMode]}</h2>
+            <h2 className="font-display font-bold text-[var(--text)] text-[17px] tracking-[-0.01em]">{titles[innerMode]}</h2>
           </div>
           <button
             onClick={onClose}

@@ -3,7 +3,7 @@
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { BalanceEvolutionPoint } from "@/lib/types/analytics.types";
@@ -26,8 +26,8 @@ type Props = { data: BalanceEvolutionPoint[] };
 export function BalanceEvolutionChart({ data }: Props) {
   if (data.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-        <SectionHeader title="Evolução do Saldo" subtitle="Saldo acumulado por data no período" />
+      <div className="border-border bg-surface flex flex-col rounded-[20px] border p-5">
+        <CardHead title="Evolução do Saldo" subtitle="Saldo acumulado por data no período" />
         <ChartEmptyState message="Sem movimentações no período selecionado" />
       </div>
     );
@@ -41,8 +41,8 @@ export function BalanceEvolutionChart({ data }: Props) {
   const hasNegative = chartData.some((p) => p.balance < 0);
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader title="Evolução do Saldo" subtitle="Saldo acumulado por data no período" />
+    <div className="border-border bg-surface flex flex-col rounded-[20px] border p-5">
+      <CardHead title="Evolução do Saldo" subtitle="Saldo acumulado por data no período" />
       <div className="w-full" style={{ height: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>

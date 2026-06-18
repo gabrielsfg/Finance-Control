@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { formatCurrency } from "@/lib/utils/index";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { SavingsDetailResponse } from "@/lib/types/analytics.types";
@@ -13,15 +13,15 @@ export function SavingsLeaksCard({ detail }: Props) {
   const leaks = detail.allocations.filter((al) => al.spent > al.allocated).slice(0, 5);
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Maiores Vazamentos"
         subtitle="Os estouros que mais custaram à sua economia no período"
       />
 
       {leaks.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8">
-          <CheckCircle2 size={32} className="text-green opacity-70" />
+          <CheckCircle2 size={32} className="text-[var(--moss)] opacity-70" />
           <p className="text-text-muted text-[13px]">Nenhum estouro neste período</p>
         </div>
       ) : (
@@ -62,6 +62,6 @@ export function SavingsLeaksCard({ detail }: Props) {
           })}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

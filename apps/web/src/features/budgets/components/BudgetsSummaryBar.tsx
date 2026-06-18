@@ -1,8 +1,9 @@
 "use client";
 
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { ProgressBar } from "@/components/shared/ProgressBar";
-import { cn } from "@/lib/utils";
+import { HeroPanel } from "@/components/shared/HeroPanel";
+import { BigMoney } from "@/components/shared/Money";
+import { FlowRow } from "@/components/shared/FlowBar";
 import type { Budget } from "@/lib/types/budgets.types";
 
 type Props = {
@@ -19,62 +20,122 @@ export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props)
   const pct            = totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0;
   const isOver         = totalSpent > totalAllocated;
 
+  // count of overspent active budgets
+  const overrun = active.filter((b) => b.totalSpent > b.totalAllocated).length;
+
   const now       = new Date();
   const dim       = daysInPeriod ?? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const dom       = dayOfPeriod  ?? now.getDate();
   const daysLeft  = Math.max(0, dim - dom);
 
   // projected overspend
-  const dailyRate    = dom > 0 ? totalSpent / dom : 0;
-  const projected    = dailyRate * dim;
-  const willExceed   = projected > totalAllocated && totalAllocated > 0;
+  const dailyRate  = dom > 0 ? totalSpent / dom : 0;
+  const projected  = dailyRate * dim;
+  const willExceed = projected > totalAllocated && totalAllocated > 0 && !isOver;
+  const daysToBlow = dailyRate > 0 ? Math.round((totalAllocated - totalSpent) / dailyRate) : 0;
 
-  const kpis = [
-    { label: "Orçamento Total",   value: formatCurrency(totalAllocated / 100),      color: "text-text" },
-    { label: "Gasto",             value: formatCurrency(totalSpent / 100),           color: isOver ? "text-red" : "text-text" },
-    { label: "Disponível",        value: formatCurrency(Math.abs(available) / 100),  color: available < 0 ? "text-red" : "text-green" },
-    { label: "Dias Restantes",    value: String(daysLeft),                           color: "text-text" },
-  ];
+  const spentPct = totalAllocated > 0 ? totalSpent / totalAllocated : 0;
+  const availPct = totalAllocated > 0 ? Math.max(0, available) / totalAllocated : 0;
 
   return (
-    <div
-      className="border-border rounded-[16px] border px-8 py-6"
-      style={{ background: "linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%)" }}
-    >
-      {/* 4 KPIs */}
-      <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {kpis.map(({ label, value, color }) => (
-          <div key={label}>
-            <p className="text-text-muted mb-1 text-[11px] tracking-[0.06em] uppercase">{label}</p>
-            <p className={cn("font-money font-600 text-[22px] tracking-tight", color)}>{value}</p>
+    <HeroPanel split>
+      {/* Left — spend figure */}
+      <div>
+        <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+          Gasto no período
+        </div>
+        <BigMoney
+          cents={totalSpent}
+          className="block mt-[10px] mb-[2px] font-semibold leading-[0.96] tracking-[-0.035em]"
+          style={{ fontSize: "clamp(40px, 5.6vw, 70px)" } as React.CSSProperties}
+        />
+
+        <div className="mt-2 inline-flex items-center gap-[7px] font-mono text-[13px] font-medium">
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-[9px] py-[3px]"
+            style={{
+              background: isOver ? "rgba(255,138,91,0.18)" : "rgba(129,151,255,0.18)",
+              color: isOver ? "var(--clay-lift)" : "var(--cobalt-lift)",
+            }}
+          >
+            {pct.toFixed(0)}% usado
+          </span>
+          <span className="text-[var(--panel-muted)]">de {formatCurrency(totalAllocated / 100)} orçados</span>
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-[26px]">
+          <div>
+            <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Orçado</div>
+            <div className="font-mono mt-[3px] text-[18px] font-medium">{formatCurrency(totalAllocated / 100)}</div>
           </div>
-        ))}
+          <div>
+            <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Disponível</div>
+            <div
+              className="font-mono mt-[3px] text-[18px] font-medium"
+              style={{ color: available < 0 ? "var(--clay-lift)" : "var(--moss-lift)" }}
+            >
+              {formatCurrency(available / 100)}
+            </div>
+          </div>
+          <div>
+            <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+              {overrun > 0 ? "Estouradas" : "Dias restantes"}
+            </div>
+            <div className="font-mono mt-[3px] text-[18px] font-medium">
+              {overrun > 0 ? overrun : daysLeft}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Progress bar */}
-      <ProgressBar value={totalSpent} max={totalAllocated} height={6} />
+      {/* Right — budget usage flow */}
+      <div className="self-center">
+        <div className="mb-[18px] flex items-baseline justify-between">
+          <span className="font-display text-[16px] font-bold">Uso do orçamento</span>
+          <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--panel-muted)]">
+            {daysLeft > 0 ? `${daysLeft} dias restantes` : "Período encerrado"}
+          </span>
+        </div>
 
-      {/* Projection warning */}
-      <div className="mt-2 flex items-center justify-between">
-        <span className="text-text-muted text-[12px]">
-          {pct.toFixed(1)}% do orçamento utilizado
-        </span>
+        <FlowRow
+          label="Gasto"
+          dotColor="var(--clay-lift)"
+          value={formatCurrency(totalSpent / 100)}
+          valueColor="var(--clay-lift)"
+          pct={spentPct}
+          variant="out"
+        />
+        <FlowRow
+          label="Disponível"
+          dotColor="var(--moss-lift)"
+          value={formatCurrency(Math.max(0, available) / 100)}
+          valueColor="var(--moss-lift)"
+          pct={availPct}
+          variant="in"
+        />
+
+        <div
+          className="mt-5 flex items-center justify-between border-t pt-4"
+          style={{ borderColor: "rgba(255,255,255,0.12)" }}
+        >
+          <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">
+            {isOver ? "Estourado em" : "Disponível"}
+          </span>
+          <span
+            className="font-mono text-[22px] font-semibold"
+            style={{ color: isOver ? "var(--clay-lift)" : "var(--moss-lift)" }}
+          >
+            {isOver ? "− " : "+ "}
+            {formatCurrency(Math.abs(available) / 100)}
+          </span>
+        </div>
+
         {willExceed && (
-          <span className="text-orange text-[12px] font-medium">
-            No ritmo atual, você vai estourar o orçamento em ~{Math.round(((totalAllocated - totalSpent) / dailyRate))} dias
-          </span>
-        )}
-        {!willExceed && available >= 0 && (
-          <span className="text-green text-[12px]">
-            Restam {formatCurrency(available / 100)}
-          </span>
-        )}
-        {isOver && (
-          <span className="text-red text-[12px] font-medium">
-            Estourado em {formatCurrency(Math.abs(totalAllocated - totalSpent) / 100)}
-          </span>
+          <p className="mt-2.5 font-mono text-[12px] text-[var(--clay-lift)]">
+            No ritmo atual, você estoura o orçamento em ~{daysToBlow} dia{daysToBlow !== 1 ? "s" : ""}.
+          </p>
         )}
       </div>
-    </div>
+    </HeroPanel>
   );
 };

@@ -283,7 +283,7 @@ export function RecurrenceDrawer({ open, data, onClose, onEdit, onCancel, onReac
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: "var(--border-color)" }}>
-          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-[--text-sub]">
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-sub)]">
             {data?.kind === "recurring" ? "Assinatura" : "Parcelamento"}
           </span>
           <button

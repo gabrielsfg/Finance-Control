@@ -1,6 +1,9 @@
 "use client";
 
-import { Zap, Check } from "lucide-react";
+import { Check, Plus } from "lucide-react";
+import { Card, CardHead, LedgerRule } from "@/components/shared/Card";
+
+const FREE_FEATURES = ["Contas e categorias ilimitadas", "Análises dos últimos 12 meses"];
 
 const PREMIUM_FEATURES = [
   "Insights de IA ilimitados",
@@ -9,63 +12,80 @@ const PREMIUM_FEATURES = [
   "Simulações avançadas",
 ];
 
-const FREE_LIMITS = [
-  "Até 3 contas bancárias",
-  "1 orçamento ativo",
-  "Dashboard básico",
-];
-
 export const ProfilePlanCard = () => {
   const isPremium = false;
 
   if (isPremium) {
     return (
-      <div className="rounded-2xl border border-purple/30 bg-gradient-to-br from-purple/15 to-purple/5 p-5">
-        <div className="mb-1 flex items-center gap-1.5">
-          <Zap size={13} className="text-purple" />
-          <span className="text-[11px] font-semibold tracking-widest text-purple uppercase">
-            Plano Premium
+      <Card>
+        <CardHead title="Plano" />
+        <div className="mb-1 flex items-center justify-between">
+          <span className="font-display text-[18px] font-bold text-[var(--text)]">Premium</span>
+          <span
+            className="rounded-full px-[11px] py-[5px] font-mono text-[11px] tracking-[0.06em]"
+            style={{ background: "color-mix(in srgb, var(--gold) 18%, transparent)", color: "var(--gold)" }}
+          >
+            Ativo
           </span>
         </div>
-        <ul className="mt-3 flex flex-col gap-2">
+        <p className="m-0 mb-3.5 text-[13px] text-[var(--text-sub)]">
+          Renovação em 15/05/2026 · R$ 29,90/mês
+        </p>
+        <LedgerRule />
+        <div className="my-3.5 flex flex-col gap-2.5">
           {PREMIUM_FEATURES.map((f) => (
-            <li key={f} className="flex items-center gap-2">
-              <Check size={12} className="text-purple shrink-0" />
-              <span className="text-text-sub text-[13px]">{f}</span>
-            </li>
+            <div key={f} className="flex items-center gap-2.5 text-[13.5px] text-[var(--text)]">
+              <Check size={16} strokeWidth={2.4} className="shrink-0 text-[var(--moss)]" />
+              {f}
+            </div>
           ))}
-        </ul>
-        <div className="border-border/50 mt-4 border-t pt-3">
-          <p className="text-text-muted text-[11px]">Renovação em 15/05/2026 · R$ 29,90/mês</p>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border-border bg-surface rounded-2xl border p-5">
-      <div className="mb-1 flex items-center gap-1.5">
-        <span className="text-[11px] font-semibold tracking-widest text-text-muted uppercase">
-          Plano Free
+    <Card>
+      <CardHead title="Plano" />
+
+      <div className="mb-1 flex items-center justify-between">
+        <span className="font-display text-[18px] font-bold text-[var(--text)]">Pessoal</span>
+        <span className="font-mono text-[16px] tabular-nums text-[var(--text)]">
+          <span className="text-[0.62em] text-[var(--text-sub)]">R$ </span>0
+          <span className="text-[12px] text-[var(--text-sub)]">/mês</span>
         </span>
       </div>
-      <ul className="mt-3 flex flex-col gap-2">
-        {FREE_LIMITS.map((f) => (
-          <li key={f} className="flex items-center gap-2">
-            <Check size={12} className="text-text-muted shrink-0" />
-            <span className="text-text-muted text-[13px]">{f}</span>
-          </li>
+      <p className="m-0 mb-3.5 text-[13px] text-[var(--text-sub)]">
+        Contas, transações e relatórios essenciais — sem custo.
+      </p>
+
+      <LedgerRule />
+
+      <div className="my-3.5 flex flex-col gap-2.5">
+        {FREE_FEATURES.map((f) => (
+          <div key={f} className="flex items-center gap-2.5 text-[13.5px] text-[var(--text)]">
+            <Check size={16} strokeWidth={2.4} className="shrink-0 text-[var(--moss)]" />
+            {f}
+          </div>
         ))}
-      </ul>
-      <div className="border-border mt-4 border-t pt-4">
-        <p className="text-text-muted mb-3 text-[12px]">
-          Faça upgrade para desbloquear analytics avançado, simulações, AI Insights e muito mais.
-        </p>
-        <button className="from-purple to-blue w-full rounded-lg bg-gradient-to-r py-2.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
-          <Zap size={13} className="mr-1.5 inline-block" />
-          Fazer upgrade
-        </button>
+        <div className="flex items-center gap-2.5 text-[13.5px] text-[var(--text-sub)]">
+          <Plus size={16} strokeWidth={2} className="shrink-0" />
+          Insight diário com IA
+          <span
+            className="rounded-full px-2 py-0.5 font-mono text-[9.5px] tracking-[0.06em]"
+            style={{ background: "color-mix(in srgb, var(--gold) 18%, transparent)", color: "var(--gold)" }}
+          >
+            Premium
+          </span>
+        </div>
       </div>
-    </div>
+
+      <button
+        className="mt-1 inline-flex w-full items-center justify-center rounded-[13px] px-[18px] py-2.5 text-[14px] font-semibold text-white transition-transform hover:-translate-y-[1px]"
+        style={{ background: "var(--brand-cobalt)", boxShadow: "0 12px 24px -12px rgba(31,60,224,0.7)" }}
+      >
+        Conhecer o Premium
+      </button>
+    </Card>
   );
 };
