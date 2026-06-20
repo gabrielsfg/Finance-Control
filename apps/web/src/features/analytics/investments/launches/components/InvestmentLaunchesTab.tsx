@@ -16,6 +16,9 @@ import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import { useInvestmentLaunches } from "@/features/analytics/hooks/useAnalytics";
+import { HeroPanel } from "@/components/shared/HeroPanel";
+import { BigMoney } from "@/components/shared/Money";
+import { FlowRow } from "@/components/shared/FlowBar";
 
 type FilterOp = "all" | "buy" | "sell";
 
@@ -65,35 +68,91 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <Card>
-          <div
-            className="mb-3 flex h-9 w-9 items-center justify-center rounded-[13px]"
-            style={{ backgroundColor: "color-mix(in srgb, var(--moss) 14%, transparent)" }}
-          >
-            <ArrowDownLeft size={18} className="text-[var(--moss)]" strokeWidth={1.75} />
-          </div>
-          <p className="font-display text-[16px] font-bold text-[var(--text)]">Total comprado</p>
-          <p className="mt-1 font-mono text-[20px] font-bold tabular-nums text-[var(--text)]">{formatCurrency(totalBought / 100)}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--text-sub)]">
-            {summary?.buyCount ?? 0} operações
-          </p>
-        </Card>
-        <Card>
-          <div
-            className="mb-3 flex h-9 w-9 items-center justify-center rounded-[13px]"
-            style={{ backgroundColor: "color-mix(in srgb, var(--clay) 14%, transparent)" }}
-          >
-            <ArrowUpRight size={18} className="text-[var(--clay)]" strokeWidth={1.75} />
-          </div>
-          <p className="font-display text-[16px] font-bold text-[var(--text)]">Total vendido</p>
-          <p className="mt-1 font-mono text-[20px] font-bold tabular-nums text-[var(--clay)]">{formatCurrency(totalSold / 100)}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--text-sub)]">
-            {summary?.sellCount ?? 0} operações
-          </p>
-        </Card>
-      </div>
+      {/* Hero panel — launches summary */}
+      {(() => {
+        const max = Math.max(totalBought, totalSold, 1);
+        const netFlow = totalBought - totalSold;
+        return (
+          <HeroPanel split>
+            {/* Left — total bought */}
+            <div>
+              <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                Total comprado
+              </div>
+              <BigMoney
+                cents={totalBought}
+                className="block mt-[10px] mb-[2px] font-semibold leading-[0.96] tracking-[-0.035em]"
+                style={{ fontSize: "clamp(40px, 5.6vw, 70px)" } as React.CSSProperties}
+              />
+              <div className="mt-2 font-mono text-[13px] text-[var(--panel-muted)]">
+                {summary?.buyCount ?? 0} compra{(summary?.buyCount ?? 0) !== 1 ? "s" : ""}
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-[26px]">
+                <div>
+                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                    Total vendido
+                  </div>
+                  <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--clay-lift)]">
+                    {formatCurrency(totalSold / 100)}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                    Vendas
+                  </div>
+                  <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--panel-foreground)]">
+                    {summary?.sellCount ?? 0}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right — buy vs sell flow */}
+            <div className="self-center">
+              <div className="mb-[18px] flex items-baseline justify-between">
+                <span className="font-display text-[16px] font-bold">Compras vs. Vendas</span>
+                <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--panel-muted)]">
+                  Volume
+                </span>
+              </div>
+
+              <FlowRow
+                label="Comprado"
+                dotColor="var(--moss-lift)"
+                value={`+ ${formatCurrency(totalBought / 100)}`}
+                valueColor="var(--moss-lift)"
+                pct={totalBought / max}
+                variant="in"
+              />
+              <FlowRow
+                label="Vendido"
+                dotColor="var(--clay-lift)"
+                value={`− ${formatCurrency(totalSold / 100)}`}
+                valueColor="var(--clay-lift)"
+                pct={totalSold / max}
+                variant="out"
+              />
+
+              <div
+                className="mt-5 flex items-center justify-between border-t pt-4"
+                style={{ borderColor: "rgba(255,255,255,0.12)" }}
+              >
+                <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">
+                  Fluxo líquido
+                </span>
+                <span
+                  className="font-mono text-[22px] font-semibold"
+                  style={{ color: netFlow >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
+                >
+                  {netFlow >= 0 ? "+ " : "− "}
+                  {formatCurrency(Math.abs(netFlow) / 100)}
+                </span>
+              </div>
+            </div>
+          </HeroPanel>
+        );
+      })()}
 
       {/* Bar chart: bought vs sold per month */}
       <Card>

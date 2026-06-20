@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { PageTopbar } from "@/components/layout/PageTopbar";
 import { Money, BigMoney } from "@/components/shared/Money";
 import { HeroPanel } from "@/components/shared/HeroPanel";
@@ -734,12 +735,9 @@ const ContributeDrawer = ({ goal, onClose }: { goal: Goal | null; onClose: () =>
 
           <div>
             <label className={LABEL_CLASS}>Valor (R$) *</label>
-            <input
-              type="number"
+            <CurrencyInput
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0,00"
-              autoFocus
+              onChange={setAmount}
               className={cn(INPUT_CLASS, "font-mono")}
             />
           </div>
@@ -873,12 +871,9 @@ const WithdrawDrawer = ({ goal, onClose }: { goal: Goal | null; onClose: () => v
 
           <div>
             <label className={LABEL_CLASS}>Valor a retirar (R$) *</label>
-            <input
-              type="number"
+            <CurrencyInput
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0,00"
-              autoFocus
+              onChange={setAmount}
               className={cn(
                 INPUT_CLASS,
                 "font-mono",
@@ -1471,11 +1466,9 @@ const AddGoalDrawer = ({ open, defaultType, onClose }: { open: boolean; defaultT
 
           <div>
             <label className={LABEL_CLASS}>{type === "Item" ? "Preço-meta (R$) *" : "Patrimônio-alvo (R$) *"}</label>
-            <input
-              type="number"
+            <CurrencyInput
               value={targetAmount}
-              onChange={(e) => setTargetAmount(e.target.value)}
-              placeholder="0,00"
+              onChange={setTargetAmount}
               className={cn(INPUT_CLASS, "font-mono")}
             />
           </div>

@@ -109,7 +109,7 @@ export const MarketAssetCard = ({ asset, trailing }: Props) => {
       </div>
 
       {/* Grade de métricas */}
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[13px] border border-[var(--border-color)] sm:grid-cols-4">
+      <div className="grid grid-cols-4 gap-px overflow-hidden rounded-[13px] border border-[var(--border-color)]">
         {[
           { label: "Fechamento ant.", money: asset.previousClose },
           { label: "Semana", value: weekChg },
@@ -120,7 +120,7 @@ export const MarketAssetCard = ({ asset, trailing }: Props) => {
           const pct = isMoney ? null : (m as { value: number | null }).value;
           const pctColor = pct == null ? "text-[var(--text-sub)]" : pct >= 0 ? "text-[var(--moss)]" : "text-[var(--clay)]";
           return (
-            <div key={m.label} className="flex flex-col gap-1 bg-[var(--surface2)] px-4 py-3">
+            <div key={m.label} className="flex flex-col gap-1 bg-[var(--surface2)] px-3 py-3 sm:px-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--text-sub)]">{m.label}</p>
               {isMoney ? (
                 (m as { money: number | null }).money !== null && (m as { money: number | null }).money !== undefined ? (

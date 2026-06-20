@@ -10,6 +10,8 @@ import {
   useBalanceEvolution,
 } from "./hooks/useAnalytics";
 import { useAnalyticsFilter } from "./AnalyticsFilterContext";
+import { HeroPanel } from "@/components/shared/HeroPanel";
+import { BigMoney } from "@/components/shared/Money";
 
 export function AnalyticsNetWorthPage() {
   const { start, finish, activeTagIds } = useAnalyticsFilter();
@@ -41,24 +43,67 @@ export function AnalyticsNetWorthPage() {
   const totalExp = mo.reduce((s, m) => s + (m.totalExpense ?? 0), 0);
   const sr = totalInc > 0 ? ((totalInc - totalExp) / totalInc) * 100 : null;
 
+  const currentYear = new Date().getFullYear();
+
   return (
     <div className="flex flex-col gap-5">
       <AnalyticsHeader title="Patrimônio" />
 
-      <div className="flex flex-col gap-4">
-        {/* 3 KPI cards ABOVE the chart */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Crescimento no mês", value: monthGrowth !== null ? `${monthGrowth >= 0 ? "+" : ""}${monthGrowth.toFixed(1)}%` : "—", color: monthGrowth !== null && monthGrowth >= 0 ? "text-green" : "text-red" },
-            { label: "Crescimento em 2026", value: yearGrowth  !== null ? `${yearGrowth  >= 0 ? "+" : ""}${yearGrowth.toFixed(1)}%`  : "—", color: yearGrowth  !== null && yearGrowth  >= 0 ? "text-green" : "text-red" },
-            { label: "Taxa de Poupança", value: sr !== null ? `${sr.toFixed(1)}%` : "—", color: "text-blue" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="border-border bg-surface rounded-xl border p-4">
-              <p className="text-text-muted text-[12px]">{label}</p>
-              <p className={`font-money font-600 mt-1 text-[22px] ${color}`}>{value}</p>
-            </div>
-          ))}
+      <HeroPanel split>
+        {/* Left — current net worth */}
+        <div>
+          <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+            Patrimônio atual
+          </div>
+          <BigMoney
+            cents={last?.netWorth ?? 0}
+            className={`block mt-[10px] mb-[2px] font-semibold leading-[0.96] tracking-[-0.035em] ${
+              (last?.netWorth ?? 0) < 0 ? "text-[var(--clay-lift)]" : ""
+            }`}
+            style={{ fontSize: "clamp(40px, 5.6vw, 70px)" } as React.CSSProperties}
+          />
+          <div className="mt-2 font-mono text-[13px] text-[var(--panel-muted)]">
+            Patrimônio líquido das suas contas
+          </div>
         </div>
+
+        {/* Right — growth metrics grid */}
+        <div className="self-center">
+          <div className="mb-[18px] font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--panel-muted)]">
+            Variação acumulada
+          </div>
+          <div className="grid grid-cols-3 gap-6">
+            {[
+              { label: "No mês", value: monthGrowth },
+              { label: `Em ${currentYear}`, value: yearGrowth },
+              { label: "Tx. poupança", value: sr },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <div className="font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--panel-muted)] mb-[6px]">
+                  {label}
+                </div>
+                <div
+                  className="font-mono text-[28px] font-semibold leading-none"
+                  style={{
+                    color:
+                      value === null
+                        ? "var(--panel-muted)"
+                        : label === `Em ${currentYear}` || label === "No mês"
+                          ? value >= 0
+                            ? "var(--moss-lift)"
+                            : "var(--clay-lift)"
+                          : "var(--panel-foreground)",
+                  }}
+                >
+                  {value !== null ? `${value >= 0 ? "+" : ""}${value.toFixed(1)}%` : "—"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </HeroPanel>
+
+      <div className="flex flex-col gap-4">
         <AnalyticsNetWorthChart data={pts} />
         <BalanceEvolutionChart data={balanceEvolution.data ?? []} />
       </div>

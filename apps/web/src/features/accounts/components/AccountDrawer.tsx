@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { useCreateAccount, useUpdateAccount } from "@/features/accounts/hooks/useAccounts";
@@ -222,9 +223,9 @@ function CreateForm({ onClose }: { onClose: () => void }) {
         {showCreditFields && (
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Limite (R$)" error={errors.creditLimit?.message}>
-              <input
-                {...register("creditLimit")}
-                type="number" step="0.01" min="0" placeholder="5000,00"
+              <CurrencyInput
+                value={watch("creditLimit") ?? ""}
+                onChange={(v) => setValue("creditLimit", v, { shouldValidate: true })}
                 className={cn(INPUT_CLASS, errors.creditLimit && "border-red/60")}
               />
             </FormField>
@@ -249,17 +250,17 @@ function CreateForm({ onClose }: { onClose: () => void }) {
         )}
 
         <FormField label="Saldo inicial (R$)">
-          <input
-            {...register("initialBalance")}
-            type="number" step="0.01" placeholder="0,00"
+          <CurrencyInput
+            value={watch("initialBalance") ?? ""}
+            onChange={(v) => setValue("initialBalance", v)}
             className={INPUT_CLASS}
           />
         </FormField>
 
         <FormField label="Meta de saldo (R$) — opcional">
-          <input
-            {...register("goalAmount")}
-            type="number" step="0.01" placeholder="0,00"
+          <CurrencyInput
+            value={watch("goalAmount") ?? ""}
+            onChange={(v) => setValue("goalAmount", v)}
             className={INPUT_CLASS}
           />
         </FormField>
@@ -355,9 +356,9 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
         {showCreditFields && (
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Limite (R$)" error={errors.creditLimit?.message}>
-              <input
-                {...register("creditLimit")}
-                type="number" step="0.01" min="0" placeholder="5000,00"
+              <CurrencyInput
+                value={watch("creditLimit") ?? ""}
+                onChange={(v) => setValue("creditLimit", v, { shouldValidate: true })}
                 className={cn(INPUT_CLASS, errors.creditLimit && "border-red/60")}
               />
             </FormField>
@@ -382,9 +383,9 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
         )}
 
         <FormField label="Meta de saldo (R$) — opcional">
-          <input
-            {...register("goalAmount")}
-            type="number" step="0.01" placeholder="0,00"
+          <CurrencyInput
+            value={watch("goalAmount") ?? ""}
+            onChange={(v) => setValue("goalAmount", v)}
             className={INPUT_CLASS}
           />
         </FormField>
@@ -401,9 +402,9 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
             <span className="text-text text-[13px] font-medium">Ajustar saldo</span>
           </div>
           <FormField label={`Novo saldo (R$) — atual: ${formatCurrency(account.currentAmount / 100)}`}>
-            <input
-              {...register("newBalance")}
-              type="number" step="0.01" placeholder="0,00"
+            <CurrencyInput
+              value={watch("newBalance") ?? ""}
+              onChange={(v) => setValue("newBalance", v)}
               className={INPUT_CLASS}
             />
           </FormField>

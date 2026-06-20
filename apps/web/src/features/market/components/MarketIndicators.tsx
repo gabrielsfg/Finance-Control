@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown } from "lucide-react";
 import { useMacroIndicators, useMarketList } from "@/features/market/hooks/useMarket";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
+import { HeroPanel } from "@/components/shared/HeroPanel";
 
 const PERCENT_UNIT: Record<string, string> = {
   percent: "%",
@@ -55,14 +56,14 @@ function TrendChip({ pct }: { pct: number }) {
 
 function IndicatorStat({ item }: { item: IndicatorItem }) {
   const inner = (
-    <div className="flex h-full flex-col rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)] p-[18px_18px_16px] transition-colors" style={{ boxShadow: "var(--shadow-sm)" }}>
-      <span className="mb-[10px] font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-sub)]">
+    <div className="flex flex-col">
+      <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--panel-muted)]">
         {item.label}
       </span>
-      <span className="font-mono text-[22px] font-semibold leading-[1.05] tracking-[-0.02em] tabular-nums text-[var(--text)]">
+      <span className="mt-[7px] font-mono text-[19px] font-semibold leading-tight tracking-[-0.02em] tabular-nums text-[var(--panel-foreground)]">
         {item.value}
       </span>
-      <div className="mt-[10px] flex items-center gap-2 font-mono text-[12px] text-[var(--text-sub)]">
+      <div className="mt-[7px] flex items-center gap-2 font-mono text-[11px] text-[var(--panel-muted)]">
         {item.changePct != null ? (
           <>
             <TrendChip pct={item.changePct} />
@@ -76,7 +77,7 @@ function IndicatorStat({ item }: { item: IndicatorItem }) {
   );
 
   return item.href ? (
-    <Link href={item.href} className="block h-full transition-transform hover:-translate-y-[1px]">
+    <Link href={item.href} className="block transition-opacity hover:opacity-75">
       {inner}
     </Link>
   ) : (
@@ -129,10 +130,14 @@ export function MarketIndicators() {
   if (items.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-2 gap-[22px] sm:grid-cols-3 lg:grid-cols-4">
-      {items.map((item) => (
-        <IndicatorStat key={item.key} item={item} />
-      ))}
-    </div>
+    <HeroPanel>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3 lg:grid-cols-6 lg:divide-x lg:divide-white/10">
+        {items.map((item) => (
+          <div key={item.key} className="lg:px-6 lg:first:pl-0 lg:last:pr-0">
+            <IndicatorStat item={item} />
+          </div>
+        ))}
+      </div>
+    </HeroPanel>
   );
 }

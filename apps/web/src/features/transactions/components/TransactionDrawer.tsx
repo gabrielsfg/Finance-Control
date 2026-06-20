@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { parseLocalDate } from "@/lib/utils/budgetPeriod";
@@ -640,13 +641,10 @@ function CreateForm({
       <FormField label="Valor" error={errors.value?.message}>
         <div className={cn(VALUE_WRAPPER_CLASS, errors.value && "border-red/60")}>
           <span className="text-text-muted select-none pl-3.5 text-[15px]">R$</span>
-          <input
-            {...register("value")}
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="0,00"
-            className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none placeholder:text-text-muted"
+          <CurrencyInput
+            value={watch("value") ?? ""}
+            onChange={(v) => setValue("value", v, { shouldValidate: true })}
+            className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none"
           />
         </div>
       </FormField>
@@ -961,13 +959,10 @@ function EditForm({
       <FormField label="Valor" error={errors.value?.message}>
         <div className={cn(VALUE_WRAPPER_CLASS, errors.value && "border-red/60")}>
           <span className="text-text-muted select-none pl-3.5 text-[15px]">R$</span>
-          <input
-            {...register("value")}
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="0,00"
-            className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none placeholder:text-text-muted"
+          <CurrencyInput
+            value={watch("value") ?? ""}
+            onChange={(v) => setValue("value", v, { shouldValidate: true })}
+            className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none"
           />
         </div>
       </FormField>

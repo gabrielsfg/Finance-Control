@@ -1,6 +1,5 @@
 "use client";
 
-import { TrendingUp, Wallet, BarChart2, ArrowUpRight } from "lucide-react";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardHead } from "@/components/shared/Card";
@@ -9,6 +8,9 @@ import { cn } from "@/lib/utils";
 import { useInvestments } from "@/features/investments/hooks/useInvestments";
 import { useAnalyticsInvestmentEvolution } from "@/features/analytics/hooks/useAnalytics";
 import { AnalyticsInvestmentEvolutionChart } from "./AnalyticsInvestmentEvolutionChart";
+import { HeroPanel } from "@/components/shared/HeroPanel";
+import { BigMoney } from "@/components/shared/Money";
+import { FlowRow } from "@/components/shared/FlowBar";
 
 const ASSET_CLASS_ORDER = ["Renda Fixa", "Renda Variável", "FII", "Internacional", "Cripto"];
 
@@ -34,64 +36,89 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
 
   return (
     <div className="flex flex-col gap-5">
-      {/* KPI cards */}
-      {data && (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Card>
-            <div
-              className="mb-3 flex h-9 w-9 items-center justify-center rounded-[13px]"
-              style={{ backgroundColor: "color-mix(in srgb, var(--moss) 14%, transparent)" }}
-            >
-              <Wallet size={18} className="text-[var(--moss)]" strokeWidth={1.75} />
-            </div>
-            <p className="font-display text-[16px] font-bold text-[var(--text)]">Patrimônio atual</p>
-            <p className="mt-1 font-mono text-[20px] font-bold tabular-nums text-[var(--text)]">
-              {formatCurrency(data.currentValue / 100)}
-            </p>
-          </Card>
+      {/* Hero panel — portfolio summary */}
+      {data && (() => {
+        const maxBar = Math.max(data.totalInvested, Math.abs(data.totalReturn), 1);
+        return (
+          <HeroPanel split>
+            {/* Left — current portfolio value */}
+            <div>
+              <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                Patrimônio atual
+              </div>
+              <BigMoney
+                cents={data.currentValue}
+                className="block mt-[10px] mb-[2px] font-semibold leading-[0.96] tracking-[-0.035em]"
+                style={{ fontSize: "clamp(40px, 5.6vw, 70px)" } as React.CSSProperties}
+              />
+              <div className="mt-2 font-mono text-[13px] text-[var(--panel-muted)]">
+                {data.investments.length} ativo{data.investments.length !== 1 ? "s" : ""} · {data.allocations.length} classe{data.allocations.length !== 1 ? "s" : ""}
+              </div>
 
-          <Card>
-            <div
-              className="mb-3 flex h-9 w-9 items-center justify-center rounded-[13px]"
-              style={{ backgroundColor: "color-mix(in srgb, var(--brand-cobalt) 14%, transparent)" }}
-            >
-              <BarChart2 size={18} className="text-[var(--brand-cobalt)]" strokeWidth={1.75} />
+              <div className="mt-6 flex flex-wrap gap-[26px]">
+                <div>
+                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                    Capital investido
+                  </div>
+                  <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--panel-foreground)]">
+                    {formatCurrency(data.totalInvested / 100)}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                    Retorno %
+                  </div>
+                  <div
+                    className="font-mono mt-[3px] text-[18px] font-medium"
+                    style={{ color: data.totalReturnPercent >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
+                  >
+                    {data.totalReturnPercent >= 0 ? "+" : ""}{data.totalReturnPercent.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="font-display text-[16px] font-bold text-[var(--text)]">Capital investido</p>
-            <p className="mt-1 font-mono text-[20px] font-bold tabular-nums text-[var(--text)]">
-              {formatCurrency(data.totalInvested / 100)}
-            </p>
-          </Card>
 
-          <Card>
-            <div
-              className="mb-3 flex h-9 w-9 items-center justify-center rounded-[13px]"
-              style={{ backgroundColor: `color-mix(in srgb, ${data.totalReturn >= 0 ? "var(--cyan)" : "var(--clay)"} 14%, transparent)` }}
-            >
-              <TrendingUp size={18} className={data.totalReturn >= 0 ? "text-[var(--cyan)]" : "text-[var(--clay)]"} strokeWidth={1.75} />
-            </div>
-            <p className="font-display text-[16px] font-bold text-[var(--text)]">Retorno total</p>
-            <p className={cn("mt-1 font-mono text-[20px] font-bold tabular-nums", data.totalReturn >= 0 ? "text-[var(--cyan)]" : "text-[var(--clay)]")}>
-              {data.totalReturn >= 0 ? "+" : ""}{formatCurrency(data.totalReturn / 100)}
-            </p>
-            <p className={cn("mt-0.5 font-mono text-[12px]", data.totalReturnPercent >= 0 ? "text-[var(--cyan)]" : "text-[var(--clay)]")}>
-              {data.totalReturnPercent >= 0 ? "+" : ""}{data.totalReturnPercent.toFixed(2)}%
-            </p>
-          </Card>
+            {/* Right — invested vs return bars */}
+            <div className="self-center">
+              <div className="mb-[18px] flex items-baseline justify-between">
+                <span className="font-display text-[16px] font-bold">Capital vs. Retorno</span>
+                <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--panel-muted)]">
+                  Composição
+                </span>
+              </div>
 
-          <Card>
-            <div
-              className="mb-3 flex h-9 w-9 items-center justify-center rounded-[13px]"
-              style={{ backgroundColor: "color-mix(in srgb, var(--gold) 14%, transparent)" }}
-            >
-              <ArrowUpRight size={18} className="text-[var(--gold)]" strokeWidth={1.75} />
+              <FlowRow
+                label="Capital investido"
+                dotColor="var(--moss-lift)"
+                value={formatCurrency(data.totalInvested / 100)}
+                valueColor="var(--moss-lift)"
+                pct={data.totalInvested / maxBar}
+                variant="in"
+              />
+              <FlowRow
+                label="Retorno total"
+                dotColor={data.totalReturn >= 0 ? "var(--moss-lift)" : "var(--clay-lift)"}
+                value={`${data.totalReturn >= 0 ? "+ " : "− "}${formatCurrency(Math.abs(data.totalReturn) / 100)}`}
+                valueColor={data.totalReturn >= 0 ? "var(--moss-lift)" : "var(--clay-lift)"}
+                pct={Math.abs(data.totalReturn) / maxBar}
+                variant={data.totalReturn >= 0 ? "in" : "out"}
+              />
+
+              <div
+                className="mt-5 flex items-center justify-between border-t pt-4"
+                style={{ borderColor: "rgba(255,255,255,0.12)" }}
+              >
+                <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">
+                  Valor atual
+                </span>
+                <span className="font-mono text-[22px] font-semibold text-[var(--panel-foreground)]">
+                  {formatCurrency(data.currentValue / 100)}
+                </span>
+              </div>
             </div>
-            <p className="font-display text-[16px] font-bold text-[var(--text)]">Ativos na carteira</p>
-            <p className="mt-1 font-display text-[20px] font-bold text-[var(--text)]">{data.investments.length}</p>
-            <p className="mt-0.5 text-[12px] text-[var(--text-sub)]">{data.allocations.length} classes de ativos</p>
-          </Card>
-        </div>
-      )}
+          </HeroPanel>
+        );
+      })()}
 
       {/* Allocation breakdown */}
       <Card>
