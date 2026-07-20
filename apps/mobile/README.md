@@ -1,158 +1,132 @@
-# Finance Control App — Personal Finance Mobile Application
+<div align="center">
+
+# Finance Control Mobile
+
+**The Flutter client for the Finance Control platform — Android & iOS.**
+
+Designed around one constraint: **register a transaction in under 10 seconds.** Powered by the [Finance Control API](../api).
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=flat&logo=flutter)
 ![Dart](https://img.shields.io/badge/Dart-3.11+-0175C2?style=flat&logo=dart)
 ![Riverpod](https://img.shields.io/badge/State-Riverpod_2-00BCD4?style=flat)
 ![Platform](https://img.shields.io/badge/Platform-Android_%7C_iOS-lightgrey?style=flat)
-![Status](https://img.shields.io/badge/Status-In_Development-yellow?style=flat)
 
-A Flutter mobile app for personal finance tracking on Android and iOS. Designed around a core UX constraint: **register a transaction in under 10 seconds**. Consumes the [Finance Control API](https://github.com/gabrielsfg/FinanceControl) — a .NET 9 backend with JWT authentication.
+</div>
 
----
+## Table of Contents
 
-## About the Project
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Core Patterns](#core-patterns)
+- [Authentication](#authentication)
 
-Finance Control App is the mobile frontend of a full-stack personal finance system. The app is built for users who want intentional, manual control over their finances — no automatic bank imports. Every transaction is entered deliberately, so the UX is optimized for speed and minimal friction.
+## Quick Start
 
-The app covers the full financial picture: multiple accounts with net worth tracking, a hierarchical category and budget system, recurring transactions, and a dashboard that surfaces spending patterns and budget performance at a glance.
+**Prerequisites:** [Flutter SDK](https://docs.flutter.dev/get-started/install) (Dart 3.11+) · Android Studio or Xcode · the [Finance Control API](../api) running.
 
-This is a personal project built to deepen expertise in Flutter, Riverpod state management, and feature-first mobile architecture.
+```bash
+cd apps/mobile
 
----
+# Install dependencies
+flutter pub get
 
-## Features
+# Generate Freezed models + JSON serialization
+dart run build_runner build --delete-conflicting-outputs
 
-| Feature | Status |
+# Run
+flutter devices                    # list devices
+flutter run -d emulator-5554       # Android emulator
+flutter run -d "iPhone 15"         # iOS simulator
+```
+
+> Re-run the `build_runner` command after changing any Freezed model or JSON-serializable class.
+
+## Configuration
+
+The API base URL is chosen by environment in `lib/core/config/app_config.dart` — change `_current` to switch:
+
+```dart
+static const AppEnv _current = AppEnv.local; // → http://localhost:5112
+```
+
+| Environment | Base URL |
 |---|---|
-| JWT authentication (login, register, logout) | ✅ Done |
-| Secure token storage (FlutterSecureStorage) | ✅ Done |
-| Auth-aware navigation with auto-redirect | ✅ Done |
-| API client with auth interceptor (auto 401 logout) | ✅ Done |
-| Material 3 theme with light/dark mode | ✅ Done |
-| Account management screens | 🚧 In Progress |
-| Transaction entry (one-time, installment, recurring) | 🚧 In Progress |
-| Budget tracking with progress visualization | 🚧 In Progress |
-| Dashboard (balance, income/expense, top categories) | 🚧 In Progress |
-| Category & subcategory management | 🚧 In Progress |
-| Profile screen | 🚧 In Progress |
+| Android emulator | `http://10.0.2.2:5112` (maps to host localhost) |
+| iOS simulator | `http://localhost:5112` |
+| Physical device | Your machine's LAN IP, e.g. `http://192.168.x.x:5112` |
 
----
+> Start the API with the Kestrel HTTP profile so it isn't bound to IIS Express only:
+> `dotnet run --project FinanceControl.WebApi --launch-profile http`
 
 ## Tech Stack
 
-| Technology | Purpose | Version |
-|---|---|---|
-| Flutter | UI framework (Android + iOS) | 3.x |
-| Dart | Language | 3.11+ |
-| Riverpod | State management | 2.5.x |
-| GoRouter | Navigation & auth routing | 14.x |
-| Dio | HTTP client | 5.7.x |
-| FlutterSecureStorage | Encrypted token storage | 9.x |
-| Freezed + JsonSerializable | Immutable models & JSON | 2.5.x |
-| Google Fonts | Typography | 6.x |
+| Concern | Package |
+|---|---|
+| State management | `flutter_riverpod` |
+| Navigation | `go_router` |
+| HTTP client | `dio` |
+| Token storage | `flutter_secure_storage` |
+| Models & JSON | `freezed` + `json_serializable` |
+| Charts | `fl_chart` |
+| Icons | `lucide_icons` |
+| Flags | `country_flags` (SVG) |
+| Typography | `google_fonts` |
 
-> **Note on Riverpod:** Code generation (`riverpod_generator`) was removed due to an incompatibility with Dart 3.11+. All providers are written manually.
+> **On code generation:** `riverpod_generator` was removed due to an incompatibility with the Dart 3.11 analyzer — **all providers are written manually**. `build_runner` is still used for Freezed and JSON serialization.
 
----
+## Project Structure
 
-## Architecture
-
-The project follows a **feature-first** structure. Each feature is self-contained with its own data, state, and UI layers:
+Feature-first. Each feature is self-contained with `data/`, `providers/`, and `presentation/` layers.
 
 ```
 lib/
-├── core/
-│   ├── api/          # Dio client setup + auth interceptor + endpoint constants
-│   ├── config/       # Environment config (local / staging / production)
-│   ├── router/       # GoRouter setup + auth-aware redirect logic
-│   ├── storage/      # JWT token persistence (FlutterSecureStorage)
-│   ├── theme/        # Material 3 theme, color tokens, spacing, typography
-│   └── utils/        # Formatters (currency, date, percentage) + extensions
-│
-├── features/
-│   ├── auth/         # Login, register, splash — providers + pages
-│   ├── accounts/     # Account CRUD — repo + providers + pages
-│   ├── transactions/ # Transaction management — repo + providers + pages
-│   ├── budgets/      # Budget tracking — repo + providers + pages
-│   ├── categories/   # Category/subcategory — repo + providers + pages
-│   ├── home/         # Dashboard summary
-│   └── profile/      # User profile
-│
+├── main.dart                 # ProviderScope + MaterialApp.router
+├── core/                     # app-wide infrastructure (no business logic)
+│   ├── api/                  # Dio client + auth interceptor + endpoint constants
+│   ├── config/               # environment config (local / staging / production)
+│   ├── router/               # GoRouter + auth-aware redirect
+│   ├── storage/              # JWT token persistence (FlutterSecureStorage)
+│   ├── theme/                # Material 3 theme, tokens, typography
+│   └── utils/                # formatters + extensions
+├── features/                 # one folder per domain
+│   ├── auth/                 # login, register, forgot/reset password, splash
+│   ├── accounts/             # account CRUD
+│   ├── transactions/         # transaction management
+│   ├── budgets/              # budget tracking
+│   ├── categories/           # category / subcategory management
+│   ├── analytics/            # charts & spending analytics
+│   ├── home/                 # dashboard summary
+│   ├── wishlist/             # wishlist items
+│   └── profile/              # user profile & preferences
 └── shared/
-    └── widgets/      # Reusable UI components (AppShell, buttons, etc.)
+    └── widgets/              # reusable UI (AppShell, …)
 ```
 
-**Layer order inside each feature:** `data/` (repository + DTOs + models) → `providers/` (Riverpod state) → `presentation/` (pages + widgets)
+**Layer order inside a feature:** `data/` (repository + DTOs + models) → `providers/` (Riverpod) → `presentation/` (pages + widgets).
 
-**Key implementation decisions:**
-- **All monetary values are integers (cents)** — never `double`, avoiding floating-point precision errors
-- **Manual Riverpod providers** — no code generation, full explicit control
-- **Environment-aware API config** — switch between `local`, `staging`, and `production` via a single enum
-- **Auth interceptor** — Dio automatically attaches `Authorization: Bearer <token>` to every request and triggers logout on `401`
+## Core Patterns
+
+- **Money in cents** — all monetary values are `int`; convert to `double` only at the display layer.
+- **Manual Riverpod providers** — full explicit control, no code generation for state.
+- **Environment-aware config** — one enum switches `local` / `staging` / `production`.
+- **Separate request/response DTOs** — mapped to domain models before reaching the UI.
+- **Auth interceptor** — Dio attaches the bearer token to every request and triggers logout on `401`.
+- **English-only code** — identifiers, comments, and mock data; Portuguese only in user-facing copy.
+
+## Authentication
+
+1. App starts → the auth notifier reads the token from `TokenStorage`.
+2. No token → GoRouter redirects to `/login`; token present → redirects to `/` (home shell).
+3. **Login success** → tokens saved to secure storage → router auto-redirects to `/`.
+4. **Logout** → tokens cleared → router auto-redirects to `/login`.
+5. A `ChangeNotifier` subscribed to the auth provider makes GoRouter re-evaluate its redirect on every auth state change.
 
 ---
 
-## Getting Started
+<div align="center">
 
-### Prerequisites
+Part of the **Finance Control** monorepo · [API](../api) · [Web](../web)
 
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) (Dart 3.11+)
-- Android Studio or Xcode (for emulator/simulator)
-- [Finance Control API](https://github.com/gabrielsfg/FinanceControl) running locally or on a remote server
-
-### Installation
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/gabrielsfg/Finance-Control-App.git
-cd Finance-Control-App
-
-# 2. Install dependencies
-flutter pub get
-
-# 3. Run code generation (for Freezed models)
-flutter pub run build_runner build --delete-conflicting-outputs
-```
-
-### Configuration
-
-Set the API base URL in `lib/core/config/app_config.dart` by changing the `_current` environment:
-
-```dart
-// Android emulator maps to host machine's localhost
-static const _current = AppEnv.local; // baseUrl: http://10.0.2.2:5112
-
-// iOS simulator uses localhost directly
-// For physical device: update AppEnv.local to your machine's LAN IP
-```
-
-### Run
-
-```bash
-# Android emulator
-flutter run -d emulator-5554
-
-# iOS simulator
-flutter run -d "iPhone 15"
-
-# List available devices
-flutter devices
-```
-
----
-
-## Related Repository
-
-This app consumes the **Finance Control API** — a RESTful .NET 9 backend with PostgreSQL, JWT auth, and full Swagger documentation.
-
-[Finance Control API →](https://github.com/gabrielsfg/FinanceControl)
-
----
-
-## Project Status
-
-The project infrastructure is complete (auth flow, navigation, API client, theming, architecture). Feature screens are **actively being developed**.
-
-**Done:** JWT authentication, auth-aware routing, API integration layer, secure token storage, Material 3 theming with light/dark mode support.
-
-**In progress:** All feature screens — accounts, transactions, budgets, categories, dashboard, and profile.
+</div>
