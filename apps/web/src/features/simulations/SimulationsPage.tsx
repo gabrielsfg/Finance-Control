@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { PageTopbar } from "@/components/layout/PageTopbar";
 import { CompoundInterestSimulator } from "@/features/simulations/components/CompoundInterestSimulator";
 import { RetirementSimulator }       from "@/features/simulations/components/RetirementSimulator";
 import { HistoricalSimulator }       from "@/features/simulations/components/HistoricalSimulator";
@@ -50,16 +51,22 @@ export function SimulationsPage() {
 
   if (!meta) {
     return (
-      <div className="flex flex-col gap-5">
-        <Link
-          href="/simulations"
-          className="text-text-muted hover:text-text flex w-fit items-center gap-1.5 text-[13px] transition-colors"
-        >
-          <ArrowLeft size={15} />
-          Voltar às simulações
-        </Link>
-        <div className="border-border bg-surface flex h-64 items-center justify-center rounded-2xl border">
-          <p className="text-text-sub text-[14px]">Simulação não encontrada.</p>
+      <div className="px-[clamp(20px,3.4vw,46px)] pb-[60px]">
+        <PageTopbar title="Simulação não encontrada" subtitle="O simulador solicitado não existe." />
+        <div className="flex flex-col gap-5">
+          <Link
+            href="/simulations"
+            className="flex w-fit items-center gap-1.5 text-[13px] text-[var(--text-sub)] transition-colors hover:text-[var(--text)]"
+          >
+            <ArrowLeft size={15} />
+            Voltar às simulações
+          </Link>
+          <div
+            className="flex h-64 items-center justify-center rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)]"
+            style={{ boxShadow: "var(--shadow-sm)" }}
+          >
+            <p className="text-[14px] text-[var(--text-sub)]">Simulação não encontrada.</p>
+          </div>
         </div>
       </div>
     );
@@ -68,13 +75,12 @@ export function SimulationsPage() {
   const Component = meta.Component;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-display font-700 text-text text-[22px] tracking-tight">{meta.label}</h1>
-        <p className="text-text-muted mt-0.5 text-[13px]">{meta.description}</p>
-      </div>
+    <div className="px-[clamp(20px,3.4vw,46px)] pb-[60px]">
+      <PageTopbar title={meta.label} subtitle={meta.description} />
 
-      <Component />
+      <div className="flex flex-col gap-5">
+        <Component />
+      </div>
     </div>
   );
 }

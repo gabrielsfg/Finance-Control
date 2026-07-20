@@ -9,7 +9,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { RealNetWorthResponse } from "@/lib/types/analytics.types";
@@ -84,19 +84,19 @@ export function RealNetWorthChart({ data }: Props) {
 
   if (chartData.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-        <SectionHeader
+      <Card className="flex flex-col">
+        <CardHead
           title="Patrimônio Real vs Inflação"
           subtitle="Evolução do patrimônio nominal e deflacionado pelo IPCA"
         />
         <ChartEmptyState message="Sem dados patrimoniais para o período" />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Patrimônio Real vs Inflação"
         subtitle="Evolução do patrimônio nominal e deflacionado pelo IPCA"
       />
@@ -134,16 +134,16 @@ export function RealNetWorthChart({ data }: Props) {
       <div className="w-full" style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--border-chart)" />
+            <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
-              tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => formatCurrencyCompact(v / 100)}
@@ -151,7 +151,7 @@ export function RealNetWorthChart({ data }: Props) {
             />
             <Tooltip
               content={<CustomTooltip />}
-              cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }}
+              cursor={{ stroke: "var(--border-color)", strokeWidth: 1, strokeDasharray: "4 4" }}
             />
             <Line
               type="monotone"
@@ -194,6 +194,6 @@ export function RealNetWorthChart({ data }: Props) {
       <p className="text-text-muted mt-3 text-[11px]">
         Fonte: BACEN SGS — série 433 (IPCA)
       </p>
-    </div>
+    </Card>
   );
 }

@@ -4,31 +4,28 @@ import { Button } from "@/components/ui/button";
 export const AiInsightCard = () => {
   return (
     <div
-      className="rounded-xl border p-4"
+      className="rounded-[20px] border p-[22px]"
       style={{
-        background: "linear-gradient(135deg, #7C6FE030, #7C6FE010)",
-        borderColor: "#7C6FE050",
+        background: "linear-gradient(135deg, color-mix(in srgb, var(--brand-cobalt) 10%, transparent), color-mix(in srgb, var(--brand-cobalt) 4%, var(--surface)))",
+        borderColor: "color-mix(in srgb, var(--brand-cobalt) 25%, var(--border-color))",
       }}
     >
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-4 flex items-center gap-[10px]">
         <div
           className="flex h-7 w-7 items-center justify-center rounded-[8px]"
-          style={{ backgroundColor: "#7C6FE040" }}
+          style={{ backgroundColor: "color-mix(in srgb, var(--brand-cobalt) 15%, transparent)" }}
         >
-          <Zap size={14} style={{ color: "var(--purple)" }} />
+          <Zap size={14} style={{ color: "var(--brand-accent)" }} />
         </div>
-        <span
-          className="font-display font-600 text-[12px]"
-          style={{ color: "var(--purple)" }}
-        >
-          <span className="text-[13px]">Insight da IA</span>
+        <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--brand-accent)]">
+          Insight da IA
         </span>
       </div>
 
-      <p className="font-display font-600 text-text mb-1.5 text-[14px]">
+      <p className="font-display font-bold text-[var(--text)] mb-1.5 text-[17px] tracking-[-0.01em]">
         Análise financeira indisponível
       </p>
-      <p className="text-text-sub mb-4 text-[13px] leading-relaxed">
+      <p className="text-[var(--text-sub)] mb-4 text-[13px] leading-relaxed">
         O insight diário com IA estará disponível em breve para usuários Premium. Acompanhe suas
         finanças de forma mais inteligente.
       </p>

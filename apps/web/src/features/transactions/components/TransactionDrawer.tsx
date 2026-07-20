@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { parseLocalDate } from "@/lib/utils/budgetPeriod";
@@ -93,14 +94,14 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 };
 
 const INPUT_CLASS =
-  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-green/60 h-11 rounded-lg px-3.5 text-[15px]";
+  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-[var(--brand-cobalt)] h-11 rounded-[13px] px-3.5 text-[15px]";
 
 // !h-11 overrides data-[size=default]:h-8 baked into SelectTrigger base styles
 const TRIGGER_CLASS =
-  "border-border bg-surface2 text-text w-full !h-11 rounded-lg px-3.5 text-[15px]";
+  "border-border bg-surface2 text-text w-full !h-11 rounded-[13px] px-3.5 text-[15px]";
 
 const VALUE_WRAPPER_CLASS =
-  "border-border bg-surface2 flex w-full items-center border h-11 rounded-lg";
+  "border-border bg-surface2 flex w-full items-center border h-11 rounded-[13px]";
 
 // ── Reusable select content components ───────────────────────────────────────
 
@@ -219,7 +220,7 @@ function BudgetToggle({
       type="button"
       onClick={() => onChange(!checked)}
       className={cn(
-        "border-border flex w-full items-center gap-3.5 rounded-xl border p-4 text-left transition-colors",
+        "border-border flex w-full items-center gap-3.5 rounded-[13px] border p-4 text-left transition-colors",
         checked ? "border-green/40 bg-green/5" : "bg-surface2 hover:bg-surface2/80",
       )}
     >
@@ -266,14 +267,14 @@ function TypeToggle({
   options: TransactionType[];
 }) {
   return (
-    <div className="bg-surface2 flex rounded-xl p-1.5">
+    <div className="bg-surface2 flex rounded-[13px] p-1.5">
       {options.map((t) => (
         <button
           key={t}
           type="button"
           onClick={() => onChange(t)}
           className={cn(
-            "flex-1 rounded-lg py-2.5 text-[14px] font-medium transition-colors",
+            "flex-1 rounded-[9px] py-2.5 text-[14px] font-medium transition-colors",
             value === t ? TYPE_TOGGLE_ACTIVE[t] : "text-text-muted hover:text-text-sub",
           )}
         >
@@ -388,7 +389,7 @@ function DetailView({
         </div>
         <p
           className={cn(
-            "font-money font-700 text-[32px]",
+            "font-money font-bold text-[32px]",
             isTransfer ? "text-text" : isIncome ? "text-green" : "text-red",
           )}
         >
@@ -417,7 +418,7 @@ function DetailView({
             {transaction.tags.map((tag) => (
               <span
                 key={tag.id}
-                className="bg-green/10 text-green rounded-md px-2 py-0.5 text-[11px] font-medium"
+                className="bg-green/10 text-green rounded-[9px] px-2 py-0.5 text-[11px] font-medium"
               >
                 {tag.name}
               </span>
@@ -427,7 +428,7 @@ function DetailView({
       </div>
 
       {/* Details list */}
-      <div className="border-border bg-surface2 divide-border flex flex-col divide-y rounded-xl border">
+      <div className="border-border bg-surface2 divide-border flex flex-col divide-y rounded-[13px] border">
         <DetailRow icon={<Calendar size={15} />} label="Data" value={dateLabel} />
         {isTransfer ? (
           <>
@@ -640,13 +641,10 @@ function CreateForm({
       <FormField label="Valor" error={errors.value?.message}>
         <div className={cn(VALUE_WRAPPER_CLASS, errors.value && "border-red/60")}>
           <span className="text-text-muted select-none pl-3.5 text-[15px]">R$</span>
-          <input
-            {...register("value")}
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="0,00"
-            className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none placeholder:text-text-muted"
+          <CurrencyInput
+            value={watch("value") ?? ""}
+            onChange={(v) => setValue("value", v, { shouldValidate: true })}
+            className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none"
           />
         </div>
       </FormField>
@@ -939,7 +937,7 @@ function EditForm({
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
       {/* Type toggle — transfers keep their type; expense/income can swap freely */}
       {isTransfer ? (
-        <div className="bg-blue/10 text-blue flex items-center justify-center gap-2 rounded-xl py-2.5 text-[14px] font-medium">
+        <div className="bg-blue/10 text-blue flex items-center justify-center gap-2 rounded-[13px] py-2.5 text-[14px] font-medium">
           <ArrowLeftRight size={15} />
           Transferência
         </div>
@@ -961,13 +959,10 @@ function EditForm({
       <FormField label="Valor" error={errors.value?.message}>
         <div className={cn(VALUE_WRAPPER_CLASS, errors.value && "border-red/60")}>
           <span className="text-text-muted select-none pl-3.5 text-[15px]">R$</span>
-          <input
-            {...register("value")}
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="0,00"
-            className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none placeholder:text-text-muted"
+          <CurrencyInput
+            value={watch("value") ?? ""}
+            onChange={(v) => setValue("value", v, { shouldValidate: true })}
+            className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none"
           />
         </div>
       </FormField>
@@ -1074,7 +1069,7 @@ function EditForm({
       )}
 
       {!isTransfer && editPaymentType !== transaction.paymentType && (
-        <p className="text-orange bg-orange/8 border-orange/20 rounded-lg border px-3.5 py-2.5 text-[12px]">
+        <p className="text-orange bg-orange/8 border-orange/20 rounded-[9px] border px-3.5 py-2.5 text-[12px]">
           Trocar o tipo de pagamento recriará a transação. O ID original será removido.
         </p>
       )}
@@ -1211,12 +1206,13 @@ export function TransactionDrawer({
       <div
         ref={panelRef}
         className={cn(
-          "bg-surface border-border fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
+          "fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
+        style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
       >
         {/* Header */}
-        <div className="border-border flex items-center justify-between border-b px-6 py-5">
+        <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: "var(--border-color)" }}>
           <div className="flex items-center gap-2">
             {showBack && (
               <button
@@ -1226,12 +1222,12 @@ export function TransactionDrawer({
                 ←
               </button>
             )}
-            <h2 className="font-display font-600 text-text text-[17px]">{titles[innerMode]}</h2>
+            <h2 className="font-display font-bold text-[var(--text)] text-[17px] tracking-[-0.01em]">{titles[innerMode]}</h2>
           </div>
           <button
             onClick={onClose}
             title="Fechar"
-            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-[9px] transition-colors"
           >
             <X size={16} />
           </button>

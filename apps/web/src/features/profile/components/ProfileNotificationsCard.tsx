@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Card, CardHead } from "@/components/shared/Card";
 import { cn } from "@/lib/utils";
 import type { NotificationPreferences } from "@/lib/types/notifications.types";
 import {
@@ -8,7 +9,8 @@ import {
   useUpdateNotificationPreferences,
 } from "@/features/notifications/hooks/useNotifications";
 
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+// Quantia switch — 40×23 pill, cobalt fill + translated knob when on.
+function Switch({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
       type="button"
@@ -16,14 +18,14 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
       aria-checked={value}
       onClick={() => onChange(!value)}
       className={cn(
-        "relative h-[22px] w-10 shrink-0 rounded-full border transition-all",
-        value ? "border-green bg-green" : "border-border bg-surface3",
+        "relative h-[23px] w-10 shrink-0 rounded-full border transition-colors",
+        value ? "border-[var(--brand-cobalt)] bg-[var(--brand-cobalt)]" : "border-[var(--border-color)] bg-[var(--surface2)]",
       )}
     >
       <span
         className={cn(
-          "absolute top-[2px] h-[16px] w-[16px] rounded-full bg-white shadow-sm transition-all",
-          value ? "left-[20px]" : "left-[2px]",
+          "absolute top-[2px] h-[17px] w-[17px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform",
+          value ? "translate-x-[17px] bg-white" : "translate-x-[2px] bg-[var(--surface)]",
         )}
       />
     </button>
@@ -55,18 +57,47 @@ function NumberField({
   };
 
   return (
-    <div className="flex items-center gap-1.5">
-      <input
-        type="number"
-        min={min}
-        max={max}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-        className="border-border bg-surface2 text-text h-8 w-14 rounded-lg border px-2 text-[13px] outline-none focus:border-green/60"
-      />
-      <span className="text-text-muted text-[12px]">{suffix}</span>
+    <div className="flex items-center gap-2">
+      <div className="flex items-center rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 py-1.5 transition-[border-color,box-shadow] focus-within:border-[var(--brand-cobalt)] focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]">
+        <input
+          type="number"
+          min={min}
+          max={max}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+          className="w-12 border-0 bg-transparent text-center font-mono text-[14px] tabular-nums text-[var(--text)] outline-none"
+        />
+      </div>
+      <span className="font-mono text-[12px] text-[var(--text-sub)]">{suffix}</span>
+    </div>
+  );
+}
+
+function SettingRow({
+  name,
+  desc,
+  control,
+  extra,
+  last,
+}: {
+  name: string;
+  desc: string;
+  control: React.ReactNode;
+  extra?: React.ReactNode;
+  last?: boolean;
+}) {
+  return (
+    <div className={cn("py-[15px]", !last && "border-b border-[var(--border-color)]")}>
+      <div className="flex items-center gap-3.5">
+        <div className="min-w-0 flex-1">
+          <div className="text-[14px] font-semibold text-[var(--text)]">{name}</div>
+          <div className="mt-0.5 text-[13px] text-[var(--text-sub)]">{desc}</div>
+        </div>
+        {control}
+      </div>
+      {extra}
     </div>
   );
 }
@@ -81,109 +112,94 @@ export const ProfileNotificationsCard = () => {
   };
 
   return (
-    <div className="border-border bg-surface rounded-2xl border p-5">
-      <p className="font-display font-600 text-text mb-1 text-[15px]">Notificações</p>
+    <Card>
+      <CardHead title="Notificações" subtitle="Resumo de faturas, metas e vencimentos" />
 
       {isLoading || !prefs ? (
-        <p className="text-text-muted py-6 text-center text-[13px]">Carregando…</p>
+        <p className="py-6 text-center font-mono text-[13px] text-[var(--text-sub)]">Carregando…</p>
       ) : (
-        <div className="divide-border/50 flex flex-col divide-y">
+        <div className="flex flex-col">
           {/* Recurrence charged */}
-          <div className="flex items-center justify-between py-3.5">
-            <div>
-              <p className="text-text text-[13px] font-medium">Cobrança de recorrência</p>
-              <p className="text-text-muted mt-0.5 text-[11px]">
-                Avisa quando uma transação recorrente é gerada
-              </p>
-            </div>
-            <Toggle
-              value={prefs.recurrenceChargedEnabled}
-              onChange={(v) => set({ recurrenceChargedEnabled: v })}
-            />
-          </div>
+          <SettingRow
+            name="Cobrança de recorrência"
+            desc="Avisa quando uma transação recorrente é gerada"
+            control={
+              <Switch
+                value={prefs.recurrenceChargedEnabled}
+                onChange={(v) => set({ recurrenceChargedEnabled: v })}
+              />
+            }
+          />
 
           {/* Card due */}
-          <div className="py-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-text text-[13px] font-medium">Vencimento da fatura</p>
-                <p className="text-text-muted mt-0.5 text-[11px]">
-                  Lembrete antes do vencimento do cartão
-                </p>
-              </div>
-              <Toggle value={prefs.cardDueEnabled} onChange={(v) => set({ cardDueEnabled: v })} />
-            </div>
-            {prefs.cardDueEnabled && (
-              <div className="mt-3 flex items-center justify-between pl-0.5">
-                <span className="text-text-sub text-[12px]">Avisar com antecedência de</span>
-                <NumberField
-                  value={prefs.cardDueDaysAhead}
-                  suffix="dias"
-                  min={0}
-                  max={30}
-                  onCommit={(v) => set({ cardDueDaysAhead: v })}
-                />
-              </div>
-            )}
-          </div>
+          <SettingRow
+            name="Vencimento da fatura"
+            desc="Lembrete antes do vencimento do cartão"
+            control={<Switch value={prefs.cardDueEnabled} onChange={(v) => set({ cardDueEnabled: v })} />}
+            extra={
+              prefs.cardDueEnabled && (
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-[13px] text-[var(--text-sub)]">Avisar com antecedência de</span>
+                  <NumberField
+                    value={prefs.cardDueDaysAhead}
+                    suffix="dias"
+                    min={0}
+                    max={30}
+                    onCommit={(v) => set({ cardDueDaysAhead: v })}
+                  />
+                </div>
+              )
+            }
+          />
 
           {/* Card closing */}
-          <div className="py-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-text text-[13px] font-medium">Fechamento da fatura</p>
-                <p className="text-text-muted mt-0.5 text-[11px]">
-                  Lembrete antes da fatura fechar
-                </p>
-              </div>
-              <Toggle
-                value={prefs.cardClosingEnabled}
-                onChange={(v) => set({ cardClosingEnabled: v })}
-              />
-            </div>
-            {prefs.cardClosingEnabled && (
-              <div className="mt-3 flex items-center justify-between pl-0.5">
-                <span className="text-text-sub text-[12px]">Avisar com antecedência de</span>
-                <NumberField
-                  value={prefs.cardClosingDaysAhead}
-                  suffix="dias"
-                  min={0}
-                  max={30}
-                  onCommit={(v) => set({ cardClosingDaysAhead: v })}
-                />
-              </div>
-            )}
-          </div>
+          <SettingRow
+            name="Fechamento da fatura"
+            desc="Lembrete antes da fatura fechar"
+            control={
+              <Switch value={prefs.cardClosingEnabled} onChange={(v) => set({ cardClosingEnabled: v })} />
+            }
+            extra={
+              prefs.cardClosingEnabled && (
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-[13px] text-[var(--text-sub)]">Avisar com antecedência de</span>
+                  <NumberField
+                    value={prefs.cardClosingDaysAhead}
+                    suffix="dias"
+                    min={0}
+                    max={30}
+                    onCommit={(v) => set({ cardClosingDaysAhead: v })}
+                  />
+                </div>
+              )
+            }
+          />
 
           {/* Budget alert */}
-          <div className="py-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-text text-[13px] font-medium">Alertas de orçamento</p>
-                <p className="text-text-muted mt-0.5 text-[11px]">
-                  Avisa ao se aproximar e ao estourar o orçamento
-                </p>
-              </div>
-              <Toggle
-                value={prefs.budgetAlertEnabled}
-                onChange={(v) => set({ budgetAlertEnabled: v })}
-              />
-            </div>
-            {prefs.budgetAlertEnabled && (
-              <div className="mt-3 flex items-center justify-between pl-0.5">
-                <span className="text-text-sub text-[12px]">Alertar ao atingir</span>
-                <NumberField
-                  value={prefs.budgetWarningPercent}
-                  suffix="%"
-                  min={1}
-                  max={100}
-                  onCommit={(v) => set({ budgetWarningPercent: v })}
-                />
-              </div>
-            )}
-          </div>
+          <SettingRow
+            name="Alertas de orçamento"
+            desc="Avisa ao se aproximar e ao estourar o orçamento"
+            last
+            control={
+              <Switch value={prefs.budgetAlertEnabled} onChange={(v) => set({ budgetAlertEnabled: v })} />
+            }
+            extra={
+              prefs.budgetAlertEnabled && (
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-[13px] text-[var(--text-sub)]">Alertar ao atingir</span>
+                  <NumberField
+                    value={prefs.budgetWarningPercent}
+                    suffix="%"
+                    min={1}
+                    max={100}
+                    onCommit={(v) => set({ budgetWarningPercent: v })}
+                  />
+                </div>
+              )
+            }
+          />
         </div>
       )}
-    </div>
+    </Card>
   );
 };

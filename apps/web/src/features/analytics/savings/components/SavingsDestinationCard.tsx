@@ -1,7 +1,7 @@
 "use client";
 
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency } from "@/lib/utils/index";
 import type { SavingsDetailResponse } from "@/lib/types/analytics.types";
@@ -28,15 +28,15 @@ export function SavingsDestinationCard({ detail }: Props) {
 
   const slices = [
     { name: "Investido", value: invested / 100, fill: "var(--purple)" },
-    { name: "Guardado em metas", value: goals / 100, fill: "var(--orange)" },
-    { name: "Livre em conta", value: idle / 100, fill: "var(--green)" },
+    { name: "Guardado em metas", value: goals / 100, fill: "var(--gold)" },
+    { name: "Livre em conta", value: idle / 100, fill: "var(--moss)" },
   ].filter((s) => s.value > 0);
 
   const total = slices.reduce((s, x) => s + x.value, 0);
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Destino das Economias"
         subtitle="Para onde foi o que você não gastou"
       />
@@ -90,6 +90,6 @@ export function SavingsDestinationCard({ detail }: Props) {
           )}
         </>
       )}
-    </div>
+    </Card>
   );
 }

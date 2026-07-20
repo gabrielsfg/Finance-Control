@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import {
   TrendingUp,
   TrendingDown,
@@ -18,8 +19,10 @@ import {
   Clock,
   type LucideIcon,
 } from "lucide-react";
+import { PageTopbar } from "@/components/layout/PageTopbar";
+import { Card } from "@/components/shared/Card";
 import { RankingCard } from "@/features/market/components/RankingCard";
-import { MarketAssetRow } from "@/features/market/components/MarketAssetRow";
+import { MarketAssetTable } from "@/features/market/components/MarketAssetTable";
 import { useMarketList } from "@/features/market/hooks/useMarket";
 import { usePageSearch } from "@/lib/hooks/usePageHeader";
 import { cn } from "@/lib/utils";
@@ -35,13 +38,13 @@ type SlugMeta = {
 };
 
 const SLUG_META: Record<string, SlugMeta> = {
-  acoes:   { type: "Acao",          label: "Ações",    description: "Ações brasileiras listadas na B3",  icon: CandlestickChart, color: "#00C98D" },
-  fiis:    { type: "FII",           label: "FIIs",     description: "Fundos de Investimento Imobiliário", icon: Building2,        color: "#F5A623" },
-  etfs:    { type: "ETF",           label: "ETFs",     description: "Exchange-Traded Funds",              icon: BarChart2,        color: "#4A9EFF" },
-  cripto:  { type: "Cripto",        label: "Cripto",   description: "Criptomoedas",                       icon: Coins,            color: "#F5CE42" },
-  moedas:  { type: "Moeda",         label: "Moedas",   description: "Câmbio e pares de moedas",          icon: DollarSign,       color: "#7C6FE0" },
-  bdrs:    { type: "BDR",           label: "BDRs",     description: "Brazilian Depositary Receipts",      icon: Globe,            color: "#00D4A0" },
-  tesouro: { type: "TesouroDireto", label: "Tesouro",  description: "Títulos do Tesouro Direto",         icon: Landmark,         color: "#4A9EFF" },
+  acoes:   { type: "Acao",          label: "Ações",    description: "Ações brasileiras listadas na B3",  icon: CandlestickChart, color: "var(--moss)" },
+  fiis:    { type: "FII",           label: "FIIs",     description: "Fundos de Investimento Imobiliário", icon: Building2,        color: "var(--gold)" },
+  etfs:    { type: "ETF",           label: "ETFs",     description: "Exchange-Traded Funds",              icon: BarChart2,        color: "var(--brand-accent)" },
+  cripto:  { type: "Cripto",        label: "Cripto",   description: "Criptomoedas",                       icon: Coins,            color: "var(--gold)" },
+  moedas:  { type: "Moeda",         label: "Moedas",   description: "Câmbio e pares de moedas",          icon: DollarSign,       color: "var(--moss-lift)" },
+  bdrs:    { type: "BDR",           label: "BDRs",     description: "Brazilian Depositary Receipts",      icon: Globe,            color: "var(--brand-accent)" },
+  tesouro: { type: "TesouroDireto", label: "Tesouro",  description: "Títulos do Tesouro Direto",         icon: Landmark,         color: "var(--brand-accent)" },
 };
 
 function stripDiacritics(text: string): string {
@@ -121,8 +124,11 @@ export function MarketTypePage() {
 
   if (!meta) {
     return (
-      <div className="border-border bg-surface flex h-64 items-center justify-center rounded-2xl border">
-        <p className="text-text-sub text-[14px]">Tipo de ativo não encontrado.</p>
+      <div className="px-[clamp(20px,3.4vw,46px)] pb-[60px]">
+        <PageTopbar title="Cotações" />
+        <Card className="flex h-64 items-center justify-center">
+          <p className="text-[14px] text-[var(--text-sub)]">Tipo de ativo não encontrado.</p>
+        </Card>
       </div>
     );
   }
@@ -137,120 +143,118 @@ export function MarketTypePage() {
   const safePage = Math.min(page, totalPages - 1);
   const pageItems = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
+  const countLabel = isLoading
+    ? "—"
+    : search.trim()
+    ? `${filtered.length} de ${allAssets.length}`
+    : `${allAssets.length}`;
+
   return (
-    <div className="flex flex-col gap-5">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-          style={{ backgroundColor: `${meta.color}18` }}
-        >
-          <Icon size={20} strokeWidth={1.75} style={{ color: meta.color }} />
-        </div>
-        <div>
-          <h1 className="font-display font-700 text-text text-[22px] tracking-tight">{meta.label}</h1>
-          <p className="text-text-muted text-[13px]">{meta.description}</p>
-          {syncTime && (
-            <div className="mt-1 flex items-center gap-1">
-              <Clock size={11} className="text-text-muted" />
-              <span className="text-text-muted text-[11px]">Última sinc. às {syncTime}</span>
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="px-[clamp(20px,3.4vw,46px)] pb-[60px]">
+      <PageTopbar
+        title={
+          <span className="flex items-center gap-3">
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px]"
+              style={{ backgroundColor: "color-mix(in srgb, " + meta.color + " 14%, transparent)" }}
+            >
+              <Icon size={20} strokeWidth={1.75} style={{ color: meta.color }} />
+            </span>
+            {meta.label}
+          </span>
+        }
+        subtitle={
+          syncTime ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Clock size={12} strokeWidth={1.75} />
+              {meta.description} · sincronizado às {syncTime}
+            </span>
+          ) : (
+            meta.description
+          )
+        }
+      />
 
-      {/* Rankings */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <RankingCard
-          title="Maiores altas hoje"
-          icon={<TrendingUp size={15} className="text-green" />}
-          sort="change_desc"
-          type={meta.type}
-          metric="change"
-          limit={6}
-        />
-        <RankingCard
-          title="Maiores quedas hoje"
-          icon={<TrendingDown size={15} className="text-red" />}
-          sort="change_asc"
-          type={meta.type}
-          metric="change"
-          limit={6}
-        />
-      </div>
-
-      {/* Full list */}
-      <div className="border-border bg-surface rounded-2xl border">
-        {/* Header */}
-        <div className="border-border flex items-center gap-3 border-b px-4 py-3">
-          <h3 className="text-text text-[14px] font-semibold">
-            Todos
-            {!isLoading && (
-              <span className="text-text-muted ml-1.5 text-[13px] font-normal">
-                {search.trim()
-                  ? `(${filtered.length} de ${allAssets.length})`
-                  : `(${allAssets.length})`}
-              </span>
-            )}
-          </h3>
+      <div className="flex flex-col gap-5">
+        {/* Rankings */}
+        <div className="grid grid-cols-1 gap-[22px] lg:grid-cols-2">
+          <RankingCard
+            title="Maiores altas hoje"
+            icon={<TrendingUp size={16} className="text-[var(--moss)]" />}
+            sort="change_desc"
+            type={meta.type}
+            metric="change"
+            limit={6}
+          />
+          <RankingCard
+            title="Maiores quedas hoje"
+            icon={<TrendingDown size={16} className="text-[var(--clay)]" />}
+            sort="change_asc"
+            type={meta.type}
+            metric="change"
+            limit={6}
+          />
         </div>
 
-        {/* Rows */}
-        <div className="flex flex-col gap-1 p-2.5">
+        {/* Full list */}
+        <Card className="flex flex-col p-[16px_6px_8px]">
+          <div className="mb-2 flex items-center gap-2.5 px-[10px]">
+            <h3 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">Todos</h3>
+            <span className="font-mono text-[12px] tabular-nums text-[var(--text-sub)]">({countLabel})</span>
+          </div>
+
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 size={20} className="text-green animate-spin" />
+              <Loader2 size={20} className="animate-spin text-[var(--brand-accent)]" />
             </div>
           ) : filtered.length === 0 ? (
-            <p className="text-text-muted py-16 text-center text-[13px]">
+            <p className="py-16 text-center font-mono text-[13px] text-[var(--text-sub)]">
               {search.trim()
                 ? `Nenhum resultado para "${search}"`
                 : "Nenhum ativo disponível."}
             </p>
           ) : (
-            pageItems.map((asset) => (
-              <MarketAssetRow key={asset.id} asset={asset} metric="change" />
-            ))
+            <MarketAssetTable assets={pageItems} />
           )}
-        </div>
 
-        {/* Pagination */}
-        {!isLoading && filtered.length > PAGE_SIZE && (
-          <div className="border-border flex items-center justify-between border-t px-4 py-3">
-            <span className="text-text-muted text-[13px]">
-              Página {safePage + 1} de {totalPages}
-              <span className="ml-1.5">
-                ({safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} de {filtered.length})
+          {/* Pagination */}
+          {!isLoading && filtered.length > PAGE_SIZE && (
+            <div className="mt-3 flex items-center justify-between px-[10px] pb-1">
+              <span className="font-mono text-[12px] tabular-nums text-[var(--text-sub)]">
+                {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} de {filtered.length}
               </span>
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={safePage === 0}
-                className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-lg transition-colors",
-                  safePage === 0
-                    ? "text-text-muted cursor-not-allowed opacity-40"
-                    : "text-text-sub hover:bg-surface2 hover:text-text",
-                )}
-              >
-                <ChevronLeft size={15} />
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={safePage === totalPages - 1}
-                className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-lg transition-colors",
-                  safePage === totalPages - 1
-                    ? "text-text-muted cursor-not-allowed opacity-40"
-                    : "text-text-sub hover:bg-surface2 hover:text-text",
-                )}
-              >
-                <ChevronRight size={15} />
-              </button>
+              <div className="flex items-center gap-1.5 font-mono text-[12px] text-[var(--text-sub)]">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={safePage === 0}
+                  className={cn(
+                    "flex h-[30px] w-[30px] items-center justify-center rounded-[9px] border border-[var(--border-color)] bg-[var(--surface)] transition-colors",
+                    safePage === 0
+                      ? "cursor-not-allowed opacity-40"
+                      : "hover:bg-[var(--surface2)] hover:text-[var(--text)]",
+                  )}
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <span className="px-1 tabular-nums">
+                  {safePage + 1} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={safePage === totalPages - 1}
+                  className={cn(
+                    "flex h-[30px] w-[30px] items-center justify-center rounded-[9px] border border-[var(--border-color)] bg-[var(--surface)] transition-colors",
+                    safePage === totalPages - 1
+                      ? "cursor-not-allowed opacity-40"
+                      : "hover:bg-[var(--surface2)] hover:text-[var(--text)]",
+                  )}
+                >
+                  <ChevronRight size={15} />
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </Card>
       </div>
     </div>
   );

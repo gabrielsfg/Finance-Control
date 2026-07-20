@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { cn } from "@/lib/utils";
 import { CategorySelectContent } from "@/components/shared/CategorySelectContent";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
@@ -58,13 +59,13 @@ const RECURRENCE_LABELS: Record<RecurrenceType, string> = {
 };
 
 const INPUT_CLASS =
-  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-green/60 h-11 rounded-lg px-3.5 text-[15px]";
+  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-[var(--brand-cobalt)] h-11 rounded-[13px] px-3.5 text-[15px]";
 
 const TRIGGER_CLASS =
-  "border-border bg-surface2 text-text w-full !h-11 rounded-lg px-3.5 text-[15px]";
+  "border-border bg-surface2 text-text w-full !h-11 rounded-[13px] px-3.5 text-[15px]";
 
 const VALUE_WRAPPER_CLASS =
-  "border-border bg-surface2 flex w-full items-center border h-11 rounded-lg";
+  "border-border bg-surface2 flex w-full items-center border h-11 rounded-[13px]";
 
 const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const WEEK_DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -73,7 +74,6 @@ const ACCOUNT_TYPE_LABELS: Record<AccountItem["type"], string> = {
   Checking: "Conta corrente",
   Savings: "Poupança",
   Credit: "Cartão de crédito",
-  Debit: "Cartão de débito",
   Cash: "Dinheiro",
 };
 
@@ -86,7 +86,6 @@ function AccountIcon({ type }: { type: AccountItem["type"] }) {
     Checking: <Landmark size={14} />,
     Savings: <PiggyBank size={14} />,
     Credit: <CreditCard size={14} />,
-    Debit: <Wallet size={14} />,
     Cash: <Banknote size={14} />,
   };
   return <>{map[type] ?? <Building2 size={14} />}</>;
@@ -218,14 +217,14 @@ function RecurringCreateForm({ onClose }: { onClose: () => void }) {
     <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
         {/* Type toggle */}
-        <div className="bg-surface2 flex rounded-xl p-1.5">
+        <div className="bg-surface2 flex rounded-[13px] p-1.5">
           {(["Expense", "Income"] as TransactionType[]).map(t => (
             <button
               key={t}
               type="button"
               onClick={() => { setTxType(t); setValue("type", t); }}
               className={cn(
-                "flex-1 rounded-lg py-2.5 text-[15px] font-medium transition-colors",
+                "flex-1 rounded-[9px] py-2.5 text-[15px] font-medium transition-colors",
                 txType === t
                   ? t === "Income" ? "bg-green/15 text-green" : "bg-red/15 text-red"
                   : "text-text-muted hover:text-text-sub",
@@ -247,13 +246,10 @@ function RecurringCreateForm({ onClose }: { onClose: () => void }) {
         <FormField label="Valor mensal" error={errors.value?.message}>
           <div className={cn(VALUE_WRAPPER_CLASS, errors.value && "border-red/60")}>
             <span className="text-text-muted select-none pl-3.5 text-[15px]">R$</span>
-            <input
-              {...register("value")}
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0,00"
-              className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none placeholder:text-text-muted"
+            <CurrencyInput
+              value={watch("value") ?? ""}
+              onChange={(v) => setValue("value", v, { shouldValidate: true })}
+              className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none"
             />
           </div>
         </FormField>
@@ -324,7 +320,7 @@ function RecurringCreateForm({ onClose }: { onClose: () => void }) {
         {serverError && <p className="text-red text-[13px]">{serverError}</p>}
       </div>
 
-      <div className="border-border shrink-0 border-t px-6 py-4">
+      <div className="shrink-0 border-t px-6 py-4" style={{ borderColor: "var(--border-color)" }}>
         <div className="flex gap-3">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
             Cancelar
@@ -409,14 +405,14 @@ function InstallmentCreateForm({ onClose }: { onClose: () => void }) {
     <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
         {/* Type toggle */}
-        <div className="bg-surface2 flex rounded-xl p-1.5">
+        <div className="bg-surface2 flex rounded-[13px] p-1.5">
           {(["Expense", "Income"] as TransactionType[]).map(t => (
             <button
               key={t}
               type="button"
               onClick={() => { setTxType(t); setValue("type", t); }}
               className={cn(
-                "flex-1 rounded-lg py-2.5 text-[15px] font-medium transition-colors",
+                "flex-1 rounded-[9px] py-2.5 text-[15px] font-medium transition-colors",
                 txType === t
                   ? t === "Income" ? "bg-green/15 text-green" : "bg-red/15 text-red"
                   : "text-text-muted hover:text-text-sub",
@@ -438,13 +434,10 @@ function InstallmentCreateForm({ onClose }: { onClose: () => void }) {
         <FormField label="Valor da parcela" error={errors.value?.message}>
           <div className={cn(VALUE_WRAPPER_CLASS, errors.value && "border-red/60")}>
             <span className="text-text-muted select-none pl-3.5 text-[15px]">R$</span>
-            <input
-              {...register("value")}
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0,00"
-              className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none placeholder:text-text-muted"
+            <CurrencyInput
+              value={watch("value") ?? ""}
+              onChange={(v) => setValue("value", v, { shouldValidate: true })}
+              className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none"
             />
           </div>
         </FormField>
@@ -530,7 +523,7 @@ function InstallmentCreateForm({ onClose }: { onClose: () => void }) {
         {serverError && <p className="text-red text-[13px]">{serverError}</p>}
       </div>
 
-      <div className="border-border shrink-0 border-t px-6 py-4">
+      <div className="shrink-0 border-t px-6 py-4" style={{ borderColor: "var(--border-color)" }}>
         <div className="flex gap-3">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
             Cancelar
@@ -573,30 +566,31 @@ export function RecurrenceCreateDrawer({ open, defaultMode = "recurring", onClos
 
       <div
         className={cn(
-          "bg-surface border-border fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
+          "fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
+        style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
       >
         {/* Header */}
-        <div className="border-border flex items-center justify-between border-b px-6 py-5">
-          <h2 className="font-display font-600 text-text text-[17px]">Nova Recorrência</h2>
+        <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: "var(--border-color)" }}>
+          <h2 className="font-display font-bold text-[var(--text)] text-[17px] tracking-[-0.01em]">Nova Recorrência</h2>
           <button
             onClick={onClose}
             title="Fechar"
-            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-[9px] transition-colors"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Mode toggle */}
-        <div className="border-border border-b px-6 py-3">
-          <div className="bg-surface2 flex rounded-xl p-1">
+        <div className="border-b px-6 py-3" style={{ borderColor: "var(--border-color)" }}>
+          <div className="bg-surface2 flex rounded-[13px] p-1">
             <button
               type="button"
               onClick={() => setMode("recurring")}
               className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-[14px] font-medium transition-colors",
+                "flex flex-1 items-center justify-center gap-2 rounded-[9px] py-2 text-[14px] font-medium transition-colors",
                 mode === "recurring" ? "bg-purple/15 text-purple" : "text-text-muted hover:text-text-sub",
               )}
             >
@@ -607,7 +601,7 @@ export function RecurrenceCreateDrawer({ open, defaultMode = "recurring", onClos
               type="button"
               onClick={() => setMode("installment")}
               className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-[14px] font-medium transition-colors",
+                "flex flex-1 items-center justify-center gap-2 rounded-[9px] py-2 text-[14px] font-medium transition-colors",
                 mode === "installment" ? "bg-blue/15 text-blue" : "text-text-muted hover:text-text-sub",
               )}
             >

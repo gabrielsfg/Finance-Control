@@ -24,7 +24,7 @@ function getEndMonth(item: InstallmentItem): string {
 export function InstallmentList({ items, totalMonthly, totalRemaining, expanded = false, onView, onEdit }: Props) {
   if (items.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border py-12 text-center">
+      <div className="flex flex-col items-center justify-center rounded-[20px] border py-12 text-center" style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}>
         <div className="bg-surface2 mb-3 flex h-10 w-10 items-center justify-center rounded-[10px]">
           <Layers size={18} className="text-text-muted" strokeWidth={1.5} />
         </div>
@@ -61,10 +61,10 @@ export function InstallmentList({ items, totalMonthly, totalRemaining, expanded 
                 key={item.id}
                 onClick={() => onView(item)}
                 className={cn(
-                  "border-border bg-surface group cursor-pointer rounded-xl border p-4 transition-colors hover:bg-surface2/40",
+                  "group cursor-pointer rounded-[20px] border p-4 transition-colors hover:bg-surface2/40",
                   done && "opacity-70",
                 )}
-                style={{ borderColor: done ? "rgb(0 201 141 / 0.27)" : `${color}33` }}
+                style={{ background: "var(--surface)", borderColor: done ? "rgb(0 201 141 / 0.27)" : `${color}33` }}
               >
                 {/* Header: icon + name + badge */}
                 <div className="mb-3.5 flex items-start justify-between gap-3">
@@ -145,7 +145,7 @@ export function InstallmentList({ items, totalMonthly, totalRemaining, expanded 
                     <button
                       onClick={e => { e.stopPropagation(); onEdit(item); }}
                       title="Editar parcelamento"
-                      className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                      className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors"
                     >
                       <Pencil size={13} />
                     </button>
@@ -157,7 +157,7 @@ export function InstallmentList({ items, totalMonthly, totalRemaining, expanded 
         </div>
       ) : (
         /* ── Compact list layout (All filter) ── */
-        <div className="border-border overflow-hidden rounded-xl border">
+        <div className="overflow-hidden rounded-[20px] border" style={{ borderColor: "var(--border-color)" }}>
           {items.map((item, i) => {
             const color = getCategoryColor(item.categoryColor, item.categoryName);
             const pct = (item.paidInstallments / item.totalInstallments) * 100;
@@ -204,7 +204,7 @@ export function InstallmentList({ items, totalMonthly, totalRemaining, expanded 
                     {done ? (
                       <span className="text-green font-money text-[13px] font-semibold">Quitado</span>
                     ) : (
-                      <span className={cn("font-money font-600 text-[15px]", item.type === "Income" ? "text-green" : "text-text")}>
+                      <span className={cn("font-money font-semibold text-[15px]", item.type === "Income" ? "text-green" : "text-text")}>
                         {item.type === "Income" ? "+" : ""}{formatCurrency(item.value / 100)}
                       </span>
                     )}
@@ -219,7 +219,7 @@ export function InstallmentList({ items, totalMonthly, totalRemaining, expanded 
                       <button
                         onClick={e => { e.stopPropagation(); onEdit(item); }}
                         title="Editar parcelamento"
-                        className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                        className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors"
                       >
                         <Pencil size={13} />
                       </button>

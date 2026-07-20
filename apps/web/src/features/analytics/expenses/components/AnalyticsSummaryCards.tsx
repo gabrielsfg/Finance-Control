@@ -1,67 +1,102 @@
 "use client";
 
-import { TrendingUp, TrendingDown, Calendar, AlertTriangle } from "lucide-react";
+import { HeroPanel } from "@/components/shared/HeroPanel";
+import { BigMoney } from "@/components/shared/Money";
+import { FlowRow } from "@/components/shared/FlowBar";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { AnalyticsSummaryResponse } from "@/lib/types/analytics.types";
 
 type Props = { summary: AnalyticsSummaryResponse };
 
 export const AnalyticsSummaryCards = ({ summary }: Props) => {
-  const items = [
-    {
-      label: "Receita Média Mensal",
-      value: formatCurrency(summary.avgMonthlyIncome / 100),
-      sub: null,
-      subColor: undefined,
-      icon: TrendingUp,
-      color: "var(--green)",
-      bg: "bg-green/10",
-    },
-    {
-      label: "Despesa Média Mensal",
-      value: formatCurrency(summary.avgMonthlyExpense / 100),
-      sub: null,
-      subColor: undefined,
-      icon: TrendingDown,
-      color: "var(--red)",
-      bg: "bg-red/10",
-    },
-    {
-      label: "Melhor Mês",
-      value: summary.bestMonth.label,
-      sub: `Saldo ${summary.bestMonth.balance < 0 ? "-" : ""}${formatCurrency(Math.abs(summary.bestMonth.balance) / 100)}`,
-      subColor: summary.bestMonth.balance < 0 ? "var(--red)" : "var(--text)",
-      icon: Calendar,
-      color: "var(--blue)",
-      bg: "bg-blue/10",
-    },
-    {
-      label: "Pior Mês",
-      value: summary.worstMonth.label,
-      sub: `Saldo ${summary.worstMonth.balance < 0 ? "-" : ""}${formatCurrency(Math.abs(summary.worstMonth.balance) / 100)}`,
-      subColor: summary.worstMonth.balance < 0 ? "var(--red)" : "var(--text)",
-      icon: AlertTriangle,
-      color: "var(--orange)",
-      bg: "bg-orange/10",
-    },
-  ];
+  const avgBalance = summary.avgMonthlyBalance;
+
+  const bestDeviation  = summary.bestMonth.balance  - avgBalance;
+  const worstDeviation = avgBalance - summary.worstMonth.balance;
+  const maxDeviation   = Math.max(bestDeviation, worstDeviation, 1);
+  const bestPct  = bestDeviation  / maxDeviation;
+  const worstPct = worstDeviation / maxDeviation;
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {items.map(({ label, value, sub, subColor, icon: Icon, color, bg }) => (
-        <div key={label} className="border-border bg-surface rounded-xl border p-5">
-          <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-[10px] ${bg}`}>
-            <Icon size={18} style={{ color }} strokeWidth={1.75} />
-          </div>
-          <p className="font-display font-700 text-text text-[16px]">{value}</p>
-          <p className="text-text-muted mt-0.5 text-[12px]">{label}</p>
-          {sub && (
-            <p className="font-money mt-0.5 text-[12px]" style={{ color: subColor }}>
-              {sub}
-            </p>
-          )}
+    <HeroPanel split>
+      {/* Left — avg monthly metrics */}
+      <div>
+        <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+          Saldo Médio Mensal
         </div>
-      ))}
-    </div>
+        <BigMoney
+          cents={avgBalance}
+          className={`block mt-[10px] mb-[2px] font-semibold leading-[0.96] tracking-[-0.035em] ${
+            avgBalance < 0 ? "text-[var(--clay-lift)]" : ""
+          }`}
+          style={{ fontSize: "clamp(40px, 5.6vw, 70px)" } as React.CSSProperties}
+        />
+        <div className="mt-2 font-mono text-[13px] text-[var(--panel-muted)]">
+          Saldo médio mensal do período
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-[26px]">
+          <div>
+            <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+              Receita Média
+            </div>
+            <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--moss-lift)]">
+              {formatCurrency(summary.avgMonthlyIncome / 100)}
+            </div>
+          </div>
+          <div>
+            <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+              Despesa Média
+            </div>
+            <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--clay-lift)]">
+              {formatCurrency(summary.avgMonthlyExpense / 100)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right — best vs worst month */}
+      <div className="self-center">
+        <div className="mb-[18px] flex items-baseline justify-between">
+          <span className="font-display text-[16px] font-bold">Melhor e Pior Mês vs. Média</span>
+          <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--panel-muted)]">
+            Desvio da média
+          </span>
+        </div>
+
+        <FlowRow
+          label={summary.bestMonth.label}
+          dotColor="var(--moss-lift)"
+          value={`${summary.bestMonth.balance >= 0 ? "+ " : "− "}${formatCurrency(Math.abs(summary.bestMonth.balance) / 100)}`}
+          valueColor="var(--moss-lift)"
+          pct={bestPct}
+          variant="in"
+        />
+        <FlowRow
+          label={summary.worstMonth.label}
+          dotColor="var(--clay-lift)"
+          value={`${summary.worstMonth.balance >= 0 ? "" : "− "}${formatCurrency(Math.abs(summary.worstMonth.balance) / 100)}`}
+          valueColor="var(--clay-lift)"
+          pct={worstPct}
+          variant="out"
+        />
+
+        <div
+          className="mt-5 flex items-center justify-between border-t pt-4"
+          style={{ borderColor: "rgba(255,255,255,0.12)" }}
+        >
+          <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">
+            Média do período
+          </span>
+          <span
+            className="font-mono text-[22px] font-semibold"
+            style={{ color: avgBalance >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
+          >
+            {avgBalance >= 0 ? "+ " : "− "}
+            {formatCurrency(Math.abs(avgBalance) / 100)}
+          </span>
+        </div>
+      </div>
+    </HeroPanel>
   );
 };

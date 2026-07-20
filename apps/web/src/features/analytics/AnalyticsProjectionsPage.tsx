@@ -1,6 +1,8 @@
 "use client";
 
 import { AnalyticsHeader } from "./components/AnalyticsHeader";
+import { HeroPanel } from "@/components/shared/HeroPanel";
+import { BigMoney } from "@/components/shared/Money";
 import { ProjectedNetWorthChart } from "./projections/components/ProjectedNetWorthChart";
 import { PassiveIncomeChart } from "./projections/components/PassiveIncomeChart";
 import { SavingsRateChart } from "./projections/components/SavingsRateChart";
@@ -54,20 +56,48 @@ export function AnalyticsProjectionsPage() {
     <div className="flex flex-col gap-5">
       <AnalyticsHeader title="Projeções" />
 
-      {/* 4 KPI cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: "Saldo proj. fim do mês", value: bp ? formatCurrency(bp.projectedBalance / 100) : "—", color: bp && bp.projectedBalance < 0 ? "text-red" : "text-text" },
-          { label: "Próx. compromissos",     value: nextCommitments > 0 ? formatCurrency(nextCommitments / 100) : "—", color: "text-orange" },
-          { label: "Patrimônio em 12m",      value: projectedIn12m > 0 ? formatCurrency(projectedIn12m / 100) : "—", color: "text-blue" },
-          { label: "Meta de poupança anual", value: annualSavingsGoal > 0 ? formatCurrency(annualSavingsGoal / 100) : "—", color: "text-purple" },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="border-border bg-surface rounded-xl border p-4">
-            <p className="text-text-muted text-[11px] uppercase tracking-[0.05em]">{label}</p>
-            <p className={`font-money font-600 mt-2 text-[18px] leading-none ${color}`}>{value}</p>
+      {/* Hero panel — projections summary */}
+      <HeroPanel split>
+        {/* Left — projected end-of-month balance */}
+        <div>
+          <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+            Saldo projetado fim do mês
           </div>
-        ))}
-      </div>
+          <BigMoney
+            cents={bp?.projectedBalance ?? 0}
+            className={`block mt-[10px] mb-[2px] font-semibold leading-[0.96] tracking-[-0.035em] ${
+              (bp?.projectedBalance ?? 0) < 0 ? "text-[var(--clay-lift)]" : ""
+            }`}
+            style={{ fontSize: "clamp(40px, 5.6vw, 70px)" } as React.CSSProperties}
+          />
+          <div className="mt-2 font-mono text-[13px] text-[var(--panel-muted)]">
+            Estimativa com base no ritmo atual de gastos
+          </div>
+        </div>
+
+        {/* Right — 3 secondary projections */}
+        <div className="self-center">
+          <div className="mb-[18px] font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--panel-muted)]">
+            Projeções do período
+          </div>
+          <div className="grid grid-cols-3 gap-6">
+            {[
+              { label: "Próx. compromissos", value: nextCommitments > 0 ? formatCurrency(nextCommitments / 100) : "—", color: "var(--gold)" },
+              { label: "Patrimônio em 12m",  value: projectedIn12m > 0  ? formatCurrency(projectedIn12m / 100)  : "—", color: "var(--panel-foreground)" },
+              { label: "Meta poupança",      value: annualSavingsGoal > 0 ? formatCurrency(annualSavingsGoal / 100) : "—", color: "var(--panel-foreground)" },
+            ].map(({ label, value, color }) => (
+              <div key={label}>
+                <div className="font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--panel-muted)] mb-[6px]">
+                  {label}
+                </div>
+                <div className="font-mono text-[17px] font-semibold leading-snug" style={{ color }}>
+                  {value}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </HeroPanel>
 
       {/* Milestones full-width */}
       <FinancialTimelineChart data={milestones.data ?? { timeline: [], milestones: [] }} />

@@ -15,6 +15,7 @@ import { useImportFlow } from "@/features/import/hooks/useImportFlow";
 import { useTransactionsFiltered } from "@/features/transactions/hooks/useTransactions";
 import { defaultTxFilter, buildTxDateRange, activeTxDateLabel } from "@/features/transactions/utils/filterDates";
 import { usePageNova, usePageFilter, usePageSearch, usePageImport } from "@/lib/hooks/usePageHeader";
+import { PageTopbar } from "@/components/layout/PageTopbar";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
@@ -274,35 +275,33 @@ export function TransactionsPage() {
 
   return (
     <>
+      <div className="px-[clamp(20px,3.4vw,46px)] pb-[60px]">
+        <PageTopbar
+          title="Transações"
+          subtitle={`${totalItems} transaç${totalItems !== 1 ? "ões" : "ão"}`}
+        />
       <div className="flex flex-col gap-5">
-        <div>
-          <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Transações</h1>
-          <p className="text-text-muted mt-0.5 text-[13px]">
-            {totalItems} transaç{totalItems !== 1 ? "ões" : "ão"}
-          </p>
-
-          {activeChips.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {activeChips.map(chip => (
-                <div
-                  key={chip.id}
-                  className="border-border bg-surface2 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px]"
+        {activeChips.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {activeChips.map(chip => (
+              <div
+                key={chip.id}
+                className="border-border bg-surface2 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px]"
+              >
+                {chip.color && (
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: chip.color }} />
+                )}
+                <span className="text-text-sub">{chip.label}</span>
+                <button
+                  onClick={chip.onRemove}
+                  className="text-text-muted hover:text-red ml-0.5 transition-colors"
                 >
-                  {chip.color && (
-                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: chip.color }} />
-                  )}
-                  <span className="text-text-sub">{chip.label}</span>
-                  <button
-                    onClick={chip.onRemove}
-                    className="text-text-muted hover:text-red ml-0.5 transition-colors"
-                  >
-                    <X size={11} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <TransactionsSummary
           totalIncome={totalIncome}
@@ -338,6 +337,7 @@ export function TransactionsPage() {
           onPageChange={setPage}
           onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
         />
+      </div>
       </div>
 
       <TransactionDrawer

@@ -7,37 +7,35 @@ import {
 } from "recharts";
 import { Info, ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
+import { CHART_GRID, axisTick, SERIES, ChartTooltip, LegendItem } from "./simShared";
 
-const inputCls = "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-green/60 transition-colors";
-
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="border-border bg-surface rounded-lg border px-3 py-2.5 shadow-md min-w-[210px]">
-      <p className="text-text-muted mb-2 text-[11px]">{label}</p>
-      {payload.map((e: any) => (
-        <div key={e.name} className="flex justify-between gap-4 mb-0.5">
-          <span className="text-[12px]" style={{ color: e.stroke ?? e.color }}>{e.name}</span>
-          <span className="font-money text-[12px]" style={{ color: e.stroke ?? e.color }}>
-            {formatCurrency(e.value / 100)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-};
+/** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
+const inputCls =
+  "h-11 w-full rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 font-mono text-[14px] tabular-nums text-[var(--text)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--text-sub)]/60 focus:border-[var(--brand-cobalt)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]";
 
 type SeriesId = "patrimonio" | "patrimonioNominal" | "aportado" | "juros";
+
+const SERIES_COLORS = {
+  patrimonio:        SERIES.moss,
+  patrimonioNominal: SERIES.cobalt,
+  aportado:          SERIES.gold,
+  juros:             SERIES.violet,
+  meta:              SERIES.clay,
+  inflation:         SERIES.gold,
+} as const;
 
 const InflationTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   const v = payload[0].value as number;
   return (
-    <div className="border-border bg-surface rounded-lg border px-3 py-2.5 shadow-md">
-      <p className="text-text-muted mb-1 text-[11px]">{label}</p>
-      <p className="font-money text-[12px]" style={{ color: "var(--orange)" }}>
+    <div
+      className="rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5"
+      style={{ boxShadow: "var(--shadow-md)" }}
+    >
+      <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-sub)]">{label}</p>
+      <p className="font-mono text-[12px] tabular-nums" style={{ color: SERIES_COLORS.inflation }}>
         Custo de vida: {v.toFixed(1)}% do valor inicial
       </p>
     </div>
@@ -51,10 +49,10 @@ type SeriesOption = {
 };
 
 const SERIES_OPTIONS: SeriesOption[] = [
-  { id: "patrimonio",        label: "Patrimônio real (R$ de hoje)",          color: "var(--green)"  },
-  { id: "patrimonioNominal", label: "Patrimônio nominal (com inflação)",     color: "var(--cyan)"   },
-  { id: "aportado",          label: "Total aportado",                         color: "var(--yellow)" },
-  { id: "juros",             label: "Juros acumulados (reais)",               color: "var(--blue)"   },
+  { id: "patrimonio",        label: "Patrimônio real (R$ de hoje)",          color: SERIES_COLORS.patrimonio        },
+  { id: "patrimonioNominal", label: "Patrimônio nominal (com inflação)",     color: SERIES_COLORS.patrimonioNominal },
+  { id: "aportado",          label: "Total aportado",                         color: SERIES_COLORS.aportado          },
+  { id: "juros",             label: "Juros acumulados (reais)",               color: SERIES_COLORS.juros             },
 ];
 
 function SeriesMultiSelect({
@@ -86,8 +84,8 @@ function SeriesMultiSelect({
       <button
         onClick={() => setOpen(v => !v)}
         className={cn(
-          "border-border bg-surface2 text-text-sub hover:text-text flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[12px] font-medium transition-colors",
-          selected.size !== SERIES_OPTIONS.length && "border-green/40 text-green",
+          "flex h-8 items-center gap-1.5 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 text-[12px] font-medium text-[var(--text-sub)] transition-colors hover:text-[var(--text)]",
+          selected.size !== SERIES_OPTIONS.length && "border-[var(--brand-accent)] text-[var(--brand-accent)]",
         )}
       >
         <span>Séries · {selected.size}/{SERIES_OPTIONS.length}</span>
@@ -95,23 +93,26 @@ function SeriesMultiSelect({
       </button>
 
       {open && (
-        <div className="border-border bg-surface absolute right-0 top-10 z-50 flex min-w-[260px] flex-col gap-px rounded-xl border p-1.5 shadow-lg">
+        <div className="absolute right-0 top-10 z-50 flex min-w-[260px] flex-col gap-px rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] p-1.5 shadow-lg">
           {SERIES_OPTIONS.map(opt => {
             const checked = selected.has(opt.id);
             return (
               <button
                 key={opt.id}
                 onClick={() => toggle(opt.id)}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface2"
+                className="flex items-center gap-2.5 rounded-[9px] px-2 py-2 text-left transition-colors hover:bg-[var(--surface2)]"
               >
-                <span className={cn(
-                  "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
-                  checked ? "border-green bg-green/15 text-green" : "border-border text-transparent",
-                )}>
+                <span
+                  className={cn(
+                    "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
+                    checked ? "border-[var(--brand-accent)] text-[var(--brand-accent)]" : "border-[var(--border-color)] text-transparent",
+                  )}
+                  style={checked ? { background: "color-mix(in srgb, var(--brand-accent) 15%, transparent)" } : undefined}
+                >
                   <Check size={10} strokeWidth={3} />
                 </span>
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: opt.color }} />
-                <span className={cn("text-[12px]", checked ? "text-text font-medium" : "text-text-sub")}>
+                <span className={cn("text-[12px]", checked ? "text-[var(--text)] font-medium" : "text-[var(--text-sub)]")}>
                   {opt.label}
                 </span>
               </button>
@@ -204,85 +205,85 @@ export const RetirementSimulator = () => {
 
         {/* Left: params + result card */}
         <div className="flex flex-col gap-4">
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <SectionHeader title="Parâmetros" />
-            <div className="flex flex-col gap-3 mt-4">
+          <Card>
+            <CardHead title="Parâmetros" />
+            <div className="flex flex-col gap-3">
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Patrimônio atual (R$)</label>
+                <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Patrimônio atual (R$)</label>
                 <input className={inputCls} value={currentPatrimony} onChange={(e) => setCurrentPatrimony(e.target.value)} placeholder="50000" />
               </div>
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Aporte mensal (R$)</label>
+                <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Aporte mensal (R$)</label>
                 <input className={inputCls} value={monthlyContrib} onChange={(e) => setMonthlyContrib(e.target.value)} placeholder="2000" />
               </div>
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Retorno anual esperado (% a.a.)</label>
+                <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Retorno anual esperado (% a.a.)</label>
                 <input className={inputCls} value={annualReturn} onChange={(e) => setAnnualReturn(e.target.value)} placeholder="10" />
               </div>
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Inflação anual esperada (% a.a.)</label>
+                <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Inflação anual esperada (% a.a.)</label>
                 <input className={inputCls} value={inflation} onChange={(e) => setInflation(e.target.value)} placeholder="4" />
               </div>
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Taxa de retirada (% a.a.)</label>
+                <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Taxa de retirada (% a.a.)</label>
                 <input className={inputCls} value={withdrawalRate} onChange={(e) => setWithdrawalRate(e.target.value)} placeholder="4" />
               </div>
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Despesas mensais alvo (R$)</label>
+                <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Despesas mensais alvo (R$)</label>
                 <input className={inputCls} value={monthlyExpenses} onChange={(e) => setMonthlyExpenses(e.target.value)} placeholder="8000" />
               </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Result card — purple gradient like the design */}
+          {/* Result card — cobalt gradient */}
           {results && (
             <div
-              className="rounded-xl border p-5"
+              className="rounded-[20px] border p-5"
               style={{
-                background: "linear-gradient(135deg, color-mix(in srgb, var(--purple) 14%, transparent), color-mix(in srgb, var(--purple) 6%, transparent))",
-                borderColor: "color-mix(in srgb, var(--purple) 30%, transparent)",
+                background: "linear-gradient(135deg, color-mix(in srgb, var(--brand-cobalt) 14%, transparent), color-mix(in srgb, var(--brand-cobalt) 6%, transparent))",
+                borderColor: "color-mix(in srgb, var(--brand-cobalt) 30%, transparent)",
               }}
             >
-              <div className="text-[11px] font-semibold tracking-widest mb-3" style={{ color: "var(--purple)" }}>
+              <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: "var(--brand-cobalt)" }}>
                 INDEPENDÊNCIA FINANCEIRA
               </div>
 
               {/* Main value: years to retire */}
-              <p className="font-money text-[36px] font-bold text-text leading-none">
+              <p className="font-mono text-[36px] font-bold leading-none tabular-nums text-[var(--text)]">
                 {results.reached
                   ? `${results.years} anos`
                   : "Inatingível"}
               </p>
               {results.reached && results.monthsRem! > 0 && (
-                <p className="text-text-muted text-[12px] mt-1">
+                <p className="mt-1 text-[12px] text-[var(--text-sub)]">
                   e {results.monthsRem} {results.monthsRem === 1 ? "mês" : "meses"}
                 </p>
               )}
 
               <div className="mt-4 flex flex-col gap-2.5">
                 {[
-                  { label: "Patrimônio alvo (FI)",   value: formatCurrency((results.fiTarget) / 100),           color: "var(--purple)" },
-                  { label: "Renda passiva mensal",    value: formatCurrency(results.monthlyPassive / 100),        color: "var(--green)"  },
+                  { label: "Patrimônio alvo (FI)",   value: formatCurrency((results.fiTarget) / 100),           color: "var(--brand-cobalt)" },
+                  { label: "Renda passiva mensal",    value: formatCurrency(results.monthlyPassive / 100),        color: "var(--moss)"  },
                   { label: "Renda atual do patrimônio", value: formatCurrency(results.currentMonthlyPassive / 100), color: "var(--text-sub)" },
-                  { label: "Retorno real (desc. inflação)", value: `${results.realReturnPct.toFixed(2)}% a.a.`, color: "var(--orange)" },
-                  { label: `Regra dos ${withdrawalRate}% ao ano`, value: `${withdrawalRate}% a.a.`,             color: "var(--blue)"   },
+                  { label: "Retorno real (desc. inflação)", value: `${results.realReturnPct.toFixed(2)}% a.a.`, color: "var(--gold)" },
+                  { label: `Regra dos ${withdrawalRate}% ao ano`, value: `${withdrawalRate}% a.a.`,             color: "var(--brand-accent)"   },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="flex justify-between text-[12px]">
-                    <span className="text-text-muted">{label}</span>
-                    <span className="font-money" style={{ color }}>{value}</span>
+                    <span className="text-[var(--text-sub)]">{label}</span>
+                    <span className="font-mono tabular-nums" style={{ color }}>{value}</span>
                   </div>
                 ))}
 
                 {/* Progress bar */}
                 <div className="mt-1">
-                  <div className="flex justify-between text-[11px] mb-1">
-                    <span className="text-text-muted">Progresso atual</span>
-                    <span className="font-money" style={{ color: "var(--purple)" }}>{results.progressPct.toFixed(1)}%</span>
+                  <div className="mb-1 flex justify-between text-[11px]">
+                    <span className="text-[var(--text-sub)]">Progresso atual</span>
+                    <span className="font-mono tabular-nums" style={{ color: "var(--brand-cobalt)" }}>{results.progressPct.toFixed(1)}%</span>
                   </div>
-                  <div className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: "color-mix(in srgb, var(--purple) 20%, transparent)" }}>
+                  <div className="h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: "color-mix(in srgb, var(--brand-cobalt) 20%, transparent)" }}>
                     <div
                       className="h-full rounded-full transition-all"
-                      style={{ width: `${results.progressPct}%`, backgroundColor: "var(--purple)" }}
+                      style={{ width: `${results.progressPct}%`, backgroundColor: "var(--brand-cobalt)" }}
                     />
                   </div>
                 </div>
@@ -294,9 +295,9 @@ export const RetirementSimulator = () => {
         {/* Right: chart + methodology */}
         <div className="flex flex-col gap-4">
           {/* Chart card */}
-          <div className="border-border bg-surface rounded-xl border p-5 flex flex-col">
+          <Card className="flex flex-col">
             <div className="flex items-start justify-between gap-3">
-              <SectionHeader title="Evolução Patrimonial" subtitle="Patrimônio real em R$ de hoje vs. nominal (R$ futuros)" />
+              <CardHead className="mb-0" title="Evolução Patrimonial" subtitle="Patrimônio real em R$ de hoje vs. nominal (R$ futuros)" />
               <SeriesMultiSelect selected={visibleSeries} onChange={setVisibleSeries} />
             </div>
             {results && results.points.length > 0 ? (
@@ -306,29 +307,29 @@ export const RetirementSimulator = () => {
                     <ComposedChart data={results.points} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="ret_gradP" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="var(--green)"  stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="var(--green)"  stopOpacity={0}   />
+                          <stop offset="5%"  stopColor={SERIES_COLORS.patrimonio}        stopOpacity={0.2} />
+                          <stop offset="95%" stopColor={SERIES_COLORS.patrimonio}        stopOpacity={0}   />
                         </linearGradient>
                         <linearGradient id="ret_gradN" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="var(--cyan)"   stopOpacity={0.18} />
-                          <stop offset="95%" stopColor="var(--cyan)"   stopOpacity={0}    />
+                          <stop offset="5%"  stopColor={SERIES_COLORS.patrimonioNominal} stopOpacity={0.18} />
+                          <stop offset="95%" stopColor={SERIES_COLORS.patrimonioNominal} stopOpacity={0}    />
                         </linearGradient>
                         <linearGradient id="ret_gradA" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="var(--yellow)" stopOpacity={0.15} />
-                          <stop offset="95%" stopColor="var(--yellow)" stopOpacity={0}    />
+                          <stop offset="5%"  stopColor={SERIES_COLORS.aportado}          stopOpacity={0.15} />
+                          <stop offset="95%" stopColor={SERIES_COLORS.aportado}          stopOpacity={0}    />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid stroke="var(--border-chart)" />
-                      <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                      <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
-                      <Tooltip content={<CustomTooltip />} />
+                      <CartesianGrid {...CHART_GRID} />
+                      <XAxis dataKey="label" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                      <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
+                      <Tooltip content={<ChartTooltip />} />
                       {/* Meta FI */}
                       <ReferenceLine
                         y={results.fiTarget}
-                        stroke="var(--purple)"
+                        stroke={SERIES_COLORS.meta}
                         strokeDasharray="5 3"
                         strokeWidth={1.5}
-                        label={{ value: "Meta FI", fill: "var(--purple)", fontSize: 11, position: "insideTopRight" }}
+                        label={{ value: "Meta FI", fill: SERIES_COLORS.meta, fontSize: 11, position: "insideTopRight" }}
                       />
 
                       {visibleSeries.has("aportado") && (
@@ -336,11 +337,11 @@ export const RetirementSimulator = () => {
                           type="monotone"
                           dataKey="aportado"
                           name="Total aportado"
-                          stroke="var(--yellow)"
+                          stroke={SERIES_COLORS.aportado}
                           strokeWidth={2}
                           fill="url(#ret_gradA)"
-                          dot={{ r: 5, fill: "var(--yellow)", stroke: "var(--surface)", strokeWidth: 2 }}
-                          activeDot={{ r: 7, fill: "var(--yellow)", stroke: "var(--surface)", strokeWidth: 2 }}
+                          dot={{ r: 5, fill: SERIES_COLORS.aportado, stroke: "var(--surface)", strokeWidth: 2 }}
+                          activeDot={{ r: 7, fill: SERIES_COLORS.aportado, stroke: "var(--surface)", strokeWidth: 2 }}
                         />
                       )}
 
@@ -349,12 +350,12 @@ export const RetirementSimulator = () => {
                           type="monotone"
                           dataKey="patrimonioNominal"
                           name="Patrimônio nominal"
-                          stroke="var(--cyan)"
+                          stroke={SERIES_COLORS.patrimonioNominal}
                           strokeWidth={2}
                           strokeDasharray="4 2"
                           fill="url(#ret_gradN)"
-                          dot={{ r: 5, fill: "var(--cyan)", stroke: "var(--surface)", strokeWidth: 2 }}
-                          activeDot={{ r: 7, fill: "var(--cyan)", stroke: "var(--surface)", strokeWidth: 2 }}
+                          dot={{ r: 5, fill: SERIES_COLORS.patrimonioNominal, stroke: "var(--surface)", strokeWidth: 2 }}
+                          activeDot={{ r: 7, fill: SERIES_COLORS.patrimonioNominal, stroke: "var(--surface)", strokeWidth: 2 }}
                         />
                       )}
 
@@ -363,11 +364,11 @@ export const RetirementSimulator = () => {
                           type="monotone"
                           dataKey="patrimonio"
                           name="Patrimônio real"
-                          stroke="var(--green)"
+                          stroke={SERIES_COLORS.patrimonio}
                           strokeWidth={2}
                           fill="url(#ret_gradP)"
-                          dot={{ r: 5, fill: "var(--green)", stroke: "var(--surface)", strokeWidth: 2 }}
-                          activeDot={{ r: 7, fill: "var(--green)", stroke: "var(--surface)", strokeWidth: 2 }}
+                          dot={{ r: 5, fill: SERIES_COLORS.patrimonio, stroke: "var(--surface)", strokeWidth: 2 }}
+                          activeDot={{ r: 7, fill: SERIES_COLORS.patrimonio, stroke: "var(--surface)", strokeWidth: 2 }}
                         />
                       )}
 
@@ -376,11 +377,11 @@ export const RetirementSimulator = () => {
                           type="monotone"
                           dataKey="juros"
                           name="Juros acumulados"
-                          stroke="var(--blue)"
+                          stroke={SERIES_COLORS.juros}
                           strokeWidth={1.5}
                           strokeDasharray="5 3"
-                          dot={{ r: 5, fill: "var(--blue)", stroke: "var(--surface)", strokeWidth: 2 }}
-                          activeDot={{ r: 7, fill: "var(--blue)", stroke: "var(--surface)", strokeWidth: 2 }}
+                          dot={{ r: 5, fill: SERIES_COLORS.juros, stroke: "var(--surface)", strokeWidth: 2 }}
+                          activeDot={{ r: 7, fill: SERIES_COLORS.juros, stroke: "var(--surface)", strokeWidth: 2 }}
                         />
                       )}
                     </ComposedChart>
@@ -390,35 +391,30 @@ export const RetirementSimulator = () => {
                 {/* Legend */}
                 <div className="mt-3 flex flex-wrap gap-4">
                   {[
-                    visibleSeries.has("patrimonio")        && ["var(--green)",  "Patrimônio real (R$ de hoje)"],
-                    visibleSeries.has("patrimonioNominal") && ["var(--cyan)",   "Patrimônio nominal"],
-                    visibleSeries.has("aportado")          && ["var(--yellow)", "Total aportado"],
-                    visibleSeries.has("juros")             && ["var(--blue)",   "Juros acumulados"],
-                                                              ["var(--purple)", "Meta FI"],
+                    visibleSeries.has("patrimonio")        && [SERIES_COLORS.patrimonio,        "Patrimônio real (R$ de hoje)"],
+                    visibleSeries.has("patrimonioNominal") && [SERIES_COLORS.patrimonioNominal, "Patrimônio nominal"],
+                    visibleSeries.has("aportado")          && [SERIES_COLORS.aportado,          "Total aportado"],
+                    visibleSeries.has("juros")             && [SERIES_COLORS.juros,             "Juros acumulados"],
+                                                              [SERIES_COLORS.meta,              "Meta FI"],
                   ]
                     .filter(Boolean)
                     .map((entry) => {
                       const [color, label] = entry as [string, string];
-                      return (
-                        <div key={label} className="flex items-center gap-1.5">
-                          <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: color }} />
-                          <span className="text-text-muted text-[12px]">{label}</span>
-                        </div>
-                      );
+                      return <LegendItem key={label} color={color}>{label}</LegendItem>;
                     })}
                 </div>
 
                 {/* Inflation companion chart */}
-                <div className="border-border mt-5 border-t pt-4">
+                <div className="mt-5 border-t border-[var(--border-color)] pt-4">
                   <div className="mb-2 flex items-baseline justify-between">
                     <div>
-                      <p className="text-text text-[13px] font-semibold">Curva de inflação acumulada</p>
-                      <p className="text-text-muted text-[11px]">
+                      <p className="font-display text-[13px] font-bold tracking-[-0.01em] text-[var(--text)]">Curva de inflação acumulada</p>
+                      <p className="text-[11px] text-[var(--text-sub)]">
                         Quanto custará R$ 100 de hoje em cada ano, com inflação de {inflation}% a.a.
                       </p>
                     </div>
                     {results.points.length > 0 && (
-                      <span className="font-money text-orange text-[12px]">
+                      <span className="font-mono text-[12px] tabular-nums" style={{ color: SERIES_COLORS.inflation }}>
                         {results.points[results.points.length - 1].custoVidaPct.toFixed(0)}% no ano {results.points.length}
                       </span>
                     )}
@@ -428,24 +424,24 @@ export const RetirementSimulator = () => {
                       <AreaChart data={results.points} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                         <defs>
                           <linearGradient id="ret_gradI" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="var(--orange)" stopOpacity={0.25} />
-                            <stop offset="95%" stopColor="var(--orange)" stopOpacity={0}    />
+                            <stop offset="5%"  stopColor={SERIES_COLORS.inflation} stopOpacity={0.25} />
+                            <stop offset="95%" stopColor={SERIES_COLORS.inflation} stopOpacity={0}    />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid stroke="var(--border-chart)" />
-                        <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                        <YAxis tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v.toFixed(0)}%`} width={48} />
+                        <CartesianGrid {...CHART_GRID} />
+                        <XAxis dataKey="label" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                        <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={(v) => `${v.toFixed(0)}%`} width={48} />
                         <Tooltip content={<InflationTooltip />} />
-                        <ReferenceLine y={100} stroke="var(--text-muted)" strokeDasharray="3 3" strokeWidth={1} />
+                        <ReferenceLine y={100} stroke="var(--text-sub)" strokeDasharray="3 3" strokeWidth={1} />
                         <Area
                           type="monotone"
                           dataKey="custoVidaPct"
                           name="Custo de vida"
-                          stroke="var(--orange)"
+                          stroke={SERIES_COLORS.inflation}
                           strokeWidth={2}
                           fill="url(#ret_gradI)"
                           dot={false}
-                          activeDot={{ r: 5, fill: "var(--orange)", stroke: "var(--surface)", strokeWidth: 2 }}
+                          activeDot={{ r: 5, fill: SERIES_COLORS.inflation, stroke: "var(--surface)", strokeWidth: 2 }}
                         />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -454,16 +450,16 @@ export const RetirementSimulator = () => {
               </>
             ) : (
               <div className="flex flex-1 items-center justify-center py-16">
-                <p className="text-text-muted text-[13px]">Preencha os parâmetros para ver a projeção</p>
+                <p className="text-[13px] text-[var(--text-sub)]">Preencha os parâmetros para ver a projeção</p>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Methodology card */}
-          <div className="border-border bg-surface rounded-xl border p-5">
+          <Card>
             <div className="mb-3 flex items-center gap-2">
-              <Info size={14} className="text-blue shrink-0" />
-              <p className="text-text text-[13px] font-semibold">Metodologia — Regra dos 4% (ajustada à inflação)</p>
+              <Info size={14} className="shrink-0 text-[var(--brand-accent)]" />
+              <p className="font-display text-[15px] font-bold tracking-[-0.01em] text-[var(--text)]">Metodologia — Regra dos 4% (ajustada à inflação)</p>
             </div>
             <div className="flex flex-col gap-3">
               {[
@@ -498,13 +494,13 @@ export const RetirementSimulator = () => {
                   body: "Quanto você quer gastar por mês na aposentadoria, em R$ de hoje. Multiplicado por 12 e dividido pela taxa de retirada, define o patrimônio-alvo.",
                 },
               ].map((item) => (
-                <div key={item.title} className="rounded-lg border border-border bg-surface2 p-3.5">
-                  <p className="text-text text-[13px] font-medium mb-1.5">{item.title}</p>
-                  <p className="text-text-muted text-[12px] leading-relaxed">{item.body}</p>
+                <div key={item.title} className="rounded-[13px] border border-[var(--border-color)] bg-[var(--surface2)] p-3.5">
+                  <p className="mb-1.5 text-[13px] font-medium text-[var(--text)]">{item.title}</p>
+                  <p className="text-[12px] leading-relaxed text-[var(--text-sub)]">{item.body}</p>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

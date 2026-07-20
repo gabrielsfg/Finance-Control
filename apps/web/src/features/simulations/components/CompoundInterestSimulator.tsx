@@ -4,26 +4,34 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import {
   ResponsiveContainer, AreaChart, Area, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
+import { HeroPanel } from "@/components/shared/HeroPanel";
+import { BigMoney, Money } from "@/components/shared/Money";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn, matchesSearch, assetTypeKeywords } from "@/lib/utils";
-import { Info, ChevronDown, ChevronUp, Check, Search, TrendingUp } from "lucide-react";
+import { Info, ChevronDown, ChevronUp, Check, Search, TrendingUp, ArrowUpRight } from "lucide-react";
 import { simulateMonthly, aggregateAnnual } from "../utils/taxCalc";
 import type { AssetCategory } from "@/lib/types/simulation";
 import { ASSET_CATEGORY_LABELS } from "@/lib/types/simulation";
 import { useAvailableBenchmarks, useAssetRateForPeriod } from "../hooks/useSimulation";
 import type { AvailableBenchmark } from "@/lib/api/simulation";
-
-const inputCls = "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-green/60 transition-colors";
+import {
+  CHART_GRID, axisTick, SERIES, FieldLabel, FieldShell, MoneyPrefix, UnitSuffix, fieldMono,
+  SegRow, SegOption, PresetPill, ChartTooltip, LegendItem,
+} from "./simShared";
 
 type ViewMode = "gross" | "net";
 type BenchmarkId = "cdi" | "ipca5" | "ibov";
 
 const BENCHMARK_RATES: Record<BenchmarkId, { label: string; rate: number; color: string; note: string }> = {
-  cdi:   { label: "CDI",       rate: 10.65, color: "var(--blue)",   note: "~10,65% a.a. — CDI médio recente" },
-  ipca5: { label: "IPCA+5%",   rate: 10.2,  color: "var(--orange)", note: "~10,2% a.a. — IPCA(~5,2%) + 5%" },
-  ibov:  { label: "IBOV",      rate: 13.0,  color: "var(--cyan)",   note: "~13% a.a. — média histórica longo prazo" },
+  cdi:   { label: "CDI",       rate: 10.65, color: SERIES.cobalt, note: "~10,65% a.a. — CDI médio recente" },
+  ipca5: { label: "IPCA+5%",   rate: 10.2,  color: SERIES.gold,   note: "~10,2% a.a. — IPCA(~5,2%) + 5%" },
+  ibov:  { label: "IBOV",      rate: 13.0,  color: SERIES.violet, note: "~13% a.a. — média histórica longo prazo" },
 };
+
+/** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
+const inputCls =
+  "h-11 w-full rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 font-mono text-[14px] tabular-nums text-[var(--text)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--text-sub)]/60 focus:border-[var(--brand-cobalt)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]";
 
 // Dropdown customizado para tipo de ativo
 const AssetCategorySelect = ({
@@ -48,21 +56,21 @@ const AssetCategorySelect = ({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="border-border bg-surface2 text-text flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-[13px] transition-colors hover:border-green/40"
+        className="flex h-[42px] w-full items-center justify-between gap-2 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 text-[14px] text-[var(--text)] transition-colors hover:border-[var(--brand-accent)]/50"
       >
         <span>{ASSET_CATEGORY_LABELS[value]}</span>
-        <ChevronDown size={14} className={cn("text-text-muted transition-transform", open && "rotate-180")} />
+        <ChevronDown size={14} className={cn("text-[var(--text-sub)] transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="border-border bg-surface absolute left-0 top-10 z-50 flex flex-col gap-px rounded-xl border p-1.5 shadow-lg w-full min-w-[220px]">
+        <div className="absolute left-0 top-[46px] z-50 flex w-full min-w-[220px] flex-col gap-px rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] p-1.5 shadow-lg">
           {(Object.entries(ASSET_CATEGORY_LABELS) as [AssetCategory, string][]).map(([k, v]) => (
             <button
               key={k}
               onClick={() => { onChange(k); setOpen(false); }}
-              className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-surface2"
+              className="flex items-center justify-between gap-2 rounded-[9px] px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--surface2)]"
             >
-              <span className={cn("text-text-sub", value === k && "text-text")}>{v}</span>
-              {value === k && <Check size={12} className="text-green shrink-0" />}
+              <span className={cn("text-[var(--text-sub)]", value === k && "text-[var(--text)]")}>{v}</span>
+              {value === k && <Check size={12} className="shrink-0 text-[var(--brand-accent)]" />}
             </button>
           ))}
         </div>
@@ -303,8 +311,8 @@ export const CompoundInterestSimulator = () => {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
 
         {/* Left: Parameters card */}
-        <div className="border-border bg-surface rounded-xl border p-5 flex flex-col gap-4">
-          <SectionHeader title="Parâmetros" />
+        <div className="border-border bg-surface rounded-[20px] border p-5 flex flex-col gap-4">
+          <CardHead title="Parâmetros" />
 
           <div className="flex flex-col gap-3">
             <div>
@@ -419,9 +427,9 @@ export const CompoundInterestSimulator = () => {
         </div>
 
         {/* Right: Chart card */}
-        <div className="border-border bg-surface rounded-xl border p-5 flex flex-col">
+        <div className="border-border bg-surface rounded-[20px] border p-5 flex flex-col">
           <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
-            <SectionHeader title="Curva de Crescimento" subtitle={useAnnual ? "Agrupado por ano" : "Mensal"} />
+            <CardHead className="mb-0" title="Curva de Crescimento" subtitle={useAnnual ? "Agrupado por ano" : "Mensal"} />
           </div>
 
           {/* Benchmark selector */}

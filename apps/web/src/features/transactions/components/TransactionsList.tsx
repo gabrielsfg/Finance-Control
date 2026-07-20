@@ -80,7 +80,7 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
 
   if (transactions.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border py-16 text-center">
+      <div className="flex flex-col items-center justify-center rounded-[20px] border py-16 text-center" style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}>
         <div className="bg-surface2 mb-4 flex h-12 w-12 items-center justify-center rounded-[12px]">
           <ArrowLeftRight size={20} className="text-text-muted" strokeWidth={1.5} />
         </div>
@@ -93,12 +93,12 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
   }
 
   return (
-    <div className="border-border overflow-hidden rounded-xl border">
+    <div className="overflow-hidden rounded-[20px] border" style={{ borderColor: "var(--border-color)" }}>
       {groups.map(({ date, transactions: txs, dayIncome, dayExpense }) => (
         <div key={date}>
           {/* Day header */}
           <div className="border-border bg-surface2 flex items-center justify-between border-b px-4 py-2.5">
-            <span className="text-text-sub font-600 text-[12px] capitalize">
+            <span className="text-text-sub font-semibold text-[12px] capitalize">
               {formatDayHeader(date)}
             </span>
             <div className="flex items-center gap-3">
@@ -184,7 +184,7 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
                 <div className="flex shrink-0 flex-col items-end gap-1 transition-transform duration-200 group-hover:-translate-x-16">
                   <span
                     className={cn(
-                      "font-money font-600 text-[15px]",
+                      "font-money font-semibold text-[15px]",
                       isIncome ? "text-green" : isTransfer ? "text-text-sub" : "text-text",
                     )}
                   >
@@ -207,14 +207,14 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
                   <button
                     onClick={(e) => { e.stopPropagation(); onEdit(t); }}
                     title="Editar transação"
-                    className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                    className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors"
                   >
                     <Pencil size={13} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); onDelete(t); }}
                     title="Excluir transação"
-                    className="text-red/60 hover:bg-red/10 flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:text-red"
+                    className="text-red/60 hover:bg-red/10 flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors hover:text-red"
                   >
                     <Trash2 size={13} />
                   </button>

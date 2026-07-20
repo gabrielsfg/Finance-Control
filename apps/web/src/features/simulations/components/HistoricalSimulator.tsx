@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip,
   CartesianGrid, ReferenceLine,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn, matchesSearch, assetTypeKeywords } from "@/lib/utils";
 import { AlertCircle, Info, Check, ChevronDown, ChevronLeft, Play, ChevronRight, Search } from "lucide-react";
@@ -14,8 +14,11 @@ import type { Benchmark, HistoricalSimulationPoint } from "@/lib/types/simulatio
 import { BENCHMARK_LABELS, BENCHMARK_SEARCH_KEYWORDS } from "@/lib/types/simulation";
 import type { AvailableBenchmark } from "@/lib/api/simulation";
 import { MonthRangePicker } from "@/components/shared/MonthRangePicker";
+import { CHART_GRID, axisTick, SERIES, PresetPill, PrimaryButton, ChartTooltip, LegendItem } from "./simShared";
 
-const inputCls = "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-green/60 transition-colors";
+/** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
+const inputCls =
+  "h-11 w-full rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 font-mono text-[14px] tabular-nums text-[var(--text)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--text-sub)]/60 focus:border-[var(--brand-cobalt)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]";
 
 const FIXED_BENCHMARKS: Benchmark[] = ["CDI", "SELIC", "IPCA+6", "IPCA+5", "IPCA+4", "IBOVESPA", "IFIX", "SP500_BRL"];
 const STUB_BENCHMARKS = new Set<Benchmark>(["IBOVESPA", "IFIX", "SP500_BRL"]);
@@ -114,23 +117,23 @@ const BenchmarkSelect = ({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="border-border bg-surface2 text-text flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-[13px] transition-colors hover:border-green/40"
+        className="flex h-9 w-full items-center justify-between gap-2 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 text-[13px] text-[var(--text)] transition-colors hover:border-[var(--brand-accent)]/50"
       >
         <span className="truncate">{selectedLabel}{isStub ? " *" : ""}</span>
-        <ChevronDown size={14} className={cn("text-text-muted transition-transform shrink-0", open && "rotate-180")} />
+        <ChevronDown size={14} className={cn("text-[var(--text-sub)] transition-transform shrink-0", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="border-border bg-surface absolute left-0 top-10 z-50 rounded-xl border shadow-lg w-full" style={{ minWidth: 280 }}>
+        <div className="absolute left-0 top-10 z-50 w-full rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] shadow-lg" style={{ minWidth: 280 }}>
           {/* Search input */}
-          <div className="border-b border-border px-2 py-2 flex items-center gap-2">
-            <Search size={12} className="text-text-muted shrink-0" />
+          <div className="flex items-center gap-2 border-b border-[var(--border-color)] px-2 py-2">
+            <Search size={12} className="text-[var(--text-sub)] shrink-0" />
             <input
               ref={inputRef}
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Buscar benchmark ou ticker..."
-              className="bg-transparent text-[12px] text-text placeholder:text-text-muted outline-none flex-1 min-w-0"
+              className="min-w-0 flex-1 bg-transparent text-[12px] text-[var(--text)] outline-none placeholder:text-[var(--text-sub)]"
             />
           </div>
 
@@ -138,18 +141,18 @@ const BenchmarkSelect = ({
             {/* Fixed benchmarks section */}
             {fixedOpts.length > 0 && (
               <>
-                <p className="px-2.5 py-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">Índices de referência</p>
+                <p className="px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--text-sub)]">Índices de referência</p>
                 {fixedOpts.map(opt => (
                   <button
                     key={opt.value}
                     onClick={() => { onSelect(opt); setOpen(false); setQuery(''); }}
-                    className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-surface2"
+                    className="flex items-center justify-between gap-2 rounded-[9px] px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--surface2)]"
                   >
-                    <span className={cn("text-text-sub", benchmarkId(selected) === opt.value && "text-text")}>
+                    <span className={cn("text-[var(--text-sub)]", benchmarkId(selected) === opt.value && "text-[var(--text)]")}>
                       {BENCHMARK_LABELS[opt.value as Benchmark]}
                       {STUB_BENCHMARKS.has(opt.value as Benchmark) ? " *" : ""}
                     </span>
-                    {benchmarkId(selected) === opt.value && <Check size={12} className="text-green shrink-0" />}
+                    {benchmarkId(selected) === opt.value && <Check size={12} className="text-[var(--brand-accent)] shrink-0" />}
                   </button>
                 ))}
               </>
@@ -158,7 +161,7 @@ const BenchmarkSelect = ({
             {/* DB ticker section */}
             {tickerOpts.length > 0 && (
               <>
-                <p className="px-2.5 py-1 mt-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                <p className="px-2.5 py-1 mt-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--text-sub)]">
                   Ativos com histórico na base
                   {loading && <span className="ml-1 normal-case font-normal">(carregando...)</span>}
                 </p>
@@ -168,18 +171,18 @@ const BenchmarkSelect = ({
                     <button
                       key={opt.value}
                       onClick={() => { onSelect(opt); setOpen(false); setQuery(''); }}
-                      className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-surface2"
+                      className="flex items-center justify-between gap-2 rounded-[9px] px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--surface2)]"
                     >
                       <div className="flex flex-col min-w-0">
-                        <span className={cn("text-text-sub truncate", benchmarkId(selected) === opt.value && "text-text")}>
+                        <span className={cn("text-[var(--text-sub)] truncate", benchmarkId(selected) === opt.value && "text-[var(--text)]")}>
                           <span className="font-medium">{m.ticker}</span>
-                          {m.name ? <span className="text-text-muted"> — {m.name}</span> : null}
+                          {m.name ? <span className="text-[var(--text-sub)]"> — {m.name}</span> : null}
                         </span>
-                        <span className="text-[10px] text-text-muted">
+                        <span className="text-[10px] text-[var(--text-sub)]">
                           {m.monthsAvailable} meses · desde {m.earliestDate.slice(0, 7)}
                         </span>
                       </div>
-                      {benchmarkId(selected) === opt.value && <Check size={12} className="text-green shrink-0" />}
+                      {benchmarkId(selected) === opt.value && <Check size={12} className="text-[var(--brand-accent)] shrink-0" />}
                     </button>
                   );
                 })}
@@ -187,32 +190,15 @@ const BenchmarkSelect = ({
             )}
 
             {filtered.length === 0 && (
-              <p className="px-2.5 py-3 text-[12px] text-text-muted text-center">Nenhum resultado</p>
+              <p className="px-2.5 py-3 text-[12px] text-[var(--text-sub)] text-center">Nenhum resultado</p>
             )}
           </div>
 
           {fixedOpts.some(o => STUB_BENCHMARKS.has(o.value as Benchmark)) && (
-            <p className="border-t border-border px-2.5 py-1.5 text-[10px] text-text-muted">* dados estimados</p>
+            <p className="border-t border-[var(--border-color)] px-2.5 py-1.5 text-[10px] text-[var(--text-sub)]">* dados estimados</p>
           )}
         </div>
       )}
-    </div>
-  );
-};
-
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="border-border bg-surface rounded-lg border px-3 py-2.5 shadow-md min-w-[190px]">
-      <p className="text-text-muted mb-2 text-[11px]">{label}</p>
-      {payload.map((e: any) => (
-        <div key={e.name} className="flex justify-between gap-4 mb-0.5">
-          <span className="text-[12px]" style={{ color: e.stroke ?? e.color }}>{e.name}</span>
-          <span className="font-money text-[12px]" style={{ color: e.stroke ?? e.color }}>
-            {formatCurrency(e.value / 100)}
-          </span>
-        </div>
-      ))}
     </div>
   );
 };
@@ -353,13 +339,13 @@ export const HistoricalSimulator = () => {
 
         {/* ── Left column: params + result ── */}
         <div className="flex flex-col gap-4">
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <SectionHeader title="Parâmetros" />
-            <div className="flex flex-col gap-3 mt-4">
+          <Card>
+            <CardHead title="Parâmetros" />
+            <div className="flex flex-col gap-3.5">
 
               {/* Benchmark */}
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Benchmark</label>
+                <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Benchmark</label>
                 <BenchmarkSelect
                   selected={selectedBenchmark}
                   onSelect={handleSelectBenchmark}
@@ -367,14 +353,14 @@ export const HistoricalSimulator = () => {
                   loading={loadingBenchmarks}
                 />
                 {isStub && (
-                  <p className="text-text-muted mt-1.5 flex items-center gap-1 text-[11px]">
-                    <Info size={11} className="text-orange/70 shrink-0" />
+                  <p className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--text-sub)]">
+                    <Info size={11} className="shrink-0 text-[var(--gold)]" />
                     Dados históricos reais em breve. Usando média estimada.
                   </p>
                 )}
                 {isDbTicker && tickerMeta && (
-                  <p className="text-text-muted mt-1.5 flex items-center gap-1 text-[11px]">
-                    <Info size={11} className="text-green/70 shrink-0" />
+                  <p className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--text-sub)]">
+                    <Info size={11} className="shrink-0 text-[var(--moss)]" />
                     {tickerMeta.monthsAvailable} meses disponíveis · {tickerMeta.earliestDate.slice(0, 7)} → {tickerMeta.latestDate.slice(0, 7)}
                   </p>
                 )}
@@ -382,18 +368,18 @@ export const HistoricalSimulator = () => {
 
               {/* Aportes */}
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Aporte inicial (R$)</label>
+                <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Aporte inicial (R$)</label>
                 <input className={inputCls} value={initialAmount} onChange={(e) => setInitialAmount(e.target.value)} placeholder="1000" />
               </div>
               <div>
-                <label className="text-text-muted mb-1.5 block text-[12px]">Aporte mensal (R$)</label>
+                <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Aporte mensal (R$)</label>
                 <input className={inputCls} value={monthlyContrib} onChange={(e) => setMonthlyContrib(e.target.value)} placeholder="500" />
               </div>
 
               {/* Período */}
               <div>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <label className="text-text-muted text-[12px]">Período</label>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Período</label>
                   <button
                     onClick={() => {
                       if (useCustom) {
@@ -407,14 +393,14 @@ export const HistoricalSimulator = () => {
                         setCustomEnd(lastMonthStr);
                       }
                     }}
-                    className="text-blue text-[11px] hover:underline"
+                    className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--brand-accent)] hover:underline"
                   >
                     {useCustom ? "Pré-definido" : "Personalizar"}
                   </button>
                 </div>
 
                 {useCustom ? (
-                  <div className="rounded-xl border border-border bg-surface2/50 p-3">
+                  <div className="rounded-[13px] border border-[var(--border-color)] bg-[var(--surface2)] p-3">
                     <MonthRangePicker
                       start={customStart}
                       end={customEnd}
@@ -427,99 +413,81 @@ export const HistoricalSimulator = () => {
                 ) : (
                   <div className="flex gap-1">
                     {PERIODS.map((p) => (
-                      <button
-                        key={p.months}
-                        onClick={() => setSelectedPeriod(p.months)}
-                        className={cn(
-                          "flex-1 rounded-lg border py-1 text-[11px] font-medium transition-colors",
-                          selectedPeriod === p.months
-                            ? "bg-green/15 text-green border-green/30"
-                            : "text-text-muted border-border hover:text-text"
-                        )}
-                      >
+                      <PresetPill key={p.months} active={selectedPeriod === p.months} onClick={() => setSelectedPeriod(p.months)}>
                         {p.label}
-                      </button>
+                      </PresetPill>
                     ))}
                   </div>
                 )}
               </div>
 
               {/* Simular button */}
-              <button
-                onClick={handleSimulate}
-                disabled={isPending}
-                className={cn(
-                  "mt-1 flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-[13px] font-medium transition-colors",
-                  isPending
-                    ? "bg-green/20 text-green/50 cursor-not-allowed"
-                    : "bg-green/15 text-green hover:bg-green/25"
-                )}
-              >
+              <PrimaryButton onClick={handleSimulate} disabled={isPending} className="mt-1">
                 <Play size={13} className={isPending ? "animate-pulse" : ""} />
                 {isPending ? "Calculando..." : "Simular"}
-              </button>
+              </PrimaryButton>
 
               {isError && (
-                <div className="flex items-center gap-2 rounded-lg bg-red/10 px-3 py-2.5">
-                  <AlertCircle size={14} className="text-red shrink-0" />
-                  <p className="text-red text-[12px]">Não foi possível buscar os dados. Tente novamente.</p>
+                <div className="flex items-center gap-2 rounded-[13px] px-3 py-2.5" style={{ background: "color-mix(in srgb, var(--clay) 10%, transparent)" }}>
+                  <AlertCircle size={14} className="shrink-0 text-[var(--clay)]" />
+                  <p className="text-[12px] text-[var(--clay)]">Não foi possível buscar os dados. Tente novamente.</p>
                 </div>
               )}
             </div>
-          </div>
+          </Card>
 
-          {/* Result card — blue gradient */}
+          {/* Result card — cobalt gradient */}
           {data && (
             <div
-              className="rounded-xl border p-5"
+              className="rounded-[20px] border p-5"
               style={{
-                background: "linear-gradient(135deg, color-mix(in srgb, var(--blue) 12%, transparent), color-mix(in srgb, var(--blue) 5%, transparent))",
-                borderColor: "color-mix(in srgb, var(--blue) 30%, transparent)",
+                background: "linear-gradient(135deg, color-mix(in srgb, var(--brand-cobalt) 12%, transparent), color-mix(in srgb, var(--brand-cobalt) 5%, transparent))",
+                borderColor: "color-mix(in srgb, var(--brand-cobalt) 30%, transparent)",
               }}
             >
-              <div className="text-[11px] font-semibold tracking-widest mb-3 truncate" style={{ color: "var(--blue)" }}>
+              <div className="mb-3 truncate font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: "var(--brand-cobalt)" }}>
                 {benchmarkLabel(selectedBenchmark).toUpperCase()}
               </div>
 
-              <p className="font-money text-[32px] font-bold text-text leading-none">
+              <p className="font-mono text-[32px] font-bold leading-none tabular-nums text-[var(--text)]">
                 {formatCurrency(data.finalValue / 100)}
               </p>
-              <p className="text-text-muted text-[12px] mt-1.5">patrimônio final · {benchmarkLabel(selectedBenchmark)}</p>
+              <p className="mt-1.5 text-[12px] text-[var(--text-sub)]">patrimônio final · {benchmarkLabel(selectedBenchmark)}</p>
 
               <div className="mt-4 flex flex-col gap-2.5">
                 {[
                   { label: "Total investido",      value: formatCurrency(data.totalInvested / 100),                      color: "var(--text-sub)" },
-                  { label: "Rendimento total",      value: `${isPositive ? "+" : ""}${formatCurrency(gain / 100)}`,       color: isPositive ? "var(--green)" : "var(--red)" },
-                  { label: "Retorno anualizado",    value: `${data.annualizedReturnPct >= 0 ? "+" : ""}${data.annualizedReturnPct.toFixed(2)}% a.a.`, color: "var(--blue)" },
-                  { label: "Multiplicador",         value: `${(data.finalValue / Math.max(data.totalInvested, 1)).toFixed(2)}×`, color: "var(--purple)" },
+                  { label: "Rendimento total",      value: `${isPositive ? "+" : ""}${formatCurrency(gain / 100)}`,       color: isPositive ? "var(--moss)" : "var(--clay)" },
+                  { label: "Retorno anualizado",    value: `${data.annualizedReturnPct >= 0 ? "+" : ""}${data.annualizedReturnPct.toFixed(2)}% a.a.`, color: "var(--brand-accent)" },
+                  { label: "Multiplicador",         value: `${(data.finalValue / Math.max(data.totalInvested, 1)).toFixed(2)}×`, color: "var(--gold)" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="flex justify-between text-[12px]">
-                    <span className="text-text-muted">{label}</span>
-                    <span className="font-money" style={{ color }}>{value}</span>
+                    <span className="text-[var(--text-sub)]">{label}</span>
+                    <span className="font-mono tabular-nums" style={{ color }}>{value}</span>
                   </div>
                 ))}
               </div>
 
               {data.dataNote && (
-                <div className="mt-3 flex items-start gap-1.5 rounded-lg bg-orange/10 px-2.5 py-2">
-                  <Info size={12} className="text-orange shrink-0 mt-0.5" />
-                  <p className="text-orange text-[11px] leading-relaxed">{data.dataNote}</p>
+                <div className="mt-3 flex items-start gap-1.5 rounded-[13px] px-2.5 py-2" style={{ background: "color-mix(in srgb, var(--gold) 12%, transparent)" }}>
+                  <Info size={12} className="mt-0.5 shrink-0 text-[var(--gold)]" />
+                  <p className="text-[11px] leading-relaxed text-[var(--gold)]">{data.dataNote}</p>
                 </div>
               )}
             </div>
           )}
 
           {!data && !isPending && (
-            <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-border">
-              <p className="text-text-muted text-[12px]">Configure e clique em Simular</p>
+            <div className="flex h-28 items-center justify-center rounded-[20px] border border-dashed border-[var(--border-color)]">
+              <p className="text-[12px] text-[var(--text-sub)]">Configure e clique em Simular</p>
             </div>
           )}
         </div>
 
         {/* ── Right column: chart + table ── */}
         <div className="flex flex-col gap-4">
-          <div className="border-border bg-surface rounded-xl border p-5 flex flex-col">
-            <SectionHeader
+          <Card className="flex flex-col">
+            <CardHead
               title="Histórico de Patrimônio"
               subtitle={`E se eu tivesse investido em ${benchmarkLabel(selectedBenchmark)}?`}
             />
@@ -531,34 +499,34 @@ export const HistoricalSimulator = () => {
                     <ComposedChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="hist_gradV" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="var(--green)"  stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="var(--green)"  stopOpacity={0}   />
+                          <stop offset="5%"  stopColor={SERIES.moss} stopOpacity={0.2} />
+                          <stop offset="95%" stopColor={SERIES.moss} stopOpacity={0}   />
                         </linearGradient>
                         <linearGradient id="hist_gradI" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="var(--yellow)" stopOpacity={0.15} />
-                          <stop offset="95%" stopColor="var(--yellow)" stopOpacity={0}    />
+                          <stop offset="5%"  stopColor={SERIES.gold} stopOpacity={0.15} />
+                          <stop offset="95%" stopColor={SERIES.gold} stopOpacity={0}    />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid stroke="var(--border-chart)" />
+                      <CartesianGrid {...CHART_GRID} />
                       <XAxis
                         dataKey="label"
-                        tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }}
+                        tick={axisTick}
                         axisLine={false}
                         tickLine={false}
                         interval={labelInterval}
                       />
                       <YAxis
-                        tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }}
+                        tick={axisTick}
                         axisLine={false}
                         tickLine={false}
                         tickFormatter={(v) => formatCurrencyCompact(v / 100)}
                         width={72}
                       />
-                      <Tooltip content={<CustomTooltip />} />
+                      <Tooltip content={<ChartTooltip />} />
                       {/* Linha de referência no aporte inicial */}
                       <ReferenceLine
                         y={chartData[0]?.invested ?? 0}
-                        stroke="var(--border)"
+                        stroke="var(--border-color)"
                         strokeDasharray="4 4"
                       />
                       {/* Total aportado */}
@@ -566,33 +534,33 @@ export const HistoricalSimulator = () => {
                         type="monotone"
                         dataKey="invested"
                         name="Total aportado"
-                        stroke="var(--yellow)"
+                        stroke={SERIES.gold}
                         strokeWidth={2}
                         fill="url(#hist_gradI)"
-                        dot={{ r: 5, fill: "var(--yellow)", stroke: "var(--surface)", strokeWidth: 2 }}
-                        activeDot={{ r: 7, fill: "var(--yellow)", stroke: "var(--surface)", strokeWidth: 2 }}
+                        dot={{ r: 5, fill: SERIES.gold, stroke: "var(--surface)", strokeWidth: 2 }}
+                        activeDot={{ r: 7, fill: SERIES.gold, stroke: "var(--surface)", strokeWidth: 2 }}
                       />
                       {/* Patrimônio real */}
                       <Area
                         type="monotone"
                         dataKey="value"
                         name="Patrimônio real"
-                        stroke="var(--green)"
+                        stroke={SERIES.moss}
                         strokeWidth={2}
                         fill="url(#hist_gradV)"
-                        dot={{ r: 5, fill: "var(--green)", stroke: "var(--surface)", strokeWidth: 2 }}
-                        activeDot={{ r: 7, fill: "var(--green)", stroke: "var(--surface)", strokeWidth: 2 }}
+                        dot={{ r: 5, fill: SERIES.moss, stroke: "var(--surface)", strokeWidth: 2 }}
+                        activeDot={{ r: 7, fill: SERIES.moss, stroke: "var(--surface)", strokeWidth: 2 }}
                       />
                       {/* Rendimento mensal como linha */}
                       <Line
                         type="monotone"
                         dataKey="interest"
                         name="Rendimento/mês"
-                        stroke="var(--blue)"
+                        stroke={SERIES.cobalt}
                         strokeWidth={1.5}
                         strokeDasharray="5 3"
-                        dot={{ r: 5, fill: "var(--blue)", stroke: "var(--surface)", strokeWidth: 2 }}
-                        activeDot={{ r: 7, fill: "var(--blue)", stroke: "var(--surface)", strokeWidth: 2 }}
+                        dot={{ r: 5, fill: SERIES.cobalt, stroke: "var(--surface)", strokeWidth: 2 }}
+                        activeDot={{ r: 7, fill: SERIES.cobalt, stroke: "var(--surface)", strokeWidth: 2 }}
                       />
                     </ComposedChart>
                   </ResponsiveContainer>
@@ -600,59 +568,52 @@ export const HistoricalSimulator = () => {
 
                 {/* Legend */}
                 <div className="mt-3 flex flex-wrap gap-4">
-                  {[
-                    ["var(--green)",  "Patrimônio real"],
-                    ["var(--yellow)", "Total aportado"],
-                    ["var(--blue)",   "Rendimento/mês"],
-                  ].map(([color, label]) => (
-                    <div key={label} className="flex items-center gap-1.5">
-                      <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: color }} />
-                      <span className="text-text-muted text-[12px]">{label}</span>
-                    </div>
-                  ))}
+                  <LegendItem color={SERIES.moss}>Patrimônio real</LegendItem>
+                  <LegendItem color={SERIES.gold}>Total aportado</LegendItem>
+                  <LegendItem color={SERIES.cobalt}>Rendimento/mês</LegendItem>
                 </div>
               </>
             ) : (
               <div className="flex flex-1 items-center justify-center py-20">
-                <p className="text-text-muted text-[13px]">
+                <p className="text-[13px] text-[var(--text-sub)]">
                   {isPending ? "Calculando simulação..." : "Configure os parâmetros e clique em Simular"}
                 </p>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Month-by-month table */}
           {data && rawPoints.length > 0 && (
-            <div className="border-border bg-surface rounded-xl border p-5">
-              <div className="flex items-center justify-between mb-3">
-                <SectionHeader title="Todos os Meses" subtitle="Detalhe mês a mês" />
-                <span className="text-text-muted text-[11px]">{rawPoints.length} meses simulados</span>
+            <Card>
+              <div className="mb-3 flex items-center justify-between">
+                <CardHead className="mb-0" title="Todos os Meses" subtitle="Detalhe mês a mês" />
+                <span className="font-mono text-[11px] tabular-nums text-[var(--text-sub)]">{rawPoints.length} meses simulados</span>
               </div>
-              <div className="overflow-x-auto rounded-xl border border-border">
-                <table className="w-full text-[12px] min-w-[440px]">
+              <div className="overflow-x-auto rounded-[13px] border border-[var(--border-color)]">
+                <table className="w-full min-w-[440px] text-[12px]">
                   <thead>
-                    <tr className="border-b border-border bg-surface2/60">
-                      <th className="text-text-muted px-3 py-2.5 text-left font-medium">Mês</th>
-                      <th className="text-text-muted px-3 py-2.5 text-right font-medium">Retorno %</th>
-                      <th className="text-text-muted px-3 py-2.5 text-right font-medium">Rendimento</th>
-                      <th className="text-text-muted px-3 py-2.5 text-right font-medium">Total aportado</th>
-                      <th className="text-text-muted px-3 py-2.5 text-right font-medium">Patrimônio</th>
+                    <tr className="border-b border-[var(--border-color)] bg-[var(--surface2)]">
+                      <th className="px-3 py-2.5 text-left font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Mês</th>
+                      <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Retorno %</th>
+                      <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Rendimento</th>
+                      <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Total aportado</th>
+                      <th className="px-3 py-2.5 text-right font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Patrimônio</th>
                     </tr>
                   </thead>
                   <tbody>
                     {visibleRows.map((p: HistoricalSimulationPoint) => (
-                      <tr key={`${p.year}-${p.month}`} className="border-b border-border last:border-0 hover:bg-surface2/30 transition-colors">
-                        <td className="text-text px-3 py-2.5 font-medium">{p.label}</td>
-                        <td className={cn("px-3 py-2.5 text-right font-money", p.monthlyReturnPct >= 0 ? "text-green" : "text-red")}>
+                      <tr key={`${p.year}-${p.month}`} className="border-b border-[var(--border-color)] transition-colors last:border-0 hover:bg-[var(--surface2)]">
+                        <td className="px-3 py-2.5 font-medium text-[var(--text)]">{p.label}</td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums" style={{ color: p.monthlyReturnPct >= 0 ? "var(--moss)" : "var(--clay)" }}>
                           {p.monthlyReturnPct >= 0 ? "+" : ""}{p.monthlyReturnPct.toFixed(4)}%
                         </td>
-                        <td className={cn("px-3 py-2.5 text-right font-money", p.interest >= 0 ? "text-green" : "text-red")}>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums" style={{ color: p.interest >= 0 ? "var(--moss)" : "var(--clay)" }}>
                           {p.interest >= 0 ? "+" : ""}{formatCurrency(p.interest / 100)}
                         </td>
-                        <td className="text-text-muted px-3 py-2.5 text-right font-money">
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--text-sub)]">
                           {formatCurrency(p.invested / 100)}
                         </td>
-                        <td className="text-text px-3 py-2.5 text-right font-money">
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums text-[var(--text)]">
                           {formatCurrency(p.value / 100)}
                         </td>
                       </tr>
@@ -663,7 +624,7 @@ export const HistoricalSimulator = () => {
 
               {/* Pagination — mesmo padrão de TransactionsPagination */}
               <div className="mt-3 flex items-center justify-end gap-3">
-                <p className="text-text-muted shrink-0 text-[13px]">
+                <p className="shrink-0 text-[13px] text-[var(--text-sub)]">
                   {totalItems === 0
                     ? "Nenhum mês"
                     : `${tableFrom}–${tableTo} de ${totalItems} mes${totalItems !== 1 ? "es" : ""}` }
@@ -672,7 +633,7 @@ export const HistoricalSimulator = () => {
                 <button
                   onClick={() => setTablePage((p) => Math.max(1, p - 1))}
                   disabled={safePage === 1}
-                  className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-40"
+                  className="flex h-8 w-8 items-center justify-center rounded-[9px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--text)] disabled:opacity-40"
                 >
                   <ChevronLeft size={15} />
                 </button>
@@ -680,16 +641,16 @@ export const HistoricalSimulator = () => {
                 <div className="flex items-center gap-1">
                   {pageNumbers.map((p, i) =>
                     p === "..." ? (
-                      <span key={`dots-${i}`} className="text-text-muted px-1 text-[13px]">…</span>
+                      <span key={`dots-${i}`} className="px-1 text-[13px] text-[var(--text-sub)]">…</span>
                     ) : (
                       <button
                         key={p}
                         onClick={() => setTablePage(p as number)}
                         className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-lg text-[13px] transition-colors",
+                          "flex h-8 w-8 items-center justify-center rounded-[9px] text-[13px] transition-colors",
                           safePage === p
-                            ? "bg-green/15 text-green font-medium"
-                            : "text-text-sub hover:bg-surface2 hover:text-text",
+                            ? "bg-[color-mix(in_srgb,var(--brand-accent)_14%,transparent)] font-medium text-[var(--brand-accent)]"
+                            : "text-[var(--text-sub)] hover:bg-[var(--surface2)] hover:text-[var(--text)]",
                         )}
                       >
                         {p}
@@ -701,7 +662,7 @@ export const HistoricalSimulator = () => {
                 <button
                   onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))}
                   disabled={safePage === totalPages}
-                  className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-40"
+                  className="flex h-8 w-8 items-center justify-center rounded-[9px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--text)] disabled:opacity-40"
                 >
                   <ChevronRight size={15} />
                 </button>
@@ -710,15 +671,15 @@ export const HistoricalSimulator = () => {
                   <button
                     onClick={() => setPageSizeOpen((o) => !o)}
                     className={cn(
-                      "border-border bg-surface2 hover:bg-surface3 flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[13px] transition-colors",
-                      pageSizeOpen ? "border-green/40 text-text" : "text-text-sub",
+                      "flex h-8 items-center gap-1.5 rounded-[9px] border border-[var(--border-color)] bg-[var(--surface)] px-3 text-[13px] transition-colors hover:bg-[var(--surface2)]",
+                      pageSizeOpen ? "text-[var(--text)]" : "text-[var(--text-sub)]",
                     )}
                   >
                     {tablePageSize} / pág.
                     <ChevronDown size={13} className={cn("transition-transform", pageSizeOpen && "rotate-180")} />
                   </button>
                   {pageSizeOpen && (
-                    <div className="border-border bg-surface absolute bottom-full right-0 mb-1.5 min-w-[110px] overflow-hidden rounded-lg border shadow-lg">
+                    <div className="absolute bottom-full right-0 mb-1.5 min-w-[110px] overflow-hidden rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] shadow-lg">
                       {[10, 20, 50, 100].map((size) => (
                         <button
                           key={size}
@@ -726,8 +687,8 @@ export const HistoricalSimulator = () => {
                           className={cn(
                             "flex w-full items-center px-3 py-2 text-left text-[13px] transition-colors",
                             tablePageSize === size
-                              ? "bg-green/10 text-green font-medium"
-                              : "text-text-sub hover:bg-surface2 hover:text-text",
+                              ? "bg-[color-mix(in_srgb,var(--brand-accent)_12%,transparent)] font-medium text-[var(--brand-accent)]"
+                              : "text-[var(--text-sub)] hover:bg-[var(--surface2)] hover:text-[var(--text)]",
                           )}
                         >
                           {size} / pág.
@@ -737,7 +698,7 @@ export const HistoricalSimulator = () => {
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
           )}
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { Money } from "@/components/shared/Money";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercentNeutral } from "@/lib/utils/formatNumber";
 import { cn, matchesSearch, assetTypeKeywords } from "@/lib/utils";
@@ -19,6 +20,8 @@ const ASSET_CLASSES: { assetClass: string; types: AssetType[] }[] = [
   { assetClass: "Criptomoedas",        types: ["Cripto"] },
   { assetClass: "Tesouro Direto",      types: ["TesouroDireto"] },
   { assetClass: "Renda Fixa",          types: ["RendaFixa"] },
+  { assetClass: "Moedas",              types: ["Moeda"] },
+  { assetClass: "Índices",             types: ["Index"] },
   { assetClass: "Outros",              types: ["Outro"] },
 ];
 
@@ -34,6 +37,8 @@ const ASSET_TYPE_COLORS: Record<AssetType, string> = {
   ETFInternacional:  "#7C6FE0",
   TesouroDireto:     "#00C98D",
   RendaFixa:         "#4A9EFF",
+  Moeda:             "#14B8A6",
+  Index:             "#8A95A3",
   Outro:             "#8A95A3",
 };
 
@@ -73,60 +78,53 @@ function InvestmentRow({
   return (
     <tr
       onClick={() => onSelectInvestment(inv)}
-      className="border-border group cursor-pointer border-b last:border-0 transition-colors odd:bg-surface even:bg-surface2/70 hover:bg-surface2"
+      className="group cursor-pointer border-b border-[var(--border-color)] transition-colors last:border-0 hover:bg-[var(--surface2)]"
     >
-      <td className={cn("px-4 py-3", W.chevronName)}>
+      <td className={cn("px-[14px] py-[13px]", W.chevronName)}>
         <div className="flex items-center gap-2.5">
-          <div
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-[10px] font-bold text-white"
-            style={{ backgroundColor: color }}
-          >
-            {inv.ticker.slice(0, 2)}
-          </div>
+          <span className="h-[9px] w-[9px] shrink-0 rounded-full" style={{ background: color }} />
           <div className="min-w-0">
-            <p className="text-text truncate text-[13px] font-medium">{inv.name}</p>
-            <p className="text-text-muted text-[11px]">{inv.ticker}</p>
+            <p className="truncate font-mono text-[13px] font-semibold tracking-[-0.01em] text-[var(--text)]">{inv.ticker}</p>
+            <p className="truncate text-[12px] text-[var(--text-sub)]">{inv.name}</p>
           </div>
         </div>
       </td>
-      <td className={cn("px-4 py-3 text-right", W.qty)}>
-        <span className="font-mono text-text-sub text-[13px]">
+      <td className={cn("px-[14px] py-[13px] text-right", W.qty)}>
+        <span className="font-mono text-[13px] tabular-nums text-[var(--text-sub)]">
           {inv.currentQuantity % 1 === 0
             ? inv.currentQuantity.toLocaleString("pt-BR")
             : inv.currentQuantity.toFixed(4)}
         </span>
       </td>
-      <td className={cn("px-4 py-3 text-right", W.price)}>
-        <span className="font-money text-text-sub text-[13px]">{formatCurrency(inv.currentPrice / 100)}</span>
+      <td className={cn("px-[14px] py-[13px] text-right", W.price)}>
+        <Money cents={inv.currentPrice} className="text-[13px] text-[var(--text-sub)]" />
       </td>
-      <td className={cn("px-4 py-3 text-right", W.changePct)}>
+      <td className={cn("px-[14px] py-[13px] text-right", W.changePct)}>
         {hasDayChange ? (
-          <span className={cn("font-mono text-[13px] font-medium", isDayPositive ? "text-green" : "text-red")}>
+          <span className={cn("font-mono text-[13px] font-medium tabular-nums", isDayPositive ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
             {formatPercentNeutral(Math.abs(inv.dayChangePct))}
           </span>
         ) : (
-          <span className="font-mono text-[13px] text-text-muted">—</span>
+          <span className="font-mono text-[13px] text-[var(--text-muted)]">—</span>
         )}
       </td>
-      <td className={cn("px-4 py-3 text-right", W.changeR)}>
+      <td className={cn("px-[14px] py-[13px] text-right", W.changeR)}>
         {hasDayChange ? (
-          <span className={cn("font-money text-[13px] font-medium", isDayPositive ? "text-green" : "text-red")}>
-            {formatCurrency(Math.abs(inv.dayChangeAbs) / 100)}
-          </span>
+          <Money cents={inv.dayChangeAbs} sign className="text-[13px]" />
         ) : (
-          <span className="font-money text-[13px] text-text-muted">—</span>
+          <span className="font-mono text-[13px] text-[var(--text-muted)]">—</span>
         )}
       </td>
-      <td className={cn("px-4 py-3 text-right", W.rentab)}>
-        <span className={cn("font-mono text-[13px] font-medium", isRentabPositive ? "text-green" : "text-red")}>
+      <td className={cn("px-[14px] py-[13px] text-right", W.rentab)}>
+        <span className={cn("font-mono text-[13px] font-medium tabular-nums", isRentabPositive ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
           {formatPercentNeutral(Math.abs(inv.totalReturnPercent))}
         </span>
       </td>
-      <td className={cn("px-4 py-3 text-right", W.balance)}>
-        <span className="font-money font-600 text-text text-[13px]">{formatCurrency(inv.currentValue / 100)}</span>
+      <td className={cn("px-[14px] py-[13px] text-right", W.balance)}>
+        <Money cents={inv.currentValue} className="text-[13px]" />
       </td>
-      <td className={cn("px-4 py-3 text-right", W.pct)}>
-        <span className="font-mono text-text-sub text-[12px]">{pct.toFixed(1)}%</span>
+      <td className={cn("px-[14px] py-[13px] text-right", W.pct)}>
+        <span className="font-mono text-[12px] tabular-nums text-[var(--text-sub)]">{pct.toFixed(1)}%</span>
       </td>
     </tr>
   );
@@ -164,87 +162,84 @@ function ClassCard({
   const isDayPositive    = groupDayChangeAbs >= 0;
 
   return (
-    <div className={cn("border-border bg-surface overflow-hidden rounded-xl border", isEmpty && "opacity-50")}>
+    <div
+      className={cn("overflow-hidden rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)]", isEmpty && "opacity-50")}
+      style={{ boxShadow: "var(--shadow-sm)" }}
+    >
       <button
         onClick={() => !isEmpty && setOpen((v) => !v)}
         className={cn(
           "w-full text-left transition-colors",
-          !isEmpty && "hover:bg-surface2/40",
+          !isEmpty && "hover:bg-[var(--surface2)]",
           isEmpty ? "cursor-default" : "cursor-pointer",
-          open && !isEmpty && "border-border border-b",
+          open && !isEmpty && "border-b border-[var(--border-color)]",
         )}
       >
         <table className="w-full table-fixed">
           <tbody>
             <tr>
-              <td className={cn("px-4 py-4", W.chevronName)}>
+              <td className={cn("px-[18px] py-[18px]", W.chevronName)}>
                 <div className="flex items-center gap-2">
                   {isEmpty ? (
-                    <ChevronRight size={14} className="text-text-muted/40 shrink-0" />
+                    <ChevronRight size={15} className="shrink-0 text-[var(--text-muted)] opacity-40" />
                   ) : open ? (
-                    <ChevronDown size={14} className="text-text-muted shrink-0" />
+                    <ChevronDown size={15} className="shrink-0 text-[var(--text-sub)]" />
                   ) : (
-                    <ChevronRight size={14} className="text-text-muted shrink-0" />
+                    <ChevronRight size={15} className="shrink-0 text-[var(--text-sub)]" />
                   )}
-                  <p className="text-text text-[14px] font-semibold">{assetClass}</p>
+                  <p className="font-display text-[15px] font-bold tracking-[-0.01em] text-[var(--text)]">{assetClass}</p>
                 </div>
               </td>
 
-              <td className={cn("px-4 py-4 text-right", W.qty)}>
-                <p className="text-text-muted text-[10px] uppercase tracking-[0.05em]">Ativos</p>
-                <p className="text-text mt-0.5 text-[13px] font-medium">{investments.length}</p>
+              <td className={cn("px-[14px] py-[18px] text-right", W.qty)}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Ativos</p>
+                <p className="mt-1 font-mono text-[13px] font-medium tabular-nums text-[var(--text)]">{investments.length}</p>
               </td>
 
-              <td className={cn("px-4 py-4 text-right", W.price)}>
-                <p className="text-text-muted text-[10px] uppercase tracking-[0.05em]">Valor total</p>
-                <p className="font-money text-text mt-0.5 text-[13px] font-medium">
-                  {isEmpty ? "—" : formatCurrency(groupValue / 100)}
-                </p>
+              <td className={cn("px-[14px] py-[18px] text-right", W.price)}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Valor total</p>
+                {isEmpty ? <p className="mt-1 font-mono text-[13px] text-[var(--text-muted)]">—</p> : <Money cents={groupValue} className="mt-1 text-[13px]" />}
               </td>
 
-              <td className={cn("px-4 py-4 text-right", W.changePct)}>
-                <p className="text-text-muted text-[10px] uppercase tracking-[0.05em]">Variação</p>
+              <td className={cn("px-[14px] py-[18px] text-right", W.changePct)}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Variação</p>
                 {isEmpty || !hasDayChange ? (
-                  <p className="font-mono mt-0.5 text-[13px] font-medium text-text-muted">—</p>
+                  <p className="mt-1 font-mono text-[13px] font-medium text-[var(--text-muted)]">—</p>
                 ) : (
-                  <p className={cn("font-mono mt-0.5 text-[13px] font-medium", isDayPositive ? "text-green" : "text-red")}>
+                  <p className={cn("mt-1 font-mono text-[13px] font-medium tabular-nums", isDayPositive ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
                     {formatPercentNeutral(Math.abs(groupDayChangePct))}
                   </p>
                 )}
               </td>
 
-              <td className={cn("px-4 py-4 text-right", W.changeR)}>
-                <p className="text-text-muted text-[10px] uppercase tracking-[0.05em]">Variação (R$)</p>
+              <td className={cn("px-[14px] py-[18px] text-right", W.changeR)}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Variação (R$)</p>
                 {isEmpty || !hasDayChange ? (
-                  <p className="font-money mt-0.5 text-[13px] font-medium text-text-muted">—</p>
+                  <p className="mt-1 font-mono text-[13px] font-medium text-[var(--text-muted)]">—</p>
                 ) : (
-                  <p className={cn("font-money mt-0.5 text-[13px] font-medium", isDayPositive ? "text-green" : "text-red")}>
-                    {formatCurrency(Math.abs(groupDayChangeAbs) / 100)}
-                  </p>
+                  <Money cents={groupDayChangeAbs} sign className="mt-1 text-[13px]" />
                 )}
               </td>
 
-              <td className={cn("px-4 py-4 text-right", W.rentab)}>
-                <p className="text-text-muted text-[10px] uppercase tracking-[0.05em]">Rentab.</p>
+              <td className={cn("px-[14px] py-[18px] text-right", W.rentab)}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Rentab.</p>
                 {isEmpty ? (
-                  <p className="font-mono mt-0.5 text-[13px] font-medium text-text-muted">—</p>
+                  <p className="mt-1 font-mono text-[13px] font-medium text-[var(--text-muted)]">—</p>
                 ) : (
-                  <p className={cn("font-mono mt-0.5 text-[13px] font-medium", isRentabPositive ? "text-green" : "text-red")}>
+                  <p className={cn("mt-1 font-mono text-[13px] font-medium tabular-nums", isRentabPositive ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
                     {formatPercentNeutral(Math.abs(groupYield))}
                   </p>
                 )}
               </td>
 
-              <td className={cn("px-4 py-4 text-right", W.balance)}>
-                <p className="text-text-muted text-[10px] uppercase tracking-[0.05em]">Saldo</p>
-                <p className={cn("font-money mt-0.5 text-[13px] font-medium", isEmpty ? "text-text-muted" : "text-text")}>
-                  {isEmpty ? "—" : formatCurrency(groupValue / 100)}
-                </p>
+              <td className={cn("px-[14px] py-[18px] text-right", W.balance)}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Saldo</p>
+                {isEmpty ? <p className="mt-1 font-mono text-[13px] text-[var(--text-muted)]">—</p> : <Money cents={groupValue} className="mt-1 text-[13px]" />}
               </td>
 
-              <td className={cn("px-4 py-4 text-right", W.pct)}>
-                <p className="text-text-muted text-[10px] uppercase tracking-[0.05em]">% Cart.</p>
-                <p className="font-mono text-text-sub mt-0.5 text-[13px]">
+              <td className={cn("px-[14px] py-[18px] text-right", W.pct)}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">% Cart.</p>
+                <p className="mt-1 font-mono text-[13px] tabular-nums text-[var(--text-sub)]">
                   {isEmpty ? "—" : `${groupPct.toFixed(1)}%`}
                 </p>
               </td>
@@ -256,15 +251,15 @@ function ClassCard({
       {open && !isEmpty && (
         <table className="w-full table-fixed">
           <thead>
-            <tr className="border-border bg-surface2 border-b">
-              <th className={cn("px-4 py-2.5 text-left text-[11px] font-medium text-text-muted", W.chevronName)}>Ativo</th>
-              <th className={cn("px-4 py-2.5 text-right text-[11px] font-medium text-text-muted", W.qty)}>Qtd.</th>
-              <th className={cn("px-4 py-2.5 text-right text-[11px] font-medium text-text-muted", W.price)}>Preço atual</th>
-              <th className={cn("px-4 py-2.5 text-right text-[11px] font-medium text-text-muted", W.changePct)}>Variação</th>
-              <th className={cn("px-4 py-2.5 text-right text-[11px] font-medium text-text-muted", W.changeR)}>Variação (R$)</th>
-              <th className={cn("px-4 py-2.5 text-right text-[11px] font-medium text-text-muted", W.rentab)}>Rentab.</th>
-              <th className={cn("px-4 py-2.5 text-right text-[11px] font-medium text-text-muted", W.balance)}>Saldo</th>
-              <th className={cn("px-4 py-2.5 text-right text-[11px] font-medium text-text-muted", W.pct)}>% Cart.</th>
+            <tr className="border-b border-[var(--border-color)]">
+              <th className={cn("px-[14px] py-[11px] text-left font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.chevronName)}>Ativo</th>
+              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.qty)}>Qtd.</th>
+              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.price)}>Preço atual</th>
+              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.changePct)}>Variação</th>
+              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.changeR)}>Variação (R$)</th>
+              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.rentab)}>Rentab.</th>
+              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.balance)}>Saldo</th>
+              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.pct)}>% Cart.</th>
             </tr>
           </thead>
           <tbody>

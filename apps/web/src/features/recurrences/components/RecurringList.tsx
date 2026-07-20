@@ -30,7 +30,7 @@ type Props = {
 export function RecurringList({ items, totalMonthly, expanded = false, onView, onEdit, onCancel, onReactivate }: Props) {
   if (items.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border py-12 text-center">
+      <div className="flex flex-col items-center justify-center rounded-[20px] border py-12 text-center" style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}>
         <div className="bg-surface2 mb-3 flex h-10 w-10 items-center justify-center rounded-[10px]">
           <RefreshCw size={18} className="text-text-muted" strokeWidth={1.5} />
         </div>
@@ -54,7 +54,7 @@ export function RecurringList({ items, totalMonthly, expanded = false, onView, o
 
       {expanded ? (
         /* ── Expanded table layout (single-type filter) ── */
-        <div className="border-border overflow-hidden rounded-xl border">
+        <div className="overflow-hidden rounded-[20px] border" style={{ borderColor: "var(--border-color)" }}>
           {/* Table header */}
           <div className="bg-surface2 border-border grid grid-cols-[2fr_130px_100px_120px_130px_100px_80px] gap-3 border-b px-5 py-2.5">
             {["Serviço", "Categoria", "Valor/mês", "Recorrência", "Conta", "Status", ""].map(h => (
@@ -131,14 +131,14 @@ export function RecurringList({ items, totalMonthly, expanded = false, onView, o
                       <button
                         onClick={() => onEdit(item)}
                         title="Editar assinatura"
-                        className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                        className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors"
                       >
                         <Pencil size={13} />
                       </button>
                       <button
                         onClick={() => onCancel(item)}
                         title="Cancelar assinatura"
-                        className="text-red/60 hover:bg-red/10 flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:text-red"
+                        className="text-red/60 hover:bg-red/10 flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors hover:text-red"
                       >
                         <X size={13} />
                       </button>
@@ -147,7 +147,7 @@ export function RecurringList({ items, totalMonthly, expanded = false, onView, o
                     <button
                       onClick={() => onReactivate(item)}
                       title="Reativar assinatura"
-                      className="text-green/70 hover:bg-green/10 hover:text-green flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                      className="text-green/70 hover:bg-green/10 hover:text-green flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors"
                     >
                       <RotateCcw size={13} />
                     </button>
@@ -165,7 +165,7 @@ export function RecurringList({ items, totalMonthly, expanded = false, onView, o
         </div>
       ) : (
         /* ── Compact list layout (All filter) ── */
-        <div className="border-border overflow-hidden rounded-xl border">
+        <div className="overflow-hidden rounded-[20px] border" style={{ borderColor: "var(--border-color)" }}>
           {items.map((item, i) => {
             const color = getCategoryColor(item.categoryColor, item.categoryName);
             const startYear = new Date(item.startDate).getFullYear();
@@ -209,7 +209,7 @@ export function RecurringList({ items, totalMonthly, expanded = false, onView, o
 
                 {/* Value — slides left on hover */}
                 <div className="flex shrink-0 flex-col items-end gap-1 transition-transform duration-200 group-hover:-translate-x-16">
-                  <span className={cn("font-money font-600 text-[15px]", item.type === "Income" ? "text-green" : "text-text")}>
+                  <span className={cn("font-money font-semibold text-[15px]", item.type === "Income" ? "text-green" : "text-text")}>
                     {item.type === "Income" ? "+" : ""}{formatCurrency(item.value / 100)}
                   </span>
                   <span
@@ -227,14 +227,14 @@ export function RecurringList({ items, totalMonthly, expanded = false, onView, o
                       <button
                         onClick={e => { e.stopPropagation(); onEdit(item); }}
                         title="Editar assinatura"
-                        className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                        className="text-text-sub hover:bg-surface2 hover:text-text flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors"
                       >
                         <Pencil size={13} />
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); onCancel(item); }}
                         title="Cancelar assinatura"
-                        className="text-red/60 hover:bg-red/10 flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:text-red"
+                        className="text-red/60 hover:bg-red/10 flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors hover:text-red"
                       >
                         <X size={13} />
                       </button>
@@ -243,7 +243,7 @@ export function RecurringList({ items, totalMonthly, expanded = false, onView, o
                     <button
                       onClick={e => { e.stopPropagation(); onReactivate(item); }}
                       title="Reativar assinatura"
-                      className="text-green/70 hover:bg-green/10 hover:text-green flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                      className="text-green/70 hover:bg-green/10 hover:text-green flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors"
                     >
                       <RotateCcw size={13} />
                     </button>

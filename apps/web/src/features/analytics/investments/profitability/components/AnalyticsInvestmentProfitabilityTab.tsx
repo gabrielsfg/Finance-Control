@@ -11,11 +11,10 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
   ReferenceLine,
 } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import {
   useInvestmentProfitabilityTotals,
@@ -104,18 +103,23 @@ export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: {
 
       {/* ── Hero card: portfolio result + benchmark comparisons ── */}
       {t && bmTotals && (
-        <div className="border-border bg-surface rounded-xl border p-5">
+        <Card>
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
-              <p className="text-text-muted text-[12px] uppercase tracking-[0.06em]">Rentabilidade total da carteira</p>
-              <p className={cn("font-money font-700 mt-1 text-[42px] leading-none", t.allTime.returnPct >= 0 ? "text-green" : "text-red")}>
+              <p className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--text-sub)]">Rentabilidade total da carteira</p>
+              <p className={cn("mt-1 font-mono text-[42px] font-bold leading-none tabular-nums", t.allTime.returnPct >= 0 ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
                 {t.allTime.returnPct >= 0 ? "+" : ""}{t.allTime.returnPct.toFixed(2)}%
               </p>
             </div>
-            <div className={cn(
-              "flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-medium",
-              t.allTime.vsCdiPct >= 0 ? "bg-green/10 text-green" : "bg-red/10 text-red"
-            )}>
+            <div
+              className={cn(
+                "flex items-center gap-1.5 rounded-[13px] px-3 py-2 text-[13px] font-medium",
+                t.allTime.vsCdiPct >= 0 ? "text-[var(--moss)]" : "text-[var(--clay)]",
+              )}
+              style={{
+                backgroundColor: `color-mix(in srgb, ${t.allTime.vsCdiPct >= 0 ? "var(--moss)" : "var(--clay)"} 14%, transparent)`,
+              }}
+            >
               {t.allTime.vsCdiPct >= 0
                 ? <TrendingUp size={15} />
                 : <TrendingDown size={15} />}
@@ -157,13 +161,14 @@ export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: {
               <p className="text-text-muted text-[11px] mt-0.5">IPCA+5%: {bmTotals.ipcaPlus5AllTimePct.toFixed(2)}%</p>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* ── Benchmark selector + monthly bar chart ── */}
-      <div className="border-border bg-surface rounded-xl border p-5">
+      <Card>
         <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
-          <SectionHeader
+          <CardHead
+            className="mb-0"
             title="Rentabilidade mensal vs benchmarks"
             subtitle="Comparativo mês a mês contra os índices selecionados"
           />
@@ -193,12 +198,12 @@ export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: {
           <div style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={points} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="25%">
-                <CartesianGrid stroke="var(--border-chart)" />
-                <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1) + "%"} width={46} />
+                <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
+                <XAxis dataKey="label" tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <YAxis tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1) + "%"} width={46} />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--surface2)" }} />
-                <ReferenceLine y={0} stroke="var(--border)" strokeWidth={1} />
-                <Bar dataKey="portfolioPct" name="Carteira" fill="var(--green)" radius={[3, 3, 0, 0]} />
+                <ReferenceLine y={0} stroke="var(--border-color)" strokeWidth={1} />
+                <Bar dataKey="portfolioPct" name="Carteira" fill="var(--moss)" radius={[3, 3, 0, 0]} />
                 {activeBenchmarks.has("cdi")   && <Bar dataKey="cdiPct"       name="CDI"     fill="var(--blue)"   radius={[3, 3, 0, 0]} />}
                 {activeBenchmarks.has("ibov")  && <Bar dataKey="ibovPct"      name="IBOV"    fill="var(--orange)" radius={[3, 3, 0, 0]} />}
                 {activeBenchmarks.has("ipca5") && <Bar dataKey="ipcaPlus5Pct" name="IPCA+5%" fill="var(--purple)" radius={[3, 3, 0, 0]} />}
@@ -206,24 +211,24 @@ export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: {
             </ResponsiveContainer>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* ── Cumulative line chart ── */}
       {cumulativeData.length > 1 && (
-        <div className="border-border bg-surface rounded-xl border p-5">
-          <SectionHeader
+        <Card>
+          <CardHead
             title="Rentabilidade acumulada"
             subtitle="Evolução percentual acumulada desde o início do período"
           />
           <div style={{ height: 260 }} className="mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={cumulativeData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <CartesianGrid stroke="var(--border-chart)" />
-                <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1) + "%"} width={50} />
-                <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />
-                <ReferenceLine y={0} stroke="var(--border)" strokeWidth={1} />
-                <Line type="monotone" dataKey="portfolio" name="Carteira" stroke="var(--green)" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
+                <XAxis dataKey="label" tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <YAxis tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1) + "%"} width={50} />
+                <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--border-color)", strokeWidth: 1, strokeDasharray: "4 4" }} />
+                <ReferenceLine y={0} stroke="var(--border-color)" strokeWidth={1} />
+                <Line type="monotone" dataKey="portfolio" name="Carteira" stroke="var(--moss)" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
                 {activeBenchmarks.has("cdi")   && <Line type="monotone" dataKey="cdi"   name="CDI"     stroke="var(--blue)"   strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4 }} />}
                 {activeBenchmarks.has("ibov")  && <Line type="monotone" dataKey="ibov"  name="IBOV"    stroke="var(--orange)" strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4 }} />}
                 {activeBenchmarks.has("ipca5") && <Line type="monotone" dataKey="ipca5" name="IPCA+5%" stroke="var(--purple)" strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4 }} />}
@@ -232,19 +237,19 @@ export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: {
           </div>
           <div className="mt-3 flex flex-wrap gap-4">
             <div className="flex items-center gap-1.5">
-              <div className="h-2.5 w-2.5 rounded-[2px] bg-green" />
+              <div className="h-2.5 w-2.5 rounded-[2px] bg-[var(--moss)]" />
               <span className="text-text-muted text-[12px]">Carteira</span>
             </div>
             {activeBenchmarks.has("cdi")   && <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-[2px] bg-blue"   /><span className="text-text-muted text-[12px]">CDI</span></div>}
             {activeBenchmarks.has("ibov")  && <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-[2px] bg-orange" /><span className="text-text-muted text-[12px]">IBOV</span></div>}
             {activeBenchmarks.has("ipca5") && <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-[2px] bg-purple" /><span className="text-text-muted text-[12px]">IPCA+5%</span></div>}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* ── Annual returns table ── */}
-      <div className="border-border bg-surface rounded-xl border p-5">
-        <SectionHeader title="Rentabilidade por ano" subtitle="Retorno mensal e anual acumulado" />
+      <Card>
+        <CardHead title="Rentabilidade por ano" subtitle="Retorno mensal e anual acumulado" />
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[700px] text-[13px]">
             <thead>
@@ -295,7 +300,7 @@ export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
       {/* IBOV disclaimer */}
       <p className="text-text-muted text-[11px] px-1">

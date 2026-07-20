@@ -10,6 +10,7 @@ import { DeleteAccountModal } from "@/features/accounts/components/DeleteAccount
 import { SetDefaultAccountModal } from "@/features/accounts/components/SetDefaultAccountModal";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { usePageNova } from "@/lib/hooks/usePageHeader";
+import { PageTopbar } from "@/components/layout/PageTopbar";
 import type { AccountItem } from "@/lib/types/accounts.types";
 import type { AccountDrawerMode } from "@/features/accounts/components/AccountDrawer";
 
@@ -32,11 +33,6 @@ export function AccountsPage() {
 
   const closeDrawer = () => setDrawerOpen(false);
 
-  const netWorth = accounts?.filter((a) => a.type !== "Credit").reduce((sum, a) => sum + a.currentAmount, 0) ?? 0;
-  const totalInvoice = accounts?.filter((a) => a.type === "Credit").reduce((sum, a) => sum + Math.abs(a.currentAmount), 0) ?? 0;
-  const totalCreditAvailable = accounts?.filter((a) => a.type === "Credit" && a.creditLimit).reduce((sum, a) => sum + (a.creditLimit! - Math.abs(a.currentAmount)), 0) ?? 0;
-
-
   const hasAccounts = !!accounts?.length;
 
   if (isLoading) {
@@ -55,23 +51,17 @@ export function AccountsPage() {
     );
   }
 
+  const subtitle = (accounts?.length ?? 0) > 0
+    ? `${accounts!.length} conta${accounts!.length !== 1 ? "s" : ""}`
+    : "Nenhuma conta";
+
   return (
     <>
+      <div className="px-[clamp(20px,3.4vw,46px)] pb-[60px]">
+        <PageTopbar title="Contas" subtitle={subtitle} />
       <div className="flex flex-col gap-5">
-        <div>
-          <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Contas</h1>
-          <p className="text-text-muted mt-0.5 text-[13px]">
-            {(accounts?.length ?? 0) > 0 ? `${accounts!.length} conta${accounts!.length !== 1 ? "s" : ""}` : "Nenhuma conta"}
-          </p>
-        </div>
 
-        {hasAccounts && (
-          <AccountsNetWorthHero
-            netWorth={netWorth}
-            totalInvoice={totalInvoice}
-            totalCreditAvailable={totalCreditAvailable}
-          />
-        )}
+        {hasAccounts && <AccountsNetWorthHero accounts={accounts!} />}
 
         {hasAccounts ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -87,7 +77,7 @@ export function AccountsPage() {
             ))}
             <button
               onClick={() => openDrawer("create")}
-              className="border-border text-text-muted hover:border-green/40 hover:text-green flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed transition-colors"
+              className="border-border text-text-muted hover:border-green/40 hover:text-green flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-[20px] border border-dashed transition-colors"
             >
               <div className="border-border flex h-10 w-10 items-center justify-center rounded-full border border-dashed">
                 <Plus size={18} strokeWidth={1.5} />
@@ -100,10 +90,10 @@ export function AccountsPage() {
         )}
 
         {/* Open Finance — V2 placeholder */}
-        <div className="border-border bg-surface rounded-xl border p-5">
+        <div className="rounded-[20px] border p-5" style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}>
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="font-display font-600 text-text text-[15px]">Open Finance</p>
+              <p className="font-display font-semibold text-[var(--text)] text-[15px]">Open Finance</p>
               <p className="text-text-muted mt-0.5 text-[12px]">Conecte seus bancos para importar transações automaticamente</p>
             </div>
             <span className="bg-orange/10 text-orange border-orange/30 rounded-full border px-2.5 py-1 text-[11px] font-medium">
@@ -117,7 +107,7 @@ export function AccountsPage() {
               { name: "XP",      color: "#FF6B00", initial: "X" },
               { name: "B3",      color: "#E50000", initial: "B" },
             ].map((bank) => (
-              <div key={bank.name} className="border-border bg-surface2 flex items-center gap-3 rounded-xl border p-3 opacity-60">
+              <div key={bank.name} className="border-border bg-surface2 flex items-center gap-3 rounded-[13px] border p-3 opacity-60">
                 <div
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] text-[13px] font-bold text-white"
                   style={{ backgroundColor: bank.color }}
@@ -136,6 +126,7 @@ export function AccountsPage() {
             ))}
           </div>
         </div>
+      </div>
       </div>
 
       <AccountDrawer

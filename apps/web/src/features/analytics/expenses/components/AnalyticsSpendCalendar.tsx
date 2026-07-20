@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from "lucide-react";
+import { Card, CardHead } from "@/components/shared/Card";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { parseMonthYear } from "@/lib/utils/budgetPeriod";
 import { cn } from "@/lib/utils";
@@ -52,27 +53,29 @@ export const AnalyticsSpendCalendar = ({ data, month, onPrev, onNext }: Props) =
   const monthLabel = `${MONTH_NAMES[monthNum]} ${year}`;
 
   return (
-    <div className="border-border bg-surface rounded-xl border p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-display font-700 text-text text-[18px] tracking-tight">Calendário de Gastos</h2>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onPrev}
-            className="text-text-muted hover:text-text hover:bg-surface2 flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
-          >
-            <ChevronLeft size={15} />
-          </button>
-          <span className="text-text-sub min-w-[120px] text-center text-[13px] font-medium">
-            {monthLabel}
-          </span>
-          <button
-            onClick={onNext}
-            className="text-text-muted hover:text-text hover:bg-surface2 flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
-          >
-            <ChevronRight size={15} />
-          </button>
-        </div>
-      </div>
+    <Card>
+      <CardHead
+        title="Calendário de Gastos"
+        right={
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onPrev}
+              className="flex h-7 w-7 items-center justify-center rounded-[9px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--text)]"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <span className="min-w-[120px] text-center text-[13px] font-medium text-[var(--text-sub)]">
+              {monthLabel}
+            </span>
+            <button
+              onClick={onNext}
+              className="flex h-7 w-7 items-center justify-center rounded-[9px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--text)]"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        }
+      />
 
       {/* Week day headers */}
       <div className="grid grid-cols-7 mb-1">
@@ -176,6 +179,6 @@ export const AnalyticsSpendCalendar = ({ data, month, onPrev, onNext }: Props) =
           <span className="text-text-muted text-[11px]">Menos que mês anterior</span>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };

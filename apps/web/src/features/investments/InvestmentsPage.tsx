@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, TrendingUp, Download, Gift, Plus, Search, X } from "lucide-react";
+import { Loader2, TrendingUp, Download, Gift, Plus } from "lucide-react";
+import { PageTopbar } from "@/components/layout/PageTopbar";
+import { InvestmentsSummaryHero } from "@/features/investments/components/InvestmentsSummaryHero";
 import { InvestmentsKpiCards } from "@/features/investments/components/InvestmentsKpiCards";
 import { InvestmentsAllocationChart } from "@/features/investments/components/InvestmentsAllocationChart";
 import { InvestmentsPriceChart } from "@/features/investments/components/InvestmentsPriceChart";
@@ -13,6 +15,7 @@ import { InvestmentDetailModal } from "@/features/investments/components/Investm
 import { useInvestments } from "@/features/investments/hooks/useInvestments";
 import { useInvestmentVisibility } from "@/features/investments/hooks/useInvestmentVisibility";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { formatPercent } from "@/lib/utils/formatNumber";
 import { usePageNova, usePageSearch, usePageFilter } from "@/lib/hooks/usePageHeader";
 import type { Investment } from "@/lib/types/investments.types";
 
@@ -27,53 +30,36 @@ export function InvestmentsPage() {
   const [search, setSearch]                         = useState("");
 
   usePageNova("Nova operação", () => setShowRegisterTx(true));
-  usePageSearch();
+  usePageSearch((q) => setSearch(q), "Buscar ativo…");
 
   usePageFilter(
     <div className="flex items-center gap-2">
-      {/* Ticker / name search */}
-      <div className="relative">
-        <Search size={13} className="text-text-muted absolute left-2.5 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Ticker ou nome..."
-          className="border-border bg-surface2 text-text placeholder:text-text-muted h-8 w-[150px] rounded-lg border py-1.5 pl-7 pr-6 text-[13px] outline-none focus:border-green/60"
-        />
-        {search && (
-          <button onClick={() => setSearch("")} title="Limpar busca" className="absolute right-2 top-1/2 -translate-y-1/2">
-            <X size={12} className="text-text-muted hover:text-text" />
-          </button>
-        )}
-      </div>
-
-      {/* Export */}
-      <button
-        onClick={() => {/* export CSV */}}
-        title="Exportar CSV"
-        className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-[8px] transition-colors"
-        aria-label="Exportar"
-      >
-        <Download size={15} strokeWidth={1.75} />
-      </button>
-
-      {/* Dividend */}
+      {/* Registrar dividendo */}
       <button
         onClick={() => setShowDividendModal(true)}
         title="Registrar dividendo"
-        className="border-border bg-surface2 text-text-sub hover:text-text flex h-7 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium transition-colors"
+        className="inline-flex h-9 items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-[13px] text-[13px] font-medium text-[var(--text-sub)] transition-colors hover:text-[var(--text)]"
       >
-        <Gift size={12} strokeWidth={1.75} />
+        <Gift size={14} strokeWidth={1.75} />
         Dividendo
       </button>
-    </div>
+
+      {/* Exportar CSV */}
+      <button
+        onClick={() => {/* export CSV */}}
+        title="Exportar CSV"
+        aria-label="Exportar"
+        className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[var(--surface2)] text-[var(--text-sub)] transition-colors hover:bg-[var(--border-color)] hover:text-[var(--text)]"
+      >
+        <Download size={15} strokeWidth={1.75} />
+      </button>
+    </div>,
   );
 
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 size={24} className="text-green animate-spin" />
+        <Loader2 size={24} className="animate-spin text-[var(--brand-accent)]" />
       </div>
     );
   }
@@ -81,68 +67,80 @@ export function InvestmentsPage() {
   if (isError || !data) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-text-sub text-[14px]">Erro ao carregar investimentos. Tente novamente.</p>
+        <p className="text-[14px] text-[var(--text-sub)]">Erro ao carregar investimentos. Tente novamente.</p>
       </div>
     );
   }
 
   const hasInvestments = data.investments.length > 0;
+  const count = data.investments.length;
+
+  const subtitle = hasInvestments
+    ? `${count} ${count === 1 ? "ativo" : "ativos"} · ${formatPercent(data.totalReturnPercent)} no acumulado`
+    : "Nenhum ativo na carteira";
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-display font-700 text-text text-[22px] tracking-tight">Investimentos</h1>
-        <p className="text-text-muted mt-0.5 text-[13px]">{data.investments.length} {data.investments.length === 1 ? "ativo" : "ativos"} na carteira</p>
-      </div>
+    <>
+      <div className="px-[clamp(20px,3.4vw,46px)] pb-[60px]">
+        <PageTopbar title="Investimentos" subtitle={subtitle} />
 
-      {hasInvestments ? (
-        <>
-          <InvestmentsKpiCards summary={data} />
+        <div className="flex flex-col gap-5">
+          {hasInvestments ? (
+            <>
+              <InvestmentsSummaryHero summary={data} />
 
-          {/* Gráficos: pizza de alocação + linha de preço, lado a lado */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[400px_1fr]">
-            <InvestmentsAllocationChart summary={data} />
-            <InvestmentsPriceChart investments={data.investments} />
-          </div>
+              {/* Evolução + alocação */}
+              <div className="grid grid-cols-1 gap-[22px] lg:grid-cols-12">
+                <div className="lg:col-span-7">
+                  <InvestmentsPriceChart investments={data.investments} />
+                </div>
+                <div className="lg:col-span-5">
+                  <InvestmentsAllocationChart summary={data} />
+                </div>
+              </div>
 
-          {/* Tabela dentro de card com header */}
-          <div className="border-border bg-surface rounded-xl border">
-            <div className="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
-              <h2 className="font-display font-700 text-text text-[20px] tracking-tight">Meus Ativos</h2>
-              <InvestmentTypeFilter
-                allTypes={allTypes}
-                visibleTypes={visibleTypes}
-                onChange={setVisibleTypes}
-              />
-            </div>
-            <div className="p-4">
+              {/* Posições */}
+              <div className="mt-1 flex items-center gap-3">
+                <h2 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">Posições</h2>
+                <div className="h-px flex-1 bg-[var(--border-color)]" />
+                <InvestmentTypeFilter
+                  allTypes={allTypes}
+                  visibleTypes={visibleTypes}
+                  onChange={setVisibleTypes}
+                />
+              </div>
+
               <InvestmentsTable
                 portfolio={data}
                 search={search}
                 visibleTypes={visibleTypes}
                 onSelectInvestment={setSelectedInvestment}
               />
+            </>
+          ) : (
+            <div
+              className="rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)] px-5 py-16 text-center"
+              style={{ boxShadow: "var(--shadow-sm)" }}
+            >
+              <div className="mx-auto mb-3.5 flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--surface2)] text-[var(--brand-accent)]">
+                <TrendingUp size={24} strokeWidth={1.75} />
+              </div>
+              <h4 className="font-display text-[16px] font-bold text-[var(--text)]">Nenhum investimento cadastrado</h4>
+              <p className="mx-auto mt-1.5 max-w-[340px] text-[13.5px] text-[var(--text-sub)]">
+                Registre sua primeira compra para começar a acompanhar sua carteira.
+              </p>
+              <button
+                onClick={() => setShowRegisterTx(true)}
+                className="mt-5 inline-flex items-center gap-2 rounded-[13px] px-[18px] py-2.5 text-[14px] font-semibold text-white transition-transform hover:-translate-y-[1px]"
+                style={{ background: "var(--brand-cobalt)", boxShadow: "0 12px 24px -12px rgba(31,60,224,0.7)" }}
+              >
+                <Plus size={16} strokeWidth={2} />
+                Registrar primeira compra
+              </button>
             </div>
-          </div>
-        </>
-      ) : (
-        <div className="border-border bg-surface flex flex-col items-center justify-center gap-4 rounded-2xl border py-20">
-          <div className="bg-green/10 flex h-14 w-14 items-center justify-center rounded-2xl">
-            <TrendingUp size={26} className="text-green" strokeWidth={1.75} />
-          </div>
-          <div className="text-center">
-            <p className="font-display font-700 text-text text-[18px]">Nenhum investimento cadastrado</p>
-            <p className="text-text-muted mt-1 text-[13px]">Registre sua primeira compra para começar a acompanhar sua carteira.</p>
-          </div>
-          <button
-            onClick={() => setShowRegisterTx(true)}
-            className="bg-green hover:bg-green/90 mt-1 flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-medium text-white transition-colors"
-          >
-            <Plus size={15} strokeWidth={2.5} />
-            Registrar primeira compra
-          </button>
+          )}
         </div>
-      )}
+      </div>
 
       <RegisterTransactionModal
         open={showRegisterTx}
@@ -165,6 +163,6 @@ export function InvestmentsPage() {
         ticker={dividendTarget?.ticker ?? ""}
         accountOptions={accounts}
       />
-    </div>
+    </>
   );
 }

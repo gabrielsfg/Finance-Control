@@ -1,6 +1,6 @@
 "use client";
 
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency } from "@/lib/utils/index";
 import type { SavingsAreaImpact } from "@/lib/types/analytics.types";
@@ -12,8 +12,8 @@ export function SavingsAreaImpactCard({ areas }: Props) {
   const worstAreaId = areas.find((a) => a.actualExpense > a.plannedExpense)?.areaId;
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Impacto por Área"
         subtitle="Áreas do orçamento que mais desviaram do planejado"
       />
@@ -32,7 +32,10 @@ export function SavingsAreaImpactCard({ areas }: Props) {
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="text-text truncate text-[13px]">{area.name}</span>
                     {area.areaId === worstAreaId && (
-                      <span className="bg-red/10 text-red shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium">
+                      <span
+                        className="shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] text-[var(--clay)]"
+                        style={{ backgroundColor: "color-mix(in srgb, var(--clay) 14%, transparent)" }}
+                      >
                         maior impacto
                       </span>
                     )}
@@ -60,6 +63,6 @@ export function SavingsAreaImpactCard({ areas }: Props) {
           })}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

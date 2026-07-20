@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import { TriangleAlert, Eye, EyeOff } from "lucide-react";
+import { Card, CardHead } from "@/components/shared/Card";
 import { useResetData } from "@/features/profile/hooks/useProfile";
 import { useAuthStore } from "@/lib/stores/authStore";
-
-const inputCls =
-  "border-red/30 bg-red/5 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-red/60 transition-colors";
 
 export const ProfileDangerZoneCard = () => {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -40,79 +38,100 @@ export const ProfileDangerZoneCard = () => {
   };
 
   return (
-    <div className="rounded-2xl border border-red/40 bg-red/5 p-5">
-      <p className="text-[11px] font-semibold tracking-widest text-red uppercase mb-3">
-        Zona de Perigo
-      </p>
+    <Card>
+      <CardHead title="Segurança" />
 
-      <div className="flex flex-col gap-3">
-        <div className="rounded-lg border border-red/20 bg-red/5 p-3">
-          <div className="mb-1.5 flex items-center gap-2">
-            <TriangleAlert size={13} className="text-red shrink-0" />
-            <p className="text-text text-[13px] font-medium">Resetar dados da conta</p>
-          </div>
-          <p className="text-text-muted text-[12px] leading-relaxed">
-            Remove permanentemente todas as transações, contas, orçamentos, investimentos, metas e
-            categorias. Sua conta é preservada. Esta ação não pode ser desfeita.
-          </p>
+      {/* Logout */}
+      <button
+        onClick={logout}
+        className="inline-flex w-full items-center justify-center rounded-[13px] border border-[var(--text)] px-[18px] py-2.5 text-[14px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--text)] hover:text-[var(--bg)]"
+      >
+        Sair da conta
+      </button>
+
+      <div className="my-[18px] h-px bg-[var(--border-color)]" />
+
+      {/* Danger: reset data */}
+      <div
+        className="rounded-[13px] border p-3.5"
+        style={{
+          borderColor: "color-mix(in srgb, var(--clay) 35%, transparent)",
+          background: "color-mix(in srgb, var(--clay) 7%, transparent)",
+        }}
+      >
+        <div className="mb-1.5 flex items-center gap-2">
+          <TriangleAlert size={14} strokeWidth={2.2} className="shrink-0 text-[var(--clay)]" />
+          <p className="text-[13.5px] font-semibold text-[var(--text)]">Resetar dados da conta</p>
         </div>
-
-        {!showConfirm ? (
-          <button
-            onClick={() => setShowConfirm(true)}
-            className="border-red/40 text-red hover:bg-red/10 w-full rounded-lg border py-2 text-[13px] font-medium transition-colors"
-          >
-            Resetar dados
-          </button>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div>
-              <label className="text-text-muted mb-1.5 block text-[12px]">
-                Digite sua senha para confirmar
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className={inputCls}
-                  placeholder="Sua senha atual"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setError(null);
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && handleReset()}
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="text-text-muted hover:text-text-sub absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                >
-                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-              {error && <p className="text-red mt-1.5 text-[12px]">{error}</p>}
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={handleCancel}
-                disabled={isPending}
-                className="border-border text-text-sub hover:text-text flex-1 rounded-lg border py-2 text-[13px] font-medium transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleReset}
-                disabled={isPending || !password.trim()}
-                className="bg-red hover:bg-red/90 disabled:opacity-50 flex-1 rounded-lg py-2 text-[13px] font-medium text-white transition-colors"
-              >
-                {isPending ? "Resetando..." : "Confirmar reset"}
-              </button>
-            </div>
-          </div>
-        )}
+        <p className="text-[12.5px] leading-relaxed text-[var(--text-sub)]">
+          Remove permanentemente todas as transações, contas, orçamentos, investimentos, metas e
+          categorias. Sua conta é preservada. Esta ação não pode ser desfeita.
+        </p>
       </div>
-    </div>
+
+      {!showConfirm ? (
+        <button
+          onClick={() => setShowConfirm(true)}
+          className="mt-3.5 inline-flex w-full items-center justify-center rounded-[13px] border px-[18px] py-2.5 text-[14px] font-semibold transition-colors"
+          style={{
+            borderColor: "color-mix(in srgb, var(--clay) 45%, transparent)",
+            color: "var(--clay)",
+          }}
+        >
+          Resetar dados
+        </button>
+      ) : (
+        <div className="mt-3.5 flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-sub)]">
+              Digite sua senha para confirmar
+            </label>
+            <div
+              className="flex items-center gap-2 rounded-[13px] border px-3.5 py-2.5 transition-[border-color,box-shadow] focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--clay)_12%,transparent)]"
+              style={{ borderColor: "color-mix(in srgb, var(--clay) 35%, transparent)" }}
+            >
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Sua senha atual"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError(null);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleReset()}
+                autoFocus
+                className="w-full border-0 bg-transparent font-sans text-[15px] text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="shrink-0 text-[var(--text-sub)] transition-colors hover:text-[var(--text)]"
+              >
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+            {error && <p className="text-[12px] text-[var(--clay)]">{error}</p>}
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancel}
+              disabled={isPending}
+              className="flex-1 rounded-[13px] bg-[var(--surface2)] py-2.5 text-[14px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--border-color)] disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleReset}
+              disabled={isPending || !password.trim()}
+              className="flex-1 rounded-[13px] py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ background: "var(--clay)" }}
+            >
+              {isPending ? "Resetando…" : "Confirmar reset"}
+            </button>
+          </div>
+        </div>
+      )}
+    </Card>
   );
 };

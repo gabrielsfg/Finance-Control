@@ -58,10 +58,10 @@ function AreaRow({ group }: { group: AreaGroup }) {
   const expenseRemaining = group.expenseAllocated - group.expenseSpent;
 
   return (
-    <div className="border-border rounded-xl border">
+    <div className="rounded-[13px] border border-[var(--border-color)]">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="hover:bg-surface2/60 flex w-full items-center gap-3 rounded-xl p-4 transition-colors"
+        className="flex w-full items-center gap-3 rounded-[13px] p-4 transition-colors hover:bg-[var(--surface2)]"
       >
         <div className="h-3 w-3 shrink-0 rounded-[3px]" style={{ backgroundColor: group.areaColor }} />
         <div className="min-w-0 flex-1 text-left">
@@ -84,7 +84,7 @@ function AreaRow({ group }: { group: AreaGroup }) {
                     : `${formatPercentNeutral(expensePct)}%`}
                 </span>
               </div>
-              <ProgressBar value={group.expenseSpent} max={group.expenseAllocated} height={4} color="var(--red)" />
+              <ProgressBar value={group.expenseSpent} max={group.expenseAllocated} height={6} color={group.areaColor} tinted />
             </div>
           )}
           {hasIncome && (
@@ -96,7 +96,7 @@ function AreaRow({ group }: { group: AreaGroup }) {
                 </span>
                 <span className="text-green text-[11px]">{formatPercentNeutral(incomePct)}%</span>
               </div>
-              <ProgressBar value={group.incomeSpent} max={group.incomeAllocated} height={4} color="var(--green)" />
+              <ProgressBar value={group.incomeSpent} max={group.incomeAllocated} height={6} color={group.areaColor} tinted overflowColor={group.areaColor} />
             </div>
           )}
         </div>
@@ -126,7 +126,14 @@ function AreaRow({ group }: { group: AreaGroup }) {
                     </span>
                   </div>
                 </div>
-                <ProgressBar value={alloc.spent} max={alloc.allocated} height={3} color={color} />
+                <ProgressBar
+                  value={alloc.spent}
+                  max={alloc.allocated}
+                  height={5}
+                  color={color}
+                  tinted
+                  overflowColor={alloc.allocationType === "Income" ? color : "var(--clay)"}
+                />
               </div>
             );
           })}

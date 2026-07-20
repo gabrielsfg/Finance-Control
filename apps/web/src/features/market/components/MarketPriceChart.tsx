@@ -6,8 +6,9 @@ import {
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { X } from "lucide-react";
+import { Card } from "@/components/shared/Card";
+import { Money } from "@/components/shared/Money";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import type { PricePoint } from "@/lib/types/market.types";
 
@@ -30,11 +31,12 @@ const PRESETS: { label: PresetPeriod; days: number }[] = [
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="border-border bg-surface rounded-lg border px-3 py-2 shadow-lg">
-      <p className="text-text-muted mb-1 text-[11px]">{label}</p>
-      <p className="font-money text-text text-[13px] font-medium">
-        {formatCurrency(payload[0].value / 100)}
-      </p>
+    <div
+      className="rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2"
+      style={{ boxShadow: "var(--shadow-sm)" }}
+    >
+      <p className="mb-1 font-mono text-[11px] tracking-[0.04em] text-[var(--text-sub)]">{label}</p>
+      <Money cents={payload[0].value} className="text-[13px]" />
     </div>
   );
 };
@@ -98,16 +100,16 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
 
   if (history.length === 0) {
     return (
-      <div className="border-border bg-surface flex items-center justify-center rounded-xl border p-5 h-[300px]">
-        <p className="text-text-muted text-[13px]">Histórico de preço não disponível ainda.</p>
-      </div>
+      <Card className="flex h-[300px] items-center justify-center">
+        <p className="text-[13px] text-[var(--text-sub)]">Histórico de preço não disponível ainda.</p>
+      </Card>
     );
   }
 
   const first     = data[0]?.price ?? 0;
   const last      = data[data.length - 1]?.price ?? 0;
   const isUp      = last >= first;
-  const color     = isUp ? "var(--green)" : "var(--red)";
+  const color     = isUp ? "var(--moss)" : "var(--clay)";
   const changePct = first > 0 ? ((last - first) / first) * 100 : null;
 
   const tickInterval = Math.max(1, Math.floor(data.length / 6));
@@ -117,22 +119,22 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
     : period;
 
   return (
-    <div className="border-border bg-surface rounded-xl border p-5">
+    <Card>
       <div className="mb-4 flex flex-col gap-3">
         {/* Header row */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="font-display font-700 text-text text-[16px] tracking-tight">Histórico de Preço</h3>
+            <h3 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">Histórico de preço</h3>
             <div className="mt-0.5 flex items-center gap-2">
-              <p className="text-text-muted text-[12px]">{ticker} — {periodLabel}</p>
+              <p className="font-mono text-[12px] tracking-[0.04em] text-[var(--text-sub)]">{ticker} — {periodLabel}</p>
               {changePct !== null && (
                 <span
-                  className="rounded-md px-1.5 py-0.5 text-[11px] font-medium font-mono"
+                  className="rounded-[9px] px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums"
                   style={{
                     color,
-                    backgroundColor: isUp
-                      ? "color-mix(in srgb, var(--green) 12%, transparent)"
-                      : "color-mix(in srgb, var(--red) 12%, transparent)",
+                    background: isUp
+                      ? "color-mix(in srgb, var(--moss) 12%, transparent)"
+                      : "color-mix(in srgb, var(--clay) 12%, transparent)",
                   }}
                 >
                   {isUp ? "+" : ""}{changePct.toFixed(2)}%
@@ -143,16 +145,16 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
         </div>
 
         {/* Period buttons */}
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="inline-flex flex-wrap items-center gap-[3px] rounded-[13px] border border-[var(--border-color)] bg-[var(--surface2)] p-[4px]">
           {PRESETS.map(({ label }) => (
             <button
               key={label}
               onClick={() => setPeriod(label)}
               className={cn(
-                "h-7 rounded-lg px-2.5 text-[11px] font-medium transition-colors",
+                "rounded-[9px] px-2.5 py-1 font-mono text-[11px] font-medium tabular-nums transition-colors",
                 period === label
-                  ? "bg-green/15 text-green"
-                  : "text-text-sub hover:bg-surface2 hover:text-text",
+                  ? "bg-[var(--surface)] text-[var(--text)] shadow-sm"
+                  : "text-[var(--text-sub)] hover:text-[var(--text)]",
               )}
             >
               {label}
@@ -164,10 +166,10 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
             ref={toggleRef}
             onClick={() => { setPeriod("custom"); setShowCalendar((v) => period === "custom" ? !v : true); }}
             className={cn(
-              "h-7 rounded-lg px-2.5 text-[11px] font-medium transition-colors",
+              "rounded-[9px] px-2.5 py-1 font-mono text-[11px] font-medium transition-colors",
               period === "custom"
-                ? "bg-green/15 text-green"
-                : "text-text-sub hover:bg-surface2 hover:text-text",
+                ? "bg-[var(--surface)] text-[var(--text)] shadow-sm"
+                : "text-[var(--text-sub)] hover:text-[var(--text)]",
             )}
           >
             Personalizado
@@ -176,13 +178,13 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
 
         {/* Custom date picker */}
         {period === "custom" && showCalendar && (
-          <div ref={calendarRef} className="border-border bg-surface2/40 w-full max-w-[300px] rounded-xl border p-3">
+          <div ref={calendarRef} className="w-full max-w-[300px] rounded-[20px] border border-[var(--border-color)] bg-[var(--surface2)] p-3">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-text text-[12px] font-medium">Período personalizado</span>
+              <span className="text-[12px] font-medium text-[var(--text)]">Período personalizado</span>
               <button
                 onClick={() => setShowCalendar(false)}
                 aria-label="Fechar calendário"
-                className="text-text-muted hover:text-text flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-surface2"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-sub)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text)]"
               >
                 <X size={14} />
               </button>
@@ -195,7 +197,7 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
               onChange={(start, finish) => { setCustomFrom(start); setCustomTo(finish); }}
             />
             {minDate && maxDate && (
-              <p className="text-text-muted mt-2 text-center text-[11px]">
+              <p className="mt-2 text-center font-mono text-[11px] text-[var(--text-sub)]">
                 Disponível: {minDate.slice(0, 4)} – {maxDate.slice(0, 4)}
               </p>
             )}
@@ -212,29 +214,29 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
                 <stop offset="100%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="var(--border-chart)" vertical={false} />
+            <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="date"
-              tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "DM Sans" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "var(--font-mono, monospace)" }}
               axisLine={false}
               tickLine={false}
               interval={tickInterval - 1}
             />
             <YAxis
               domain={["auto", "auto"]}
-              tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "JetBrains Mono" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "var(--font-mono, monospace)" }}
               tickFormatter={(v) => `R$${(v / 100).toFixed(0)}`}
               axisLine={false}
               tickLine={false}
               width={60}
             />
-            <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine y={first} stroke="var(--border)" strokeDasharray="4 3" />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border-color)", strokeWidth: 1 }} />
+            <ReferenceLine y={first} stroke="var(--border-color)" strokeDasharray="4 3" />
             <Area
               type="monotone"
               dataKey="price"
               stroke={color}
-              strokeWidth={2}
+              strokeWidth={2.5}
               fill={`url(#priceGradient-${ticker})`}
               dot={false}
               activeDot={{ r: 5, fill: color, stroke: "var(--surface)", strokeWidth: 2 }}
@@ -242,6 +244,6 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
           </AreaChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </Card>
   );
 };

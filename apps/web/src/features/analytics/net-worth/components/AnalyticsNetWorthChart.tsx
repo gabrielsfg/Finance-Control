@@ -3,7 +3,7 @@
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { NetWorthPoint } from "@/lib/types/analytics.types";
@@ -29,22 +29,22 @@ export const AnalyticsNetWorthChart = ({ data }: Props) => {
 
   if (data.length === 0) {
     return (
-      <div className="border-border bg-surface rounded-xl border p-5">
-        <SectionHeader title="Evolução Patrimonial" subtitle="Patrimônio líquido, ativos e passivos (últimos 7 meses)" />
+      <Card>
+        <CardHead title="Evolução Patrimonial" subtitle="Patrimônio líquido, ativos e passivos (últimos 7 meses)" />
         <ChartEmptyState message="Sem dados patrimoniais para o período" />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border-border bg-surface rounded-xl border p-5">
-      <SectionHeader title="Evolução Patrimonial" subtitle="Patrimônio líquido, ativos e passivos (últimos 7 meses)" />
+    <Card>
+      <CardHead title="Evolução Patrimonial" subtitle="Patrimônio líquido, ativos e passivos (últimos 7 meses)" />
 
       {latest && (
-        <div className="bg-surface2 mb-5 grid grid-cols-3 gap-3 rounded-xl p-4">
+        <div className="bg-[var(--surface2)] mb-5 grid grid-cols-3 gap-3 rounded-[13px] p-4">
           <div>
             <p className="text-text-muted text-[12px]">Patrimônio líquido</p>
-            <p className={`font-money font-600 text-[18px] ${(latest.netWorth ?? 0) < 0 ? "text-red" : "text-text"}`}>
+            <p className={`font-money font-600 text-[18px] ${(latest.netWorth ?? 0) < 0 ? "text-[var(--clay)]" : "text-text"}`}>
               {(latest.netWorth ?? 0) < 0 && "-"}{formatCurrency(Math.abs(latest.netWorth ?? 0) / 100)}
             </p>
           </div>
@@ -54,7 +54,7 @@ export const AnalyticsNetWorthChart = ({ data }: Props) => {
           </div>
           <div>
             <p className="text-text-muted text-[12px]">Total de passivos</p>
-            <p className="font-money font-600 text-red text-[18px]">{formatCurrency((latest.liabilities ?? 0) / 100)}</p>
+            <p className="font-money font-600 text-[var(--clay)] text-[18px]">{formatCurrency((latest.liabilities ?? 0) / 100)}</p>
           </div>
         </div>
       )}
@@ -110,6 +110,6 @@ export const AnalyticsNetWorthChart = ({ data }: Props) => {
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 };

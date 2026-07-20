@@ -20,7 +20,8 @@ export function CancelRecurringDialog({ item, loading, onConfirm, onClose }: Pro
       onClick={onClose}
     >
       <div
-        className="bg-surface border-border w-full max-w-[400px] rounded-2xl border p-6 shadow-2xl"
+        className="w-full max-w-[400px] rounded-[20px] border p-6 shadow-2xl"
+        style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
         onClick={e => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between">
@@ -35,13 +36,13 @@ export function CancelRecurringDialog({ item, loading, onConfirm, onClose }: Pro
           </div>
           <button
             onClick={onClose}
-            className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+            className="text-text-muted hover:text-text flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors"
           >
             <X size={15} />
           </button>
         </div>
 
-        <div className="bg-red/8 border-red/20 mb-5 rounded-xl border p-3.5">
+        <div className="bg-red/8 border-red/20 mb-5 rounded-[13px] border p-3.5">
           <p className="text-text-sub text-[13px] leading-relaxed">
             Ao cancelar, você vai economizar{" "}
             <span className="font-money text-green font-semibold">
@@ -55,14 +56,14 @@ export function CancelRecurringDialog({ item, loading, onConfirm, onClose }: Pro
           <button
             onClick={onClose}
             disabled={loading}
-            className="bg-surface2 hover:bg-surface3 text-text border-border flex-1 rounded-xl border py-2.5 text-[13px] font-semibold transition-colors disabled:opacity-50"
+            className="bg-surface2 hover:bg-surface3 text-text border-border flex-1 rounded-[13px] border py-2.5 text-[13px] font-semibold transition-colors disabled:opacity-50"
           >
             Manter assinatura
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="bg-red/15 hover:bg-red/25 text-red border-red/25 flex-1 rounded-xl border py-2.5 text-[13px] font-semibold transition-colors disabled:opacity-50"
+            className="bg-red/15 hover:bg-red/25 text-red border-red/25 flex-1 rounded-[13px] border py-2.5 text-[13px] font-semibold transition-colors disabled:opacity-50"
           >
             {loading ? "Cancelando..." : "Confirmar cancelamento"}
           </button>

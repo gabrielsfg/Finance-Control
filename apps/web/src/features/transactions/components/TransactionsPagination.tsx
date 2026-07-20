@@ -64,7 +64,7 @@ export const TransactionsPagination = ({
         onClick={() => onPageChange(Math.max(1, page - 1))}
         disabled={page === 1}
         title="Página anterior"
-        className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-40"
+        className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-[9px] transition-colors disabled:opacity-40"
       >
         <ChevronLeft size={15} />
       </button>
@@ -79,7 +79,7 @@ export const TransactionsPagination = ({
               key={p}
               onClick={() => onPageChange(p as number)}
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-lg text-[13px] transition-colors",
+                "flex h-8 w-8 items-center justify-center rounded-[9px] text-[13px] transition-colors",
                 page === p
                   ? "bg-green/15 text-green font-medium"
                   : "text-text-sub hover:bg-surface2 hover:text-text",
@@ -96,7 +96,7 @@ export const TransactionsPagination = ({
         onClick={() => onPageChange(Math.min(totalPages, page + 1))}
         disabled={page === totalPages}
         title="Próxima página"
-        className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-40"
+        className="text-text-sub hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-[9px] transition-colors disabled:opacity-40"
       >
         <ChevronRight size={15} />
       </button>
@@ -107,7 +107,7 @@ export const TransactionsPagination = ({
           onClick={() => setDropdownOpen(o => !o)}
           title="Itens por página"
           className={cn(
-            "border-border bg-surface2 hover:bg-surface3 flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[13px] transition-colors",
+            "border-border bg-surface2 hover:bg-surface3 flex h-8 items-center gap-1.5 rounded-[9px] border px-3 text-[13px] transition-colors",
             dropdownOpen ? "border-green/40 text-text" : "text-text-sub",
           )}
         >
@@ -116,7 +116,7 @@ export const TransactionsPagination = ({
         </button>
 
         {dropdownOpen && (
-          <div className="border-border bg-surface absolute bottom-full right-0 mb-1.5 min-w-[110px] overflow-hidden rounded-lg border shadow-lg">
+          <div className="border-border bg-surface absolute bottom-full right-0 mb-1.5 min-w-[110px] overflow-hidden rounded-[13px] border shadow-lg">
             {PAGE_SIZE_OPTIONS.map((size) => (
               <button
                 key={size}

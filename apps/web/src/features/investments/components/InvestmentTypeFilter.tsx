@@ -17,6 +17,8 @@ const LABELS: Record<AssetType, string> = {
   Cripto:            "Criptomoedas",
   TesouroDireto:     "Tesouro Direto",
   RendaFixa:         "Renda Fixa",
+  Moeda:             "Moedas",
+  Index:             "Índices",
   Outro:             "Outros",
 };
 
@@ -55,22 +57,22 @@ export const InvestmentTypeFilter = ({ allTypes, visibleTypes, onChange }: Props
         onClick={() => setOpen((v) => !v)}
         title="Filtrar tipos de investimentos"
         className={cn(
-          "border-border bg-surface2 text-text-sub hover:text-text flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[12px] font-medium transition-colors",
-          hiddenCount > 0 && "border-green/40 text-green",
+          "inline-flex h-9 items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-[13px] text-[13px] font-medium text-[var(--text-sub)] transition-colors hover:text-[var(--text)]",
+          hiddenCount > 0 && "border-[var(--brand-accent)] text-[var(--brand-accent)]",
         )}
       >
-        <SlidersHorizontal size={13} strokeWidth={1.75} />
+        <SlidersHorizontal size={14} strokeWidth={1.75} />
         Tipos
         {hiddenCount > 0 && (
-          <span className="bg-green text-white rounded-full px-1.5 py-px text-[10px] font-bold ml-0.5">
+          <span className="ml-0.5 rounded-full px-1.5 py-px font-mono text-[10px] font-bold text-white" style={{ background: "var(--brand-accent)" }}>
             {hiddenCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="border-border bg-surface absolute right-0 top-10 z-50 flex flex-col gap-px rounded-xl border p-1.5 shadow-lg min-w-[180px]">
-          <p className="text-text-muted px-2 py-1 text-[10px] uppercase tracking-[0.06em]">
+        <div className="absolute right-0 top-11 z-50 flex min-w-[200px] flex-col gap-px rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] p-1.5" style={{ boxShadow: "var(--shadow-md)" }}>
+          <p className="px-2 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--text-sub)]">
             Mostrar tipos
           </p>
           {allTypes.map((type) => {
@@ -79,17 +81,17 @@ export const InvestmentTypeFilter = ({ allTypes, visibleTypes, onChange }: Props
               <button
                 key={type}
                 onClick={() => toggle(type)}
-                className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-surface2"
+                className="flex items-center justify-between gap-2 rounded-[9px] px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--surface2)]"
               >
-                <span className={cn("text-text-sub", checked && "text-text")}>{LABELS[type]}</span>
-                {checked && <Check size={12} className="text-green shrink-0" />}
+                <span className={cn("text-[var(--text-sub)]", checked && "text-[var(--text)]")}>{LABELS[type]}</span>
+                {checked && <Check size={13} className="shrink-0 text-[var(--brand-accent)]" />}
               </button>
             );
           })}
-          <div className="border-border mx-1 my-1 border-t" />
+          <div className="mx-1 my-1 border-t border-[var(--border-color)]" />
           <button
             onClick={() => onChange([...allTypes])}
-            className="rounded-lg px-2.5 py-1.5 text-left text-[12px] text-text-muted transition-colors hover:bg-surface2 hover:text-text"
+            className="rounded-[9px] px-2.5 py-1.5 text-left text-[12px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--text)]"
           >
             Mostrar todos
           </button>

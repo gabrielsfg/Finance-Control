@@ -22,7 +22,7 @@ namespace FinanceControl.Services.Services
 
         public async Task<Result<IEnumerable<GetAccountItemResponseDto>>> CreateAccountAsync(CreateAccountRequestDto requestDto, int userId)
         {
-            var hasCreditFields = requestDto.Type == EnumAccountType.Credit || requestDto.Type == EnumAccountType.Checking;
+            var hasCreditFields = requestDto.Type == EnumAccountType.Credit;
             var account = new Account()
             {
                 UserId = userId,
@@ -176,7 +176,7 @@ namespace FinanceControl.Services.Services
             if (account == null)
                 return Result<IEnumerable<GetAccountItemResponseDto>>.Failure("Account not found.");
 
-            var hasCreditFieldsUpdate = requestDto.Type == EnumAccountType.Credit || requestDto.Type == EnumAccountType.Checking;
+            var hasCreditFieldsUpdate = requestDto.Type == EnumAccountType.Credit;
             account.Name = requestDto.Name;
             account.Type = requestDto.Type;
             account.GoalAmount = requestDto.GoalAmount;

@@ -12,16 +12,16 @@ import {
   Cell,
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import type { MonthlyData } from "@/lib/types/analytics.types";
 
 const RECOMMENDED_RATE = 20;
 
 function barFill(rate: number): string {
-  if (rate < 10)  return "var(--red)";
-  if (rate < 20)  return "var(--orange)";
-  return "var(--green)";
+  if (rate < 10)  return "var(--clay)";
+  if (rate < 20)  return "var(--gold)";
+  return "var(--moss)";
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -61,19 +61,19 @@ export function SavingsRateChart({ data }: Props) {
 
   if (chartData.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-        <SectionHeader
+      <Card className="flex flex-col">
+        <CardHead
           title="Evolução da Taxa de Poupança"
           subtitle="Percentual da renda que está sendo poupado a cada mês"
         />
         <ChartEmptyState message="Sem receitas registradas no período" />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Evolução da Taxa de Poupança"
         subtitle="Percentual da renda que está sendo poupado a cada mês"
       />
@@ -109,15 +109,15 @@ export function SavingsRateChart({ data }: Props) {
       <div className="w-full" style={{ height: 260 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--border-chart)" />
+            <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "JetBrains Mono" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => `${v}%`}
@@ -126,10 +126,10 @@ export function SavingsRateChart({ data }: Props) {
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--surface2)", opacity: 0.5 }} />
             <ReferenceLine
               y={RECOMMENDED_RATE}
-              stroke="var(--blue)"
+              stroke="var(--brand-cobalt)"
               strokeDasharray="4 3"
               strokeWidth={1.5}
-              label={{ value: "Meta 20%", fill: "var(--blue)", fontSize: 11, position: "right" }}
+              label={{ value: "Meta 20%", fill: "var(--brand-cobalt)", fontSize: 11, position: "right" }}
             />
             <Bar dataKey="savingsRate" name="Taxa de poupança" radius={[4, 4, 0, 0]} maxBarSize={36}>
               {chartData.map((entry) => (
@@ -142,9 +142,9 @@ export function SavingsRateChart({ data }: Props) {
 
       <div className="mt-3 flex flex-wrap gap-5">
         {[
-          ["var(--green)",  "> 20% (ótimo)"],
-          ["var(--orange)", "10–20% (ok)"],
-          ["var(--red)",    "< 10% (atenção)"],
+          ["var(--moss)", "> 20% (ótimo)"],
+          ["var(--gold)", "10–20% (ok)"],
+          ["var(--clay)", "< 10% (atenção)"],
         ].map(([color, label]) => (
           <div key={label as string} className="flex items-center gap-1.5">
             <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: color as string }} />
@@ -153,11 +153,11 @@ export function SavingsRateChart({ data }: Props) {
         ))}
         <div className="flex items-center gap-1.5">
           <svg width="20" height="12">
-            <line x1="0" y1="6" x2="20" y2="6" stroke="var(--blue)" strokeWidth="2" strokeDasharray="4 3" />
+            <line x1="0" y1="6" x2="20" y2="6" stroke="var(--brand-cobalt)" strokeWidth="2" strokeDasharray="4 3" />
           </svg>
           <span className="text-text-muted text-[13px]">Meta recomendada (20%)</span>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

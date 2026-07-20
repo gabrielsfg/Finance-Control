@@ -1,15 +1,15 @@
 "use client";
 
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency } from "@/lib/utils/index";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { SavingsDetailResponse } from "@/lib/types/analytics.types";
 
 function scoreColor(rate: number): string {
-  if (rate >= 80) return "var(--green)";
-  if (rate >= 50) return "var(--orange)";
-  return "var(--red)";
+  if (rate >= 80) return "var(--moss)";
+  if (rate >= 50) return "var(--gold)";
+  return "var(--clay)";
 }
 
 type Props = { detail: SavingsDetailResponse };
@@ -18,8 +18,8 @@ export function SavingsAdherenceCard({ detail }: Props) {
   const { allocations, allocationsTotal, allocationsWithinLimit, adherenceRate } = detail;
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Aderência ao Orçamento"
         subtitle="Categorias que ficaram dentro do limite planejado"
       />
@@ -76,6 +76,6 @@ export function SavingsAdherenceCard({ detail }: Props) {
           </div>
         </>
       )}
-    </div>
+    </Card>
   );
 }

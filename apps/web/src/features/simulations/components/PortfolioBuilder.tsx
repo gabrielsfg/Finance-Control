@@ -8,15 +8,16 @@ import type { AssetCategory, PortfolioAsset } from "@/lib/types/simulation";
 import { ASSET_CATEGORY_LABELS, BENCHMARK_LABELS, BENCHMARK_SEARCH_KEYWORDS } from "@/lib/types/simulation";
 import type { Benchmark } from "@/lib/types/simulation";
 
-const inputCls = "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-9 px-3 text-[13px] outline-none focus:border-green/60 transition-colors";
+const inputCls =
+  "h-9 w-full rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 font-mono text-[13px] tabular-nums text-[var(--text)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--text-sub)]/60 focus:border-[var(--brand-cobalt)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]";
 
 export const MAX_ASSETS = 10;
 export const MIN_ASSETS = 2;
 
 // Paleta estável para identificar cada ativo nos gráficos/legendas
 export const PORTFOLIO_COLORS = [
-  "var(--green)", "var(--blue)", "var(--purple)", "var(--orange)",
-  "var(--cyan)", "var(--yellow)", "var(--red)", "#9b8cff",
+  "var(--moss)", "var(--brand-cobalt)", "#7c6fe0", "var(--clay)",
+  "var(--gold)", "#00d4a0", "#f25f5c", "#9b8cff",
   "#3ddc97", "#ff8fab",
 ];
 
@@ -101,21 +102,21 @@ const AssetPicker = ({
         disabled={isTaken}
         onClick={() => { onSelect(opt); setOpen(false); setQuery(""); }}
         className={cn(
-          "flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors",
-          isTaken ? "opacity-35 cursor-not-allowed" : "hover:bg-surface2",
+          "flex items-center justify-between gap-2 rounded-[9px] px-2.5 py-1.5 text-left text-[13px] transition-colors",
+          isTaken ? "opacity-35 cursor-not-allowed" : "hover:bg-[var(--surface2)]",
         )}
       >
         <div className="flex flex-col min-w-0">
-          <span className={cn("text-text-sub truncate", value === opt.ticker && "text-text")}>
+          <span className={cn("text-[var(--text-sub)] truncate", value === opt.ticker && "text-[var(--text)]")}>
             <span className="font-medium">{opt.fixed ? BENCHMARK_LABELS[opt.ticker as Benchmark] : opt.ticker}</span>
-            {!opt.fixed && opt.name ? <span className="text-text-muted"> — {opt.name}</span> : null}
+            {!opt.fixed && opt.name ? <span className="text-[var(--text-sub)]"> — {opt.name}</span> : null}
           </span>
           {opt.meta && (
-            <span className="text-[10px] text-text-muted">{opt.meta.monthsAvailable} meses · desde {opt.meta.earliestDate.slice(0, 7)}</span>
+            <span className="text-[10px] text-[var(--text-sub)]">{opt.meta.monthsAvailable} meses · desde {opt.meta.earliestDate.slice(0, 7)}</span>
           )}
         </div>
-        {value === opt.ticker && <Check size={12} className="text-green shrink-0" />}
-        {isTaken && <span className="text-[10px] text-text-muted shrink-0">já na carteira</span>}
+        {value === opt.ticker && <Check size={12} className="text-[var(--brand-accent)] shrink-0" />}
+        {isTaken && <span className="text-[10px] text-[var(--text-sub)] shrink-0">já na carteira</span>}
       </button>
     );
   };
@@ -124,34 +125,34 @@ const AssetPicker = ({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className="border-border bg-surface2 text-text flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-[13px] transition-colors hover:border-green/40"
+        className="flex h-9 w-full items-center justify-between gap-2 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 text-[13px] text-[var(--text)] transition-colors hover:border-[var(--brand-accent)]/50"
       >
-        <span className={cn("truncate", !selected && "text-text-muted")}>{label}</span>
-        <ChevronDown size={14} className={cn("text-text-muted transition-transform shrink-0", open && "rotate-180")} />
+        <span className={cn("truncate", !selected && "text-[var(--text-sub)]")}>{label}</span>
+        <ChevronDown size={14} className={cn("text-[var(--text-sub)] transition-transform shrink-0", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="border-border bg-surface absolute left-0 top-10 z-50 rounded-xl border shadow-lg w-full" style={{ minWidth: 260 }}>
-          <div className="border-b border-border px-2 py-2 flex items-center gap-2">
-            <Search size={12} className="text-text-muted shrink-0" />
+        <div className="absolute left-0 top-10 z-50 w-full rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] shadow-lg" style={{ minWidth: 260 }}>
+          <div className="flex items-center gap-2 border-b border-[var(--border-color)] px-2 py-2">
+            <Search size={12} className="text-[var(--text-sub)] shrink-0" />
             <input
               ref={inputRef}
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Buscar benchmark ou ticker..."
-              className="bg-transparent text-[12px] text-text placeholder:text-text-muted outline-none flex-1 min-w-0"
+              className="min-w-0 flex-1 bg-transparent text-[12px] text-[var(--text)] outline-none placeholder:text-[var(--text-sub)]"
             />
           </div>
           <div className="max-h-60 overflow-y-auto p-1.5 flex flex-col gap-px">
             {fixedOpts.length > 0 && (
               <>
-                <p className="px-2.5 py-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">Índices de referência</p>
+                <p className="px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--text-sub)]">Índices de referência</p>
                 {fixedOpts.map(renderOpt)}
               </>
             )}
             {tickerOpts.length > 0 && (
               <>
-                <p className="px-2.5 py-1 mt-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                <p className="px-2.5 py-1 mt-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--text-sub)]">
                   Ativos com histórico na base
                   {loading && <span className="ml-1 normal-case font-normal">(carregando...)</span>}
                 </p>
@@ -159,7 +160,7 @@ const AssetPicker = ({
               </>
             )}
             {filtered.length === 0 && (
-              <p className="px-2.5 py-3 text-[12px] text-text-muted text-center">Nenhum resultado</p>
+              <p className="px-2.5 py-3 text-[12px] text-[var(--text-sub)] text-center">Nenhum resultado</p>
             )}
           </div>
         </div>
@@ -180,21 +181,21 @@ const CategoryPicker = ({ value, onChange }: { value: AssetCategory; onChange: (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className="border-border bg-surface2 text-text flex h-9 w-full items-center justify-between gap-1.5 rounded-lg border px-2.5 text-[12px] transition-colors hover:border-green/40"
+        className="flex h-9 w-full items-center justify-between gap-1.5 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-2.5 text-[12px] text-[var(--text)] transition-colors hover:border-[var(--brand-accent)]/50"
       >
         <span className="truncate">{ASSET_CATEGORY_LABELS[value]}</span>
-        <ChevronDown size={13} className={cn("text-text-muted transition-transform shrink-0", open && "rotate-180")} />
+        <ChevronDown size={13} className={cn("text-[var(--text-sub)] transition-transform shrink-0", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="border-border bg-surface absolute left-0 top-10 z-50 flex flex-col gap-px rounded-xl border p-1.5 shadow-lg w-full min-w-[220px]">
+        <div className="absolute left-0 top-10 z-50 flex w-full min-w-[220px] flex-col gap-px rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] p-1.5 shadow-lg">
           {(Object.entries(ASSET_CATEGORY_LABELS) as [AssetCategory, string][]).map(([k, v]) => (
             <button
               key={k}
               onClick={() => { onChange(k); setOpen(false); }}
-              className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[12px] transition-colors hover:bg-surface2"
+              className="flex items-center justify-between gap-2 rounded-[9px] px-2.5 py-1.5 text-left text-[12px] transition-colors hover:bg-[var(--surface2)]"
             >
-              <span className={cn("text-text-sub", value === k && "text-text")}>{v}</span>
-              {value === k && <Check size={12} className="text-green shrink-0" />}
+              <span className={cn("text-[var(--text-sub)]", value === k && "text-[var(--text)]")}>{v}</span>
+              {value === k && <Check size={12} className="text-[var(--brand-accent)] shrink-0" />}
             </button>
           ))}
         </div>
@@ -250,7 +251,7 @@ export function PortfolioBuilder({
     <div className="flex flex-col gap-3">
       {/* Cabeçalho de colunas */}
       <div className={cn(
-        "hidden gap-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-text-muted sm:grid",
+        "hidden gap-2 px-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--text-sub)] sm:grid",
         mode === "projection"
           ? "grid-cols-[1fr_120px_90px_70px_32px]"
           : "grid-cols-[1fr_90px_32px]",
@@ -304,11 +305,12 @@ export function PortfolioBuilder({
               />
               {suggestedPeriod && a.annualRatePct !== undefined && (
                 <div
-                  className="pointer-events-none absolute -top-2 -right-1 flex items-center gap-0.5 rounded-full bg-blue/15 px-1.5 py-0.5"
+                  className="pointer-events-none absolute -top-2 -right-1 flex items-center gap-0.5 rounded-full px-1.5 py-0.5"
+                  style={{ background: "color-mix(in srgb, var(--brand-accent) 15%, transparent)" }}
                   title={`Taxa sugerida com base no histórico de ${suggestedPeriod}`}
                 >
-                  <History size={9} className="text-blue" />
-                  <span className="text-[9px] font-semibold text-blue">{suggestedPeriod}</span>
+                  <History size={9} className="text-[var(--brand-accent)]" />
+                  <span className="text-[9px] font-semibold text-[var(--brand-accent)]">{suggestedPeriod}</span>
                 </div>
               )}
             </div>
@@ -329,7 +331,7 @@ export function PortfolioBuilder({
             onClick={() => remove(a.id)}
             disabled={assets.length <= MIN_ASSETS}
             title={assets.length <= MIN_ASSETS ? `Mínimo de ${MIN_ASSETS} ativos` : "Remover ativo"}
-            className="text-text-muted hover:text-red flex h-9 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex h-9 w-8 items-center justify-center rounded-[9px] text-[var(--text-sub)] transition-colors hover:text-[var(--clay)] disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Trash2 size={15} />
           </button>
@@ -341,35 +343,36 @@ export function PortfolioBuilder({
         <button
           onClick={add}
           disabled={assets.length >= MAX_ASSETS}
-          className="text-green border-green/30 bg-green/10 hover:bg-green/20 flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 rounded-[13px] border px-3 py-1.5 text-[12px] font-medium text-[var(--brand-accent)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ borderColor: "color-mix(in srgb, var(--brand-accent) 30%, transparent)", background: "color-mix(in srgb, var(--brand-accent) 10%, transparent)" }}
         >
           <Plus size={13} /> Adicionar ativo
         </button>
         <button
           onClick={distributeEqually}
-          className="text-text-sub border-border hover:text-text flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors"
+          className="flex items-center gap-1.5 rounded-[13px] border border-[var(--border-color)] px-3 py-1.5 text-[12px] font-medium text-[var(--text-sub)] transition-colors hover:text-[var(--text)]"
         >
           <Scale size={13} /> Distribuir igualmente
         </button>
-        <span className="text-text-muted text-[11px] ml-auto">{assets.length}/{MAX_ASSETS} ativos</span>
+        <span className="ml-auto font-mono text-[11px] tabular-nums text-[var(--text-sub)]">{assets.length}/{MAX_ASSETS} ativos</span>
       </div>
 
       {/* Barra de soma de pesos */}
       <div className="mt-1">
         <div className="mb-1.5 flex items-center justify-between text-[11px]">
-          <span className="text-text-muted">Alocação total</span>
-          <span className={cn("font-money font-semibold", weightOk ? "text-green" : "text-orange")}>
+          <span className="text-[var(--text-sub)]">Alocação total</span>
+          <span className={cn("font-mono font-semibold tabular-nums", weightOk ? "text-[var(--moss)]" : "text-[var(--gold)]")}>
             {totalWeight.toFixed(1)}%
           </span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-surface2">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface2)]">
           <div
-            className={cn("h-full rounded-full transition-all", weightOk ? "bg-green" : "bg-orange")}
-            style={{ width: `${Math.min(totalWeight, 100)}%` }}
+            className="h-full rounded-full transition-all"
+            style={{ width: `${Math.min(totalWeight, 100)}%`, backgroundColor: weightOk ? "var(--moss)" : "var(--gold)" }}
           />
         </div>
         {!weightOk && (
-          <p className="text-orange mt-1.5 flex items-center gap-1 text-[11px]">
+          <p className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--gold)]">
             <AlertCircle size={11} className="shrink-0" />
             A soma dos pesos deve ser 100% (faltam {(100 - totalWeight).toFixed(1)}%).
           </p>

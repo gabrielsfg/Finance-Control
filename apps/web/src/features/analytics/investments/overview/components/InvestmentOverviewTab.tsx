@@ -1,24 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { TrendingUp, Wallet, BarChart2, ArrowUpRight } from "lucide-react";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
-import { PieChart, Pie, Cell, Sector, Tooltip, ResponsiveContainer } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { Card, CardHead } from "@/components/shared/Card";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import { useInvestments } from "@/features/investments/hooks/useInvestments";
 import { useAnalyticsInvestmentEvolution } from "@/features/analytics/hooks/useAnalytics";
 import { AnalyticsInvestmentEvolutionChart } from "./AnalyticsInvestmentEvolutionChart";
+import { HeroPanel } from "@/components/shared/HeroPanel";
+import { BigMoney } from "@/components/shared/Money";
+import { FlowRow } from "@/components/shared/FlowBar";
 
 const ASSET_CLASS_ORDER = ["Renda Fixa", "Renda Variável", "FII", "Internacional", "Cripto"];
-
-const renderActiveShape = (props: any) => {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-  return (
-    <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 8} startAngle={startAngle} endAngle={endAngle} fill={fill} />
-  );
-};
 
 const DonutTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
@@ -37,64 +31,98 @@ const DonutTooltip = ({ active, payload }: any) => {
 export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: string; finishDate: string }) {
   const portfolio = useInvestments();
   const evolution = useAnalyticsInvestmentEvolution(startDate, finishDate);
-  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
-  const onMouseEnter = useCallback((_: any, i: number) => setActiveIndex(i), []);
-  const onMouseLeave = useCallback(() => setActiveIndex(undefined), []);
 
   const data = portfolio.data;
 
   return (
     <div className="flex flex-col gap-5">
-      {/* KPI cards */}
-      {data && (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <div className="bg-green/10 mb-3 flex h-9 w-9 items-center justify-center rounded-[10px]">
-              <Wallet size={18} className="text-green" strokeWidth={1.75} />
-            </div>
-            <p className="font-display font-700 text-text text-[16px]">Patrimônio atual</p>
-            <p className="font-money font-700 text-text mt-1 text-[20px]">
-              {formatCurrency(data.currentValue / 100)}
-            </p>
-          </div>
+      {/* Hero panel — portfolio summary */}
+      {data && (() => {
+        const maxBar = Math.max(data.totalInvested, Math.abs(data.totalReturn), 1);
+        return (
+          <HeroPanel split>
+            {/* Left — current portfolio value */}
+            <div>
+              <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                Patrimônio atual
+              </div>
+              <BigMoney
+                cents={data.currentValue}
+                className="block mt-[10px] mb-[2px] font-semibold leading-[0.96] tracking-[-0.035em]"
+                style={{ fontSize: "clamp(40px, 5.6vw, 70px)" } as React.CSSProperties}
+              />
+              <div className="mt-2 font-mono text-[13px] text-[var(--panel-muted)]">
+                {data.investments.length} ativo{data.investments.length !== 1 ? "s" : ""} · {data.allocations.length} classe{data.allocations.length !== 1 ? "s" : ""}
+              </div>
 
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <div className="bg-blue/10 mb-3 flex h-9 w-9 items-center justify-center rounded-[10px]">
-              <BarChart2 size={18} className="text-blue" strokeWidth={1.75} />
+              <div className="mt-6 flex flex-wrap gap-[26px]">
+                <div>
+                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                    Capital investido
+                  </div>
+                  <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--panel-foreground)]">
+                    {formatCurrency(data.totalInvested / 100)}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                    Retorno %
+                  </div>
+                  <div
+                    className="font-mono mt-[3px] text-[18px] font-medium"
+                    style={{ color: data.totalReturnPercent >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
+                  >
+                    {data.totalReturnPercent >= 0 ? "+" : ""}{data.totalReturnPercent.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="font-display font-700 text-text text-[16px]">Capital investido</p>
-            <p className="font-money font-700 text-text mt-1 text-[20px]">
-              {formatCurrency(data.totalInvested / 100)}
-            </p>
-          </div>
 
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <div className={cn("mb-3 flex h-9 w-9 items-center justify-center rounded-[10px]", data.totalReturn >= 0 ? "bg-cyan/10" : "bg-red/10")}>
-              <TrendingUp size={18} className={data.totalReturn >= 0 ? "text-cyan" : "text-red"} strokeWidth={1.75} />
-            </div>
-            <p className="font-display font-700 text-text text-[16px]">Retorno total</p>
-            <p className={cn("font-money font-700 mt-1 text-[20px]", data.totalReturn >= 0 ? "text-cyan" : "text-red")}>
-              {data.totalReturn >= 0 ? "+" : ""}{formatCurrency(data.totalReturn / 100)}
-            </p>
-            <p className={cn("font-mono mt-0.5 text-[12px]", data.totalReturnPercent >= 0 ? "text-cyan" : "text-red")}>
-              {data.totalReturnPercent >= 0 ? "+" : ""}{data.totalReturnPercent.toFixed(2)}%
-            </p>
-          </div>
+            {/* Right — invested vs return bars */}
+            <div className="self-center">
+              <div className="mb-[18px] flex items-baseline justify-between">
+                <span className="font-display text-[16px] font-bold">Capital vs. Retorno</span>
+                <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--panel-muted)]">
+                  Composição
+                </span>
+              </div>
 
-          <div className="border-border bg-surface rounded-xl border p-5">
-            <div className="bg-orange/10 mb-3 flex h-9 w-9 items-center justify-center rounded-[10px]">
-              <ArrowUpRight size={18} className="text-orange" strokeWidth={1.75} />
+              <FlowRow
+                label="Capital investido"
+                dotColor="var(--moss-lift)"
+                value={formatCurrency(data.totalInvested / 100)}
+                valueColor="var(--moss-lift)"
+                pct={data.totalInvested / maxBar}
+                variant="in"
+              />
+              <FlowRow
+                label="Retorno total"
+                dotColor={data.totalReturn >= 0 ? "var(--moss-lift)" : "var(--clay-lift)"}
+                value={`${data.totalReturn >= 0 ? "+ " : "− "}${formatCurrency(Math.abs(data.totalReturn) / 100)}`}
+                valueColor={data.totalReturn >= 0 ? "var(--moss-lift)" : "var(--clay-lift)"}
+                pct={Math.abs(data.totalReturn) / maxBar}
+                variant={data.totalReturn >= 0 ? "in" : "out"}
+              />
+
+              <div
+                className="mt-5 flex items-center justify-between border-t pt-4"
+                style={{ borderColor: "rgba(255,255,255,0.12)" }}
+              >
+                <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">
+                  Valor atual
+                </span>
+                <span className="font-mono text-[22px] font-semibold text-[var(--panel-foreground)]">
+                  {formatCurrency(data.currentValue / 100)}
+                </span>
+              </div>
             </div>
-            <p className="font-display font-700 text-text text-[16px]">Ativos na carteira</p>
-            <p className="font-display font-700 text-text mt-1 text-[20px]">{data.investments.length}</p>
-            <p className="text-text-muted mt-0.5 text-[12px]">{data.allocations.length} classes de ativos</p>
-          </div>
-        </div>
-      )}
+          </HeroPanel>
+        );
+      })()}
 
       {/* Allocation breakdown */}
-      <div className="border-border bg-surface rounded-xl border p-5">
-        <SectionHeader title="Alocação por classe" subtitle="Distribuição do patrimônio entre classes de ativos" />
+      <Card>
+        <CardHead title="Alocação por classe" subtitle="Distribuição do patrimônio entre classes de ativos" />
         {!data || data.allocations.length === 0 ? (
           <ChartEmptyState message="Nenhuma posição em carteira" />
         ) : (
@@ -112,10 +140,6 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
                     outerRadius={95}
                     paddingAngle={2}
                     strokeWidth={0}
-                    activeIndex={activeIndex}
-                    activeShape={renderActiveShape}
-                    onMouseEnter={onMouseEnter}
-                    onMouseLeave={onMouseLeave}
                   >
                     {data.allocations.map((alloc) => (
                       <Cell key={alloc.assetClass} fill={alloc.color} />
@@ -152,7 +176,7 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Evolution chart */}
       <AnalyticsInvestmentEvolutionChart data={evolution.data ?? { data: [], returnPct: null, cumulativeDividends: 0 }} />

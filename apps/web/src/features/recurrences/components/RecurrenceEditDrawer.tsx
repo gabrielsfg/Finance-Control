@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { cn } from "@/lib/utils";
 import { CategorySelectContent } from "@/components/shared/CategorySelectContent";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
@@ -47,13 +48,13 @@ type Props = {
 };
 
 const INPUT_CLASS =
-  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-green/60 h-11 rounded-lg px-3.5 text-[15px]";
+  "border-border bg-surface2 text-text placeholder:text-text-muted w-full border outline-none focus:border-[var(--brand-cobalt)] h-11 rounded-[13px] px-3.5 text-[15px]";
 
 const TRIGGER_CLASS =
-  "border-border bg-surface2 text-text w-full !h-11 rounded-lg px-3.5 text-[15px]";
+  "border-border bg-surface2 text-text w-full !h-11 rounded-[13px] px-3.5 text-[15px]";
 
 const VALUE_WRAPPER_CLASS =
-  "border-border bg-surface2 flex w-full items-center border h-11 rounded-lg";
+  "border-border bg-surface2 flex w-full items-center border h-11 rounded-[13px]";
 
 const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const WEEK_DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -62,7 +63,6 @@ const ACCOUNT_TYPE_LABELS: Record<AccountItem["type"], string> = {
   Checking: "Conta corrente",
   Savings: "Poupança",
   Credit: "Cartão de crédito",
-  Debit: "Cartão de débito",
   Cash: "Dinheiro",
 };
 
@@ -71,7 +71,6 @@ function AccountIcon({ type }: { type: AccountItem["type"] }) {
     Checking: <Landmark size={14} />,
     Savings: <PiggyBank size={14} />,
     Credit: <CreditCard size={14} />,
-    Debit: <Wallet size={14} />,
     Cash: <Banknote size={14} />,
   };
   return <>{map[type] ?? <Building2 size={14} />}</>;
@@ -215,13 +214,10 @@ function RecurringEditForm({
         <FormField label="Valor mensal" error={errors.value?.message}>
           <div className={cn(VALUE_WRAPPER_CLASS, errors.value && "border-red/60")}>
             <span className="text-text-muted select-none pl-3.5 text-[15px]">R$</span>
-            <input
-              {...register("value")}
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0,00"
-              className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none placeholder:text-text-muted"
+            <CurrencyInput
+              value={watch("value") ?? ""}
+              onChange={(v) => setValue("value", v, { shouldValidate: true })}
+              className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none"
             />
           </div>
         </FormField>
@@ -266,7 +262,7 @@ function RecurringEditForm({
         {serverError && <p className="text-red text-[13px]">{serverError}</p>}
       </div>
 
-      <div className="border-border shrink-0 border-t px-6 py-4">
+      <div className="shrink-0 border-t px-6 py-4" style={{ borderColor: "var(--border-color)" }}>
         <div className="flex gap-3">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
             Cancelar
@@ -366,13 +362,10 @@ function InstallmentEditForm({
         <FormField label="Valor da parcela" error={errors.value?.message}>
           <div className={cn(VALUE_WRAPPER_CLASS, errors.value && "border-red/60")}>
             <span className="text-text-muted select-none pl-3.5 text-[15px]">R$</span>
-            <input
-              {...register("value")}
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0,00"
-              className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none placeholder:text-text-muted"
+            <CurrencyInput
+              value={watch("value") ?? ""}
+              onChange={(v) => setValue("value", v, { shouldValidate: true })}
+              className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none"
             />
           </div>
         </FormField>
@@ -457,7 +450,7 @@ function InstallmentEditForm({
         {serverError && <p className="text-red text-[13px]">{serverError}</p>}
       </div>
 
-      <div className="border-border shrink-0 border-t px-6 py-4">
+      <div className="shrink-0 border-t px-6 py-4" style={{ borderColor: "var(--border-color)" }}>
         <div className="flex gap-3">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
             Cancelar
@@ -499,16 +492,17 @@ export function RecurrenceEditDrawer({ open, target, onClose }: Props) {
 
       <div
         className={cn(
-          "fixed inset-y-0 right-0 z-[60] flex w-full max-w-[440px] flex-col bg-surface shadow-2xl transition-transform duration-300",
+          "fixed inset-y-0 right-0 z-[60] flex w-full max-w-[440px] flex-col border-l shadow-2xl transition-transform duration-300",
           open ? "translate-x-0" : "translate-x-full",
         )}
+        style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
       >
-        <div className="border-border flex items-center justify-between border-b px-6 py-5">
-          <h2 className="font-display font-600 text-text text-[17px]">{title}</h2>
+        <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: "var(--border-color)" }}>
+          <h2 className="font-display font-bold text-[var(--text)] text-[17px] tracking-[-0.01em]">{title}</h2>
           <button
             onClick={onClose}
             title="Fechar"
-            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-[9px] transition-colors"
           >
             <X size={16} />
           </button>

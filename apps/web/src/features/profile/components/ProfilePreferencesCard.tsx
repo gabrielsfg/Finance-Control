@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Sun, Moon, ChevronDown, Check } from "lucide-react";
+import { Card, CardHead } from "@/components/shared/Card";
 import { usePreferences, useUpdatePreferences } from "@/features/profile/hooks/useProfile";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,12 @@ function FlagImg({ countryCode }: { countryCode: string }) {
   );
 }
 
+// `.sel`-styled trigger + tokenised dropdown.
+const triggerCls =
+  "flex min-w-[180px] items-center gap-2 rounded-[13px] border bg-[var(--surface)] px-3.5 py-2.5 text-[14px] transition-[border-color,box-shadow]";
+const menuCls =
+  "absolute right-0 top-full z-50 mt-1.5 min-w-full overflow-hidden rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)]";
+
 function CurrencySelect({
   options,
   value,
@@ -61,41 +68,49 @@ function CurrencySelect({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex items-center gap-2 rounded-lg border px-3 h-9 text-[13px] transition-colors min-w-[172px]",
+          triggerCls,
           open
-            ? "border-green/60 bg-surface2 text-text"
-            : "border-border bg-surface2 text-text hover:border-border/80",
+            ? "border-[var(--brand-cobalt)] text-[var(--text)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]"
+            : "border-[var(--border-color)] text-[var(--text)] hover:border-[var(--brand-cobalt)]/60",
         )}
       >
         <FlagImg countryCode={selected.countryCode} />
         <span className="flex-1 text-left font-medium">{selected.label}</span>
-        <span className="text-text-muted text-[11px]">{selected.sub}</span>
+        <span className="font-mono text-[11px] text-[var(--text-sub)]">{selected.sub}</span>
         <ChevronDown
-          size={13}
-          className={cn("text-text-muted ml-0.5 shrink-0 transition-transform", open && "rotate-180")}
+          size={15}
+          className={cn("ml-0.5 shrink-0 text-[var(--text-sub)] transition-transform", open && "rotate-180")}
         />
       </button>
 
       {open && (
-        <div className="border-border bg-surface absolute right-0 top-full z-50 mt-1.5 min-w-full rounded-xl border shadow-lg overflow-hidden">
+        <div className={menuCls} style={{ boxShadow: "var(--shadow-sm)" }}>
           {options.map((opt) => (
             <button
               key={opt.code}
               type="button"
-              onClick={() => { onChange(opt.code); setOpen(false); }}
+              onClick={() => {
+                onChange(opt.code);
+                setOpen(false);
+              }}
               className={cn(
-                "flex w-full items-center gap-2.5 px-3 py-2.5 text-[13px] transition-colors",
-                opt.code === value
-                  ? "bg-green/10 text-green"
-                  : "text-text hover:bg-surface2",
+                "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-[14px] transition-colors",
+                opt.code === value ? "text-[var(--brand-accent)]" : "text-[var(--text)] hover:bg-[var(--surface2)]",
               )}
+              style={
+                opt.code === value
+                  ? { background: "color-mix(in srgb, var(--brand-accent) 12%, transparent)" }
+                  : undefined
+              }
             >
               <FlagImg countryCode={opt.countryCode} />
               <span className="flex-1 text-left font-medium">{opt.label}</span>
-              <span className={cn("text-[11px]", opt.code === value ? "text-green/70" : "text-text-muted")}>
+              <span
+                className={cn("font-mono text-[11px]", opt.code === value ? "text-[var(--brand-accent)]" : "text-[var(--text-sub)]")}
+              >
                 {opt.sub}
               </span>
-              {opt.code === value && <Check size={12} className="shrink-0" />}
+              {opt.code === value && <Check size={13} className="shrink-0" />}
             </button>
           ))}
         </div>
@@ -131,39 +146,47 @@ function LocaleSelect({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex items-center gap-2 rounded-lg border px-3 h-9 text-[13px] transition-colors min-w-[172px]",
+          triggerCls,
           open
-            ? "border-green/60 bg-surface2 text-text"
-            : "border-border bg-surface2 text-text hover:border-border/80",
+            ? "border-[var(--brand-cobalt)] text-[var(--text)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]"
+            : "border-[var(--border-color)] text-[var(--text)] hover:border-[var(--brand-cobalt)]/60",
         )}
       >
         <span className="flex-1 text-left font-medium">{selected.label}</span>
-        <span className="text-text-muted text-[11px]">{selected.sub}</span>
+        <span className="font-mono text-[11px] text-[var(--text-sub)]">{selected.sub}</span>
         <ChevronDown
-          size={13}
-          className={cn("text-text-muted ml-0.5 shrink-0 transition-transform", open && "rotate-180")}
+          size={15}
+          className={cn("ml-0.5 shrink-0 text-[var(--text-sub)] transition-transform", open && "rotate-180")}
         />
       </button>
 
       {open && (
-        <div className="border-border bg-surface absolute right-0 top-full z-50 mt-1.5 min-w-full rounded-xl border shadow-lg overflow-hidden">
+        <div className={menuCls} style={{ boxShadow: "var(--shadow-sm)" }}>
           {options.map((opt) => (
             <button
               key={opt.code}
               type="button"
-              onClick={() => { onChange(opt.code); setOpen(false); }}
+              onClick={() => {
+                onChange(opt.code);
+                setOpen(false);
+              }}
               className={cn(
-                "flex w-full items-center gap-2.5 px-3 py-2.5 text-[13px] transition-colors",
-                opt.code === value
-                  ? "bg-green/10 text-green"
-                  : "text-text hover:bg-surface2",
+                "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-[14px] transition-colors",
+                opt.code === value ? "text-[var(--brand-accent)]" : "text-[var(--text)] hover:bg-[var(--surface2)]",
               )}
+              style={
+                opt.code === value
+                  ? { background: "color-mix(in srgb, var(--brand-accent) 12%, transparent)" }
+                  : undefined
+              }
             >
               <span className="flex-1 text-left font-medium">{opt.label}</span>
-              <span className={cn("text-[11px]", opt.code === value ? "text-green/70" : "text-text-muted")}>
+              <span
+                className={cn("font-mono text-[11px]", opt.code === value ? "text-[var(--brand-accent)]" : "text-[var(--text-sub)]")}
+              >
                 {opt.sub}
               </span>
-              {opt.code === value && <Check size={12} className="shrink-0" />}
+              {opt.code === value && <Check size={13} className="shrink-0" />}
             </button>
           ))}
         </div>
@@ -178,7 +201,7 @@ export const ProfilePreferencesCard = () => {
   const { theme, setTheme } = useUIStore();
 
   const [currency, setCurrency] = useState("BRL");
-  const [locale, setLocale]     = useState("pt-BR");
+  const [locale, setLocale] = useState("pt-BR");
 
   useEffect(() => {
     if (prefs) {
@@ -195,80 +218,103 @@ export const ProfilePreferencesCard = () => {
   };
 
   return (
-    <div className="border-border bg-surface rounded-2xl border p-5">
-      <p className="font-display font-600 text-text mb-4 text-[15px]">Preferências</p>
+    <Card>
+      <CardHead title="Preferências" />
 
       {isLoading ? (
         <div className="flex flex-col gap-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface2 h-9 w-full animate-pulse rounded-lg" />
+            <div key={i} className="h-[52px] w-full animate-pulse rounded-[13px] bg-[var(--surface2)]" />
           ))}
         </div>
       ) : (
-        <div className="flex flex-col divide-y divide-border/50">
-          {/* Moeda */}
-          <div className="flex items-center justify-between py-3.5">
-            <div>
-              <p className="text-text text-[13px] font-medium">Moeda</p>
-              <p className="text-text-muted mt-0.5 text-[11px]">Moeda padrão do app</p>
+        <div className="flex flex-col">
+          {/* Tema */}
+          <SettingRow name="Tema" desc="Aparência do app">
+            <div className="flex gap-1.5">
+              <ThemeButton active={theme === "light"} onClick={() => setTheme("light")} icon={<Sun size={13} />}>
+                Claro
+              </ThemeButton>
+              <ThemeButton active={theme === "dark"} onClick={() => setTheme("dark")} icon={<Moon size={13} />}>
+                Escuro
+              </ThemeButton>
             </div>
+          </SettingRow>
+
+          {/* Moeda */}
+          <SettingRow name="Moeda" desc="Moeda padrão do app">
             <CurrencySelect options={CURRENCIES} value={currency} onChange={setCurrency} />
-          </div>
+          </SettingRow>
 
           {/* Idioma */}
-          <div className="flex items-center justify-between py-3.5">
-            <div>
-              <p className="text-text text-[13px] font-medium">Idioma</p>
-              <p className="text-text-muted mt-0.5 text-[11px]">Idioma da interface</p>
-            </div>
+          <SettingRow name="Idioma" desc="Idioma da interface" last>
             <LocaleSelect options={LOCALES} value={locale} onChange={setLocale} />
-          </div>
-
-          {/* Tema */}
-          <div className="flex items-center justify-between py-3.5">
-            <div>
-              <p className="text-text text-[13px] font-medium">Tema</p>
-              <p className="text-text-muted mt-0.5 text-[11px]">Aparência do app</p>
-            </div>
-            <div className="flex gap-1.5">
-              <button
-                onClick={() => setTheme("light")}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-all",
-                  theme === "light"
-                    ? "border-green/45 bg-green/15 text-green"
-                    : "border-border bg-surface2 text-text-sub hover:text-text",
-                )}
-              >
-                <Sun size={13} /> Claro
-              </button>
-              <button
-                onClick={() => setTheme("dark")}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-all",
-                  theme === "dark"
-                    ? "border-green/45 bg-green/15 text-green"
-                    : "border-border bg-surface2 text-text-sub hover:text-text",
-                )}
-              >
-                <Moon size={13} /> Escuro
-              </button>
-            </div>
-          </div>
+          </SettingRow>
         </div>
       )}
 
       {!isLoading && (
-        <div className="mt-4 flex justify-end">
+        <div className="mt-[22px] flex justify-end">
           <button
             onClick={handleSave}
             disabled={isPending || !isDirty}
-            className="bg-green hover:bg-green/90 disabled:opacity-50 rounded-lg px-4 py-2 text-[13px] font-medium text-black transition-colors"
+            className="inline-flex items-center rounded-[13px] px-[18px] py-2.5 text-[14px] font-semibold text-white transition-transform hover:-translate-y-[1px] disabled:translate-y-0 disabled:opacity-50"
+            style={{ background: "var(--brand-cobalt)", boxShadow: "0 12px 24px -12px rgba(31,60,224,0.7)" }}
           >
-            {isPending ? "Salvando..." : "Salvar preferências"}
+            {isPending ? "Salvando…" : "Salvar preferências"}
           </button>
         </div>
       )}
-    </div>
+    </Card>
   );
 };
+
+function SettingRow({
+  name,
+  desc,
+  last,
+  children,
+}: {
+  name: string;
+  desc: string;
+  last?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn("flex items-center gap-3.5 py-[15px]", !last && "border-b border-[var(--border-color)]")}>
+      <div className="min-w-0 flex-1">
+        <div className="text-[14px] font-semibold text-[var(--text)]">{name}</div>
+        <div className="mt-0.5 text-[13px] text-[var(--text-sub)]">{desc}</div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ThemeButton({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 rounded-[13px] border px-3 py-2 text-[13px] font-medium transition-all",
+        active
+          ? "border-[var(--brand-cobalt)] text-[var(--brand-accent)]"
+          : "border-[var(--border-color)] bg-[var(--surface2)] text-[var(--text-sub)] hover:text-[var(--text)]",
+      )}
+      style={active ? { background: "color-mix(in srgb, var(--brand-accent) 12%, transparent)" } : undefined}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, AlertCircle, Coins } from "lucide-react";
+import { Card } from "@/components/shared/Card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { useFiiIndicators } from "@/features/market/hooks/useMarket";
@@ -42,9 +43,9 @@ function MetricGrid({ items }: { items: Item[] }) {
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {present.map((i) => (
-        <div key={i.label} className="bg-surface2 flex flex-col gap-0.5 rounded-xl px-4 py-3">
-          <p className="text-text-muted text-[10px] uppercase tracking-[0.06em]">{i.label}</p>
-          <p className={cn("font-money text-text text-[15px] font-semibold", i.valueClass)}>{i.value}</p>
+        <div key={i.label} className="flex flex-col gap-0.5 rounded-[13px] bg-[var(--surface2)] px-4 py-3">
+          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--text-sub)]">{i.label}</p>
+          <p className={cn("font-mono text-[15px] font-semibold tabular-nums text-[var(--text)]", i.valueClass)}>{i.value}</p>
         </div>
       ))}
     </div>
@@ -55,12 +56,12 @@ function RowsCard({ title, rows }: { title: string; rows: Item[] }) {
   const present = rows.filter((r) => r.value !== null);
   if (present.length === 0) return null;
   return (
-    <div className="border-border rounded-xl border px-4 py-2">
-      <p className="text-text-muted mb-1 text-[11px] uppercase tracking-[0.06em]">{title}</p>
+    <div className="rounded-[13px] border border-[var(--border-color)] px-4 py-2">
+      <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-sub)]">{title}</p>
       {present.map((r) => (
-        <div key={r.label} className="border-border flex items-center justify-between border-b py-2.5 last:border-0">
-          <span className="text-text-muted text-[13px]">{r.label}</span>
-          <span className={cn("text-text text-right text-[13px] font-medium", r.valueClass)}>{r.value}</span>
+        <div key={r.label} className="flex items-center justify-between border-b border-[var(--border-color)] py-2.5 last:border-0">
+          <span className="text-[13px] text-[var(--text-sub)]">{r.label}</span>
+          <span className={cn("text-right text-[13px] font-medium text-[var(--text)]", r.valueClass)}>{r.value}</span>
         </div>
       ))}
     </div>
@@ -72,7 +73,7 @@ function Content({ f }: { f: FiiIndicators }) {
     <div className="flex flex-col gap-4">
       <MetricGrid items={[
         { label: "P/VP", value: fmtRatio(f.priceToNav) },
-        { label: "DY (12m)", value: fmtYield(f.dividendYield12m), valueClass: "text-green" },
+        { label: "DY (12m)", value: fmtYield(f.dividendYield12m), valueClass: "text-[var(--moss)]" },
         { label: "Cota patrimonial", value: f.navPerShare != null ? formatCurrency(f.navPerShare) : null },
         { label: "Preço", value: f.price != null ? formatCurrency(f.price) : null },
       ]} />
@@ -92,22 +93,22 @@ export function FiiPanel({ ticker }: { ticker: string }) {
   const { data, isLoading, isError } = useFiiIndicators(ticker);
 
   return (
-    <div className="border-border bg-surface rounded-2xl border p-5">
+    <Card>
       <div className="mb-4 flex items-center gap-1.5">
-        <Coins size={13} className="text-orange" />
-        <p className="text-text-muted text-[11px] uppercase tracking-[0.06em]">Indicadores do fundo</p>
+        <Coins size={13} className="text-[var(--gold)]" />
+        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-sub)]">Indicadores do fundo</p>
       </div>
 
       {isLoading && (
         <div className="flex h-40 items-center justify-center">
-          <Loader2 size={22} className="text-green animate-spin" />
+          <Loader2 size={22} className="animate-spin text-[var(--brand-accent)]" />
         </div>
       )}
       {isError && (
         <div className="flex flex-col items-center gap-3 py-10 text-center">
-          <AlertCircle size={28} className="text-red" />
-          <p className="text-text-sub text-[14px]">Não foi possível carregar os dados do FII.</p>
-          <p className="text-text-muted text-[12px]">
+          <AlertCircle size={28} className="text-[var(--clay)]" />
+          <p className="text-[14px] text-[var(--text-sub)]">Não foi possível carregar os dados do FII.</p>
+          <p className="text-[12px] text-[var(--text-sub)]">
             Verifique se a conta Brapi tem plano Pro ativo e se o token está configurado.
           </p>
         </div>
@@ -115,11 +116,11 @@ export function FiiPanel({ ticker }: { ticker: string }) {
       {!isLoading && !isError && data && (
         <>
           <Content f={data} />
-          <p className="text-text-muted mt-6 text-center text-[10px]">
+          <p className="mt-6 text-center font-mono text-[10px] tracking-[0.04em] text-[var(--text-sub)]">
             Fonte: Brapi · Atualizado às {new Date(data.fetchedAt).toLocaleString("pt-BR")}
           </p>
         </>
       )}
-    </div>
+    </Card>
   );
 }

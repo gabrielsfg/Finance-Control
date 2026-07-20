@@ -49,7 +49,7 @@ export function TagInput({ value, onChange }: Props) {
   return (
     <div className="relative">
       <div
-        className="border-border bg-surface2 flex min-h-11 cursor-text flex-wrap items-center gap-1.5 rounded-lg border px-3 py-2 focus-within:border-green/60"
+        className="border-border bg-surface2 flex min-h-11 cursor-text flex-wrap items-center gap-1.5 rounded-[13px] border px-3 py-2 focus-within:border-[var(--brand-cobalt)]"
         onClick={() => inputRef.current?.focus()}
       >
         <TagIcon size={13} className="text-text-muted shrink-0" />
@@ -85,7 +85,7 @@ export function TagInput({ value, onChange }: Props) {
       </div>
 
       {showDropdown && (input.trim().length > 0 || suggestions.length > 0) && (
-        <div className="border-border bg-surface absolute z-50 mt-1 w-full rounded-lg border shadow-lg">
+        <div className="border-border bg-surface absolute z-50 mt-1 w-full rounded-[13px] border shadow-lg">
           {suggestions.map((tag) => (
             <button
               key={tag.id}

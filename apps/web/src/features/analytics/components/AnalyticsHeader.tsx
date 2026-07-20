@@ -20,8 +20,8 @@ const ASSET_CLASS_LABELS: Record<string, string> = {
 
 type Chip = { id: string; label: string; color?: string; onRemove: () => void };
 
-/** Page title plus the active-filter chips, shared by every analytics sub-page. */
-export function AnalyticsHeader({ title }: { title: string }) {
+/** Active-filter chips, shared by every analytics sub-page (title lives in PageTopbar). */
+export function AnalyticsHeader(_props: { title?: string }) {
   const { filter, setFilter, mode } = useAnalyticsFilter();
 
   const { data: accountsRaw = [] } = useAccounts();
@@ -102,30 +102,27 @@ export function AnalyticsHeader({ title }: { title: string }) {
     return chips;
   }, [filter, mode, metaCategories, metaAccounts, metaTags, setFilter]);
 
+  if (activeChips.length === 0) return null;
+
   return (
-    <div>
-      <h1 className="font-display font-700 text-text text-[22px] tracking-tight">{title}</h1>
-      {activeChips.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {activeChips.map(chip => (
-            <div
-              key={chip.id}
-              className="border-border bg-surface2 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px]"
-            >
-              {chip.color && (
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: chip.color }} />
-              )}
-              <span className="text-text-sub">{chip.label}</span>
-              <button
-                onClick={chip.onRemove}
-                className="text-text-muted hover:text-red ml-0.5 transition-colors"
-              >
-                <X size={11} />
-              </button>
-            </div>
-          ))}
+    <div className="flex flex-wrap gap-2">
+      {activeChips.map(chip => (
+        <div
+          key={chip.id}
+          className="flex items-center gap-1.5 rounded-full border border-[var(--border-color)] bg-[var(--surface2)] px-2.5 py-1 text-[12px]"
+        >
+          {chip.color && (
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: chip.color }} />
+          )}
+          <span className="text-[var(--text-sub)]">{chip.label}</span>
+          <button
+            onClick={chip.onRemove}
+            className="ml-0.5 text-[var(--text-sub)] transition-colors hover:text-[var(--clay)]"
+          >
+            <X size={11} />
+          </button>
         </div>
-      )}
+      ))}
     </div>
   );
 }

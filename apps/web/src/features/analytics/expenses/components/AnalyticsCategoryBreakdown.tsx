@@ -39,7 +39,7 @@ export const AnalyticsCategoryBreakdown = ({ data }: Props) => {
                   </span>
                 </div>
               </div>
-              <ProgressBar value={cat.totalSpent} max={maxSpent} height={5} color={cat.color} />
+              <ProgressBar value={cat.totalSpent} max={maxSpent} height={5} color={cat.color ?? undefined} />
               <p className="text-text-muted mt-0.5 text-right text-[11px]">{cat.percent.toFixed(1)}% do total</p>
             </div>
           ))}

@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
 import Link from "next/link";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { PieChart as PieChartIcon } from "lucide-react";
-import { SectionHeader } from "@/components/shared/SectionHeader";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDateMonth } from "@/lib/utils/formatDate";
 import { getCategoryColor } from "@/lib/config/categoryColors";
@@ -13,7 +11,7 @@ import type { TopCategoryItem } from "@/lib/types/dashboard.types";
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const { name, value, payload: entry } = payload[0];
-  const color = entry?.color ?? DEFAULT_COLOR;
+  const color = entry?.color ?? "var(--text-sub)";
   return (
     <div className="border-border bg-surface rounded-lg border px-3 py-2 shadow-md">
       <p className="text-text mb-1 text-[13px] font-medium">{name}</p>
@@ -25,52 +23,30 @@ const CustomTooltip = ({ active, payload }: any) => {
   );
 };
 
-const renderActiveShape = (props: any) => {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-  return (
-    <Sector
-      cx={cx}
-      cy={cy}
-      innerRadius={innerRadius}
-      outerRadius={outerRadius + 8}
-      startAngle={startAngle}
-      endAngle={endAngle}
-      fill={fill}
-    />
-  );
-};
-
 type Props = {
   categories: TopCategoryItem[];
 };
 
 export const CategoryDonutChart = ({ categories }: Props) => {
-  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
-
   const data = categories.slice(0, 5).map((c) => ({
     name: c.categoryName,
     value: c.totalSpent,
     color: getCategoryColor(c.color, c.categoryName),
   }));
 
-  const onMouseEnter = useCallback((_: any, index: number) => setActiveIndex(index), []);
-  const onMouseLeave = useCallback(() => setActiveIndex(undefined), []);
-
   const header = (
-    <div className="mb-4 flex items-start justify-between">
-      <div>
-        <h2 className="font-display font-700 text-text text-[18px] tracking-tight">Gastos por Categoria</h2>
-        <p className="text-text-muted mt-0.5 text-[13px]">{formatDateMonth(new Date())}</p>
-      </div>
-      <Link href="/categories" className="font-500 text-text-sub hover:text-green text-[12px] transition-colors">
-        Ver categorias →
+    <div className="mb-4 flex items-center gap-[10px]">
+      <h2 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">Gastos por Categoria</h2>
+      <span className="font-mono text-[11px] text-[var(--text-sub)]">{formatDateMonth(new Date())}</span>
+      <Link href="/categories" className="ml-auto font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--brand-accent)] hover:underline">
+        Ver categorias
       </Link>
     </div>
   );
 
   if (data.length === 0) {
     return (
-      <div className="border-border bg-surface flex h-full flex-col rounded-xl border p-5">
+      <div className="border-[var(--border-color)] bg-[var(--surface)] flex h-full flex-col rounded-[20px] border p-[22px]">
         {header}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8">
           <PieChartIcon size={32} className="text-text-muted opacity-40" />
@@ -81,7 +57,7 @@ export const CategoryDonutChart = ({ categories }: Props) => {
   }
 
   return (
-    <div className="border-border bg-surface flex h-full flex-col rounded-xl border p-5">
+    <div className="border-[var(--border-color)] bg-[var(--surface)] flex h-full flex-col rounded-[20px] border p-[22px]">
       {header}
 
       <div className="w-full flex-1" style={{ minHeight: 160 }}>
@@ -96,10 +72,6 @@ export const CategoryDonutChart = ({ categories }: Props) => {
               paddingAngle={2}
               dataKey="value"
               strokeWidth={0}
-              activeIndex={activeIndex}
-              activeShape={renderActiveShape}
-              onMouseEnter={onMouseEnter}
-              onMouseLeave={onMouseLeave}
             >
               {data.map((entry) => (
                 <Cell key={entry.name} fill={entry.color} />

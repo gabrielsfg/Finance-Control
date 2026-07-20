@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { cn } from "@/lib/utils";
 import { useRegisterDividend } from "@/features/investments/hooks/useInvestments";
 import type { DividendType } from "@/lib/types/investments.types";
@@ -296,13 +297,10 @@ export const RegisterDividendModal = ({ open, onClose, investmentId, ticker, acc
             <FormField label="Valor recebido (R$)" error={errors.amount?.message}>
               <div className={cn(VALUE_WRAPPER_CLASS, errors.amount && "border-red/60")}>
                 <span className="text-text-muted select-none pl-3.5 text-[15px]">R$</span>
-                <input
-                  {...register("amount")}
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0,00"
-                  className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none placeholder:text-text-muted"
+                <CurrencyInput
+                  value={watch("amount") ?? ""}
+                  onChange={(v) => setValue("amount", v, { shouldValidate: true })}
+                  className="h-full flex-1 bg-transparent px-2 text-[15px] text-text outline-none"
                 />
               </div>
             </FormField>
@@ -311,7 +309,7 @@ export const RegisterDividendModal = ({ open, onClose, investmentId, ticker, acc
             <FormField label="Conta de destino" error={errors.accountId?.message}>
               <Select
                 value={accountId ?? ""}
-                onValueChange={(v) => setValue("accountId", v, { shouldValidate: true })}
+                onValueChange={(v) => setValue("accountId", v ?? "", { shouldValidate: true })}
               >
                 <SelectTrigger className={cn(TRIGGER_CLASS, errors.accountId && "border-red/60")}>
                   <SelectValue>

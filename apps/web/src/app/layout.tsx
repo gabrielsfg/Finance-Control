@@ -1,29 +1,32 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
+const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
-  variable: "--font-space-grotesk",
+  variable: "--font-bricolage",
+  weight: ["400", "600", "700", "800"],
   display: "swap",
 });
 
-const dmSans = DM_Sans({
+const hanken = Hanken_Grotesk({
   subsets: ["latin"],
-  variable: "--font-dm-sans",
+  variable: "--font-hanken",
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
+  variable: "--font-ibm-plex-mono",
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Controle — Seu dinheiro, organizado",
+  title: "Quantia — Seu dinheiro, organizado",
   description: "Gerencie suas finanças pessoais com inteligência.",
 };
 
@@ -31,8 +34,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="pt-BR"
-      className={`${spaceGrotesk.variable} ${dmSans.variable} ${jetbrainsMono.variable} dark h-full antialiased`}
+      suppressHydrationWarning
+      className={`${bricolage.variable} ${hanken.variable} ${ibmPlexMono.variable} h-full`}
     >
+      <head>
+        {/* Apply saved theme before paint to prevent flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=JSON.parse(localStorage.getItem('controle-ui')||'{}');var t=(s.state||{}).theme||'dark';document.documentElement.classList.toggle('dark',t==='dark');}catch(e){document.documentElement.classList.add('dark');}})();`,
+          }}
+        />
+      </head>
       <body className="bg-background text-foreground h-full">
         <QueryProvider>
           <TooltipProvider delay={300}>{children}</TooltipProvider>

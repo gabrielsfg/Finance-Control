@@ -3,31 +3,17 @@
 import { useState } from "react";
 import type React from "react";
 import { TrendingUp, TrendingDown, Clock } from "lucide-react";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { Card } from "@/components/shared/Card";
+import { Money } from "@/components/shared/Money";
 import { cn } from "@/lib/utils";
 import type { MarketAssetDetail } from "@/lib/types/market.types";
-
-const ASSET_TYPE_COLORS: Record<string, string> = {
-  Acao:              "#00C98D",
-  FundoInvestimento: "#4A9EFF",
-  FII:               "#F5A623",
-  Cripto:            "#F25F5C",
-  Stock:             "#00D4A0",
-  Reit:              "#7C6FE0",
-  BDR:               "#F5CE42",
-  ETF:               "#4A9EFF",
-  ETFInternacional:  "#7C6FE0",
-  TesouroDireto:     "#00C98D",
-  RendaFixa:         "#4A9EFF",
-  Moeda:             "#14B8A6",
-  Outro:             "#8A95A3",
-};
+import { assetColor } from "@/features/market/lib/marketDisplay";
 
 type Props = { asset: MarketAssetDetail; trailing?: React.ReactNode };
 
 export const MarketAssetCard = ({ asset, trailing }: Props) => {
   const [logoError, setLogoError] = useState(false);
-  const color = ASSET_TYPE_COLORS[asset.assetType] ?? "#8A95A3";
+  const color = assetColor(asset.assetType);
   const isUp = (asset.dayChangePct ?? 0) >= 0;
   const dayChangeAbs = asset.previousClose !== null
     ? Math.abs(asset.currentPrice - asset.previousClose)
@@ -55,38 +41,41 @@ export const MarketAssetCard = ({ asset, trailing }: Props) => {
     : null;
 
   return (
-    <div className="border-border bg-surface rounded-xl border p-5">
+    <Card>
       {/* Header: logo + nome + ticker + classe + trailing */}
       <div className="mb-5 flex items-start gap-4">
         {asset.logoUrl && !logoError ? (
           <img
             src={asset.logoUrl}
             alt={asset.ticker}
-            className="h-12 w-12 shrink-0 rounded-xl object-contain bg-white/5"
+            className="h-12 w-12 shrink-0 rounded-[13px] bg-white/5 object-contain"
             onError={() => setLogoError(true)}
           />
         ) : (
           <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[13px] text-sm font-bold text-white"
             style={{ backgroundColor: color }}
           >
             {asset.ticker.slice(0, 2)}
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="font-display font-700 text-text text-[20px] tracking-tight">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-display text-[20px] font-bold tracking-[-0.01em] text-[var(--text)]">
               {asset.coinName ?? asset.ticker}
             </h2>
             <span
-              className="rounded-full px-2 py-0.5 text-[11px] font-medium text-white"
-              style={{ backgroundColor: color + "cc" }}
+              className="rounded-full px-[11px] py-[3px] font-mono text-[11px] tracking-[0.06em]"
+              style={{
+                background: `color-mix(in srgb, ${color} 16%, transparent)`,
+                color,
+              }}
             >
               {asset.assetClass}
             </span>
-            <span className="text-text-muted text-[12px]">{asset.currency}</span>
+            <span className="font-mono text-[12px] tracking-[0.04em] text-[var(--text-sub)]">{asset.currency}</span>
           </div>
-          <p className="text-text-sub mt-0.5 text-[13px] truncate">
+          <p className="mt-0.5 truncate text-[13px] text-[var(--text-sub)]">
             {asset.coinName ? asset.ticker : asset.name}
           </p>
         </div>
@@ -94,58 +83,68 @@ export const MarketAssetCard = ({ asset, trailing }: Props) => {
       </div>
 
       {/* Preço principal + variação dia */}
-      <div className="mb-5 flex items-end gap-3 flex-wrap">
-        <span className="font-money font-700 text-text text-[32px] leading-none">
-          {formatCurrency(asset.currentPrice / 100)}
-        </span>
+      <div className="mb-5 flex flex-wrap items-end gap-3">
+        <Money cents={asset.currentPrice} className="text-[32px] font-bold leading-none" />
         {asset.dayChangePct !== null && (
-          <div className={cn(
-            "flex items-center gap-1 rounded-lg px-2.5 py-1.5 mb-0.5",
-            isUp ? "bg-green/10" : "bg-red/10",
-          )}>
+          <div
+            className="mb-0.5 flex items-center gap-1.5 rounded-[9px] px-2.5 py-1.5"
+            style={{
+              background: isUp
+                ? "color-mix(in srgb, var(--moss) 12%, transparent)"
+                : "color-mix(in srgb, var(--clay) 12%, transparent)",
+            }}
+          >
             {isUp
-              ? <TrendingUp size={14} className="text-green" />
-              : <TrendingDown size={14} className="text-red" />
+              ? <TrendingUp size={14} className="text-[var(--moss)]" />
+              : <TrendingDown size={14} className="text-[var(--clay)]" />
             }
-            <span className={cn("font-mono text-[13px] font-medium", isUp ? "text-green" : "text-red")}>
+            <span className={cn("font-mono text-[13px] font-medium tabular-nums", isUp ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
               {isUp ? "+" : ""}{asset.dayChangePct.toFixed(2)}%
             </span>
             {dayChangeAbs !== null && (
-              <span className={cn("font-money text-[12px]", isUp ? "text-green" : "text-red")}>
-                ({isUp ? "+" : "-"}{formatCurrency(dayChangeAbs / 100)})
-              </span>
+              <Money cents={dayChangeAbs} className={cn("text-[12px]", isUp ? "text-[var(--moss)]" : "text-[var(--clay)]")} />
             )}
           </div>
         )}
       </div>
 
       {/* Grade de métricas */}
-      <div className="border-border grid grid-cols-2 gap-px rounded-xl border overflow-hidden sm:grid-cols-4">
+      <div className="grid grid-cols-4 gap-px overflow-hidden rounded-[13px] border border-[var(--border-color)]">
         {[
-          { label: "Fechamento ant.", value: asset.previousClose !== null ? formatCurrency(asset.previousClose / 100) : "—", mono: true },
-          { label: "Semana", value: weekChg !== null ? `${weekChg >= 0 ? "+" : ""}${weekChg.toFixed(2)}%` : "—", color: weekChg !== null ? (weekChg >= 0 ? "text-green" : "text-red") : "" },
-          { label: "Mês", value: monthChg !== null ? `${monthChg >= 0 ? "+" : ""}${monthChg.toFixed(2)}%` : "—", color: monthChg !== null ? (monthChg >= 0 ? "text-green" : "text-red") : "" },
-          { label: "12 meses", value: yearChg !== null ? `${yearChg >= 0 ? "+" : ""}${yearChg.toFixed(2)}%` : "—", color: yearChg !== null ? (yearChg >= 0 ? "text-green" : "text-red") : "" },
-        ].map(({ label, value, mono, color: c }) => (
-          <div key={label} className="bg-surface2 flex flex-col gap-1 px-4 py-3">
-            <p className="text-text-muted text-[10px] uppercase tracking-[0.06em]">{label}</p>
-            <p className={cn(
-              "text-[14px] font-medium",
-              mono ? "font-money text-text" : cn("font-mono", c || "text-text-sub"),
-            )}>
-              {value}
-            </p>
-          </div>
-        ))}
+          { label: "Fechamento ant.", money: asset.previousClose },
+          { label: "Semana", value: weekChg },
+          { label: "Mês", value: monthChg },
+          { label: "12 meses", value: yearChg },
+        ].map((m) => {
+          const isMoney = "money" in m;
+          const pct = isMoney ? null : (m as { value: number | null }).value;
+          const pctColor = pct == null ? "text-[var(--text-sub)]" : pct >= 0 ? "text-[var(--moss)]" : "text-[var(--clay)]";
+          return (
+            <div key={m.label} className="flex flex-col gap-1 bg-[var(--surface2)] px-3 py-3 sm:px-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--text-sub)]">{m.label}</p>
+              {isMoney ? (
+                (m as { money: number | null }).money !== null && (m as { money: number | null }).money !== undefined ? (
+                  <Money cents={(m as { money: number | null }).money!} className="text-[14px]" />
+                ) : (
+                  <p className="font-mono text-[14px] font-medium text-[var(--text-sub)]">—</p>
+                )
+              ) : (
+                <p className={cn("font-mono text-[14px] font-medium tabular-nums", pctColor)}>
+                  {pct !== null ? `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%` : "—"}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Última atualização */}
       {lastUpdate && (
         <div className="mt-3 flex items-center gap-1.5">
-          <Clock size={11} className="text-text-muted" />
-          <p className="text-text-muted text-[11px]">Atualizado em {lastUpdate}</p>
+          <Clock size={11} className="text-[var(--text-sub)]" />
+          <p className="font-mono text-[11px] text-[var(--text-sub)]">Atualizado em {lastUpdate}</p>
         </div>
       )}
-    </div>
+    </Card>
   );
 };

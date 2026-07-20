@@ -17,7 +17,7 @@ export const RecurringBanner = ({ transactions }: Props) => {
 
   return (
     <div
-      className="flex items-center gap-4 rounded-xl border border-purple/25 px-5 py-4"
+      className="flex items-center gap-4 rounded-[13px] border border-purple/25 px-5 py-4"
       style={{ background: "linear-gradient(135deg, color-mix(in srgb, var(--purple) 8%, transparent), color-mix(in srgb, var(--purple) 4%, transparent))" }}
     >
       <div className="bg-purple/15 flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]">

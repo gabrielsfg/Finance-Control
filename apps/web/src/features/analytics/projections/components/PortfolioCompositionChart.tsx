@@ -10,7 +10,7 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { PortfolioCompositionProjectionResponse } from "@/lib/types/analytics.types";
@@ -91,19 +91,19 @@ export function PortfolioCompositionChart({ data }: Props) {
 
   if (data.data.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-        <SectionHeader
+      <Card className="flex flex-col">
+        <CardHead
           title="Composição Futura da Carteira"
           subtitle="Distribuição histórica por classe de ativo e projeção para os próximos meses"
         />
         <ChartEmptyState message="Sem dados de carteira para o período" />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Composição Futura da Carteira"
         subtitle="Distribuição histórica por classe de ativo e projeção para os próximos meses"
       />
@@ -131,22 +131,22 @@ export function PortfolioCompositionChart({ data }: Props) {
       <div className="w-full" style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--border-chart)" />
+            <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
-              tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }}
+              tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => formatCurrencyCompact(v / 100)}
               width={72}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border-color)", strokeWidth: 1, strokeDasharray: "4 4" }} />
             {projectionLabel && (
               <ReferenceLine
                 x={projectionLabel}
@@ -187,6 +187,6 @@ export function PortfolioCompositionChart({ data }: Props) {
           <span className="text-text-muted text-[13px]">Projeção</span>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

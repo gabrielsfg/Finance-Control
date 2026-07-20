@@ -28,7 +28,7 @@ export function IncomeCommitmentCard({
   const visInstPct = overcommitted ? (instPct / totalCommittedPct) * 100 : instPct;
 
   return (
-    <div className="border-border bg-surface flex flex-col gap-3 rounded-xl border p-4">
+    <div className="flex flex-col gap-3 rounded-[20px] border p-4" style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-display text-text text-[14px] font-semibold">

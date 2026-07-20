@@ -29,17 +29,23 @@ export const DeleteCategoryModal = ({ category, onClose }: Props) => {
     <Dialog open={!!category} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="font-display font-600 text-text text-[16px]">
+          <DialogTitle className="font-display text-[16px] font-bold tracking-[-0.01em] text-[var(--text)]">
             Excluir categoria
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 pt-1">
-          <div className="bg-red/8 border-red/20 flex items-start gap-3 rounded-lg border p-3">
-            <TriangleAlert size={15} className="text-red mt-0.5 shrink-0" />
-            <p className="text-text-sub text-[13px] leading-relaxed">
+          <div
+            className="flex items-start gap-3 rounded-[13px] border p-3"
+            style={{
+              background: "color-mix(in srgb, var(--clay) 8%, transparent)",
+              borderColor: "color-mix(in srgb, var(--clay) 22%, transparent)",
+            }}
+          >
+            <TriangleAlert size={15} className="mt-0.5 shrink-0 text-[var(--clay)]" />
+            <p className="text-[13px] leading-relaxed text-[var(--text-sub)]">
               Excluir{" "}
-              <span className="text-text font-500">{category?.name}</span> irá
+              <span className="font-medium text-[var(--text)]">{category?.name}</span> irá
               remover todas as subcategorias vinculadas. Esta ação não pode ser
               desfeita.
             </p>

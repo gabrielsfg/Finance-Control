@@ -12,15 +12,15 @@ import {
   Cell,
 } from "recharts";
 import { Flame } from "lucide-react";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import type { SavingsPeriodItem } from "@/lib/types/analytics.types";
 import { periodShortLabel } from "../savingsPeriod";
 
 function barFill(rate: number): string {
-  if (rate < 10) return "var(--red)";
-  if (rate < 20) return "var(--orange)";
-  return "var(--green)";
+  if (rate < 10) return "var(--chart-3)";
+  if (rate < 20) return "var(--chart-4)";
+  return "var(--chart-1)";
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -54,8 +54,8 @@ export function SavingsRateHistoryChart({ periods, plannedRate, positiveStreak }
     chartData.length > 0 ? chartData.reduce((s, d) => s + d.rate, 0) / chartData.length : 0;
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Taxa de Economia por Período"
         subtitle="Percentual do que você recebeu que ficou com você"
       />
@@ -132,6 +132,6 @@ export function SavingsRateHistoryChart({ periods, plannedRate, positiveStreak }
           </div>
         </>
       )}
-    </div>
+    </Card>
   );
 }

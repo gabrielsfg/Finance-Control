@@ -62,9 +62,10 @@ export const Header = () => {
         {onNovaClick && (
           <button
             onClick={onNovaClick}
-            className="bg-green hover:bg-green/90 font-600 inline-flex h-9 items-center gap-1.5 rounded-[min(var(--radius-md),12px)] px-3 text-[0.8rem] font-medium text-black transition-colors"
+            className="inline-flex h-9 items-center gap-2 rounded-[13px] px-[18px] text-[14px] font-semibold text-white transition-transform hover:-translate-y-[1px]"
+            style={{ background: "var(--brand-cobalt)", boxShadow: "0 8px 16px -8px rgba(31,60,224,0.5)" }}
           >
-            <Plus size={15} strokeWidth={2} />
+            <Plus size={16} strokeWidth={2} />
             <span className="hidden sm:inline">{novaLabel}</span>
           </button>
         )}

@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Bell, TrendingUp, TrendingDown, Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { Money } from "@/components/shared/Money";
 import type { AlertDirection } from "@/lib/types/alerts.types";
 import {
   useAlertRules,
@@ -91,16 +91,21 @@ export function AssetAlertButton({
         type="button"
         onClick={handleToggle}
         className={cn(
-          "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] font-medium transition-colors",
+          "flex items-center gap-1.5 rounded-[13px] border px-2.5 py-1.5 text-[12px] font-medium transition-colors",
           open
-            ? "border-purple/40 bg-purple/10 text-purple"
-            : "border-border text-text-muted hover:border-border hover:bg-surface2 hover:text-text",
+            ? "border-[var(--brand-cobalt)] text-[var(--brand-accent)]"
+            : "border-[var(--border-color)] text-[var(--text-sub)] hover:bg-[var(--surface2)] hover:text-[var(--text)]",
         )}
+        style={
+          open
+            ? { background: "color-mix(in srgb, var(--brand-cobalt) 12%, transparent)" }
+            : undefined
+        }
       >
         <Bell size={13} strokeWidth={1.75} />
-        Criar Alerta
+        Criar alerta
         {activeCount > 0 && (
-          <span className="bg-purple flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white">
+          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-cobalt)] px-1 font-mono text-[9px] font-bold text-white">
             {activeCount > 9 ? "9+" : activeCount}
           </span>
         )}
@@ -111,31 +116,34 @@ export function AssetAlertButton({
         createPortal(
           <div
             ref={panelRef}
-            style={{ top: pos.top, right: pos.right }}
-            className="border-border bg-surface fixed z-50 w-80 rounded-xl border p-4 shadow-xl"
+            style={{ top: pos.top, right: pos.right, boxShadow: "var(--shadow-sm)" }}
+            className="fixed z-50 w-80 rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)] p-4"
           >
             <div className="mb-1 flex items-center gap-2">
-              <Bell size={14} className="text-purple" strokeWidth={1.75} />
-              <p className="font-display font-600 text-text text-[14px]">Alertas de preço</p>
+              <Bell size={14} className="text-[var(--brand-accent)]" strokeWidth={1.75} />
+              <p className="font-display text-[15px] font-bold tracking-[-0.01em] text-[var(--text)]">Alertas de preço</p>
             </div>
-            <p className="text-text-muted mb-3 text-[12px]">
+            <p className="mb-3 text-[12px] text-[var(--text-sub)]">
               Avisamos uma vez quando o preço cruzar o alvo. Cotação atual:{" "}
-              <span className="font-money text-text-sub">
-                {formatCurrency(currentPrice / 100)}
-              </span>
+              <Money cents={currentPrice} className="text-[12px] text-[var(--text-sub)]" />
             </p>
 
             <div className="flex flex-wrap items-end gap-2">
-              <div className="flex rounded-lg border border-border p-0.5">
+              <div className="flex rounded-[13px] border border-[var(--border-color)] p-0.5">
                 <button
                   type="button"
                   onClick={() => setDirection("Above")}
                   className={cn(
-                    "flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[12px] font-medium transition-colors",
+                    "flex items-center gap-1 rounded-[9px] px-2.5 py-1.5 text-[12px] font-medium transition-colors",
                     direction === "Above"
-                      ? "bg-green/15 text-green"
-                      : "text-text-muted hover:text-text",
+                      ? "text-[var(--moss)]"
+                      : "text-[var(--text-sub)] hover:text-[var(--text)]",
                   )}
+                  style={
+                    direction === "Above"
+                      ? { background: "color-mix(in srgb, var(--moss) 14%, transparent)" }
+                      : undefined
+                  }
                 >
                   <TrendingUp size={13} /> Acima de
                 </button>
@@ -143,59 +151,71 @@ export function AssetAlertButton({
                   type="button"
                   onClick={() => setDirection("Below")}
                   className={cn(
-                    "flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[12px] font-medium transition-colors",
+                    "flex items-center gap-1 rounded-[9px] px-2.5 py-1.5 text-[12px] font-medium transition-colors",
                     direction === "Below"
-                      ? "bg-red/15 text-red"
-                      : "text-text-muted hover:text-text",
+                      ? "text-[var(--clay)]"
+                      : "text-[var(--text-sub)] hover:text-[var(--text)]",
                   )}
+                  style={
+                    direction === "Below"
+                      ? { background: "color-mix(in srgb, var(--clay) 14%, transparent)" }
+                      : undefined
+                  }
                 >
                   <TrendingDown size={13} /> Abaixo de
                 </button>
               </div>
 
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && submit()}
-                placeholder="0,00"
-                className="border-border bg-surface2 text-text placeholder:text-text-muted h-9 w-28 rounded-lg border px-3 text-[13px] outline-none focus:border-green/60"
-              />
+              <div className="flex h-9 w-28 items-center gap-1 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3 transition-colors focus-within:border-[var(--brand-cobalt)]">
+                <span className="font-mono text-[12px] text-[var(--text-sub)]">R$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && submit()}
+                  placeholder="0,00"
+                  className="w-full bg-transparent font-mono text-[13px] tabular-nums text-[var(--text)] outline-none placeholder:text-[var(--text-sub)]"
+                />
+              </div>
 
               <button
                 type="button"
                 onClick={submit}
                 disabled={createAlert.isPending}
-                className="bg-green hover:bg-green/90 font-600 inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-black transition-colors disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-[13px] bg-[var(--brand-cobalt)] px-3 text-[13px] font-semibold text-white transition-transform hover:-translate-y-[1px] disabled:opacity-50"
+                style={{ boxShadow: "0 12px 24px -12px rgba(31,60,224,0.7)" }}
               >
                 <Plus size={14} strokeWidth={2} />
                 Criar
               </button>
             </div>
 
-            {error && <p className="text-red mt-2 text-[12px]">{error}</p>}
+            {error && <p className="mt-2 text-[12px] text-[var(--clay)]">{error}</p>}
 
             {alerts.length > 0 && (
-              <div className="border-border/60 mt-3 flex flex-col divide-y divide-border/50 border-t pt-1">
+              <div className="mt-3 flex flex-col divide-y divide-[var(--border-color)] border-t border-[var(--border-color)] pt-1">
                 {alerts.map((a) => {
                   const Icon = a.direction === "Above" ? TrendingUp : TrendingDown;
-                  const color = a.direction === "Above" ? "text-green" : "text-red";
+                  const color = a.direction === "Above" ? "text-[var(--moss)]" : "text-[var(--clay)]";
                   return (
                     <div key={a.id} className="flex items-center gap-3 py-2">
                       <Icon size={14} className={cn("shrink-0", color)} />
                       <div className="min-w-0 flex-1">
-                        <p className="text-text text-[13px]">
+                        <p className="flex items-center gap-1 text-[13px] text-[var(--text)]">
                           {a.direction === "Above" ? "Acima de" : "Abaixo de"}{" "}
-                          <span className="font-money">{formatCurrency(a.targetValue / 100)}</span>
+                          <Money cents={a.targetValue} className="text-[13px]" />
                         </p>
-                        <p className="text-text-muted text-[11px]">
+                        <p className="font-mono text-[11px] tracking-[0.04em] text-[var(--text-sub)]">
                           {a.isTriggered ? "Disparado" : "Ativo · aguardando"}
                         </p>
                       </div>
                       {!a.isTriggered && (
-                        <span className="bg-green/15 text-green rounded-full px-2 py-0.5 text-[10px] font-medium">
+                        <span
+                          className="rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--moss)]"
+                          style={{ background: "color-mix(in srgb, var(--moss) 15%, transparent)" }}
+                        >
                           Ativo
                         </span>
                       )}
@@ -203,7 +223,7 @@ export function AssetAlertButton({
                         type="button"
                         onClick={() => deleteAlert.mutate(a.id)}
                         title="Remover alerta"
-                        className="text-text-muted hover:text-red hover:bg-surface2 flex h-7 w-7 items-center justify-center rounded-md transition-colors"
+                        className="flex h-7 w-7 items-center justify-center rounded-[9px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--clay)]"
                       >
                         <Trash2 size={13} />
                       </button>

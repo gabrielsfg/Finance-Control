@@ -7,8 +7,9 @@ import { CategoryColorPicker } from "./CategoryColorPicker";
 import { useCreateCategory } from "@/features/categories/hooks/useCategories";
 import { cn } from "@/lib/utils";
 
+const labelCls = "font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-sub)]";
 const inputCls =
-  "border-border bg-surface2 text-text placeholder:text-text-muted w-full rounded-lg border h-10 px-3.5 text-[14px] outline-none focus:border-green/60 transition-colors";
+  "w-full rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 py-2.5 text-[14px] text-[var(--text)] placeholder:text-[var(--text-muted)] outline-none transition-shadow focus:border-[var(--brand-cobalt)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]";
 
 type Props = { open: boolean; onClose: () => void; zIndex?: number };
 
@@ -42,19 +43,19 @@ export function CreateCategoryModal({ open, onClose, zIndex }: Props) {
       />
 
       <div
-        style={{ zIndex: drawerZ }}
+        style={{ zIndex: drawerZ, background: "var(--surface)", borderColor: "var(--border-color)" }}
         className={cn(
-          "bg-surface border-border fixed inset-y-0 right-0 flex w-full max-w-[400px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
+          "fixed inset-y-0 right-0 flex w-full max-w-[400px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
         {/* Header */}
-        <div className="border-border flex items-center justify-between border-b px-6 py-5">
-          <h2 className="font-display font-600 text-text text-[17px]">Nova categoria</h2>
+        <div className="flex items-center justify-between border-b border-[var(--border-color)] px-6 py-5">
+          <h2 className="font-display text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">Nova categoria</h2>
           <button
             onClick={handleClose}
             title="Fechar"
-            className="text-text-muted hover:bg-surface2 hover:text-text flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-[9px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--text)]"
           >
             <X size={16} />
           </button>
@@ -63,7 +64,7 @@ export function CreateCategoryModal({ open, onClose, zIndex }: Props) {
         {/* Content */}
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
           <div className="flex flex-col gap-2">
-            <label className="text-text-sub text-[14px]">Nome</label>
+            <label className={labelCls}>Nome</label>
             <input
               className={inputCls}
               placeholder="Ex: Alimentação"
@@ -75,11 +76,11 @@ export function CreateCategoryModal({ open, onClose, zIndex }: Props) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-text-sub text-[14px]">Cor</label>
+            <label className={labelCls}>Cor</label>
             <div className="flex items-center gap-3">
               <div
-                className="h-8 w-8 shrink-0 rounded-full border-2 border-white/10"
-                style={{ backgroundColor: color }}
+                className="h-8 w-8 shrink-0 rounded-full"
+                style={{ backgroundColor: color, boxShadow: "inset 0 0 0 2px color-mix(in srgb, var(--text) 10%, transparent)" }}
               />
               <CategoryColorPicker value={color} onChange={setColor} />
             </div>
@@ -87,7 +88,7 @@ export function CreateCategoryModal({ open, onClose, zIndex }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="border-border shrink-0 border-t px-6 py-4">
+        <div className="shrink-0 border-t border-[var(--border-color)] px-6 py-4">
           <div className="flex gap-3">
             <Button variant="outline" className="flex-1" onClick={handleClose}>Cancelar</Button>
             <Button className="flex-1" disabled={!name.trim() || isPending} onClick={handleSubmit}>

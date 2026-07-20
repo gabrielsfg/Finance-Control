@@ -11,7 +11,7 @@ import {
   ReferenceLine,
   Cell,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/index";
 import type { SavingsPeriodItem } from "@/lib/types/analytics.types";
@@ -44,8 +44,8 @@ export function SavingsPlannedVsActualChart({ periods, plannedSavings }: Props) 
   }));
 
   return (
-    <div className="border-border bg-surface flex flex-col rounded-xl border p-5">
-      <SectionHeader
+    <Card className="flex flex-col">
+      <CardHead
         title="Planejado vs. Executado"
         subtitle="Quanto o orçamento previa poupar e quanto você realmente poupou"
       />
@@ -57,26 +57,26 @@ export function SavingsPlannedVsActualChart({ periods, plannedSavings }: Props) 
           <div className="w-full" style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <CartesianGrid stroke="var(--border-chart)" />
+                <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}
+                  tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "JetBrains Mono" }}
+                  tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v) => formatCurrencyCompact(v)}
                   width={72}
                 />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--surface2)", opacity: 0.5 }} />
-                <ReferenceLine y={0} stroke="var(--border-chart)" />
-                <Bar dataKey="planejado" name="Planejado" fill="var(--blue)" fillOpacity={0.45} radius={[4, 4, 0, 0]} maxBarSize={28} />
+                <ReferenceLine y={0} stroke="var(--border-color)" />
+                <Bar dataKey="planejado" name="Planejado" fill="var(--chart-2)" fillOpacity={0.45} radius={[4, 4, 0, 0]} maxBarSize={28} />
                 <Bar dataKey="executado" name="Executado" radius={[4, 4, 0, 0]} maxBarSize={28}>
                   {chartData.map((entry, i) => (
-                    <Cell key={i} fill={entry.executado < 0 ? "var(--red)" : "var(--green)"} />
+                    <Cell key={i} fill={entry.executado < 0 ? "var(--chart-3)" : "var(--chart-1)"} />
                   ))}
                 </Bar>
               </BarChart>
@@ -85,9 +85,9 @@ export function SavingsPlannedVsActualChart({ periods, plannedSavings }: Props) 
 
           <div className="mt-3 flex flex-wrap gap-5">
             {[
-              ["var(--blue)", "Planejado"],
-              ["var(--green)", "Executado (positivo)"],
-              ["var(--red)", "Executado (negativo)"],
+              ["var(--chart-2)", "Planejado"],
+              ["var(--chart-1)", "Executado (positivo)"],
+              ["var(--chart-3)", "Executado (negativo)"],
             ].map(([color, label]) => (
               <div key={label} className="flex items-center gap-1.5">
                 <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: color, opacity: label === "Planejado" ? 0.45 : 1 }} />
@@ -97,6 +97,6 @@ export function SavingsPlannedVsActualChart({ periods, plannedSavings }: Props) 
           </div>
         </>
       )}
-    </div>
+    </Card>
   );
 }

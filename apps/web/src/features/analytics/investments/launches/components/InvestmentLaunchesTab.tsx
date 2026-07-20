@@ -11,11 +11,14 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import { useInvestmentLaunches } from "@/features/analytics/hooks/useAnalytics";
+import { HeroPanel } from "@/components/shared/HeroPanel";
+import { BigMoney } from "@/components/shared/Money";
+import { FlowRow } from "@/components/shared/FlowBar";
 
 type FilterOp = "all" | "buy" | "sell";
 
@@ -65,33 +68,95 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="border-border bg-surface rounded-xl border p-5">
-          <div className="bg-green/10 mb-3 flex h-9 w-9 items-center justify-center rounded-[10px]">
-            <ArrowDownLeft size={18} className="text-green" strokeWidth={1.75} />
-          </div>
-          <p className="font-display font-700 text-text text-[16px]">Total comprado</p>
-          <p className="font-money font-700 text-text mt-1 text-[20px]">{formatCurrency(totalBought / 100)}</p>
-          <p className="text-text-muted mt-0.5 text-[12px]">
-            {summary?.buyCount ?? 0} operações
-          </p>
-        </div>
-        <div className="border-border bg-surface rounded-xl border p-5">
-          <div className="bg-red/10 mb-3 flex h-9 w-9 items-center justify-center rounded-[10px]">
-            <ArrowUpRight size={18} className="text-red" strokeWidth={1.75} />
-          </div>
-          <p className="font-display font-700 text-text text-[16px]">Total vendido</p>
-          <p className="font-money font-700 text-red mt-1 text-[20px]">{formatCurrency(totalSold / 100)}</p>
-          <p className="text-text-muted mt-0.5 text-[12px]">
-            {summary?.sellCount ?? 0} operações
-          </p>
-        </div>
-      </div>
+      {/* Hero panel — launches summary */}
+      {(() => {
+        const max = Math.max(totalBought, totalSold, 1);
+        const netFlow = totalBought - totalSold;
+        return (
+          <HeroPanel split>
+            {/* Left — total bought */}
+            <div>
+              <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                Total comprado
+              </div>
+              <BigMoney
+                cents={totalBought}
+                className="block mt-[10px] mb-[2px] font-semibold leading-[0.96] tracking-[-0.035em]"
+                style={{ fontSize: "clamp(40px, 5.6vw, 70px)" } as React.CSSProperties}
+              />
+              <div className="mt-2 font-mono text-[13px] text-[var(--panel-muted)]">
+                {summary?.buyCount ?? 0} compra{(summary?.buyCount ?? 0) !== 1 ? "s" : ""}
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-[26px]">
+                <div>
+                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                    Total vendido
+                  </div>
+                  <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--clay-lift)]">
+                    {formatCurrency(totalSold / 100)}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
+                    Vendas
+                  </div>
+                  <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--panel-foreground)]">
+                    {summary?.sellCount ?? 0}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right — buy vs sell flow */}
+            <div className="self-center">
+              <div className="mb-[18px] flex items-baseline justify-between">
+                <span className="font-display text-[16px] font-bold">Compras vs. Vendas</span>
+                <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--panel-muted)]">
+                  Volume
+                </span>
+              </div>
+
+              <FlowRow
+                label="Comprado"
+                dotColor="var(--moss-lift)"
+                value={`+ ${formatCurrency(totalBought / 100)}`}
+                valueColor="var(--moss-lift)"
+                pct={totalBought / max}
+                variant="in"
+              />
+              <FlowRow
+                label="Vendido"
+                dotColor="var(--clay-lift)"
+                value={`− ${formatCurrency(totalSold / 100)}`}
+                valueColor="var(--clay-lift)"
+                pct={totalSold / max}
+                variant="out"
+              />
+
+              <div
+                className="mt-5 flex items-center justify-between border-t pt-4"
+                style={{ borderColor: "rgba(255,255,255,0.12)" }}
+              >
+                <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">
+                  Fluxo líquido
+                </span>
+                <span
+                  className="font-mono text-[22px] font-semibold"
+                  style={{ color: netFlow >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
+                >
+                  {netFlow >= 0 ? "+ " : "− "}
+                  {formatCurrency(Math.abs(netFlow) / 100)}
+                </span>
+              </div>
+            </div>
+          </HeroPanel>
+        );
+      })()}
 
       {/* Bar chart: bought vs sold per month */}
-      <div className="border-border bg-surface rounded-xl border p-5">
-        <SectionHeader
+      <Card>
+        <CardHead
           title="Volume por mês"
           subtitle="Valor total de compras e vendas nos últimos 7 meses"
         />
@@ -102,57 +167,57 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
             <div style={{ height: 240 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={monthPoints} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="30%">
-                  <CartesianGrid stroke="var(--border-chart)" />
+                  <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 5" vertical={false} />
                   <XAxis
                     dataKey="label"
-                    tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "DM Sans" }}
+                    tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fill: "var(--text-muted)", fontSize: 12, fontFamily: "JetBrains Mono" }}
+                    tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v) => formatCurrencyCompact(v / 100)}
                     width={64}
                   />
                   <Tooltip content={<BarTooltip />} cursor={{ fill: "var(--surface2)" }} />
-                  <Bar dataKey="bought" name="Comprado" fill="var(--green)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="sold"   name="Vendido"  fill="var(--red)"   radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="bought" name="Comprado" fill="var(--moss)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="sold"   name="Vendido"  fill="var(--clay)"  radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             <div className="mt-3 flex gap-4">
               <div className="flex items-center gap-1.5">
-                <div className="bg-green h-2.5 w-2.5 rounded-[2px]" />
+                <div className="h-2.5 w-2.5 rounded-[2px] bg-[var(--moss)]" />
                 <span className="text-text-muted text-[13px]">Comprado</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="bg-red h-2.5 w-2.5 rounded-[2px]" />
+                <div className="h-2.5 w-2.5 rounded-[2px] bg-[var(--clay)]" />
                 <span className="text-text-muted text-[13px]">Vendido</span>
               </div>
             </div>
           </>
         )}
-      </div>
+      </Card>
 
       {/* Launches table */}
-      <div className="border-border bg-surface rounded-xl border p-5">
+      <Card>
         <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h2 className="font-display font-700 text-text text-[18px] tracking-tight">Histórico de operações</h2>
-            <p className="text-text-muted mt-0.5 text-[13px]">{filtered.length} lançamento{filtered.length !== 1 ? "s" : ""}</p>
+            <h2 className="font-display text-[18px] font-bold tracking-[-0.01em] text-[var(--text)]">Histórico de operações</h2>
+            <p className="mt-0.5 text-[13px] text-[var(--text-sub)]">{filtered.length} lançamento{filtered.length !== 1 ? "s" : ""}</p>
           </div>
-          <div className="border-border flex gap-0.5 rounded-lg border bg-surface p-0.5">
+          <div className="flex gap-0.5 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface2)] p-1">
             {(["all", "buy", "sell"] as FilterOp[]).map((op) => (
               <button
                 key={op}
                 onClick={() => setFilterOp(op)}
                 className={cn(
-                  "rounded-[7px] px-3 py-1 text-[12px] font-medium transition-all",
+                  "rounded-[9px] px-3 py-1 text-[12px] font-medium transition-all",
                   filterOp === op
-                    ? "bg-surface2 text-text shadow-sm"
-                    : "text-text-muted hover:text-text-sub",
+                    ? "bg-[var(--surface)] text-[var(--text)] shadow-sm"
+                    : "text-[var(--text-sub)] hover:text-[var(--text)]",
                 )}
               >
                 {op === "all" ? "Todos" : op === "buy" ? "Compras" : "Vendas"}
@@ -229,7 +294,7 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
             </table>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
