@@ -58,3 +58,7 @@ FinanceControlFilesDocumentation/
 # Documents & implementation plans (local only, not merged to main)
 docs/
 implementation-plans/
+
+# Design reference (local only, not merged to main)
+design/
+design.zip
