@@ -6,6 +6,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/category_palette.dart';
+import '../../../core/utils/color_hex.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/category.dart';
 import '../providers/categories_provider.dart';
@@ -37,12 +39,12 @@ class SubcategoriesPage extends ConsumerWidget {
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (_, __) => Center(
-                    child: Text('Could not load categories.',
+                    child: Text('Não foi possível carregar as categorias.',
                         style: AppTextStyles.body(t.error)),
                   ),
                   data: (categories) => categories.isEmpty
                       ? Center(
-                          child: Text('No categories found.',
+                          child: Text('Nenhuma categoria encontrada.',
                               style: AppTextStyles.body(t.txtSecondary)),
                         )
                       : Column(
@@ -84,7 +86,7 @@ class _Header extends StatelessWidget {
         ),
         Expanded(
           child: Text(
-            'Subcategories',
+            'Subcategorias',
             textAlign: TextAlign.center,
             style: AppTextStyles.body(t.txtPrimary)
                 .copyWith(fontWeight: FontWeight.w700, fontSize: 17),
@@ -107,21 +109,12 @@ class _CategorySection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppThemeTokens.of(context);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: t.isDark
-            ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-            : Colors.white.withValues(alpha: 0.9),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: GlassCard(
+        padding: EdgeInsets.zero,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(
-          color: t.isDark
-              ? Colors.white.withValues(alpha: 0.07)
-              : const Color(0xFF7C3AED).withValues(alpha: 0.12),
-        ),
-        boxShadow: t.isDark ? [] : AppShadows.cardLight,
-      ),
-      child: Column(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Category header ──────────────────────────────────────────
@@ -132,11 +125,20 @@ class _CategorySection extends ConsumerWidget {
                 Container(
                   width: 34,
                   height: 34,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: t.primary.withValues(alpha: 0.12),
+                    color: categoryColor(category.color, category.name)
+                        .withValues(alpha: 0.16),
                     borderRadius: AppRadius.mdAll,
                   ),
-                  child: Icon(LucideIcons.tag, size: 16, color: t.primary),
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: categoryColor(category.color, category.name),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -181,11 +183,12 @@ class _CategorySection extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
               child: Text(
-                'No subcategories yet.',
+                'Nenhuma subcategoria ainda.',
                 style: AppTextStyles.caption(t.txtTertiary),
               ),
             ),
         ],
+      ),
       ),
     );
   }
@@ -194,7 +197,7 @@ class _CategorySection extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (_) => _SubcategoryDialog(
-        title: 'New subcategory',
+        title: 'Nova subcategoria',
         categoryId: category.id,
         onSave: (name) async {
           await ref
@@ -224,15 +227,22 @@ class _SubcategoryRow extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
           child: Row(
             children: [
-              Container(
-                width: 6,
-                height: 6,
-                margin: const EdgeInsets.only(left: 6, right: 12),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: t.txtDisabled,
+              if (sub.emoji?.isNotEmpty ?? false)
+                Padding(
+                  padding: const EdgeInsets.only(left: 2, right: 10),
+                  child:
+                      Text(sub.emoji!, style: AppTextStyles.emoji(fontSize: 16)),
+                )
+              else
+                Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.only(left: 6, right: 12),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorFromHex(sub.categoryColor, fallback: t.accent),
+                  ),
                 ),
-              ),
               Expanded(
                 child: Text(
                   sub.name,
@@ -274,7 +284,7 @@ class _SubcategoryRow extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (_) => _SubcategoryDialog(
-        title: 'Edit subcategory',
+        title: 'Editar subcategoria',
         categoryId: sub.categoryId,
         initialName: sub.name,
         onSave: (name) async {
@@ -291,24 +301,24 @@ class _SubcategoryRow extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: t.isDark ? const Color(0xFF1C1830) : Colors.white,
-        title: Text('Delete subcategory?',
+        backgroundColor: t.surface,
+        title: Text('Excluir subcategoria?',
             style: AppTextStyles.h3(t.txtPrimary)),
         content: Text(
-          'Delete "${sub.name}"? Transactions linked to it will keep the reference.',
+          'Excluir "${sub.name}"? As transações vinculadas a ela manterão a referência.',
           style: AppTextStyles.body(t.txtSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: AppTextStyles.body(t.txtSecondary)),
+            child: Text('Cancelar', style: AppTextStyles.body(t.txtSecondary)),
           ),
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
               ref.read(subcategoriesNotifierProvider.notifier).delete(sub.id);
             },
-            child: Text('Delete', style: AppTextStyles.body(t.error)),
+            child: Text('Excluir', style: AppTextStyles.body(t.error)),
           ),
         ],
       ),
@@ -355,7 +365,7 @@ class _SubcategoryDialogState extends State<_SubcategoryDialog> {
   Future<void> _submit() async {
     final name = _controller.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Name is required.');
+      setState(() => _error = 'Informe o nome.');
       return;
     }
     setState(() {
@@ -369,7 +379,7 @@ class _SubcategoryDialogState extends State<_SubcategoryDialog> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Could not save. Try again.';
+          _error = 'Não foi possível salvar. Tente novamente.';
         });
       }
     }
@@ -379,13 +389,13 @@ class _SubcategoryDialogState extends State<_SubcategoryDialog> {
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
     return AlertDialog(
-      backgroundColor: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+      backgroundColor: t.surface,
       title: Text(widget.title, style: AppTextStyles.h3(t.txtPrimary)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           AppInputField(
-            placeholder: 'Subcategory name',
+            placeholder: 'Nome da subcategoria',
             controller: _controller,
             textCapitalization: TextCapitalization.sentences,
             textInputAction: TextInputAction.done,
@@ -400,7 +410,7 @@ class _SubcategoryDialogState extends State<_SubcategoryDialog> {
       actions: [
         TextButton(
           onPressed: _loading ? null : () => Navigator.of(context).pop(),
-          child: Text('Cancel', style: AppTextStyles.body(t.txtSecondary)),
+          child: Text('Cancelar', style: AppTextStyles.body(t.txtSecondary)),
         ),
         TextButton(
           onPressed: _loading ? null : _submit,
@@ -409,9 +419,9 @@ class _SubcategoryDialogState extends State<_SubcategoryDialog> {
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: t.primary),
+                      strokeWidth: 2, color: t.accent),
                 )
-              : Text('Save', style: AppTextStyles.body(t.primary)),
+              : Text('Salvar', style: AppTextStyles.body(t.accent)),
         ),
       ],
     );

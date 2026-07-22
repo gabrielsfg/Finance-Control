@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,7 +18,7 @@ import '../providers/transaction_provider.dart';
 
 // ── Enums ──────────────────────────────────────────────────────────────────
 
-enum _TxType { expense, income }
+enum _TxType { expense, income, transfer }
 
 enum _PaymentType { oneTime, installment, recurring }
 
@@ -57,6 +55,9 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
   int? _accountId;
   String? _accountName;
   String? _accountType;
+  int? _destinationAccountId;
+  String? _destinationAccountName;
+  String? _destinationError;
   DateTime _date = DateTime.now();
   _PaymentType _paymentType = _PaymentType.oneTime;
   int _installmentCount = 2;
@@ -120,28 +121,41 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     String? installmentsError;
     String? recurrenceError;
 
+    final isTransfer = _type == _TxType.transfer;
+    String? destinationError;
+
     final valueInCents = CentsInputFormatter.parseCents(_amountController.text);
-    if (valueInCents <= 0) valueError = 'Enter a valid amount';
+    if (valueInCents <= 0) valueError = 'Informe um valor válido';
 
-    if (_accountId == null) accountError = 'Select an account';
+    if (_accountId == null) accountError = 'Selecione uma conta';
 
-    if (_subcategoryId == null) subcategoryError = 'Select a subcategory';
+    if (!isTransfer && _subcategoryId == null) {
+      subcategoryError = 'Selecione uma subcategoria';
+    }
 
-    if (_paymentType == _PaymentType.installment) {
+    if (isTransfer) {
+      if (_destinationAccountId == null) {
+        destinationError = 'Selecione a conta de destino';
+      } else if (_destinationAccountId == _accountId) {
+        destinationError = 'A conta de destino deve ser diferente da origem';
+      }
+    }
+
+    if (!isTransfer && _paymentType == _PaymentType.installment) {
       if (!_accountSupportsInstallmentOrRecurring()) {
         installmentsError =
-            'Cash, Debit and Savings accounts do not support installments or recurrence';
+            'Contas Dinheiro, Débito e Poupança não permitem parcelamento ou recorrência';
       } else if (_installmentCount < 2) {
-        installmentsError = 'Minimum 2 installments';
+        installmentsError = 'Mínimo de 2 parcelas';
       }
     }
 
     if (_paymentType == _PaymentType.recurring) {
       if (!_accountSupportsInstallmentOrRecurring()) {
         recurrenceError =
-            'Cash, Debit and Savings accounts do not support installments or recurrence';
+            'Contas Dinheiro, Débito e Poupança não permitem parcelamento ou recorrência';
       } else if (_recurrence == null || _recurrence!.isEmpty) {
-        recurrenceError = 'Select the recurrence';
+        recurrenceError = 'Selecione a recorrência';
       }
     }
 
@@ -151,40 +165,53 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
       _subcategoryError = subcategoryError;
       _installmentsError = installmentsError;
       _recurrenceError = recurrenceError;
+      _destinationError = destinationError;
     });
 
     return accountError == null &&
         valueError == null &&
         subcategoryError == null &&
         installmentsError == null &&
-        recurrenceError == null;
+        recurrenceError == null &&
+        destinationError == null;
   }
 
   Future<void> _submit() async {
     if (!_validate()) return;
 
     final valueInCents = CentsInputFormatter.parseCents(_amountController.text);
+    final isTransfer = _type == _TxType.transfer;
 
     final dto = CreateTransactionRequestDto(
-      subCategoryId: _subcategoryId!,
+      subCategoryId: isTransfer ? null : _subcategoryId,
       accountId: _accountId!,
+      destinationAccountId: isTransfer ? _destinationAccountId : null,
       value: valueInCents,
-      type: _type == _TxType.expense ? 'Expense' : 'Income',
-      transactionDate: _formatDateIso(_date),
-      paymentType: switch (_paymentType) {
-        _PaymentType.oneTime => 'OneTime',
-        _PaymentType.installment => 'Installment',
-        _PaymentType.recurring => 'Recurring',
+      type: switch (_type) {
+        _TxType.expense => 'Expense',
+        _TxType.income => 'Income',
+        _TxType.transfer => 'Transfer',
       },
-      includeInBudget: _includeInBudget,
+      transactionDate: _formatDateIso(_date),
+      paymentType: isTransfer
+          ? 'OneTime'
+          : switch (_paymentType) {
+              _PaymentType.oneTime => 'OneTime',
+              _PaymentType.installment => 'Installment',
+              _PaymentType.recurring => 'Recurring',
+            },
+      includeInBudget: isTransfer ? false : _includeInBudget,
       description: _descriptionController.text.trim().isEmpty
           ? null
           : _descriptionController.text.trim(),
       totalInstallments:
-          _paymentType == _PaymentType.installment ? _installmentCount : null,
-      recurrence:
-          _paymentType == _PaymentType.recurring ? _recurrence : null,
-      paymentMethod: _isCredit ? 'Credit' : 'Debit',
+          (!isTransfer && _paymentType == _PaymentType.installment)
+              ? _installmentCount
+              : null,
+      recurrence: (!isTransfer && _paymentType == _PaymentType.recurring)
+          ? _recurrence
+          : null,
+      paymentMethod: isTransfer ? null : (_isCredit ? 'Credit' : 'Debit'),
     );
 
     await ref.read(createTransactionProvider.notifier).submit(dto);
@@ -192,13 +219,15 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     final result = ref.read(createTransactionProvider);
     if (!mounted) return;
 
+    final t = AppThemeTokens.of(context);
+
     switch (result) {
       case CreateTransactionSuccess(:final transactions):
         final count = transactions.length;
         final isInstallment = _paymentType == _PaymentType.installment;
         final message = isInstallment
-            ? '$count installments created successfully'
-            : 'Transaction saved successfully';
+            ? '$count parcelas criadas com sucesso'
+            : 'Transação salva com sucesso';
 
         ref.read(createTransactionProvider.notifier).reset();
         context.pop();
@@ -207,7 +236,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
           SnackBar(
             content: Text(message),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: const Color(0xFF7C3AED),
+            backgroundColor: t.primary,
           ),
         );
 
@@ -216,7 +245,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
           SnackBar(
             content: Text(message),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red.shade700,
+            backgroundColor: t.clay,
           ),
         );
 
@@ -284,6 +313,26 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     );
   }
 
+  void _openDestinationAccountPicker(List<Account> accounts) {
+    final options = accounts.where((a) => a.id != _accountId).toList();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _AccountPickerSheet(
+        accounts: options,
+        selectedId: _destinationAccountId,
+        onSelected: (id, name, type) {
+          setState(() {
+            _destinationAccountId = id;
+            _destinationAccountName = name;
+            _destinationError = null;
+          });
+        },
+      ),
+    );
+  }
+
   void _openRecurrencePicker() {
     showModalBottomSheet(
       context: context,
@@ -310,6 +359,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
 
     final txState = ref.watch(createTransactionProvider);
     final isLoading = txState is CreateTransactionLoading;
+    final isTransfer = _type == _TxType.transfer;
 
     final accountsAsync = ref.watch(accountsProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
@@ -346,7 +396,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                     ),
                     Expanded(
                       child: Text(
-                        'New Transaction',
+                        'Nova transação',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.body(t.txtPrimary).copyWith(
                           fontWeight: FontWeight.w700,
@@ -391,31 +441,44 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
                   children: [
-                    // Card 1 — Subcategory + Account
+                    // Card 1 — Subcategory + Account (or origin/destination)
                     _FormCard(
                       children: [
+                        if (!isTransfer)
+                          _FieldRow(
+                            label: 'Subcategoria',
+                            value: _subcategoryName ?? 'Selecionar',
+                            errorText: _subcategoryError,
+                            onTap: isLoading
+                                ? () {}
+                                : () => _openSubcategoryPicker(
+                                      categoriesAsync.valueOrNull ?? [],
+                                    ),
+                            showDivider: true,
+                          ),
                         _FieldRow(
-                          label: 'Subcategory',
-                          value: _subcategoryName ?? 'Select',
-                          errorText: _subcategoryError,
-                          onTap: isLoading
-                              ? () {}
-                              : () => _openSubcategoryPicker(
-                                    categoriesAsync.valueOrNull ?? [],
-                                  ),
-                          showDivider: true,
-                        ),
-                        _FieldRow(
-                          label: 'Account',
-                          value: _accountName ?? 'Select',
+                          label: isTransfer ? 'Conta de origem' : 'Conta',
+                          value: _accountName ?? 'Selecionar',
                           onTap: isLoading
                               ? () {}
                               : () => _openAccountPicker(
                                     accountsAsync.valueOrNull ?? [],
                                   ),
                           errorText: _accountError,
-                          showDivider: false,
+                          showDivider: isTransfer,
                         ),
+                        if (isTransfer)
+                          _FieldRow(
+                            label: 'Conta de destino',
+                            value: _destinationAccountName ?? 'Selecionar',
+                            errorText: _destinationError,
+                            onTap: isLoading
+                                ? () {}
+                                : () => _openDestinationAccountPicker(
+                                      accountsAsync.valueOrNull ?? [],
+                                    ),
+                            showDivider: false,
+                          ),
                       ],
                     ),
 
@@ -425,7 +488,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                     _FormCard(
                       children: [
                         _FieldRow(
-                          label: 'Date',
+                          label: 'Data',
                           value: _formatDate(_date),
                           onTap: isLoading
                               ? () {}
@@ -449,7 +512,8 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                     const SizedBox(height: 12),
 
                     // Card 3 — Payment type + Stepper / Recurrence
-                    _FormCard(
+                    if (!isTransfer)
+                      _FormCard(
                       children: [
                         _PaymentTypeSection(
                           selected: _paymentType,
@@ -492,8 +556,10 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                                   children: [
                                     _InternalDivider(),
                                     _FieldRow(
-                                      label: 'Recurrence',
-                                      value: _recurrence ?? 'Select',
+                                      label: 'Recorrência',
+                                      value: _recurrence == null
+                                          ? 'Selecionar'
+                                          : recurrenceLabelPt(_recurrence!),
                                       onTap: isLoading
                                           ? () {}
                                           : _openRecurrencePicker,
@@ -510,7 +576,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                     const SizedBox(height: 12),
 
                     // Card 4 — Payment method (Checking only — others are fixed)
-                    if (_accountType == 'Checking')
+                    if (!isTransfer && _accountType == 'Checking')
                       _FormCard(
                         children: [
                           _PaymentMethodToggle(
@@ -525,7 +591,8 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                     const SizedBox(height: 12),
 
                     // Card 5 — Include in budget
-                    _FormCard(
+                    if (!isTransfer)
+                      _FormCard(
                       children: [
                         _IncludeInBudgetRow(
                           value: _includeInBudget,
@@ -569,9 +636,8 @@ class _NavButton extends StatelessWidget {
         height: 36,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: t.isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : t.primary.withValues(alpha: 0.08),
+          color: t.surfaceEl,
+          border: Border.all(color: t.mist),
         ),
         child: Icon(icon, size: 18, color: t.txtPrimary),
       ),
@@ -597,13 +663,7 @@ class _SaveButton extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient,
             borderRadius: AppRadius.baseAll,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF7C3AED).withValues(alpha: 0.30),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            boxShadow: AppShadows.primaryBtnShadow,
           ),
           child: Center(
             child: isLoading
@@ -616,7 +676,7 @@ class _SaveButton extends StatelessWidget {
                     ),
                   )
                 : const Text(
-                    'Save Transaction',
+                    'Salvar transação',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -645,32 +705,35 @@ class _TypeToggle extends StatelessWidget {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: t.isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : t.primary.withValues(alpha: 0.06),
+        color: t.surfaceEl,
         borderRadius: AppRadius.baseAll,
-        border: Border.all(
-          color: t.isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : t.primary.withValues(alpha: 0.12),
-        ),
+        border: Border.all(color: t.mist),
       ),
       child: Row(
         children: [
           Expanded(
             child: _TypeTab(
-              label: 'Expense',
+              label: 'Despesa',
               active: selected == _TxType.expense,
-              activeColor: t.error,
+              activeColor: t.clay,
               onTap: onChanged == null ? null : () => onChanged!(_TxType.expense),
             ),
           ),
           Expanded(
             child: _TypeTab(
-              label: 'Income',
+              label: 'Receita',
               active: selected == _TxType.income,
-              activeColor: t.success,
+              activeColor: t.moss,
               onTap: onChanged == null ? null : () => onChanged!(_TxType.income),
+            ),
+          ),
+          Expanded(
+            child: _TypeTab(
+              label: 'Transferência',
+              active: selected == _TxType.transfer,
+              activeColor: t.accent,
+              onTap:
+                  onChanged == null ? null : () => onChanged!(_TxType.transfer),
             ),
           ),
         ],
@@ -712,13 +775,17 @@ class _TypeTab extends StatelessWidget {
               : null,
         ),
         child: Center(
-          child: Text(
-            label,
-            style: AppTextStyles.body(
-              active ? activeColor : t.txtTertiary,
-            ).copyWith(
-              fontSize: 14,
-              fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: AppTextStyles.body(
+                active ? activeColor : t.txtTertiary,
+              ).copyWith(
+                fontSize: 13,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+              ),
             ),
           ),
         ),
@@ -743,8 +810,11 @@ class _AmountDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final isExpense = type == _TxType.expense;
-    final accentColor = isExpense ? t.error : t.success;
+    final accentColor = switch (type) {
+      _TxType.expense => t.clay,
+      _TxType.income => t.moss,
+      _TxType.transfer => t.accent,
+    };
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -759,7 +829,7 @@ class _AmountDisplay extends StatelessWidget {
             children: [
               Text(
                 'R\$',
-                style: AppTextStyles.mono(t.txtSecondary, fontSize: 26)
+                style: AppTextStyles.mono(t.txtSecondary, fontSize: 28)
                     .copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(width: 6),
@@ -772,7 +842,7 @@ class _AmountDisplay extends StatelessWidget {
                     const CentsInputFormatter(),
                   ],
                   style: AppTextStyles.moneyLg(accentColor).copyWith(
-                    fontSize: 36,
+                    fontSize: 40,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -1,
                   ),
@@ -781,7 +851,7 @@ class _AmountDisplay extends StatelessWidget {
                     hintStyle: AppTextStyles.moneyLg(
                       accentColor.withValues(alpha: 0.35),
                     ).copyWith(
-                      fontSize: 36,
+                      fontSize: 40,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -1,
                     ),
@@ -819,39 +889,11 @@ class _FormCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            color: t.isDark
-                ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-                : Colors.white.withValues(alpha: 0.82),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.07)
-                  : const Color(0xFF7C3AED).withValues(alpha: 0.13),
-            ),
-            boxShadow: t.isDark
-                ? []
-                : [
-                    BoxShadow(
-                      color: const Color(0xFF6D28D9).withValues(alpha: 0.07),
-                      blurRadius: 12,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: children,
-          ),
-        ),
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
       ),
     );
   }
@@ -866,9 +908,7 @@ class _InternalDivider extends StatelessWidget {
     return Divider(
       height: 1,
       thickness: 1,
-      color: t.isDark
-          ? Colors.white.withValues(alpha: 0.06)
-          : const Color(0xFF7C3AED).withValues(alpha: 0.07),
+      color: t.mist,
     );
   }
 }
@@ -963,7 +1003,7 @@ class _DescriptionField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            'Description',
+            'Descrição',
             style: AppTextStyles.body(t.txtSecondary).copyWith(
               fontSize: 14,
               fontWeight: FontWeight.w400,
@@ -980,7 +1020,7 @@ class _DescriptionField extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
               decoration: InputDecoration(
-                hintText: 'Optional',
+                hintText: 'Opcional',
                 hintStyle: AppTextStyles.body(t.txtDisabled).copyWith(
                   fontSize: 14,
                   fontStyle: FontStyle.italic,
@@ -1023,18 +1063,15 @@ class _PaymentTypeSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Payment type',
-            style: AppTextStyles.caption(t.txtSecondary).copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+            'Tipo de pagamento',
+            style: AppTextStyles.eyebrow(t.txtSecondary),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: _PaymentChip(
-                  label: 'One-time',
+                  label: 'À vista',
                   active: selected == _PaymentType.oneTime,
                   onTap: onChanged == null
                       ? null
@@ -1045,7 +1082,7 @@ class _PaymentTypeSection extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _PaymentChip(
-                    label: 'Installment',
+                    label: 'Parcelado',
                     active: selected == _PaymentType.installment,
                     onTap: onChanged == null
                         ? null
@@ -1055,7 +1092,7 @@ class _PaymentTypeSection extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _PaymentChip(
-                    label: 'Recurring',
+                    label: 'Recorrente',
                     active: selected == _PaymentType.recurring,
                     onTap: onChanged == null
                         ? null
@@ -1093,23 +1130,21 @@ class _PaymentChip extends StatelessWidget {
         height: 38,
         decoration: BoxDecoration(
           color: active
-              ? t.primary.withValues(alpha: t.isDark ? 0.20 : 0.10)
+              ? t.accent.withValues(alpha: t.isDark ? 0.20 : 0.10)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: AppRadius.mdAll,
           border: Border.all(
             width: active ? 1.5 : 1,
             color: active
-                ? t.primary.withValues(alpha: t.isDark ? 0.55 : 0.45)
-                : t.isDark
-                    ? Colors.white.withValues(alpha: 0.12)
-                    : const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                ? t.accent.withValues(alpha: t.isDark ? 0.55 : 0.45)
+                : t.mist,
           ),
         ),
         child: Center(
           child: Text(
             label,
             style: AppTextStyles.caption(
-              active ? t.primary : t.txtTertiary,
+              active ? t.accent : t.txtTertiary,
             ).copyWith(
               fontSize: 12,
               fontWeight: active ? FontWeight.w600 : FontWeight.w400,
@@ -1142,18 +1177,15 @@ class _PaymentMethodToggle extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Payment method',
-            style: AppTextStyles.caption(t.txtSecondary).copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+            'Forma de pagamento',
+            style: AppTextStyles.eyebrow(t.txtSecondary),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: _PaymentChip(
-                  label: 'Debit',
+                  label: 'Débito',
                   active: !isCredit,
                   onTap: onChanged == null ? null : () => onChanged!(false),
                 ),
@@ -1161,7 +1193,7 @@ class _PaymentMethodToggle extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _PaymentChip(
-                  label: 'Credit',
+                  label: 'Crédito',
                   active: isCredit,
                   onTap: onChanged == null ? null : () => onChanged!(true),
                 ),
@@ -1200,7 +1232,7 @@ class _InstallmentStepper extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'No. of installments',
+                'Nº de parcelas',
                 style: AppTextStyles.body(t.txtSecondary).copyWith(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
@@ -1216,18 +1248,17 @@ class _InstallmentStepper extends StatelessWidget {
                       width: 36,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: t.isDark
-                            ? t.primary.withValues(alpha: 0.14)
-                            : const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                        color: t.accent
+                            .withValues(alpha: t.isDark ? 0.14 : 0.08),
                         borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(8),
-                          bottomLeft: Radius.circular(8),
+                          topLeft: Radius.circular(AppRadius.sm),
+                          bottomLeft: Radius.circular(AppRadius.sm),
                         ),
                       ),
                       child: Icon(
                         LucideIcons.minus,
                         size: 16,
-                        color: count > 2 ? t.primary : t.txtDisabled,
+                        color: count > 2 ? t.accent : t.txtDisabled,
                       ),
                     ),
                   ),
@@ -1235,9 +1266,7 @@ class _InstallmentStepper extends StatelessWidget {
                     width: 48,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: t.isDark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : const Color(0xFFEDE9FE).withValues(alpha: 0.5),
+                      color: t.surfaceEl,
                     ),
                     child: Center(
                       child: AnimatedSwitcher(
@@ -1259,15 +1288,14 @@ class _InstallmentStepper extends StatelessWidget {
                       width: 36,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: t.isDark
-                            ? t.primary.withValues(alpha: 0.14)
-                            : const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                        color: t.accent
+                            .withValues(alpha: t.isDark ? 0.14 : 0.08),
                         borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(8),
-                          bottomRight: Radius.circular(8),
+                          topRight: Radius.circular(AppRadius.sm),
+                          bottomRight: Radius.circular(AppRadius.sm),
                         ),
                       ),
-                      child: Icon(LucideIcons.plus, size: 16, color: t.primary),
+                      child: Icon(LucideIcons.plus, size: 16, color: t.accent),
                     ),
                   ),
                 ],
@@ -1308,7 +1336,7 @@ class _IncludeInBudgetRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Include in budget?',
+                  'Incluir no orçamento?',
                   style: AppTextStyles.body(t.txtPrimary).copyWith(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -1316,7 +1344,7 @@ class _IncludeInBudgetRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Consider this transaction in budget limits',
+                  'Considerar esta transação nos limites do orçamento',
                   style: AppTextStyles.caption(t.txtTertiary).copyWith(
                     fontSize: 11,
                   ),
@@ -1351,18 +1379,8 @@ class _BudgetToggle extends StatelessWidget {
         width: 48,
         height: 28,
         decoration: BoxDecoration(
-          gradient: value
-              ? const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                )
-              : null,
-          color: value
-              ? null
-              : t.isDark
-                  ? Colors.white.withValues(alpha: 0.12)
-                  : Colors.black.withValues(alpha: 0.14),
+          gradient: value ? AppColors.primaryGradient : null,
+          color: value ? null : t.surface3,
           borderRadius: AppRadius.pillAll,
         ),
         child: AnimatedAlign(
@@ -1487,10 +1505,7 @@ class _SubcategoryPickerPageState
                       child: Text(
                         'Subcategoria',
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.body(t.txtPrimary).copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 17,
-                        ),
+                        style: AppTextStyles.h3(t.txtPrimary),
                       ),
                     ),
                     GestureDetector(
@@ -1500,7 +1515,7 @@ class _SubcategoryPickerPageState
                       },
                       child: Text(
                         'Editar',
-                        style: AppTextStyles.body(t.primary).copyWith(
+                        style: AppTextStyles.body(t.accent).copyWith(
                           fontWeight: FontWeight.w600,
                           fontSize: 15,
                         ),
@@ -1518,13 +1533,9 @@ class _SubcategoryPickerPageState
                 child: Container(
                   height: 42,
                   decoration: BoxDecoration(
-                    color: t.isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : t.primary.withValues(alpha: 0.05),
+                    color: t.surfaceEl,
                     borderRadius: AppRadius.baseAll,
-                    border: Border.all(
-                      color: t.primary.withValues(alpha: 0.15),
-                    ),
+                    border: Border.all(color: t.mist),
                   ),
                   child: TextField(
                     controller: _searchController,
@@ -1585,19 +1596,16 @@ class _SubcategoryPickerPageState
                         child: Container(
                           height: 44,
                           decoration: BoxDecoration(
-                            color: t.isDark
-                                ? const Color(0xFF1C1830)
-                                    .withValues(alpha: 0.72)
-                                : Colors.white.withValues(alpha: 0.9),
+                            color: t.surfaceEl,
                             borderRadius: AppRadius.baseAll,
                             border: Border.all(
-                                color: t.primary.withValues(alpha: 0.4),
+                                color: t.accent.withValues(alpha: 0.4),
                                 width: 1.5),
                           ),
                           child: Center(
                             child: Text(
                               '+ Categoria',
-                              style: AppTextStyles.body(t.primary).copyWith(
+                              style: AppTextStyles.body(t.accent).copyWith(
                                   fontWeight: FontWeight.w600, fontSize: 14),
                             ),
                           ),
@@ -1631,30 +1639,11 @@ class _SubcategoryPickerPageState
                                     top: 16, bottom: 8),
                                 child: Text(
                                   cat.name.toUpperCase(),
-                                  style: AppTextStyles.caption(t.primary)
-                                      .copyWith(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.8,
-                                  ),
+                                  style: AppTextStyles.eyebrow(t.accent),
                                 ),
                               ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: t.isDark
-                                      ? const Color(0xFF1C1830)
-                                          .withValues(alpha: 0.72)
-                                      : Colors.white.withValues(alpha: 0.9),
-                                  borderRadius: AppRadius.xlAll,
-                                  border: Border.all(
-                                    color: t.isDark
-                                        ? Colors.white.withValues(alpha: 0.07)
-                                        : const Color(0xFF7C3AED)
-                                            .withValues(alpha: 0.12),
-                                  ),
-                                  boxShadow:
-                                      t.isDark ? [] : AppShadows.cardLight,
-                                ),
+                              GlassCard(
+                                padding: EdgeInsets.zero,
                                 child: Column(
                                   children: cat.subCategories
                                       .asMap()
@@ -1685,7 +1674,7 @@ class _SubcategoryPickerPageState
                                                     sub.name,
                                                     style: AppTextStyles.body(
                                                       isSelected
-                                                          ? t.primary
+                                                          ? t.accent
                                                           : t.txtPrimary,
                                                     ).copyWith(
                                                       fontSize: 14,
@@ -1698,7 +1687,7 @@ class _SubcategoryPickerPageState
                                                 if (isSelected)
                                                   Icon(LucideIcons.check,
                                                       size: 16,
-                                                      color: t.primary)
+                                                      color: t.accent)
                                                 else
                                                   Icon(
                                                     LucideIcons.chevronRight,
@@ -1714,8 +1703,7 @@ class _SubcategoryPickerPageState
                                             height: 1,
                                             thickness: 1,
                                             indent: 16,
-                                            color: t.divider.withValues(
-                                                alpha: t.isDark ? 0.2 : 0.4),
+                                            color: t.mist,
                                           ),
                                       ],
                                     );
@@ -1812,7 +1800,7 @@ class _PickerCreateSubcategorySheetState
           EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
         decoration: BoxDecoration(
-          color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+          color: t.surface,
           borderRadius: const BorderRadius.vertical(
               top: Radius.circular(AppRadius.xl3)),
           boxShadow: AppShadows.bottomSheet,
@@ -1828,9 +1816,7 @@ class _PickerCreateSubcategorySheetState
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: t.isDark
-                      ? Colors.white.withValues(alpha: 0.15)
-                      : Colors.black.withValues(alpha: 0.12),
+                  color: t.mist,
                   borderRadius: AppRadius.pillAll,
                 ),
               ),
@@ -1840,8 +1826,7 @@ class _PickerCreateSubcategorySheetState
             const SizedBox(height: 20),
             Text(
               'Nome',
-              style: AppTextStyles.caption(t.txtSecondary)
-                  .copyWith(fontWeight: FontWeight.w600),
+              style: AppTextStyles.eyebrow(t.txtSecondary),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -1856,48 +1841,39 @@ class _PickerCreateSubcategorySheetState
                     .copyWith(fontSize: 15),
                 errorText: _nameError,
                 filled: true,
-                fillColor: t.isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : t.primary.withValues(alpha: 0.04),
+                fillColor: t.surfaceEl,
                 border: OutlineInputBorder(
                   borderRadius: AppRadius.baseAll,
-                  borderSide: BorderSide(
-                      color: t.primary.withValues(alpha: 0.2)),
+                  borderSide: BorderSide(color: t.mist),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: AppRadius.baseAll,
-                  borderSide: BorderSide(
-                      color: t.primary.withValues(alpha: 0.2)),
+                  borderSide: BorderSide(color: t.mist),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: AppRadius.baseAll,
-                  borderSide: BorderSide(color: t.primary, width: 1.5),
+                  borderSide: BorderSide(color: t.accent, width: 1.5),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             Text(
               'Categoria',
-              style: AppTextStyles.caption(t.txtSecondary)
-                  .copyWith(fontWeight: FontWeight.w600),
+              style: AppTextStyles.eyebrow(t.txtSecondary),
             ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: t.isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : t.primary.withValues(alpha: 0.04),
+                color: t.surfaceEl,
                 borderRadius: AppRadius.baseAll,
-                border: Border.all(
-                    color: t.primary.withValues(alpha: 0.2), width: 1),
+                border: Border.all(color: t.mist, width: 1),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<int>(
                   value: _selectedCategoryId,
                   isExpanded: true,
-                  dropdownColor:
-                      t.isDark ? const Color(0xFF1C1830) : Colors.white,
+                  dropdownColor: t.surface,
                   style: AppTextStyles.body(t.txtPrimary)
                       .copyWith(fontSize: 15),
                   items: widget.categories
@@ -1975,7 +1951,7 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
 
     return Container(
       decoration: BoxDecoration(
-        color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+        color: t.surface,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppRadius.xl3),
         ),
@@ -1991,9 +1967,7 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.12),
+              color: t.mist,
               borderRadius: AppRadius.pillAll,
             ),
           ),
@@ -2004,7 +1978,7 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
               children: [
                 Expanded(
                   child: Text(
-                    _editMode ? 'Edit Accounts' : 'Select Account',
+                    _editMode ? 'Editar contas' : 'Selecionar conta',
                     style: AppTextStyles.h3(t.txtPrimary),
                   ),
                 ),
@@ -2017,15 +1991,16 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: _editMode
-                          ? t.primary.withValues(alpha: 0.15)
-                          : t.isDark
-                              ? Colors.white.withValues(alpha: 0.08)
-                              : t.primary.withValues(alpha: 0.08),
+                          ? t.accent.withValues(alpha: 0.15)
+                          : t.surfaceEl,
+                      border: Border.all(
+                        color: _editMode ? t.accent.withValues(alpha: 0.4) : t.mist,
+                      ),
                     ),
                     child: Icon(
                       LucideIcons.pencil,
                       size: 14,
-                      color: _editMode ? t.primary : t.txtSecondary,
+                      color: _editMode ? t.accent : t.txtSecondary,
                     ),
                   ),
                 ),
@@ -2041,11 +2016,10 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                     height: 32,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: t.isDark
-                          ? Colors.white.withValues(alpha: 0.08)
-                          : t.primary.withValues(alpha: 0.08),
+                      color: t.surfaceEl,
+                      border: Border.all(color: t.mist),
                     ),
-                    child: Icon(LucideIcons.plus, size: 16, color: t.primary),
+                    child: Icon(LucideIcons.plus, size: 16, color: t.accent),
                   ),
                 ),
               ],
@@ -2056,7 +2030,7 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Text(
-                'No accounts found.',
+                'Nenhuma conta encontrada.',
                 style: AppTextStyles.body(t.txtTertiary),
               ),
             )
@@ -2084,11 +2058,11 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                         height: 40,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: t.primary
+                          color: t.accent
                               .withValues(alpha: t.isDark ? 0.2 : 0.1),
                         ),
                         child: Icon(LucideIcons.wallet,
-                            size: 18, color: t.primary),
+                            size: 18, color: t.accent),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -2096,7 +2070,7 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                           acc.name,
                           style: AppTextStyles.body(
                             !_editMode && isSelected
-                                ? t.primary
+                                ? t.accent
                                 : t.txtPrimary,
                           ).copyWith(
                             fontSize: 14,
@@ -2110,7 +2084,7 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                         Icon(LucideIcons.pencil,
                             size: 14, color: t.txtDisabled)
                       else if (isSelected)
-                        Icon(LucideIcons.check, size: 18, color: t.primary),
+                        Icon(LucideIcons.check, size: 18, color: t.accent),
                     ],
                   ),
                 ),
@@ -2140,7 +2114,7 @@ class _RecurrencePickerSheet extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+        color: t.surface,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppRadius.xl3),
         ),
@@ -2155,9 +2129,7 @@ class _RecurrencePickerSheet extends StatelessWidget {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.12),
+              color: t.mist,
               borderRadius: AppRadius.pillAll,
             ),
           ),
@@ -2165,7 +2137,7 @@ class _RecurrencePickerSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Select Recurrence',
+              child: Text('Selecionar recorrência',
                   style: AppTextStyles.h3(t.txtPrimary)),
             ),
           ),
@@ -2184,9 +2156,9 @@ class _RecurrencePickerSheet extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      option,
+                      recurrenceLabelPt(option),
                       style: AppTextStyles.body(
-                        isSelected ? t.primary : t.txtPrimary,
+                        isSelected ? t.accent : t.txtPrimary,
                       ).copyWith(
                         fontSize: 14,
                         fontWeight:
@@ -2194,7 +2166,7 @@ class _RecurrencePickerSheet extends StatelessWidget {
                       ),
                     ),
                     if (isSelected)
-                      Icon(LucideIcons.check, size: 18, color: t.primary),
+                      Icon(LucideIcons.check, size: 18, color: t.accent),
                   ],
                 ),
               ),

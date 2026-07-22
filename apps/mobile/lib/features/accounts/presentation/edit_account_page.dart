@@ -7,14 +7,12 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/app_locale.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/bank_picker_sheet.dart';
 import '../data/dtos/update_account_request_dto.dart';
 import '../data/models/account_detail.dart';
 import '../providers/accounts_provider.dart';
-import '../../transactions/providers/transaction_filter_provider.dart';
 
 const _accountTypes = ['Debit', 'Checking', 'Savings', 'Credit', 'Cash'];
 
@@ -41,7 +39,6 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
   String? _nameError;
   String? _submitError;
   bool _isSaving = false;
-  bool _isDeleting = false;
 
   bool get _hasCreditFields => _type == 'Credit' || _type == 'Checking';
 
@@ -87,7 +84,7 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
 
   bool _validate() {
     final nameErr = _nameController.text.trim().isEmpty
-        ? 'Account name is required'
+        ? 'O nome da conta é obrigatório'
         : null;
     setState(() => _nameError = nameErr);
     return nameErr == null;
@@ -120,30 +117,8 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
       if (mounted) context.pop();
     } catch (e) {
       setState(() {
-        _submitError = 'Failed to save changes. Please try again.';
+        _submitError = 'Não foi possível salvar as alterações. Tente novamente.';
         _isSaving = false;
-      });
-    }
-  }
-
-  Future<void> _delete() async {
-    final confirmed = await showDeleteConfirmDialog(
-      context: context,
-      title: 'Delete Account',
-      itemName: _nameController.text.trim(),
-    );
-    if (confirmed != true) return;
-
-    setState(() => _isDeleting = true);
-    try {
-      await ref
-          .read(accountsNotifierProvider.notifier)
-          .deleteAccount(widget.accountId);
-      if (mounted) context.pop();
-    } catch (e) {
-      setState(() {
-        _submitError = 'Failed to delete account. Please try again.';
-        _isDeleting = false;
       });
     }
   }
@@ -164,13 +139,13 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
             children: [
               Icon(LucideIcons.alertCircle, color: t.error, size: 32),
               const SizedBox(height: 8),
-              Text('Failed to load account',
+              Text('Não foi possível carregar a conta',
                   style: AppTextStyles.body(t.txtSecondary)),
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () =>
                     ref.invalidate(accountDetailProvider(widget.accountId)),
-                child: const Text('Retry'),
+                child: const Text('Tentar novamente'),
               ),
             ],
           ),
@@ -187,26 +162,10 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 8),
-                    // ── Header ──────────────────────────────────────────────
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => context.pop(),
-                          child: Icon(LucideIcons.arrowLeft,
-                              color: t.txtPrimary, size: 22),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Edit Account',
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.body(t.txtPrimary).copyWith(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 17,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 22),
-                      ],
+                    PageHeader(
+                      title: 'Editar conta',
+                      showBack: true,
+                      onBack: () => context.pop(),
                     ),
                     const SizedBox(height: 24),
                     // ── Account type selector ────────────────────────────────
@@ -217,8 +176,8 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
                     const SizedBox(height: 20),
                     // ── Name ────────────────────────────────────────────────
                     AppInputField(
-                      label: 'Account name',
-                      placeholder: 'e.g. Nubank, Cash, Savings',
+                      label: 'Nome da conta',
+                      placeholder: 'ex.: Nubank, Dinheiro, Poupança',
                       controller: _nameController,
                       textCapitalization: TextCapitalization.words,
                       errorText: _nameError,
@@ -241,7 +200,7 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
                     const SizedBox(height: 14),
                     // ── Goal ────────────────────────────────────────────────
                     AppInputField(
-                      label: 'Goal (optional)',
+                      label: 'Meta (opcional)',
                       placeholder: '0,00',
                       controller: _goalController,
                       keyboardType: TextInputType.number,
@@ -256,7 +215,7 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
                     if (_hasCreditFields) ...[
                       const SizedBox(height: 14),
                       AppInputField(
-                        label: 'Credit limit',
+                        label: 'Limite de crédito',
                         placeholder: '0,00',
                         controller: _creditLimitController,
                         keyboardType: TextInputType.number,
@@ -278,22 +237,13 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
                     // ── Toggles ──────────────────────────────────────────────
                     GlassCard(
                       child: _ToggleRow(
-                        label: 'Default Account',
-                        subtitle: 'Pre-select in new transactions',
+                        label: 'Conta padrão',
+                        subtitle: 'Pré-selecionar em novas transações',
                         value: _isDefault,
                         onChanged: (v) => setState(() => _isDefault = v),
                       ),
                     ),
                     const SizedBox(height: 28),
-                    // ── Recent Transactions ──────────────────────────────────
-                    if (detail.recentTransactions.isNotEmpty) ...[
-                      _RecentTransactionsSection(
-                        transactions: detail.recentTransactions,
-                        accountId: detail.id,
-                        accountName: detail.name,
-                      ),
-                      const SizedBox(height: 28),
-                    ],
                     // ── Error ────────────────────────────────────────────────
                     if (_submitError != null) ...[
                       Text(
@@ -305,10 +255,7 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
                     // ── Action Buttons ───────────────────────────────────────
                     _ActionButtons(
                       isSaving: _isSaving,
-                      isDeleting: _isDeleting,
-                      onNewTransaction: () =>
-                          context.push('/transactions/add'),
-                      onDelete: _delete,
+                      onCancel: () => context.pop(),
                       onSave: _save,
                     ),
                     SizedBox(height: bottomPad + 24),
@@ -338,7 +285,7 @@ class _BillingDayPicker extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Billing due day',
+          'Dia de vencimento',
           style: AppTextStyles.caption(t.txtSecondary)
               .copyWith(fontSize: 12, fontWeight: FontWeight.w500),
         ),
@@ -363,14 +310,14 @@ class _BillingDayPicker extends StatelessWidget {
                         ? t.primary
                         : t.isDark
                             ? Colors.white.withValues(alpha: 0.07)
-                            : const Color(0xFFEDE9FE).withValues(alpha: 0.6),
+                            : t.surfaceEl,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isSelected
                           ? t.primary
                           : t.isDark
                               ? Colors.white.withValues(alpha: 0.1)
-                              : const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                              : t.mist,
                       width: 1,
                     ),
                   ),
@@ -410,7 +357,7 @@ class _BankPickerField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Bank (optional)',
+          'Banco (opcional)',
           style: AppTextStyles.caption(t.txtSecondary)
               .copyWith(fontSize: 12, fontWeight: FontWeight.w500),
         ),
@@ -420,14 +367,10 @@ class _BankPickerField extends StatelessWidget {
           child: Container(
             height: 48,
             decoration: BoxDecoration(
-              color: t.isDark
-                  ? const Color(0xFF1C1830).withValues(alpha: 0.85)
-                  : const Color(0xFFEDE9FE).withValues(alpha: 0.5),
+              color: t.surfaceEl,
               borderRadius: AppRadius.baseAll,
               border: Border.all(
-                color: t.isDark
-                    ? Colors.white.withValues(alpha: 0.09)
-                    : const Color(0xFF7C3AED).withValues(alpha: 0.18),
+                color: t.mist,
                 width: 1.5,
               ),
             ),
@@ -438,7 +381,7 @@ class _BankPickerField extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    selected ?? 'Select bank...',
+                    selected ?? 'Selecionar banco...',
                     style: AppTextStyles.body(
                       selected != null ? t.txtPrimary : t.txtTertiary,
                     ).copyWith(fontSize: 14),
@@ -474,6 +417,16 @@ class _AccountTypeSelector extends StatelessWidget {
     'Cash': LucideIcons.banknote,
   };
 
+  // Display labels (pt-BR) mapped from the backend wire values above.
+  // The stored/sent `type` keeps the English key; only the label is localized.
+  static const _labels = {
+    'Debit': 'Débito',
+    'Checking': 'Conta corrente',
+    'Savings': 'Poupança',
+    'Credit': 'Crédito',
+    'Cash': 'Dinheiro',
+  };
+
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
@@ -482,7 +435,7 @@ class _AccountTypeSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Account type',
+          'Tipo de conta',
           style: AppTextStyles.caption(t.txtSecondary).copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -522,7 +475,7 @@ class _AccountTypeSelector extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        type,
+                        _labels[type]!,
                         style: AppTextStyles.caption(
                           isSelected ? t.primary : t.txtSecondary,
                         ).copyWith(
@@ -591,220 +544,61 @@ class _ToggleRow extends StatelessWidget {
   }
 }
 
-// ── Recent Transactions Section ───────────────────────────────────────────────
-
-class _RecentTransactionsSection extends ConsumerWidget {
-  final List<RecentTransaction> transactions;
-  final int accountId;
-  final String accountName;
-
-  const _RecentTransactionsSection({
-    required this.transactions,
-    required this.accountId,
-    required this.accountName,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final t = AppThemeTokens.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Recent Transactions',
-              style: AppTextStyles.body(t.txtPrimary)
-                  .copyWith(fontWeight: FontWeight.w700, fontSize: 15),
-            ),
-            const Spacer(),
-            GestureDetector(
-              onTap: () {
-                ref
-                    .read(transactionFilterProvider.notifier)
-                    .updateAccount(accountId, accountName);
-                context.go('/transactions');
-              },
-              child: Text(
-                'View all',
-                style: AppTextStyles.caption(t.primary)
-                    .copyWith(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        GlassCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              for (int i = 0; i < transactions.length; i++) ...[
-                if (i > 0)
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: t.divider.withValues(alpha: 0.35),
-                    indent: 16,
-                    endIndent: 16,
-                  ),
-                _TransactionRow(transaction: transactions[i]),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TransactionRow extends StatelessWidget {
-  final RecentTransaction transaction;
-
-  const _TransactionRow({required this.transaction});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
-    final isExpense = transaction.isExpense;
-    final valueColor = isExpense ? t.error : t.success;
-    final valuePrefix = isExpense ? '-' : '+';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: valueColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              isExpense ? LucideIcons.arrowDownLeft : LucideIcons.arrowUpRight,
-              color: valueColor,
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  transaction.description?.isNotEmpty == true
-                      ? transaction.description!
-                      : transaction.subCategoryName,
-                  style: AppTextStyles.body(t.txtPrimary)
-                      .copyWith(fontSize: 13, fontWeight: FontWeight.w500),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  transaction.categoryName,
-                  style: AppTextStyles.caption(t.txtTertiary),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '$valuePrefix${fmt.formatCurrency(transaction.valueCents.abs())}',
-            style: AppTextStyles.moneyMd(valueColor)
-                .copyWith(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Action Buttons ────────────────────────────────────────────────────────────
 
 class _ActionButtons extends StatelessWidget {
   final bool isSaving;
-  final bool isDeleting;
-  final VoidCallback onNewTransaction;
-  final VoidCallback onDelete;
+  final VoidCallback onCancel;
   final VoidCallback onSave;
 
   const _ActionButtons({
     required this.isSaving,
-    required this.isDeleting,
-    required this.onNewTransaction,
-    required this.onDelete,
+    required this.onCancel,
     required this.onSave,
   });
 
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final isBusy = isSaving || isDeleting;
 
-    return Column(
+    return Row(
       children: [
-        OutlinedButton.icon(
-          onPressed: isBusy ? null : onNewTransaction,
-          icon: Icon(LucideIcons.plus, size: 16, color: t.primary),
-          label: Text(
-            '+ New Transaction',
-            style: AppTextStyles.body(t.primary)
-                .copyWith(fontWeight: FontWeight.w600),
-          ),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-            side: BorderSide(color: t.primary.withValues(alpha: 0.5)),
-            shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+        Expanded(
+          child: OutlinedButton(
+            onPressed: isSaving ? null : onCancel,
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              side: BorderSide(color: t.mist),
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+            ),
+            child: Text(
+              'Cancelar',
+              style: AppTextStyles.body(t.txtSecondary)
+                  .copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: isDeleting
-                  ? const Center(child: CircularProgressIndicator())
-                  : OutlinedButton.icon(
-                      onPressed: isBusy ? null : onDelete,
-                      icon: Icon(LucideIcons.trash2, size: 15, color: t.error),
-                      label: Text(
-                        'Delete',
-                        style: AppTextStyles.body(t.error)
-                            .copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                        side:
-                            BorderSide(color: t.error.withValues(alpha: 0.5)),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: AppRadius.lgAll),
-                      ),
-                    ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 2,
-              child: isSaving
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      onPressed: isBusy ? null : onSave,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                        backgroundColor: t.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: AppRadius.lgAll),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'Save Changes',
-                        style: AppTextStyles.body(Colors.white)
-                            .copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-            ),
-          ],
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 2,
+          child: isSaving
+              ? const Center(child: CircularProgressIndicator())
+              : ElevatedButton(
+                  onPressed: onSave,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    backgroundColor: t.primary,
+                    foregroundColor: Colors.white,
+                    shape:
+                        RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Salvar alterações',
+                    style: AppTextStyles.body(Colors.white)
+                        .copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
         ),
       ],
     );

@@ -60,7 +60,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
 
   bool _validate() {
     final nameErr =
-        _nameController.text.trim().isEmpty ? 'Account name is required' : null;
+        _nameController.text.trim().isEmpty ? 'O nome da conta é obrigatório' : null;
     setState(() => _nameError = nameErr);
     return nameErr == null;
   }
@@ -102,7 +102,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
       if (mounted) context.pop();
     } catch (e) {
       setState(() {
-        _submitError = 'Failed to create account. Please try again.';
+        _submitError = 'Não foi possível criar a conta. Tente novamente.';
         _isLoading = false;
       });
     }
@@ -138,7 +138,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                     ),
                     Expanded(
                       child: Text(
-                        'New Account',
+                        'Nova conta',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.body(t.txtPrimary).copyWith(
                           fontWeight: FontWeight.w700,
@@ -161,8 +161,8 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                 const SizedBox(height: 20),
                 // ── Name ──────────────────────────────────────────────────
                 AppInputField(
-                  label: 'Account name',
-                  placeholder: 'e.g. Nubank, Cash, Savings',
+                  label: 'Nome da conta',
+                  placeholder: 'ex.: Nubank, Dinheiro, Poupança',
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
                   errorText: _nameError,
@@ -183,7 +183,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                 const SizedBox(height: 14),
                 // ── Goal ──────────────────────────────────────────────────
                 AppInputField(
-                  label: 'Goal (optional)',
+                  label: 'Meta (opcional)',
                   placeholder: '0,00',
                   controller: _goalController,
                   keyboardType: TextInputType.number,
@@ -198,7 +198,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                 if (_hasCreditFields) ...[
                   const SizedBox(height: 14),
                   AppInputField(
-                    label: 'Credit limit',
+                    label: 'Limite de crédito',
                     placeholder: '0,00',
                     controller: _creditLimitController,
                     keyboardType: TextInputType.number,
@@ -219,7 +219,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                 if (_hasInitialBalance) ...[
                   const SizedBox(height: 14),
                   AppInputField(
-                    label: 'Current balance (optional)',
+                    label: 'Saldo atual (opcional)',
                     placeholder: '0,00',
                     controller: _initialBalanceController,
                     keyboardType: TextInputType.number,
@@ -235,7 +235,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                 if (_hasCurrentInvoice) ...[
                   const SizedBox(height: 14),
                   AppInputField(
-                    label: 'Current invoice (optional)',
+                    label: 'Fatura atual (opcional)',
                     placeholder: '0,00',
                     controller: _currentInvoiceController,
                     keyboardType: TextInputType.number,
@@ -251,8 +251,8 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                 // ── Toggles ───────────────────────────────────────────────
                 GlassCard(
                   child: _ToggleRow(
-                    label: 'Default Account',
-                    subtitle: 'Pre-select in new transactions',
+                    label: 'Conta padrão',
+                    subtitle: 'Pré-selecionar em novas transações',
                     value: _isDefault,
                     onChanged: (v) => setState(() => _isDefault = v),
                   ),
@@ -269,7 +269,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                 _isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : PrimaryButton(
-                        label: 'Save',
+                        label: 'Salvar',
                         onPressed: _submit,
                       ),
                 SizedBox(height: bottomPad + 24),
@@ -297,7 +297,7 @@ class _BillingDayPicker extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Billing due day',
+          'Dia de vencimento',
           style: AppTextStyles.caption(t.txtSecondary)
               .copyWith(fontSize: 12, fontWeight: FontWeight.w500),
         ),
@@ -322,14 +322,14 @@ class _BillingDayPicker extends StatelessWidget {
                         ? t.primary
                         : t.isDark
                             ? Colors.white.withValues(alpha: 0.07)
-                            : const Color(0xFFEDE9FE).withValues(alpha: 0.6),
+                            : t.surfaceEl,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isSelected
                           ? t.primary
                           : t.isDark
                               ? Colors.white.withValues(alpha: 0.1)
-                              : const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                              : t.mist,
                       width: 1,
                     ),
                   ),
@@ -369,7 +369,7 @@ class _BankPickerField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Bank (optional)',
+          'Banco (opcional)',
           style: AppTextStyles.caption(t.txtSecondary)
               .copyWith(fontSize: 12, fontWeight: FontWeight.w500),
         ),
@@ -379,14 +379,10 @@ class _BankPickerField extends StatelessWidget {
           child: Container(
             height: 48,
             decoration: BoxDecoration(
-              color: t.isDark
-                  ? const Color(0xFF1C1830).withValues(alpha: 0.85)
-                  : const Color(0xFFEDE9FE).withValues(alpha: 0.5),
+              color: t.surfaceEl,
               borderRadius: AppRadius.baseAll,
               border: Border.all(
-                color: t.isDark
-                    ? Colors.white.withValues(alpha: 0.09)
-                    : const Color(0xFF7C3AED).withValues(alpha: 0.18),
+                color: t.mist,
                 width: 1.5,
               ),
             ),
@@ -397,7 +393,7 @@ class _BankPickerField extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    selected ?? 'Select bank...',
+                    selected ?? 'Selecionar banco...',
                     style: AppTextStyles.body(
                       selected != null ? t.txtPrimary : t.txtTertiary,
                     ).copyWith(fontSize: 14),
@@ -433,6 +429,16 @@ class _AccountTypeSelector extends StatelessWidget {
     'Cash': LucideIcons.banknote,
   };
 
+  // Display labels (pt-BR) mapped from the backend wire values above.
+  // The stored/sent `type` keeps the English key; only the label is localized.
+  static const _labels = {
+    'Debit': 'Débito',
+    'Checking': 'Conta corrente',
+    'Savings': 'Poupança',
+    'Credit': 'Crédito',
+    'Cash': 'Dinheiro',
+  };
+
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
@@ -441,7 +447,7 @@ class _AccountTypeSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Account type',
+          'Tipo de conta',
           style: AppTextStyles.caption(t.txtSecondary).copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -481,7 +487,7 @@ class _AccountTypeSelector extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        type,
+                        _labels[type]!,
                         style: AppTextStyles.caption(
                           isSelected ? t.primary : t.txtSecondary,
                         ).copyWith(

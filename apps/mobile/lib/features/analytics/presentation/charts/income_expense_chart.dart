@@ -35,13 +35,13 @@ class IncomeExpenseChart extends ConsumerWidget {
             barRods: [
               BarChartRodData(
                 toY: item.totalIncome / 100,
-                color: t.success,
+                color: t.moss,
                 width: compact ? 8 : 12,
                 borderRadius: BorderRadius.circular(4),
               ),
               BarChartRodData(
                 toY: item.totalExpense / 100,
-                color: t.error,
+                color: t.clay,
                 width: compact ? 8 : 12,
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -49,8 +49,8 @@ class IncomeExpenseChart extends ConsumerWidget {
           );
         }).toList();
 
-        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        final months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+            'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
         return SizedBox(
           height: compact ? 160 : 220,
@@ -79,8 +79,7 @@ class IncomeExpenseChart extends ConsumerWidget {
                       if (i < 0 || i >= items.length) return const SizedBox();
                       return Text(
                         months[items[i].month - 1],
-                        style: AppTextStyles.caption(t.txtTertiary)
-                            .copyWith(fontSize: 10),
+                        style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
                       );
                     },
                   ),
@@ -92,7 +91,7 @@ class IncomeExpenseChart extends ConsumerWidget {
                   getTooltipItem: (group, _, rod, rodIndex) {
                     final item = items[group.x];
                     final fmt = AppLocaleScope.of(context);
-                    final label = rodIndex == 0 ? 'Income' : 'Expense';
+                    final label = rodIndex == 0 ? 'Receita' : 'Despesa';
                     final value = rodIndex == 0
                         ? item.totalIncome
                         : item.totalExpense;
@@ -120,7 +119,7 @@ Widget _placeholder(bool compact) => SizedBox(
 Widget _error(BuildContext context, AppThemeTokens t) => SizedBox(
       height: 80,
       child: Center(
-        child: Text('Could not load data',
+        child: Text('Não foi possível carregar os dados',
             style: AppTextStyles.bodySm(t.txtTertiary)),
       ),
     );
@@ -128,7 +127,7 @@ Widget _error(BuildContext context, AppThemeTokens t) => SizedBox(
 Widget _empty(BuildContext context, AppThemeTokens t) => SizedBox(
       height: 80,
       child: Center(
-        child: Text('No data for this period',
+        child: Text('Sem dados para este período',
             style: AppTextStyles.bodySm(t.txtTertiary)),
       ),
     );

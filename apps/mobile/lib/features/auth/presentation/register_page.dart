@@ -223,7 +223,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                 // ── Email ──────────────────────────────────────────────────
                 AppInputField(
-                  placeholder: 'Email',
+                  placeholder: 'E-mail',
                   controller: _emailController,
                   errorText: _emailError,
                   keyboardType: TextInputType.emailAddress,
@@ -323,7 +323,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                         onTap: () => context.pop(),
                         child: Text(
                           'Entrar',
-                          style: AppTextStyles.body(t.primary).copyWith(
+                          style: AppTextStyles.body(t.accent).copyWith(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -368,9 +368,9 @@ class _PasswordStrengthIndicator extends StatelessWidget {
     final strength = _calcStrength(password);
 
     final (filledSegments, color, label) = switch (strength) {
-      _PasswordStrength.weak   => (1, t.error,                      'Fraca'),
-      _PasswordStrength.medium => (2, const Color(0xFFF59E0B),      'Média'),
-      _PasswordStrength.strong => (3, const Color(0xFF22C55E),      'Forte'),
+      _PasswordStrength.weak   => (1, t.clay, 'Fraca'),
+      _PasswordStrength.medium => (2, t.gold, 'Média'),
+      _PasswordStrength.strong => (3, t.moss, 'Forte'),
     };
 
     return Row(

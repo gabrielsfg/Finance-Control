@@ -49,37 +49,35 @@ class TransactionRepository {
     );
   }
 
+  /// Fetches every transaction linked to [budgetId] within the budget's
+  /// [startDate]–[finishDate] window via the consolidated `filtered` endpoint.
+  /// Dates are formatted as `yyyy-MM-dd` to bind to the backend `DateOnly`.
   Future<List<GetTransactionResponseDto>> getTransactionsByBudget(
-    int budgetId,
-  ) async {
-    final response =
-        await _dio.get(ApiEndpoints.transactionsByBudget(budgetId));
-    return (response.data as List)
+    int budgetId, {
+    required DateTime startDate,
+    required DateTime finishDate,
+  }) async {
+    final response = await _dio.get(
+      ApiEndpoints.transactionsFiltered,
+      queryParameters: {
+        'StartDate': _formatDate(startDate),
+        'FinishDate': _formatDate(finishDate),
+        'BudgetIds': [budgetId],
+        'PageSize': 100,
+      },
+    );
+    final page = (response.data as Map<String, dynamic>)['page']
+        as Map<String, dynamic>;
+    return (page['items'] as List)
         .map((e) =>
             GetTransactionResponseDto.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
-  Future<List<GetTransactionResponseDto>> getTransactionsByAccount(
-    int accountId,
-  ) async {
-    final response =
-        await _dio.get(ApiEndpoints.transactionsByAccount(accountId));
-    return (response.data as List)
-        .map((e) =>
-            GetTransactionResponseDto.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  Future<List<GetTransactionResponseDto>> getTransactionsBySubcategory(
-    int subCategoryId,
-  ) async {
-    final response =
-        await _dio.get(ApiEndpoints.transactionsBySubcategory(subCategoryId));
-    return (response.data as List)
-        .map((e) =>
-            GetTransactionResponseDto.fromJson(e as Map<String, dynamic>))
-        .toList();
+  static String _formatDate(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
   }
 
   // ── Update ───────────────────────────────────────────────────────────────

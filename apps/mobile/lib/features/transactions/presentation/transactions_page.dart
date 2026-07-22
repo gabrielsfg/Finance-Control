@@ -75,7 +75,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
         bottom: false,
         child: asyncTx.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) => Center(child: Text('Erro: $e')),
           data: (_) {
             final groups = _groupByDate(filtered);
 
@@ -117,7 +117,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 80),
                         child: Text(
-                          'No transactions found',
+                          'Nenhuma transação encontrada',
                           style: AppTextStyles.body(
                             AppThemeTokens.of(context).txtTertiary,
                           ),
@@ -173,17 +173,16 @@ class _SearchBar extends StatelessWidget {
           child: Container(
             height: 44,
             decoration: BoxDecoration(
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : t.primary.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(12),
+              color: t.surfaceEl,
+              borderRadius: AppRadius.baseAll,
+              border: Border.all(color: t.mist),
             ),
             child: TextField(
               controller: controller,
               onChanged: onChanged,
               style: AppTextStyles.body(t.txtPrimary).copyWith(fontSize: 14),
               decoration: InputDecoration(
-                hintText: 'Search transactions...',
+                hintText: 'Buscar transações...',
                 hintStyle:
                     AppTextStyles.body(t.txtTertiary).copyWith(fontSize: 14),
                 prefixIcon:
@@ -206,16 +205,19 @@ class _SearchBar extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: filterCount > 0
-                      ? t.primary.withValues(alpha: 0.15)
-                      : (t.isDark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : t.primary.withValues(alpha: 0.06)),
-                  borderRadius: BorderRadius.circular(12),
+                      ? t.accent.withValues(alpha: 0.15)
+                      : t.surfaceEl,
+                  borderRadius: AppRadius.baseAll,
+                  border: Border.all(
+                    color: filterCount > 0
+                        ? t.accent.withValues(alpha: 0.4)
+                        : t.mist,
+                  ),
                 ),
                 child: Icon(
                   Icons.tune_rounded,
                   size: 20,
-                  color: filterCount > 0 ? t.primary : t.txtTertiary,
+                  color: filterCount > 0 ? t.accent : t.txtTertiary,
                 ),
               ),
               if (filterCount > 0)
@@ -265,94 +267,29 @@ class _SummaryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Transactions',
-          style: AppTextStyles.h2(t.txtPrimary).copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 22,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 14),
-        GlassCard(
-          child: Row(
-            children: [
-              Expanded(
-                child: _SummaryColumn(
-                  label: 'Income',
-                  value: fmt.formatCurrency(income),
-                  color: t.success,
-                ),
-              ),
-              _VerticalDivider(),
-              Expanded(
-                child: _SummaryColumn(
-                  label: 'Expenses',
-                  value: fmt.formatCurrency(expense),
-                  color: t.error,
-                ),
-              ),
-              _VerticalDivider(),
-              Expanded(
-                child: _SummaryColumn(
-                  label: 'Balance',
-                  value: fmt.formatCurrency(balance),
-                  color: t.success,
-                ),
-              ),
-            ],
-          ),
+        const PageHeader(title: 'Extrato'),
+        const SizedBox(height: 16),
+        SummaryPanel(
+          eyebrow: 'SALDO DO PERÍODO',
+          valueCents: balance,
+          stats: [
+            SummaryStat(
+              label: 'RECEITAS',
+              valueCents: income,
+              valueColor: t.mossLift,
+            ),
+            SummaryStat(
+              label: 'DESPESAS',
+              valueCents: expense,
+              valueColor: t.clayLift,
+            ),
+          ],
         ),
       ],
-    );
-  }
-}
-
-class _SummaryColumn extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _SummaryColumn({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-    return Column(
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.caption(t.txtSecondary).copyWith(fontSize: 11),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: AppTextStyles.mono(color, fontSize: 13).copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-}
-
-class _VerticalDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-    return Container(
-      width: 1,
-      height: 32,
-      color: t.divider.withValues(alpha: t.isDark ? 0.4 : 0.6),
     );
   }
 }
@@ -379,8 +316,8 @@ class _TransactionGroupSection extends StatelessWidget {
   }
 
   String _groupLabel(AppLocale fmt) {
-    if (_isToday(group.date)) return 'TODAY';
-    if (_isYesterday(group.date)) return 'YESTERDAY';
+    if (_isToday(group.date)) return 'HOJE';
+    if (_isYesterday(group.date)) return 'ONTEM';
     return fmt.formatDayHeader(group.date);
   }
 
@@ -398,11 +335,7 @@ class _TransactionGroupSection extends StatelessWidget {
         const SizedBox(height: 20),
         Text(
           headerText,
-          style: AppTextStyles.caption(t.txtTertiary).copyWith(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-          ),
+          style: AppTextStyles.eyebrow(t.txtTertiary),
         ),
         const SizedBox(height: 8),
         GlassCard(
@@ -432,11 +365,8 @@ class _TransactionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
     final isExpense = item.amountCents < 0;
-    final amountColor = isExpense ? t.error : t.success;
-    final sign = isExpense ? '-' : '+';
-    final amountStr = '$sign${fmt.formatCurrency(item.amountCents.abs())}';
+    final signalColor = isExpense ? t.clay : t.moss;
 
     return Column(
       children: [
@@ -451,8 +381,7 @@ class _TransactionRow extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color:
-                        (isExpense ? t.error : t.success).withValues(alpha: 0.15),
+                    color: isExpense ? t.expenseBg : t.incomeBg,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -461,7 +390,7 @@ class _TransactionRow extends StatelessWidget {
                           ? Icons.arrow_upward_rounded
                           : Icons.arrow_downward_rounded,
                       size: 20,
-                      color: isExpense ? t.error : t.success,
+                      color: signalColor,
                     ),
                   ),
                 ),
@@ -486,11 +415,11 @@ class _TransactionRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                Text(
-                  amountStr,
-                  style: AppTextStyles.mono(amountColor, fontSize: 13).copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                Money(
+                  item.amountCents,
+                  signed: true,
+                  size: 14,
+                  weight: FontWeight.w600,
                 ),
               ],
             ),
@@ -500,7 +429,7 @@ class _TransactionRow extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: t.divider.withValues(alpha: t.isDark ? 0.35 : 0.6),
+            color: t.mist,
           ),
       ],
     );

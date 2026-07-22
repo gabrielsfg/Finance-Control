@@ -44,18 +44,18 @@ class _DeleteConfirmDialog extends StatelessWidget {
       backgroundColor: t.bg,
       title: Text(title, style: AppTextStyles.h3(t.txtPrimary)),
       content: Text(
-        'Are you sure you want to delete "$itemName"? This action cannot be undone.',
+        'Tem certeza de que deseja excluir "$itemName"? Esta ação não pode ser desfeita.',
         style: AppTextStyles.body(t.txtSecondary),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: Text('Cancel', style: AppTextStyles.body(t.txtTertiary)),
+          child: Text('Cancelar', style: AppTextStyles.body(t.txtTertiary)),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(true),
           child: Text(
-            'Delete',
+            'Excluir',
             style: AppTextStyles.body(t.error)
                 .copyWith(fontWeight: FontWeight.w700),
           ),

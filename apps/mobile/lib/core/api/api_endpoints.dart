@@ -3,18 +3,20 @@ import '../config/app_config.dart';
 abstract class ApiEndpoints {
   static String get baseUrl => AppConfig.apiBaseUrl;
 
-  // Auth — UserController
-  static const String login = '/api/user/login';
-  static const String register = '/api/user/register';
-  static const String refreshToken = '/api/user/refresh';
-  static const String logout = '/api/user/logout';
+  // Auth — UserController.
+  // Mobile uses the body-based token variants (refresh token in the request
+  // body, not an HttpOnly cookie). The cookie-based /api/user/{login,refresh,
+  // logout} endpoints are reserved for the web client.
+  static const String login = '/api/user/mobile/login';
+  static const String register = '/api/user/mobile/register';
+  static const String refreshToken = '/api/user/mobile/refresh';
+  static const String logout = '/api/user/mobile/logout';
   static const String forgotPassword = '/api/user/forgot-password';
   static const String resetPassword = '/api/user/reset-password';
   static const String userProfile = '/api/user/profile';
   static const String deleteAccount = '/api/user/me';
   static const String resetData = '/api/user/me/reset-data';
   static const String userPreferences = '/api/user/preferences';
-  static String currencies({String base = 'USD'}) => '/api/currencies?base=$base';
   static String banks(String country) => '/api/banks?country=$country';
 
   // Main page
@@ -27,12 +29,7 @@ abstract class ApiEndpoints {
   // Transactions
   static const String transactions = '/api/transaction';
   static String transactionById(int id) => '/api/transaction/$id';
-  static String transactionsByBudget(int budgetId) =>
-      '/api/transaction/by-budget/$budgetId';
-  static String transactionsByAccount(int accountId) =>
-      '/api/transaction/by-account/$accountId';
-  static String transactionsBySubcategory(int subCategoryId) =>
-      '/api/transaction/by-subcategory/$subCategoryId';
+  static const String transactionsFiltered = '/api/transaction/filtered';
   static String updateRecurringTransaction(int recurringId) =>
       '/api/transaction/$recurringId/recurring';
   static String cancelRecurringTransaction(int recurringId) =>
@@ -47,13 +44,6 @@ abstract class ApiEndpoints {
   static const String subcategories = '/api/SubCategory';
   static String subcategoryById(int id) => '/api/SubCategory/$id';
   static String deleteSubcategory(int id) => '/api/SubCategory/$id';
-
-  // Wishlist
-  static const String wishlist = '/api/wishlist';
-  static String wishlistById(int id) => '/api/wishlist/$id';
-  static String wishlistPrice(int id) => '/api/wishlist/$id/price';
-  static String wishlistPurchase(int id) => '/api/wishlist/$id/purchase';
-  static String wishlistPriceHistory(int id) => '/api/wishlist/$id/price-history';
 
   // Analytics
   static const String analyticsIncomeExpense = '/api/analytics/income-expense';
@@ -78,6 +68,48 @@ abstract class ApiEndpoints {
       '/api/analytics/projection/net-worth';
   static const String analyticsProjectionCommitmentsImpact =
       '/api/analytics/projection/commitments-impact';
+
+  // Recurrences (subscriptions + installments overview)
+  static const String recurrences = '/api/recurrences';
+  static const String recurringCreate = '/api/recurrences/recurring';
+  static String recurringById(int id) => '/api/recurrences/recurring/$id';
+  static String recurringCancel(int id) =>
+      '/api/recurrences/recurring/$id/cancel';
+  static String recurringReactivate(int id) =>
+      '/api/recurrences/recurring/$id/reactivate';
+
+  // Goals (metas)
+  static const String goals = '/api/goals';
+  static String goalById(int id) => '/api/goals/$id';
+  static String goalContribute(int id) => '/api/goals/$id/contribute';
+  static String goalWithdraw(int id) => '/api/goals/$id/withdraw';
+  static String goalPurchase(int id) => '/api/goals/$id/purchase';
+  static String goalInvestmentTransactions(int id) =>
+      '/api/goals/$id/investment-transactions';
+
+  // Investments
+  static const String investments = '/api/Investment';
+  static String investmentById(int id) => '/api/Investment/$id';
+  static const String investmentTransactions = '/api/Investment/transactions';
+  static const String investmentDividends = '/api/Investment/dividends';
+  static String investmentPriceHistory(int id) =>
+      '/api/Investment/$id/price-history';
+
+  // Market
+  static String market({String? type, String sort = 'change_desc', int limit = 20}) {
+    final params = <String, String>{
+      'sort': sort,
+      'limit': '$limit',
+      if (type != null) 'type': type,
+    };
+    final query = params.entries.map((e) => '${e.key}=${e.value}').join('&');
+    return '/api/Market?$query';
+  }
+
+  static String marketSearch(String q) =>
+      '/api/Market/search?q=${Uri.encodeQueryComponent(q)}';
+  static String marketAsset(String ticker) => '/api/Market/$ticker';
+  static const String marketMacro = '/api/Market/macro';
 
   // Budgets
   static const String budgets = '/api/budget';

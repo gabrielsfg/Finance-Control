@@ -25,7 +25,7 @@ class NetWorthChart extends ConsumerWidget {
       error: (e, _) => SizedBox(
         height: 80,
         child: Center(
-          child: Text('Could not load data',
+          child: Text('Não foi possível carregar os dados',
               style: AppTextStyles.bodySm(t.txtTertiary)),
         ),
       ),
@@ -34,7 +34,7 @@ class NetWorthChart extends ConsumerWidget {
           return SizedBox(
             height: 80,
             child: Center(
-              child: Text('No data for this period',
+              child: Text('Sem dados para este período',
                   style: AppTextStyles.bodySm(t.txtTertiary)),
             ),
           );
@@ -49,12 +49,10 @@ class NetWorthChart extends ConsumerWidget {
         final minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
         final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
         final padding = (maxY - minY) * 0.15;
-        final isPositive =
-            items.isEmpty || items.last.netWorth >= items.first.netWorth;
-        final lineColor = isPositive ? t.success : t.error;
+        final lineColor = t.accent;
 
-        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        final months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+            'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
         return SizedBox(
           height: compact ? 160 : 220,
@@ -84,8 +82,7 @@ class NetWorthChart extends ConsumerWidget {
                       if (i < 0 || i >= items.length) return const SizedBox();
                       return Text(
                         months[items[i].month - 1],
-                        style: AppTextStyles.caption(t.txtTertiary)
-                            .copyWith(fontSize: 10),
+                        style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
                       );
                     },
                   ),

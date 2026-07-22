@@ -24,7 +24,7 @@ class SpendingHeatmapChart extends ConsumerWidget {
       error: (e, _) => SizedBox(
         height: 80,
         child: Center(
-            child: Text('Could not load data',
+            child: Text('Não foi possível carregar os dados',
                 style: AppTextStyles.bodySm(t.txtTertiary))),
       ),
       data: (items) {
@@ -32,7 +32,7 @@ class SpendingHeatmapChart extends ConsumerWidget {
           return SizedBox(
             height: 80,
             child: Center(
-                child: Text('No spending data for this period',
+                child: Text('Sem dados de gastos para este período',
                     style: AppTextStyles.bodySm(t.txtTertiary))),
           );
         }
@@ -55,7 +55,7 @@ class SpendingHeatmapChart extends ConsumerWidget {
               month: entry.key,
               spending: byDate,
               maxTotal: maxTotal,
-              baseColor: t.primary,
+              baseColor: t.moss,
               t: t,
               fmt: fmt,
               compact: compact,
@@ -86,9 +86,9 @@ class _MonthGrid extends StatelessWidget {
   final dynamic fmt;
   final bool compact;
 
-  static const _dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  static const _monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  static const _dayLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  static const _monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
   @override
   Widget build(BuildContext context) {
@@ -116,8 +116,7 @@ class _MonthGrid extends StatelessWidget {
                     width: cellSize,
                     child: Text(d,
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.caption(t.txtTertiary)
-                            .copyWith(fontSize: 8)),
+                        style: AppTextStyles.mono(t.txtTertiary, fontSize: 8)),
                   ))
               .toList(),
         ),
@@ -137,15 +136,13 @@ class _MonthGrid extends StatelessWidget {
               final intensity =
                   maxTotal > 0 ? (total / maxTotal).clamp(0.0, 1.0) : 0.0;
               final cellColor = total == 0
-                  ? (t.isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.04))
+                  ? t.surfaceEl
                   : baseColor.withValues(alpha: 0.15 + intensity * 0.75);
 
               return Tooltip(
                 message: total > 0
                     ? '${date.day}/${date.month}: ${fmt.formatCurrency(total)}'
-                    : '${date.day}/${date.month}: No spending',
+                    : '${date.day}/${date.month}: Sem gastos',
                 child: Container(
                   width: cellSize,
                   height: cellSize,
@@ -158,9 +155,10 @@ class _MonthGrid extends StatelessWidget {
                       : Center(
                           child: Text(
                             '${i + 1}',
-                            style: AppTextStyles.caption(
+                            style: AppTextStyles.mono(
                               total > 0 ? Colors.white : t.txtDisabled,
-                            ).copyWith(fontSize: 9),
+                              fontSize: 9,
+                            ),
                           ),
                         ),
                 ),

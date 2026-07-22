@@ -51,18 +51,18 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
     var hasError = false;
     if (token.isEmpty) {
-      setState(() => _tokenError = 'Reset token is required.');
+      setState(() => _tokenError = 'Informe o token de redefinição.');
       hasError = true;
     }
     if (password.isEmpty) {
-      setState(() => _passwordError = 'Password is required.');
+      setState(() => _passwordError = 'Informe sua senha.');
       hasError = true;
     } else if (password.length < 6) {
-      setState(() => _passwordError = 'Password must be at least 6 characters.');
+      setState(() => _passwordError = 'A senha deve ter pelo menos 6 caracteres.');
       hasError = true;
     }
     if (confirm != password) {
-      setState(() => _confirmError = 'Passwords do not match.');
+      setState(() => _confirmError = 'As senhas não coincidem.');
       hasError = true;
     }
     if (hasError) return;
@@ -74,7 +74,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
     } on DioException catch (e) {
       setState(() {
         _globalError = e.response?.data?['message'] as String? ??
-            'Invalid or expired reset token.';
+            'Token de redefinição inválido ou expirado.';
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -101,10 +101,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                       color: t.txtPrimary, size: 24),
                 ),
                 const SizedBox(height: 32),
-                Text('Reset password', style: AppTextStyles.h1(t.txtPrimary)),
+                Text('Redefinir senha', style: AppTextStyles.h1(t.txtPrimary)),
                 const SizedBox(height: 6),
                 Text(
-                  'Enter the reset token and your new password.',
+                  'Informe o token de redefinição e sua nova senha.',
                   style: AppTextStyles.body(t.txtSecondary),
                 ),
                 const SizedBox(height: 32),
@@ -125,7 +125,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Password reset successfully!',
+                            'Senha redefinida com sucesso!',
                             style: AppTextStyles.body(t.success)
                                 .copyWith(fontSize: 14),
                           ),
@@ -135,7 +135,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   ),
                   const SizedBox(height: 24),
                   PrimaryButton(
-                    label: 'Go to login',
+                    label: 'Ir para o login',
                     onPressed: () => context.go('/login'),
                   ),
                 ] else ...[
@@ -154,7 +154,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                     const SizedBox(height: 16),
                   ],
                   AppInputField(
-                    placeholder: 'Reset token',
+                    placeholder: 'Token de redefinição',
                     controller: _tokenController,
                     errorText: _tokenError,
                     textInputAction: TextInputAction.next,
@@ -162,7 +162,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   ),
                   const SizedBox(height: 14),
                   AppInputField(
-                    placeholder: 'New password',
+                    placeholder: 'Nova senha',
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     errorText: _passwordError,
@@ -184,7 +184,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   ),
                   const SizedBox(height: 14),
                   AppInputField(
-                    placeholder: 'Confirm new password',
+                    placeholder: 'Confirmar nova senha',
                     controller: _confirmController,
                     obscureText: _obscureConfirm,
                     errorText: _confirmError,
@@ -219,7 +219,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                           ),
                         )
                       : PrimaryButton(
-                          label: 'Reset password',
+                          label: 'Redefinir senha',
                           onPressed: _submit,
                         ),
                 ],

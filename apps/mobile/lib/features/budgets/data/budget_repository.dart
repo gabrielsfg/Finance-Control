@@ -33,9 +33,22 @@ class BudgetRepository {
         response.data as Map<String, dynamic>);
   }
 
-  /// Returns the budget with all areas, allocations and spent values per allocation.
-  Future<GetBudgetByIdResponseDto> getBudgetWithAllocations(int id) async {
-    final response = await _dio.get(ApiEndpoints.budgetWithAllocations(id));
+  /// Returns the budget with all areas, allocations and spent values per
+  /// allocation. Pass [referenceDate] (yyyy-MM-dd) to fetch a specific period.
+  Future<GetBudgetByIdResponseDto> getBudgetWithAllocations(
+    int id, {
+    DateTime? referenceDate,
+  }) async {
+    final query = referenceDate == null
+        ? null
+        : {
+            'referenceDate':
+                '${referenceDate.year}-${referenceDate.month.toString().padLeft(2, '0')}-${referenceDate.day.toString().padLeft(2, '0')}',
+          };
+    final response = await _dio.get(
+      ApiEndpoints.budgetWithAllocations(id),
+      queryParameters: query,
+    );
     return GetBudgetByIdResponseDto.fromJson(
         response.data as Map<String, dynamic>);
   }

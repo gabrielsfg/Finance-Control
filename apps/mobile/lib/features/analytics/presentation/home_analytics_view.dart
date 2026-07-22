@@ -76,17 +76,17 @@ class _EmptySelection extends StatelessWidget {
         children: [
           Icon(Icons.bar_chart_rounded, size: 48, color: t.txtDisabled),
           const SizedBox(height: 12),
-          Text('No charts selected',
+          Text('Nenhum gráfico selecionado',
               style: AppTextStyles.body(t.txtSecondary)
                   .copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          Text('Tap "See full analysis" to customize your charts',
+          Text('Toque em "Ver análise completa" para personalizar seus gráficos',
               style: AppTextStyles.bodySm(t.txtTertiary),
               textAlign: TextAlign.center),
           const SizedBox(height: 20),
           SizedBox(
             width: 200,
-            child: PrimaryButton(label: 'Customize', onPressed: onCustomize),
+            child: PrimaryButton(label: 'Personalizar', onPressed: onCustomize),
           ),
         ],
       ),
@@ -111,7 +111,7 @@ class _SeeFullButton extends StatelessWidget {
           borderRadius: AppRadius.baseAll,
         ),
         child: Text(
-          'See full analysis →',
+          'Ver análise completa →',
           textAlign: TextAlign.center,
           style: AppTextStyles.body(t.primary)
               .copyWith(fontWeight: FontWeight.w600),
@@ -133,16 +133,10 @@ class _ChartCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
-        color: t.isDark
-            ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-            : Colors.white.withValues(alpha: 0.9),
+        color: t.surface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(
-          color: t.isDark
-              ? Colors.white.withValues(alpha: 0.07)
-              : t.primary.withValues(alpha: 0.10),
-        ),
-        boxShadow: t.isDark ? [] : AppShadows.cardLight,
+        border: Border.all(color: t.mist),
+        boxShadow: t.isDark ? AppShadows.cardDark : AppShadows.cardLight,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

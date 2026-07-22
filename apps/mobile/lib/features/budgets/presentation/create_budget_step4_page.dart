@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/app_locale.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/budget_models.dart';
 import '../providers/budget_provider.dart';
@@ -47,7 +48,7 @@ class _CreateBudgetStep4PageState
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _error = 'Failed to create budget. Please try again.';
+        _error = 'Falha ao criar o orçamento. Tente novamente.';
       });
     }
   }
@@ -56,7 +57,6 @@ class _CreateBudgetStep4PageState
   Widget build(BuildContext context) {
     final s = CreateBudgetState.instance;
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
     final bottomPad = MediaQuery.viewPaddingOf(context).bottom;
 
     final totalIncomeCents =
@@ -90,15 +90,13 @@ class _CreateBudgetStep4PageState
                               : t.primary.withValues(alpha: 0.08),
                         ),
                         child: Center(
-                          child: Text('←',
-                              style:
-                                  TextStyle(fontSize: 18, color: t.txtPrimary)),
+                          child: Icon(LucideIcons.chevronLeft, size: 20, color: t.txtPrimary),
                         ),
                       ),
                     ),
                     Expanded(
                       child: Text(
-                        'New Budget',
+                        'Novo orçamento',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.body(t.txtPrimary).copyWith(
                           fontWeight: FontWeight.w700,
@@ -121,7 +119,7 @@ class _CreateBudgetStep4PageState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Review & confirm',
+                        'Revisar e confirmar',
                         style: AppTextStyles.h2(t.txtPrimary).copyWith(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -129,7 +127,7 @@ class _CreateBudgetStep4PageState
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Check everything before creating your budget.',
+                        'Confira tudo antes de criar seu orçamento.',
                         style: AppTextStyles.body(t.txtSecondary).copyWith(
                           fontSize: 13,
                           height: 1.5,
@@ -142,7 +140,7 @@ class _CreateBudgetStep4PageState
                         child: Column(
                           children: [
                             _SummaryRow(
-                              label: 'Name',
+                              label: 'Nome',
                               value: s.name,
                               valueStyle: AppTextStyles.body(t.txtPrimary)
                                   .copyWith(
@@ -150,32 +148,39 @@ class _CreateBudgetStep4PageState
                                       fontWeight: FontWeight.w600),
                             ),
                             _divider(t),
-                            _SummaryRow(label: 'Recurrence', value: s.recurrence),
+                            _SummaryRow(
+                                label: 'Recorrência',
+                                value: recurrenceLabelPt(s.recurrence)),
                             _divider(t),
                             _SummaryRow(
-                              label: 'Expected income',
-                              value: fmt.formatCurrency(totalIncomeCents),
-                              valueStyle: AppTextStyles.mono(t.success,
-                                      fontSize: 14)
-                                  .copyWith(fontWeight: FontWeight.w700),
+                              label: 'Receita prevista',
+                              valueWidget: Money(
+                                totalIncomeCents,
+                                size: 14,
+                                weight: FontWeight.w700,
+                                color: t.success,
+                              ),
                             ),
                             _divider(t),
                             _SummaryRow(
-                              label: 'Expected expenses',
-                              value: '- ${fmt.formatCurrency(totalExpenseCents)}',
-                              valueStyle: AppTextStyles.mono(t.error,
-                                      fontSize: 14)
-                                  .copyWith(fontWeight: FontWeight.w700),
+                              label: 'Despesa prevista',
+                              valueWidget: Money(
+                                totalExpenseCents,
+                                size: 14,
+                                weight: FontWeight.w700,
+                                color: t.error,
+                              ),
                             ),
                             _divider(t),
                             _SummaryRow(
-                              label: 'Balance',
-                              value:
-                                  '${balanceCents < 0 ? '- ' : ''}${fmt.formatCurrency(balanceCents.abs())}',
-                              valueStyle: AppTextStyles.mono(
-                                      balanceCents >= 0 ? t.success : t.error,
-                                      fontSize: 14)
-                                  .copyWith(fontWeight: FontWeight.w700),
+                              label: balanceCents >= 0 ? 'Saldo' : 'Déficit',
+                              valueWidget: Money(
+                                balanceCents.abs(),
+                                size: 14,
+                                weight: FontWeight.w700,
+                                color:
+                                    balanceCents >= 0 ? t.success : t.error,
+                              ),
                             ),
                           ],
                         ),
@@ -185,7 +190,7 @@ class _CreateBudgetStep4PageState
                       // ── Income areas ──────────────────────────────────
                       if (s.incomeAreas.isNotEmpty) ...[
                         _SectionHeader(
-                          label: 'Income areas',
+                          label: 'Áreas de receita',
                           color: t.success,
                         ),
                         const SizedBox(height: 10),
@@ -201,7 +206,7 @@ class _CreateBudgetStep4PageState
                       // ── Expense areas ─────────────────────────────────
                       if (s.expenseAreas.isNotEmpty) ...[
                         _SectionHeader(
-                          label: 'Expense areas',
+                          label: 'Áreas de despesa',
                           color: t.error,
                         ),
                         const SizedBox(height: 10),
@@ -229,7 +234,7 @@ class _CreateBudgetStep4PageState
               Padding(
                 padding: EdgeInsets.fromLTRB(24, 16, 24, bottomPad + 20),
                 child: PrimaryButton(
-                  label: _isLoading ? 'Creating...' : 'Create Budget',
+                  label: _isLoading ? 'Criando...' : 'Criar orçamento',
                   onPressed: _isLoading ? null : _confirm,
                 ),
               ),
@@ -284,13 +289,17 @@ class _SectionHeader extends StatelessWidget {
 
 class _SummaryRow extends StatelessWidget {
   final String label;
-  final String value;
+  final String? value;
   final TextStyle? valueStyle;
+
+  /// When provided, renders instead of [value] — used for [Money] amounts.
+  final Widget? valueWidget;
 
   const _SummaryRow({
     required this.label,
-    required this.value,
+    this.value,
     this.valueStyle,
+    this.valueWidget,
   });
 
   @override
@@ -303,11 +312,12 @@ class _SummaryRow extends StatelessWidget {
           label,
           style: AppTextStyles.body(t.txtSecondary).copyWith(fontSize: 13),
         ),
-        Text(
-          value,
-          style: valueStyle ??
-              AppTextStyles.body(t.txtPrimary).copyWith(fontSize: 13),
-        ),
+        valueWidget ??
+            Text(
+              value ?? '',
+              style: valueStyle ??
+                  AppTextStyles.body(t.txtPrimary).copyWith(fontSize: 13),
+            ),
       ],
     );
   }
@@ -334,11 +344,9 @@ class _AreaSummaryCardState extends State<_AreaSummaryCard> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
     final area = widget.area;
     final isIncome = widget.allocationType == 'Income';
     final accentColor = isIncome ? t.success : t.error;
-    final prefix = isIncome ? '' : '- ';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -362,10 +370,11 @@ class _AreaSummaryCardState extends State<_AreaSummaryCard> {
                         ),
                       ),
                     ),
-                    Text(
-                      '$prefix${fmt.formatCurrency(area.totalAllocatedCents)}',
-                      style: AppTextStyles.mono(accentColor, fontSize: 14)
-                          .copyWith(fontWeight: FontWeight.w700),
+                    Money(
+                      area.totalAllocatedCents,
+                      size: 14,
+                      weight: FontWeight.w700,
+                      color: accentColor,
                     ),
                     const SizedBox(width: 8),
                     AnimatedRotation(
@@ -415,10 +424,11 @@ class _AreaSummaryCardState extends State<_AreaSummaryCard> {
                               ],
                             ),
                           ),
-                          Text(
-                            '$prefix${fmt.formatCurrency(sub.allocatedCents)}',
-                            style: AppTextStyles.mono(accentColor, fontSize: 13)
-                                .copyWith(fontWeight: FontWeight.w700),
+                          Money(
+                            sub.allocatedCents,
+                            size: 13,
+                            weight: FontWeight.w700,
+                            color: accentColor,
                           ),
                         ],
                       ),

@@ -21,9 +21,7 @@ class TransactionDetailPage extends ConsumerWidget {
     final fmt = AppLocaleScope.of(context);
     final actionState = ref.watch(transactionActionProvider);
     final isExpense = transaction.amountCents < 0;
-    final amountColor = isExpense ? t.error : t.success;
-    final sign = isExpense ? '- ' : '+ ';
-    final amountStr = '$sign${fmt.formatCurrency(transaction.amountCents.abs())}';
+    final signalColor = isExpense ? t.clay : t.moss;
 
     ref.listen(transactionActionProvider, (_, next) {
       if (next is TransactionActionSuccess) {
@@ -58,9 +56,8 @@ class TransactionDetailPage extends ConsumerWidget {
                         height: 36,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: t.isDark
-                              ? Colors.white.withValues(alpha: 0.08)
-                              : t.primary.withValues(alpha: 0.08),
+                          color: t.surfaceEl,
+                          border: Border.all(color: t.mist),
                         ),
                         child: Icon(
                           Icons.arrow_back,
@@ -71,12 +68,9 @@ class TransactionDetailPage extends ConsumerWidget {
                     ),
                     Expanded(
                       child: Text(
-                        'Detail',
+                        'Detalhes',
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.body(t.txtPrimary).copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 17,
-                        ),
+                        style: AppTextStyles.h3(t.txtPrimary),
                       ),
                     ),
                     const SizedBox(width: 36),
@@ -98,7 +92,7 @@ class TransactionDetailPage extends ConsumerWidget {
                               width: 64,
                               height: 64,
                               decoration: BoxDecoration(
-                                color: amountColor.withValues(alpha: 0.18),
+                                color: isExpense ? t.expenseBg : t.incomeBg,
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
@@ -107,23 +101,21 @@ class TransactionDetailPage extends ConsumerWidget {
                                       ? Icons.arrow_upward_rounded
                                       : Icons.arrow_downward_rounded,
                                   size: 28,
-                                  color: amountColor,
+                                  color: signalColor,
                                 ),
                               ),
                             ),
                             const SizedBox(height: 14),
-                            Text(
-                              amountStr,
-                              style: AppTextStyles.moneyLg(amountColor)
-                                  .copyWith(fontSize: 32),
+                            Money(
+                              transaction.amountCents,
+                              signed: true,
+                              size: 32,
+                              weight: FontWeight.w700,
                             ),
                             const SizedBox(height: 6),
                             Text(
                               transaction.subCategoryName,
-                              style: AppTextStyles.body(t.txtPrimary).copyWith(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
-                              ),
+                              style: AppTextStyles.h3(t.txtPrimary),
                             ),
                           ],
                         ),
@@ -138,53 +130,58 @@ class TransactionDetailPage extends ConsumerWidget {
                         child: Column(
                           children: [
                             _DetailRow(
-                              label: 'Subcategory',
+                              label: 'Subcategoria',
                               value: transaction.subCategoryName,
                             ),
                             _DetailRow(
-                              label: 'Account',
+                              label: 'Conta',
                               value: transaction.accountName,
                             ),
                             _DetailRow(
-                              label: 'Date',
+                              label: 'Data',
                               value: fmt.formatDate(transaction.date),
                             ),
                             _DetailRow(
-                              label: 'Type',
-                              value: isExpense ? 'Expense' : 'Income',
-                              valueColor: amountColor,
+                              label: 'Tipo',
+                              value: isExpense ? 'Despesa' : 'Receita',
+                              valueColor: signalColor,
                             ),
                             _DetailRow(
-                              label: 'Payment',
-                              value: transaction.paymentType,
+                              label: 'Pagamento',
+                              value: switch (transaction.paymentType) {
+                                'OneTime' => 'À vista',
+                                'Installment' => 'Parcelado',
+                                'Recurring' => 'Recorrente',
+                                _ => transaction.paymentType,
+                              },
                             ),
                             _DetailRow(
-                              label: 'Method',
+                              label: 'Forma',
                               value: transaction.paymentMethod == 'Credit'
-                                  ? 'Credit'
-                                  : 'Debit',
+                                  ? 'Crédito'
+                                  : 'Débito',
                             ),
                             if (transaction.paymentType == 'Recurring')
                               _DetailRow(
-                                label: 'Recurring ID',
+                                label: 'ID da recorrência',
                                 value:
                                     '#${transaction.recurringTransactionId}',
                               ),
                             if (transaction.paymentType == 'Installment' &&
                                 transaction.installmentNumber != null)
                               _DetailRow(
-                                label: 'Installment',
+                                label: 'Parcela',
                                 value:
                                     '${transaction.installmentNumber}/${transaction.totalInstallments}',
                               ),
                             if (transaction.budgetId != null)
                               _DetailRow(
-                                label: 'Budget',
+                                label: 'Orçamento',
                                 value: '#${transaction.budgetId}',
                               ),
                             if (transaction.description != null)
                               _DetailRow(
-                                label: 'Description',
+                                label: 'Descrição',
                                 value: transaction.description!,
                                 showDivider: false,
                               ),
@@ -208,7 +205,7 @@ class TransactionDetailPage extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: AppOutlineButton(
-                        label: 'Delete',
+                        label: 'Excluir',
                         danger: true,
                         onPressed: isLoading
                             ? null
@@ -216,7 +213,7 @@ class TransactionDetailPage extends ConsumerWidget {
                                 final confirmed =
                                     await showDeleteConfirmDialog(
                                   context: context,
-                                  title: 'Delete Transaction',
+                                  title: 'Excluir transação',
                                   itemName: transaction.subCategoryName,
                                 );
                                 if (confirmed == true && context.mounted) {
@@ -230,7 +227,7 @@ class TransactionDetailPage extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: PrimaryButton(
-                        label: isLoading ? 'Loading...' : 'Edit',
+                        label: isLoading ? 'Carregando...' : 'Editar',
                         onPressed: isLoading
                             ? null
                             : () => context.push(
@@ -275,19 +272,21 @@ class _DetailRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 14),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 label,
-                style: AppTextStyles.body(t.txtSecondary).copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                ),
+                style: AppTextStyles.eyebrow(t.txtSecondary),
               ),
-              Text(
-                value,
-                style: AppTextStyles.body(valueColor ?? t.txtPrimary).copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  style: AppTextStyles.body(valueColor ?? t.txtPrimary).copyWith(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -297,7 +296,7 @@ class _DetailRow extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: t.divider.withValues(alpha: t.isDark ? 0.35 : 0.6),
+            color: t.mist,
           ),
       ],
     );

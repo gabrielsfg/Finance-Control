@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/app_locale.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../categories/data/models/category.dart';
@@ -164,7 +164,7 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _error = 'Failed to save. Please try again.';
+        _error = 'Falha ao salvar. Tente novamente.';
       });
     }
   }
@@ -172,7 +172,7 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
   Future<void> _deleteBudget() async {
     final confirmed = await showDeleteConfirmDialog(
       context: context,
-      title: 'Delete Budget',
+      title: 'Excluir orçamento',
       itemName: widget.budget.name,
     );
     if (confirmed != true || !mounted) return;
@@ -186,7 +186,7 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _error = 'Failed to delete. Please try again.';
+        _error = 'Falha ao excluir. Tente novamente.';
       });
     }
   }
@@ -206,33 +206,29 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+              color: t.surface,
               borderRadius: AppRadius.xlAll,
-              border: Border.all(
-                color: t.isDark
-                    ? Colors.white.withValues(alpha: 0.07)
-                    : t.primary.withValues(alpha: 0.13),
-              ),
+              border: Border.all(color: t.mist),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Area name',
+                  'Nome da área',
                   style: AppTextStyles.body(t.txtPrimary)
                       .copyWith(fontWeight: FontWeight.w700, fontSize: 16),
                 ),
                 const SizedBox(height: 14),
                 AppInputField(
                   placeholder:
-                      allocationType == 'Income' ? 'e.g. Salary' : 'e.g. Housing',
+                      allocationType == 'Income' ? 'ex: Salário' : 'ex: Moradia',
                   controller: nameController,
                   textCapitalization: TextCapitalization.words,
                 ),
                 const SizedBox(height: 16),
                 PrimaryButton(
-                  label: 'Add Area',
+                  label: 'Adicionar área',
                   onPressed: () {
                     final name = nameController.text.trim();
                     if (name.isEmpty) return;
@@ -318,15 +314,13 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                               : t.primary.withValues(alpha: 0.08),
                         ),
                         child: Center(
-                          child: Text('←',
-                              style:
-                                  TextStyle(fontSize: 18, color: t.txtPrimary)),
+                          child: Icon(LucideIcons.chevronLeft, size: 20, color: t.txtPrimary),
                         ),
                       ),
                     ),
                     Expanded(
                       child: Text(
-                        'Edit Budget',
+                        'Editar orçamento',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.body(t.txtPrimary).copyWith(
                           fontWeight: FontWeight.w700,
@@ -363,12 +357,8 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                     children: [
                       // ── Basic info ────────────────────────────────────
                       Text(
-                        'Budget details',
-                        style: AppTextStyles.caption(t.txtSecondary).copyWith(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
+                        'DETALHES DO ORÇAMENTO',
+                        style: AppTextStyles.eyebrow(t.txtSecondary),
                       ),
                       const SizedBox(height: 10),
                       GlassCard(
@@ -376,15 +366,15 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             AppInputField(
-                              label: 'Budget name',
-                              placeholder: 'e.g. Fixed Costs',
+                              label: 'Nome do orçamento',
+                              placeholder: 'ex: Custos fixos',
                               controller: _nameController,
                               textCapitalization: TextCapitalization.sentences,
                               onChanged: (_) => setState(() {}),
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Recurrence',
+                              'Recorrência',
                               style: AppTextStyles.caption(t.txtSecondary)
                                   .copyWith(
                                       fontSize: 12,
@@ -406,27 +396,22 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                                         horizontal: 14, vertical: 8),
                                     decoration: BoxDecoration(
                                       color: selected
-                                          ? t.primary.withValues(
-                                              alpha: t.isDark ? 0.2 : 0.1)
-                                          : t.isDark
-                                              ? Colors.white
-                                                  .withValues(alpha: 0.05)
-                                              : Colors.white
-                                                  .withValues(alpha: 0.7),
+                                          ? t.accent.withValues(
+                                              alpha: t.isDark ? 0.22 : 0.12)
+                                          : t.surfaceEl,
                                       borderRadius: AppRadius.pillAll,
                                       border: Border.all(
                                         color: selected
-                                            ? t.primary.withValues(
-                                                alpha: t.isDark ? 0.55 : 0.4)
-                                            : t.primary
-                                                .withValues(alpha: 0.15),
+                                            ? t.accent.withValues(
+                                                alpha: t.isDark ? 0.6 : 0.5)
+                                            : t.mist,
                                         width: selected ? 1.5 : 1.0,
                                       ),
                                     ),
                                     child: Text(
                                       opt,
                                       style: AppTextStyles.bodySm(
-                                        selected ? t.primary : t.txtSecondary,
+                                        selected ? t.accent : t.txtSecondary,
                                       ).copyWith(
                                         fontSize: 13,
                                         fontWeight: selected
@@ -440,7 +425,7 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Start day of month',
+                              'Dia de início do mês',
                               style: AppTextStyles.caption(t.txtSecondary)
                                   .copyWith(
                                       fontSize: 12,
@@ -449,15 +434,9 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                             const SizedBox(height: 8),
                             Container(
                               decoration: BoxDecoration(
-                                color: t.isDark
-                                    ? Colors.white.withValues(alpha: 0.04)
-                                    : Colors.white.withValues(alpha: 0.7),
+                                color: t.surfaceEl,
                                 borderRadius: AppRadius.baseAll,
-                                border: Border.all(
-                                  color: t.isDark
-                                      ? Colors.white.withValues(alpha: 0.07)
-                                      : t.primary.withValues(alpha: 0.12),
-                                ),
+                                border: Border.all(color: t.mist),
                               ),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<int>(
@@ -466,9 +445,7 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 16),
                                   borderRadius: AppRadius.baseAll,
-                                  dropdownColor: t.isDark
-                                      ? const Color(0xFF1C1830)
-                                      : Colors.white,
+                                  dropdownColor: t.surface,
                                   icon: Text('▾',
                                       style: TextStyle(
                                           fontSize: 18,
@@ -480,7 +457,7 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                                     final day = i + 1;
                                     return DropdownMenuItem(
                                       value: day,
-                                      child: Text('Day $day',
+                                      child: Text('Dia $day',
                                           style: AppTextStyles.body(
                                                   t.txtPrimary)
                                               .copyWith(fontSize: 14)),
@@ -504,12 +481,8 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Income areas',
-                              style: AppTextStyles.caption(t.success).copyWith(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
+                              'ÁREAS DE RECEITA',
+                              style: AppTextStyles.eyebrow(t.success),
                             ),
                           ),
                         ],
@@ -550,7 +523,7 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                                       height: 1)),
                               const SizedBox(width: 6),
                               Text(
-                                'Add Income Area',
+                                'Adicionar área de receita',
                                 style: AppTextStyles.body(t.success).copyWith(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600),
@@ -563,12 +536,8 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
 
                       // ── Expense areas ─────────────────────────────────
                       Text(
-                        'Expense areas',
-                        style: AppTextStyles.caption(t.error).copyWith(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
+                        'ÁREAS DE DESPESA',
+                        style: AppTextStyles.eyebrow(t.error),
                       ),
                       const SizedBox(height: 10),
                       ...expenseAreas.map((area) {
@@ -606,7 +575,7 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                                       height: 1)),
                               const SizedBox(width: 6),
                               Text(
-                                'Add Expense Area',
+                                'Adicionar área de despesa',
                                 style: AppTextStyles.body(t.error).copyWith(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600),
@@ -635,7 +604,7 @@ class _EditBudgetPageState extends ConsumerState<EditBudgetPage> {
                 padding:
                     EdgeInsets.fromLTRB(24, 16, 24, bottomPad + 20),
                 child: PrimaryButton(
-                  label: _isLoading ? 'Saving...' : 'Save Changes',
+                  label: _isLoading ? 'Salvando...' : 'Salvar alterações',
                   onPressed: (_isLoading || !_canSave) ? null : _save,
                 ),
               ),
@@ -674,11 +643,10 @@ class _EditAreaCardState extends State<_EditAreaCard> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
     final area = widget.area;
     final isIncome = area.allocationType == 'Income';
     final accentColor = isIncome ? t.success : t.error;
-    final prefix = isIncome ? '' : '- ';
+    final prefix = isIncome ? '' : '- '; // input R$ prefix for expense rows
     final total = area.totalCents;
 
     return Padding(
@@ -705,11 +673,11 @@ class _EditAreaCardState extends State<_EditAreaCard> {
                           ),
                           if (total > 0) ...[
                             const SizedBox(height: 2),
-                            Text(
-                              '$prefix${fmt.formatCurrency(total)}',
-                              style: AppTextStyles.mono(accentColor,
-                                      fontSize: 13)
-                                  .copyWith(fontWeight: FontWeight.w700),
+                            Money(
+                              total,
+                              size: 13,
+                              weight: FontWeight.w700,
+                              color: accentColor,
                             ),
                           ],
                         ],
@@ -759,7 +727,7 @@ class _EditAreaCardState extends State<_EditAreaCard> {
                               fontSize: 18, color: accentColor, height: 1)),
                       const SizedBox(width: 6),
                       Text(
-                        'Add Subcategory',
+                        'Adicionar subcategoria',
                         style: AppTextStyles.bodySm(accentColor)
                             .copyWith(
                                 fontWeight: FontWeight.w500, fontSize: 13),
@@ -999,15 +967,13 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                               : t.primary.withValues(alpha: 0.08),
                         ),
                         child: Center(
-                          child: Text('←',
-                              style: TextStyle(
-                                  fontSize: 18, color: t.txtPrimary)),
+                          child: Icon(LucideIcons.chevronLeft, size: 20, color: t.txtPrimary),
                         ),
                       ),
                     ),
                     Expanded(
                       child: Text(
-                        'Select Subcategory',
+                        'Selecionar subcategoria',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.body(t.txtPrimary).copyWith(
                             fontWeight: FontWeight.w700, fontSize: 17),
@@ -1023,12 +989,9 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                 child: Container(
                   height: 42,
                   decoration: BoxDecoration(
-                    color: t.isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : t.primary.withValues(alpha: 0.05),
+                    color: t.surfaceEl,
                     borderRadius: AppRadius.baseAll,
-                    border: Border.all(
-                        color: t.primary.withValues(alpha: 0.15)),
+                    border: Border.all(color: t.mist),
                   ),
                   child: TextField(
                     controller: _searchController,
@@ -1039,7 +1002,7 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                       isDense: true,
                       contentPadding:
                           const EdgeInsets.symmetric(vertical: 11),
-                      hintText: 'Search subcategory...',
+                      hintText: 'Buscar subcategoria...',
                       hintStyle: AppTextStyles.body(t.txtDisabled)
                           .copyWith(fontSize: 14),
                       prefixIcon: Icon(Icons.search,
@@ -1056,7 +1019,7 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                 child: filtered.isEmpty
                     ? Center(
                         child: Text(
-                          'No subcategories available.',
+                          'Nenhuma subcategoria disponível.',
                           style: AppTextStyles.body(t.txtTertiary)
                               .copyWith(fontSize: 14),
                         ),
@@ -1073,26 +1036,14 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                                     const EdgeInsets.only(top: 16, bottom: 8),
                                 child: Text(
                                   cat.name.toUpperCase(),
-                                  style:
-                                      AppTextStyles.caption(t.primary).copyWith(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.8,
-                                  ),
+                                  style: AppTextStyles.eyebrow(t.accent),
                                 ),
                               ),
                               Container(
                                 decoration: BoxDecoration(
-                                  color: t.isDark
-                                      ? const Color(0xFF1C1830)
-                                          .withValues(alpha: 0.72)
-                                      : Colors.white.withValues(alpha: 0.9),
+                                  color: t.surface,
                                   borderRadius: AppRadius.xlAll,
-                                  border: Border.all(
-                                    color: t.isDark
-                                        ? Colors.white.withValues(alpha: 0.07)
-                                        : t.primary.withValues(alpha: 0.12),
-                                  ),
+                                  border: Border.all(color: t.mist),
                                 ),
                                 child: Column(
                                   children: cat.subcategories
@@ -1128,7 +1079,7 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                                                 ),
                                                 if (isUsed)
                                                   Text(
-                                                    'Added',
+                                                    'Adicionada',
                                                     style: AppTextStyles
                                                         .caption(t.txtDisabled)
                                                         .copyWith(fontSize: 11),
@@ -1206,13 +1157,9 @@ class _AmountSheetState extends State<_AmountSheet> {
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+          color: t.surface,
           borderRadius: AppRadius.xlAll,
-          border: Border.all(
-            color: t.isDark
-                ? Colors.white.withValues(alpha: 0.07)
-                : t.primary.withValues(alpha: 0.13),
-          ),
+          border: Border.all(color: t.mist),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1233,7 +1180,7 @@ class _AmountSheetState extends State<_AmountSheet> {
             ],
             const SizedBox(height: 20),
             Text(
-              'Expected amount',
+              'Valor previsto',
               style: AppTextStyles.caption(t.txtSecondary)
                   .copyWith(fontSize: 12, fontWeight: FontWeight.w500),
             ),
@@ -1283,7 +1230,7 @@ class _AmountSheetState extends State<_AmountSheet> {
             ),
             const SizedBox(height: 16),
             PrimaryButton(
-              label: 'Add',
+              label: 'Adicionar',
               onPressed: _cents > 0
                   ? () {
                       widget.onConfirm(_cents);

@@ -18,14 +18,19 @@ class BudgetStepIndicator extends StatelessWidget {
         final step = i + 1;
         final isDone = step < current;
         final isActive = step == current;
-        final color = (isDone || isActive) ? t.primary : t.txtDisabled;
+        // Active step reads in cobalt (accent); completed steps carry a solid
+        // cobalt fill; upcoming steps stay recessed with a mist hairline.
+        final numberColor = (isDone || isActive) ? t.accent : t.txtTertiary;
         final bg = isDone
             ? t.primary
             : isActive
-                ? t.primary.withValues(alpha: 0.15)
-                : t.isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : t.primary.withValues(alpha: 0.06);
+                ? t.accent.withValues(alpha: t.isDark ? 0.18 : 0.10)
+                : t.surfaceEl;
+        final borderColor = isDone
+            ? t.primary
+            : isActive
+                ? t.accent.withValues(alpha: t.isDark ? 0.6 : 0.45)
+                : t.mist;
 
         return Row(
           children: [
@@ -33,11 +38,7 @@ class BudgetStepIndicator extends StatelessWidget {
               Container(
                 width: 40,
                 height: 1.5,
-                color: isDone
-                    ? t.primary
-                    : t.isDark
-                        ? Colors.white.withValues(alpha: 0.1)
-                        : t.primary.withValues(alpha: 0.15),
+                color: isDone ? t.primary : t.mist,
               ),
             Container(
               width: 32,
@@ -45,9 +46,7 @@ class BudgetStepIndicator extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: bg,
-                border: Border.all(
-                  color: color.withValues(alpha: isActive ? 0.5 : 0.3),
-                ),
+                border: Border.all(color: borderColor),
               ),
               child: Center(
                 child: isDone
@@ -57,7 +56,7 @@ class BudgetStepIndicator extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: color,
+                          color: numberColor,
                         ),
                       ),
               ),

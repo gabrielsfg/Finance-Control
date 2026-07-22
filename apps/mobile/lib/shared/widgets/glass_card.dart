@@ -1,41 +1,51 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 
+/// The base card. Quantia is flat and editorial (no frosted glass): a calm
+/// surface with a hairline `mist` border and a soft shadow in light mode; in
+/// dark mode the border alone separates it from the background.
+///
+/// Kept the `GlassCard` name so existing screens re-skin without edits.
 class GlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
   final BorderRadius? borderRadius;
+  final Color? color;
+  final VoidCallback? onTap;
 
-  const GlassCard({super.key, required this.child, this.padding, this.borderRadius});
+  const GlassCard({
+    super.key,
+    required this.child,
+    this.padding,
+    this.borderRadius,
+    this.color,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final br = borderRadius ?? AppRadius.xlAll;
-    return ClipRRect(
+    final br = borderRadius ?? AppRadius.cardAll;
+    final card = Container(
+      padding: padding ?? AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: color ?? t.surface,
+        borderRadius: br,
+        border: Border.all(color: t.mist),
+        boxShadow: t.isDark ? AppShadows.cardDark : AppShadows.cardLight,
+      ),
+      child: child,
+    );
+    if (onTap == null) return card;
+    return Material(
+      color: Colors.transparent,
       borderRadius: br,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          padding: padding ?? AppSpacing.cardPadding,
-          decoration: BoxDecoration(
-            color: t.isDark
-                ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-                : Colors.white.withValues(alpha: 0.82),
-            borderRadius: br,
-            border: Border.all(
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.07)
-                  : const Color(0xFF7C3AED).withValues(alpha: 0.13),
-            ),
-            boxShadow: t.isDark ? [] : AppShadows.cardLight,
-          ),
-          child: child,
-        ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: br,
+        child: card,
       ),
     );
   }

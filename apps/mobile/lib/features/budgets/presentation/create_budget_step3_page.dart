@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/app_locale.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../categories/data/models/category.dart';
@@ -76,20 +76,16 @@ class _CreateBudgetStep3PageState extends ConsumerState<CreateBudgetStep3Page> {
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+              color: t.surface,
               borderRadius: AppRadius.xlAll,
-              border: Border.all(
-                color: t.isDark
-                    ? Colors.white.withValues(alpha: 0.07)
-                    : t.primary.withValues(alpha: 0.13),
-              ),
+              border: Border.all(color: t.mist),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Area name',
+                  'Nome da área',
                   style: AppTextStyles.body(t.txtPrimary).copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
@@ -97,13 +93,13 @@ class _CreateBudgetStep3PageState extends ConsumerState<CreateBudgetStep3Page> {
                 ),
                 const SizedBox(height: 14),
                 AppInputField(
-                  placeholder: 'e.g. Housing, Leisure',
+                  placeholder: 'ex: Moradia, Lazer',
                   controller: nameController,
                   textCapitalization: TextCapitalization.words,
                 ),
                 const SizedBox(height: 16),
                 PrimaryButton(
-                  label: 'Add Area',
+                  label: 'Adicionar área',
                   onPressed: () {
                     final name = nameController.text.trim();
                     if (name.isEmpty) return;
@@ -179,15 +175,13 @@ class _CreateBudgetStep3PageState extends ConsumerState<CreateBudgetStep3Page> {
                               : t.primary.withValues(alpha: 0.08),
                         ),
                         child: Center(
-                          child: Text('←',
-                              style: TextStyle(
-                                  fontSize: 18, color: t.txtPrimary)),
+                          child: Icon(LucideIcons.chevronLeft, size: 20, color: t.txtPrimary),
                         ),
                       ),
                     ),
                     Expanded(
                       child: Text(
-                        'New Budget',
+                        'Novo orçamento',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.body(t.txtPrimary).copyWith(
                           fontWeight: FontWeight.w700,
@@ -210,7 +204,7 @@ class _CreateBudgetStep3PageState extends ConsumerState<CreateBudgetStep3Page> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Expected expenses',
+                        'Despesa prevista',
                         style: AppTextStyles.h2(t.txtPrimary).copyWith(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -218,7 +212,7 @@ class _CreateBudgetStep3PageState extends ConsumerState<CreateBudgetStep3Page> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Create areas and add subcategories with the spending limit for each.',
+                        'Crie áreas e adicione subcategorias com o limite de gastos para cada uma.',
                         style: AppTextStyles.body(t.txtSecondary).copyWith(
                           fontSize: 13,
                           height: 1.5,
@@ -264,7 +258,7 @@ class _CreateBudgetStep3PageState extends ConsumerState<CreateBudgetStep3Page> {
                                       height: 1)),
                               const SizedBox(width: 6),
                               Text(
-                                'Add Expense Area',
+                                'Adicionar área de despesa',
                                 style:
                                     AppTextStyles.body(t.error).copyWith(
                                   fontSize: 14,
@@ -285,7 +279,7 @@ class _CreateBudgetStep3PageState extends ConsumerState<CreateBudgetStep3Page> {
                 padding:
                     EdgeInsets.fromLTRB(24, 16, 24, bottomPad + 20),
                 child: PrimaryButton(
-                  label: 'Next: Review',
+                  label: 'Próximo: revisão',
                   onPressed: _canProceed ? _next : null,
                 ),
               ),
@@ -324,7 +318,6 @@ class _DraftAreaCardState extends State<_DraftAreaCard> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
     final total = widget.area.totalAllocatedCents;
 
     return Padding(
@@ -354,11 +347,11 @@ class _DraftAreaCardState extends State<_DraftAreaCard> {
                           ),
                           if (total > 0) ...[
                             const SizedBox(height: 2),
-                            Text(
-                              '- ${fmt.formatCurrency(total)}',
-                              style: AppTextStyles.mono(t.error,
-                                      fontSize: 14)
-                                  .copyWith(fontWeight: FontWeight.w700),
+                            Money(
+                              total,
+                              size: 14,
+                              weight: FontWeight.w700,
+                              color: t.error,
                             ),
                           ],
                         ],
@@ -412,7 +405,7 @@ class _DraftAreaCardState extends State<_DraftAreaCard> {
                               height: 1)),
                       const SizedBox(width: 6),
                       Text(
-                        'Add Subcategory',
+                        'Adicionar subcategoria',
                         style: AppTextStyles.bodySm(t.error).copyWith(
                           fontWeight: FontWeight.w500,
                           fontSize: 13,
@@ -648,15 +641,13 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                               : t.primary.withValues(alpha: 0.08),
                         ),
                         child: Center(
-                          child: Text('←',
-                              style: TextStyle(
-                                  fontSize: 18, color: t.txtPrimary)),
+                          child: Icon(LucideIcons.chevronLeft, size: 20, color: t.txtPrimary),
                         ),
                       ),
                     ),
                     Expanded(
                       child: Text(
-                        'Select Subcategory',
+                        'Selecionar subcategoria',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.body(t.txtPrimary).copyWith(
                           fontWeight: FontWeight.w700,
@@ -674,12 +665,9 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                 child: Container(
                   height: 42,
                   decoration: BoxDecoration(
-                    color: t.isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : t.primary.withValues(alpha: 0.05),
+                    color: t.surfaceEl,
                     borderRadius: AppRadius.baseAll,
-                    border: Border.all(
-                        color: t.primary.withValues(alpha: 0.15)),
+                    border: Border.all(color: t.mist),
                   ),
                   child: TextField(
                     controller: _searchController,
@@ -690,7 +678,7 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                       isDense: true,
                       contentPadding:
                           const EdgeInsets.symmetric(vertical: 11),
-                      hintText: 'Search subcategory...',
+                      hintText: 'Buscar subcategoria...',
                       hintStyle: AppTextStyles.body(t.txtDisabled)
                           .copyWith(fontSize: 14),
                       prefixIcon: Icon(Icons.search,
@@ -707,7 +695,7 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                 child: filtered.isEmpty
                     ? Center(
                         child: Text(
-                          'No subcategories available.',
+                          'Nenhuma subcategoria disponível.',
                           style: AppTextStyles.body(t.txtTertiary)
                               .copyWith(fontSize: 14),
                         ),
@@ -724,30 +712,14 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                                     top: 16, bottom: 8),
                                 child: Text(
                                   cat.name.toUpperCase(),
-                                  style:
-                                      AppTextStyles.caption(t.primary)
-                                          .copyWith(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.8,
-                                  ),
+                                  style: AppTextStyles.eyebrow(t.accent),
                                 ),
                               ),
                               Container(
                                 decoration: BoxDecoration(
-                                  color: t.isDark
-                                      ? const Color(0xFF1C1830)
-                                          .withValues(alpha: 0.72)
-                                      : Colors.white
-                                          .withValues(alpha: 0.9),
+                                  color: t.surface,
                                   borderRadius: AppRadius.xlAll,
-                                  border: Border.all(
-                                    color: t.isDark
-                                        ? Colors.white
-                                            .withValues(alpha: 0.07)
-                                        : t.primary
-                                            .withValues(alpha: 0.12),
-                                  ),
+                                  border: Border.all(color: t.mist),
                                 ),
                                 child: Column(
                                   children: cat.subcategories
@@ -790,7 +762,7 @@ class _SubcategoryPickerPageState extends State<_SubcategoryPickerPage> {
                                                 ),
                                                 if (isUsed)
                                                   Text(
-                                                    'Added',
+                                                    'Adicionada',
                                                     style: AppTextStyles
                                                         .caption(
                                                             t.txtDisabled)
@@ -874,13 +846,9 @@ class _AmountSheetState extends State<_AmountSheet> {
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+          color: t.surface,
           borderRadius: AppRadius.xlAll,
-          border: Border.all(
-            color: t.isDark
-                ? Colors.white.withValues(alpha: 0.07)
-                : t.primary.withValues(alpha: 0.13),
-          ),
+          border: Border.all(color: t.mist),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -903,7 +871,7 @@ class _AmountSheetState extends State<_AmountSheet> {
             ],
             const SizedBox(height: 20),
             Text(
-              'Spending limit',
+              'Limite de gastos',
               style: AppTextStyles.caption(t.txtSecondary)
                   .copyWith(fontSize: 12, fontWeight: FontWeight.w500),
             ),
@@ -954,7 +922,7 @@ class _AmountSheetState extends State<_AmountSheet> {
             ),
             const SizedBox(height: 16),
             PrimaryButton(
-              label: 'Add',
+              label: 'Adicionar',
               onPressed: _cents > 0
                   ? () {
                       widget.onConfirm(_cents);

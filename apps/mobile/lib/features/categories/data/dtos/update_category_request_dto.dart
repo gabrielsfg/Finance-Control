@@ -4,10 +4,15 @@ part 'update_category_request_dto.g.dart';
 
 @JsonSerializable(createFactory: false)
 class UpdateCategoryItemDto {
-  const UpdateCategoryItemDto({required this.id, required this.name});
+  const UpdateCategoryItemDto({
+    required this.id,
+    required this.name,
+    this.color,
+  });
 
   final int id;
   final String name;
+  final String? color;
 
   Map<String, dynamic> toJson() => _$UpdateCategoryItemDtoToJson(this);
 }

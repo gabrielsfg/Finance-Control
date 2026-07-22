@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/app_locale.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/budget_models.dart';
 import '../providers/budget_provider.dart';
@@ -61,10 +62,10 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Failed to load budget',
+            Text('Falha ao carregar o orçamento',
                 style: AppTextStyles.body(t.txtSecondary)),
             const SizedBox(height: 16),
-            PrimaryButton(label: 'Retry', onPressed: onRetry),
+            PrimaryButton(label: 'Tentar novamente', onPressed: onRetry),
           ],
         ),
       ),
@@ -88,16 +89,9 @@ class _EmptyState extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-              child: Text(
-                'Budget',
-                style: AppTextStyles.h2(t.txtPrimary).copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 22,
-                ),
-                textAlign: TextAlign.center,
-              ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: PageHeader(title: 'Orçamento'),
             ),
             Expanded(
               child: Center(
@@ -120,7 +114,7 @@ class _EmptyState extends StatelessWidget {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'No budget yet',
+                        'Nenhum orçamento ainda',
                         style: AppTextStyles.h2(t.txtPrimary).copyWith(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -128,7 +122,7 @@ class _EmptyState extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Create your first budget to track\nyour spending by category.',
+                        'Crie seu primeiro orçamento para\nacompanhar seus gastos por categoria.',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.body(t.txtSecondary).copyWith(
                           fontSize: 14,
@@ -137,7 +131,7 @@ class _EmptyState extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
                       PrimaryButton(
-                        label: 'Create Budget',
+                        label: 'Criar orçamento',
                         icon: const Text('+',
                             style: TextStyle(
                                 color: Colors.white,
@@ -182,68 +176,20 @@ class _BudgetView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Budget',
-                      style: AppTextStyles.h2(t.txtPrimary).copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 22,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => context.push(
-                      '/budgets/edit',
-                      extra: budget,
-                    ),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: t.primary.withValues(alpha: 0.1),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.edit_outlined,
-                          size: 18,
-                          color: t.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: () => context.push('/budgets/create/step1'),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: t.primary.withValues(alpha: 0.1),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '+',
-                          style: TextStyle(
-                            fontSize: 22,
-                            color: t.primary,
-                            height: 1,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              PageHeader(
+                title: 'Orçamento',
+                trailing: HeaderActionButton(
+                  icon: LucideIcons.pencil,
+                  onTap: () => context.push('/budgets/edit', extra: budget),
+                ),
               ),
+              const SizedBox(height: 14),
+              _PeriodNav(budget: budget),
               const SizedBox(height: 16),
               _OverviewCard(budget: budget),
               const SizedBox(height: 20),
               Text(
-                'Areas',
+                'Áreas',
                 style: AppTextStyles.h3(t.txtPrimary).copyWith(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
@@ -265,6 +211,73 @@ class _BudgetView extends StatelessWidget {
   }
 }
 
+// ── Period navigation ─────────────────────────────────────────────────────────
+
+class _PeriodNav extends ConsumerWidget {
+  const _PeriodNav({required this.budget});
+
+  final Budget budget;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppThemeTokens.of(context);
+    final fmt = AppLocaleScope.of(context);
+    final monthly = budget.recurrence == 'Monthly';
+    final raw = monthly
+        ? fmt.formatMonthYear(budget.startDate)
+        : '${fmt.formatDate(budget.startDate)} – ${fmt.formatDate(budget.endDate)}';
+    final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1);
+
+    return Row(
+      children: [
+        _NavArrow(
+          icon: LucideIcons.chevronLeft,
+          onTap: () =>
+              ref.read(budgetNotifierProvider.notifier).previousPeriod(),
+        ),
+        Expanded(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body(t.txtPrimary)
+                .copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        _NavArrow(
+          icon: LucideIcons.chevronRight,
+          onTap: () => ref.read(budgetNotifierProvider.notifier).nextPeriod(),
+        ),
+      ],
+    );
+  }
+}
+
+class _NavArrow extends StatelessWidget {
+  const _NavArrow({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: t.surface,
+          borderRadius: AppRadius.baseAll,
+          border: Border.all(color: t.mist),
+        ),
+        child: Icon(icon, size: 18, color: t.txtSecondary),
+      ),
+    );
+  }
+}
+
 // ── Overview Card ────────────────────────────────────────────────────────────
 
 class _OverviewCard extends StatelessWidget {
@@ -280,7 +293,7 @@ class _OverviewCard extends StatelessWidget {
         '${fmt.formatDate(budget.startDate)} – ${fmt.formatDate(budget.endDate)}';
     final balance = budget.actualIncomeCents - budget.actualExpenseCents;
 
-    return GlassCard(
+    return HeroPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -292,39 +305,21 @@ class _OverviewCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'ACTIVE BUDGET',
-                      style: AppTextStyles.caption(t.txtTertiary).copyWith(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.0,
-                      ),
+                      'ORÇAMENTO ATIVO',
+                      style: AppTextStyles.eyebrow(t.panelMuted),
                     ),
                     const SizedBox(height: 4),
-                    Text(budget.name, style: AppTextStyles.h3(t.txtPrimary)),
+                    Text(budget.name, style: AppTextStyles.h3(t.panelText)),
                     const SizedBox(height: 2),
                     Text(
                       period,
-                      style: AppTextStyles.bodySm(t.txtTertiary)
+                      style: AppTextStyles.bodySm(t.panelMuted)
                           .copyWith(fontSize: 11),
                     ),
                   ],
                 ),
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: t.primary.withValues(alpha: t.isDark ? 0.2 : 0.1),
-                  borderRadius: AppRadius.fullAll,
-                ),
-                child: Text(
-                  budget.recurrence,
-                  style: AppTextStyles.caption(t.primary).copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+              TonalTag(recurrenceLabelPt(budget.recurrence), color: t.accent),
             ],
           ),
           const SizedBox(height: 16),
@@ -334,16 +329,18 @@ class _OverviewCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _OverviewStat(
-                  label: 'Expected income',
-                  value: fmt.formatCurrency(budget.expectedIncomeCents),
-                  color: t.success.withValues(alpha: 0.7),
+                  label: 'Receita prevista',
+                  cents: budget.expectedIncomeCents,
+                  color: t.mossLift,
+                  labelColor: t.panelMuted,
                 ),
               ),
               Expanded(
                 child: _OverviewStat(
-                  label: 'Expected expenses',
-                  value: '- ${fmt.formatCurrency(budget.expectedExpenseCents)}',
-                  color: t.error.withValues(alpha: 0.7),
+                  label: 'Despesa prevista',
+                  cents: budget.expectedExpenseCents,
+                  color: t.clayLift,
+                  labelColor: t.panelMuted,
                   align: TextAlign.end,
                 ),
               ),
@@ -354,26 +351,27 @@ class _OverviewCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _OverviewStat(
-                  label: 'Received',
-                  value: fmt.formatCurrency(budget.actualIncomeCents),
-                  color: t.success,
+                  label: 'Recebido',
+                  cents: budget.actualIncomeCents,
+                  color: t.mossLift,
+                  labelColor: t.panelMuted,
                 ),
               ),
               Expanded(
                 child: _OverviewStat(
-                  label: 'Spent',
-                  value: '- ${fmt.formatCurrency(budget.actualExpenseCents)}',
-                  color: t.error,
+                  label: 'Gasto',
+                  cents: budget.actualExpenseCents,
+                  color: t.clayLift,
+                  labelColor: t.panelMuted,
                   align: TextAlign.end,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Divider(
+          Container(
             height: 1,
-            thickness: 1,
-            color: t.divider.withValues(alpha: t.isDark ? 0.25 : 0.4),
+            color: Colors.white.withValues(alpha: 0.12),
           ),
           const SizedBox(height: 10),
 
@@ -382,23 +380,22 @@ class _OverviewCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${budget.areas.length} area${budget.areas.length == 1 ? '' : 's'}',
-                style: AppTextStyles.bodySm(t.txtTertiary)
+                '${budget.areas.length} ${budget.areas.length == 1 ? 'área' : 'áreas'}',
+                style: AppTextStyles.bodySm(t.panelMuted)
                     .copyWith(fontSize: 11),
               ),
               Row(
                 children: [
                   Text(
-                    balance >= 0 ? 'Balance  ' : 'Deficit  ',
-                    style: AppTextStyles.bodySm(t.txtTertiary)
+                    balance >= 0 ? 'Saldo  ' : 'Déficit  ',
+                    style: AppTextStyles.bodySm(t.panelMuted)
                         .copyWith(fontSize: 11),
                   ),
-                  Text(
-                    '${balance < 0 ? '- ' : ''}${fmt.formatCurrency(balance.abs())}',
-                    style: AppTextStyles.mono(
-                      balance >= 0 ? t.success : t.error,
-                      fontSize: 12,
-                    ).copyWith(fontWeight: FontWeight.w700),
+                  Money(
+                    balance.abs(),
+                    size: 12,
+                    weight: FontWeight.w700,
+                    color: balance >= 0 ? t.mossLift : t.clayLift,
                   ),
                 ],
               ),
@@ -412,14 +409,16 @@ class _OverviewCard extends StatelessWidget {
 
 class _OverviewStat extends StatelessWidget {
   final String label;
-  final String value;
+  final int cents;
   final Color color;
+  final Color? labelColor;
   final TextAlign align;
 
   const _OverviewStat({
     required this.label,
-    required this.value,
+    required this.cents,
     required this.color,
+    this.labelColor,
     this.align = TextAlign.start,
   });
 
@@ -429,20 +428,17 @@ class _OverviewStat extends StatelessWidget {
     final crossAxis = align == TextAlign.end
         ? CrossAxisAlignment.end
         : CrossAxisAlignment.start;
+    // Direction is carried by the moss/clay color + the label — no +/− sign.
     return Column(
       crossAxisAlignment: crossAxis,
       children: [
         Text(
           label,
-          style: AppTextStyles.caption(t.txtTertiary).copyWith(fontSize: 10),
+          style: AppTextStyles.caption(labelColor ?? t.txtTertiary)
+              .copyWith(fontSize: 10),
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: AppTextStyles.mono(color, fontSize: 13).copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        Money(cents, size: 13, weight: FontWeight.w700, color: color),
       ],
     );
   }
@@ -465,11 +461,15 @@ class _AreaCardState extends State<_AreaCard> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
     final area = widget.area;
     final percentStr = '${(area.spentPercent * 100).round()}%';
     final isIncome = area.isIncome;
-    final actionLabel = isIncome ? 'received' : 'spent';
+    final actionLabel = isIncome ? 'recebido' : 'gasto';
+    final statusColor = area.spentPercent >= 1.0
+        ? t.error
+        : area.spentPercent >= 0.8
+            ? t.warning
+            : t.accent;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -497,13 +497,7 @@ class _AreaCardState extends State<_AreaCard> {
                         ),
                         Text(
                           percentStr,
-                          style: AppTextStyles.body(
-                            area.spentPercent >= 1.0
-                                ? t.error
-                                : area.spentPercent >= 0.8
-                                    ? t.warning
-                                    : t.primary,
-                          ).copyWith(
+                          style: AppTextStyles.body(statusColor).copyWith(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                           ),
@@ -527,19 +521,21 @@ class _AreaCardState extends State<_AreaCard> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Text(
-                          fmt.formatCurrency(area.spentCents),
-                          style: AppTextStyles.mono(
-                            area.spentPercent >= 1.0
-                                ? t.error
-                                : area.spentPercent >= 0.8
-                                    ? t.warning
-                                    : t.primary,
-                            fontSize: 11,
-                          ).copyWith(fontWeight: FontWeight.w600),
+                        Money(
+                          area.spentCents,
+                          size: 11,
+                          weight: FontWeight.w600,
+                          color: statusColor,
                         ),
                         Text(
-                          '/${fmt.formatCurrency(area.allocatedCents)} $actionLabel',
+                          '/',
+                          style: AppTextStyles.mono(t.txtTertiary,
+                              fontSize: 11),
+                        ),
+                        Money(area.allocatedCents,
+                            size: 11, color: t.txtTertiary),
+                        Text(
+                          ' $actionLabel',
                           style: AppTextStyles.bodySm(t.txtTertiary)
                               .copyWith(fontSize: 11),
                         ),
@@ -589,10 +585,9 @@ class _SubcategoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
     final isOver = sub.spentCents > sub.allocatedCents;
     final accentColor = sub.isExpense ? t.error : t.success;
-    final actionLabel = sub.isExpense ? 'spent' : 'received';
+    final actionLabel = sub.isExpense ? 'gasto' : 'recebido';
 
     return Column(
       children: [
@@ -615,10 +610,20 @@ class _SubcategoryRow extends StatelessWidget {
                     ),
                   ),
                   if (isOver)
-                    Text(
-                      '+${fmt.formatCurrency(sub.spentCents - sub.allocatedCents)} over',
-                      style: AppTextStyles.caption(t.error)
-                          .copyWith(fontSize: 10),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Money(
+                          sub.spentCents - sub.allocatedCents,
+                          size: 10,
+                          color: t.error,
+                        ),
+                        Text(
+                          ' acima',
+                          style: AppTextStyles.caption(t.error)
+                              .copyWith(fontSize: 10),
+                        ),
+                      ],
                     ),
                 ],
               ),
@@ -626,16 +631,21 @@ class _SubcategoryRow extends StatelessWidget {
               // ── spent / allocated values ───────────────────────────────
               Row(
                 children: [
-                  Text(
-                    fmt.formatCurrency(sub.spentCents),
-                    style: AppTextStyles.mono(
-                      isOver ? t.error : accentColor,
-                      fontSize: 11,
-                    ).copyWith(fontWeight: FontWeight.w600),
+                  Money(
+                    sub.spentCents,
+                    size: 11,
+                    weight: FontWeight.w600,
+                    color: isOver ? t.error : accentColor,
                   ),
                   Text(
-                    '/${fmt.formatCurrency(sub.allocatedCents)} $actionLabel',
+                    '/',
                     style: AppTextStyles.mono(t.txtTertiary, fontSize: 11),
+                  ),
+                  Money(sub.allocatedCents, size: 11, color: t.txtTertiary),
+                  Text(
+                    ' $actionLabel',
+                    style: AppTextStyles.bodySm(t.txtTertiary)
+                        .copyWith(fontSize: 11),
                   ),
                 ],
               ),
@@ -676,7 +686,6 @@ class _OtherExpensesCardState extends State<_OtherExpensesCard> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
 
     // Aggregate by subcategory name for a cleaner display
     final Map<String, int> aggregated = {};
@@ -711,7 +720,7 @@ class _OtherExpensesCardState extends State<_OtherExpensesCard> {
                       children: [
                         Expanded(
                           child: Text(
-                            'Other transactions',
+                            'Outras transações',
                             style: AppTextStyles.body(t.txtPrimary).copyWith(
                               fontWeight: FontWeight.w700,
                               fontSize: 15,
@@ -732,22 +741,22 @@ class _OtherExpensesCardState extends State<_OtherExpensesCard> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        if (totalExpense > 0)
-                          Text(
-                            '- ${fmt.formatCurrency(totalExpense)} spent',
-                            style: AppTextStyles.bodySm(t.error)
-                                .copyWith(fontSize: 11),
-                          ),
+                        if (totalExpense > 0) ...[
+                          Money(totalExpense, size: 11, color: t.error),
+                          Text(' gasto',
+                              style: AppTextStyles.bodySm(t.error)
+                                  .copyWith(fontSize: 11)),
+                        ],
                         if (totalExpense > 0 && totalIncome > 0)
                           Text('  ·  ',
                               style: AppTextStyles.bodySm(t.txtTertiary)
                                   .copyWith(fontSize: 11)),
-                        if (totalIncome > 0)
-                          Text(
-                            '${fmt.formatCurrency(totalIncome)} received',
-                            style: AppTextStyles.bodySm(t.success)
-                                .copyWith(fontSize: 11),
-                          ),
+                        if (totalIncome > 0) ...[
+                          Money(totalIncome, size: 11, color: t.success),
+                          Text(' recebido',
+                              style: AppTextStyles.bodySm(t.success)
+                                  .copyWith(fontSize: 11)),
+                        ],
                       ],
                     ),
                   ],
@@ -781,12 +790,11 @@ class _OtherExpensesCardState extends State<_OtherExpensesCard> {
                                       .copyWith(fontSize: 13),
                             ),
                           ),
-                          Text(
-                            '${isExpense ? '- ' : ''}${fmt.formatCurrency(cents)}',
-                            style: AppTextStyles.mono(
-                              isExpense ? t.error : t.success,
-                              fontSize: 13,
-                            ).copyWith(fontWeight: FontWeight.w600),
+                          Money(
+                            cents,
+                            size: 13,
+                            weight: FontWeight.w600,
+                            color: isExpense ? t.error : t.success,
                           ),
                         ],
                       ),

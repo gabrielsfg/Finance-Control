@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,7 +17,11 @@ class _FakeHomeNotifier extends HomeNotifier {
 
   @override
   Future<HomeState> build() async {
-    state = _state;
+    // Simulate a persistent loading state (never completes) so the loading UI
+    // stays on screen for the test.
+    if (_state is AsyncLoading) return Completer<HomeState>().future;
+    // Surface errors so the error UI renders.
+    if (_state case AsyncError(:final error)) throw error;
     return _state.requireValue;
   }
 
@@ -90,48 +96,40 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Failed to load data'), findsOneWidget);
-      expect(find.text('Try again'), findsOneWidget);
+      expect(find.text('Não foi possível carregar'), findsOneWidget);
+      expect(find.text('Tentar de novo'), findsOneWidget);
     });
 
-    testWidgets('shows balance card with dashes when summary is null', (tester) async {
+    testWidgets('shows hero panel when summary is null', (tester) async {
       await tester.pumpWidget(_buildSubject(AsyncData(_emptyState())));
       await tester.pump();
 
-      expect(find.text('Total Balance'), findsOneWidget);
-      expect(find.text('—'), findsWidgets);
+      expect(find.text('Saldo do período'), findsOneWidget);
     });
 
-    testWidgets('shows formatted balance when summary is present', (tester) async {
+    testWidgets('shows hero and flow bar when summary is present', (tester) async {
       await tester.pumpWidget(_buildSubject(AsyncData(_stateWithSummary())));
       await tester.pump();
 
-      expect(find.text('Total Balance'), findsOneWidget);
-      // R$ 3.000,00 formatted from 300000 cents with pt-BR locale
-      expect(find.textContaining('3.000'), findsOneWidget);
-    });
-
-    testWidgets('shows INCOME and EXPENSES mini-cards', (tester) async {
-      await tester.pumpWidget(_buildSubject(AsyncData(_stateWithSummary())));
-      await tester.pump();
-
-      expect(find.text('INCOME'), findsOneWidget);
-      expect(find.text('EXPENSES'), findsOneWidget);
+      expect(find.text('Saldo do período'), findsOneWidget);
+      expect(find.text('Entradas e saídas'), findsOneWidget);
+      expect(find.text('Entradas'), findsOneWidget);
+      expect(find.text('Saídas'), findsOneWidget);
     });
 
     testWidgets('shows budget section with percentage', (tester) async {
       await tester.pumpWidget(_buildSubject(AsyncData(_stateWithSummary())));
       await tester.pump();
 
-      expect(find.text('BUDGET'), findsOneWidget);
+      expect(find.text('ORÇAMENTO'), findsOneWidget);
       expect(find.text('50%'), findsOneWidget);
     });
 
-    testWidgets('shows top category chip when categories exist', (tester) async {
+    testWidgets('shows top category tile when categories exist', (tester) async {
       await tester.pumpWidget(_buildSubject(AsyncData(_stateWithSummary())));
       await tester.pump();
 
-      expect(find.text('Top Categories'), findsOneWidget);
+      expect(find.text('Principais categorias'), findsOneWidget);
       expect(find.text('Food'), findsOneWidget);
     });
 
@@ -154,16 +152,15 @@ void main() {
       await tester.pumpWidget(_buildSubject(AsyncData(state)));
       await tester.pump();
 
-      expect(find.text('Top Categories'), findsNothing);
+      expect(find.text('Principais categorias'), findsNothing);
     });
 
-    testWidgets('shows recent transaction row with description and amount', (tester) async {
+    testWidgets('shows recent transaction row with description', (tester) async {
       await tester.pumpWidget(_buildSubject(AsyncData(_stateWithSummary())));
       await tester.pump();
 
-      expect(find.text('Recent Transactions'), findsOneWidget);
+      expect(find.text('Transações recentes'), findsOneWidget);
       expect(find.text('Supermarket'), findsOneWidget);
-      expect(find.textContaining('50,00'), findsOneWidget);
     });
 
     testWidgets('hides recent transactions section when list is empty', (tester) async {

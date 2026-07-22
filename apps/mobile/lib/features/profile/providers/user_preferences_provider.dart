@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/dtos/currency_response_dto.dart';
 import '../data/dtos/update_user_preferences_request_dto.dart';
 import '../data/dtos/user_preferences_response_dto.dart';
 import '../data/user_preferences_repository.dart';
@@ -22,17 +21,5 @@ class UserPreferencesNotifier
         .read(userPreferencesRepositoryProvider)
         .updatePreferences(dto);
     state = AsyncData(updated);
-  }
-}
-
-final currenciesProvider =
-    AsyncNotifierProvider<CurrenciesNotifier, List<CurrencyResponseDto>>(
-  CurrenciesNotifier.new,
-);
-
-class CurrenciesNotifier extends AsyncNotifier<List<CurrencyResponseDto>> {
-  @override
-  Future<List<CurrencyResponseDto>> build() async {
-    return ref.read(userPreferencesRepositoryProvider).getCurrencies();
   }
 }

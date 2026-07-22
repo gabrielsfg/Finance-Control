@@ -29,7 +29,7 @@ class BudgetPaceChart extends ConsumerWidget {
         height: 80,
         child: Center(
           child: Text(
-            'No active budget selected',
+            'Nenhum orçamento ativo selecionado',
             style: AppTextStyles.bodySm(t.txtTertiary),
           ),
         ),
@@ -91,8 +91,7 @@ class BudgetPaceChart extends ConsumerWidget {
                       }
                       final d = pace.actual[i].date;
                       return Text('${d.day}',
-                          style: AppTextStyles.caption(t.txtTertiary)
-                              .copyWith(fontSize: 9));
+                          style: AppTextStyles.mono(t.txtTertiary, fontSize: 9));
                     },
                   ),
                 ),
@@ -102,7 +101,7 @@ class BudgetPaceChart extends ConsumerWidget {
                   getTooltipColor: (_) => t.surface,
                   getTooltipItems: (touchedSpots) =>
                       touchedSpots.map((s) {
-                    final label = s.barIndex == 0 ? 'Actual' : 'Ideal';
+                    final label = s.barIndex == 0 ? 'Real' : 'Ideal';
                     return LineTooltipItem(
                       '$label\n${fmt.formatCurrency((s.y * 100).toInt())}',
                       AppTextStyles.bodySm(t.txtPrimary)
@@ -116,12 +115,12 @@ class BudgetPaceChart extends ConsumerWidget {
                 LineChartBarData(
                   spots: actualSpots,
                   isCurved: false,
-                  color: t.error,
+                  color: t.clay,
                   barWidth: 2.5,
                   dotData: const FlDotData(show: false),
                   belowBarData: BarAreaData(
                     show: true,
-                    color: t.error.withValues(alpha: 0.10),
+                    color: t.clay.withValues(alpha: 0.10),
                   ),
                 ),
                 // Ideal pace (dashed look via dashArray)
@@ -147,8 +146,8 @@ Widget _loader(bool compact) =>
 
 Widget _err(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('Could not load data', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Não foi possível carregar os dados', style: AppTextStyles.bodySm(t.txtTertiary))));
 
 Widget _empty(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('No budget data for this period', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Sem dados de orçamento para este período', style: AppTextStyles.bodySm(t.txtTertiary))));

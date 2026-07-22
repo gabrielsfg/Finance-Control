@@ -26,16 +26,18 @@ class CategoriesNotifier extends AsyncNotifier<List<Category>> {
     state = await AsyncValue.guard(_fetch);
   }
 
-  Future<void> createCategory(String name) async {
+  Future<void> createCategory(String name, {String? color}) async {
     final dtos = await ref
         .read(categoryRepositoryProvider)
-        .createCategory(CreateCategoryRequestDto(name: name));
+        .createCategory(CreateCategoryRequestDto(name: name, color: color));
     state = AsyncData(dtos.map(Category.fromDto).toList());
   }
 
-  Future<void> updateCategories(Map<int, String> changes) async {
+  /// Bulk-updates categories. Each entry carries the new name and optional color.
+  Future<void> updateCategories(Map<int, ({String name, String? color})> changes) async {
     final items = changes.entries
-        .map((e) => UpdateCategoryItemDto(id: e.key, name: e.value))
+        .map((e) =>
+            UpdateCategoryItemDto(id: e.key, name: e.value.name, color: e.value.color))
         .toList();
     final dtos = await ref
         .read(categoryRepositoryProvider)

@@ -13,8 +13,8 @@ class CommitmentsImpactChart extends ConsumerWidget {
 
   final bool compact;
 
-  static const _monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  static const _monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -48,18 +48,18 @@ class CommitmentsImpactChart extends ConsumerWidget {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: AppSpacing.cardPaddingSm,
                 decoration: BoxDecoration(
-                  color: t.error.withValues(alpha: 0.10),
+                  color: t.clay.withValues(alpha: 0.10),
                   borderRadius: AppRadius.smAll,
-                  border: Border.all(color: t.error.withValues(alpha: 0.3)),
+                  border: Border.all(color: t.clay.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.warning_rounded, color: t.error, size: 16),
+                    Icon(Icons.warning_rounded, color: t.clay, size: 16),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Your balance may go negative due to upcoming commitments.',
-                        style: AppTextStyles.bodySm(t.error)
+                        'Seu saldo pode ficar negativo devido a compromissos futuros.',
+                        style: AppTextStyles.bodySm(t.clay)
                             .copyWith(fontWeight: FontWeight.w500),
                       ),
                     ),
@@ -79,7 +79,7 @@ class CommitmentsImpactChart extends ConsumerWidget {
                       final isZero = val.abs() < 1;
                       return FlLine(
                         color: isZero
-                            ? t.error.withValues(alpha: 0.5)
+                            ? t.clay.withValues(alpha: 0.5)
                             : t.divider.withValues(alpha: 0.4),
                         strokeWidth: isZero ? 1.5 : 1,
                         dashArray: isZero ? null : [4, 4],
@@ -101,8 +101,7 @@ class CommitmentsImpactChart extends ConsumerWidget {
                           }
                           return Text(
                             _monthNames[impact.months[i].month - 1],
-                            style: AppTextStyles.caption(t.txtTertiary)
-                                .copyWith(fontSize: 10),
+                            style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
                           );
                         },
                       ),
@@ -116,7 +115,7 @@ class CommitmentsImpactChart extends ConsumerWidget {
                         final negative = m.isNegative;
                         return LineTooltipItem(
                           '${_monthNames[m.month - 1]} ${m.year}\n${fmt.formatCurrency(m.projectedBalance)}',
-                          AppTextStyles.bodySm(negative ? t.error : t.txtPrimary)
+                          AppTextStyles.bodySm(negative ? t.clay : t.txtPrimary)
                               .copyWith(fontWeight: FontWeight.w600),
                         );
                       }).toList(),
@@ -128,8 +127,8 @@ class CommitmentsImpactChart extends ConsumerWidget {
                       isCurved: true,
                       gradient: LinearGradient(
                         colors: spots.any((s) => s.y < 0)
-                            ? [t.success, t.error]
-                            : [t.success, t.success],
+                            ? [t.moss, t.clay]
+                            : [t.moss, t.moss],
                       ),
                       barWidth: 2.5,
                       dotData: FlDotData(
@@ -138,7 +137,7 @@ class CommitmentsImpactChart extends ConsumerWidget {
                           final m = impact.months[index];
                           return FlDotCirclePainter(
                             radius: 5,
-                            color: m.isNegative ? t.error : t.success,
+                            color: m.isNegative ? t.clay : t.moss,
                             strokeWidth: 0,
                           );
                         },
@@ -149,8 +148,8 @@ class CommitmentsImpactChart extends ConsumerWidget {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            t.success.withValues(alpha: 0.10),
-                            t.success.withValues(alpha: 0.0),
+                            t.moss.withValues(alpha: 0.10),
+                            t.moss.withValues(alpha: 0.0),
                           ],
                         ),
                       ),
@@ -184,14 +183,10 @@ class _MonthRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: AppSpacing.cardPaddingSm,
       decoration: BoxDecoration(
-        color: negative
-            ? t.error.withValues(alpha: 0.08)
-            : (t.isDark
-                ? Colors.white.withValues(alpha: 0.04)
-                : Colors.black.withValues(alpha: 0.02)),
+        color: negative ? t.clay.withValues(alpha: 0.08) : t.surfaceEl,
         borderRadius: AppRadius.smAll,
         border: negative
-            ? Border.all(color: t.error.withValues(alpha: 0.25))
+            ? Border.all(color: t.clay.withValues(alpha: 0.25))
             : null,
       ),
       child: Row(
@@ -199,7 +194,7 @@ class _MonthRow extends StatelessWidget {
           if (negative)
             Padding(
               padding: const EdgeInsets.only(right: 6),
-              child: Icon(Icons.warning_amber_rounded, color: t.error, size: 14),
+              child: Icon(Icons.warning_amber_rounded, color: t.clay, size: 14),
             ),
           Text(
             '${CommitmentsImpactChart._monthNames[m.month - 1]} ${m.year}',
@@ -209,12 +204,12 @@ class _MonthRow extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             '−${fmt.formatCurrency(m.totalCommitments)}',
-            style: AppTextStyles.bodySm(t.error).copyWith(fontSize: 11),
+            style: AppTextStyles.bodySm(t.clay).copyWith(fontSize: 11),
           ),
           const Spacer(),
           Text(
             fmt.formatCurrency(m.projectedBalance),
-            style: AppTextStyles.body(negative ? t.error : t.success)
+            style: AppTextStyles.body(negative ? t.clay : t.moss)
                 .copyWith(fontWeight: FontWeight.w700, fontSize: 13),
           ),
         ],
@@ -228,8 +223,8 @@ Widget _loader(bool compact) =>
 
 Widget _err(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('Could not load data', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Não foi possível carregar os dados', style: AppTextStyles.bodySm(t.txtTertiary))));
 
 Widget _empty(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('No commitments found', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Nenhum compromisso encontrado', style: AppTextStyles.bodySm(t.txtTertiary))));

@@ -47,14 +47,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     String? emailErr;
 
     if (_nameController.text.trim().isEmpty) {
-      nameErr = 'Name is required';
+      nameErr = 'Informe o nome';
     }
 
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      emailErr = 'Email is required';
+      emailErr = 'Informe o e-mail';
     } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
-      emailErr = 'Invalid email';
+      emailErr = 'E-mail inválido';
     }
 
     setState(() {
@@ -85,11 +85,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       final status = e.response?.statusCode;
       setState(() {
         _submitError = status == 400
-            ? 'Email already in use.'
-            : 'Could not save changes. Try again.';
+            ? 'E-mail já está em uso.'
+            : 'Não foi possível salvar as alterações. Tente novamente.';
       });
     } catch (_) {
-      setState(() => _submitError = 'Unexpected error. Try again.');
+      setState(() => _submitError = 'Erro inesperado. Tente novamente.');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -119,7 +119,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   const SizedBox(height: 20),
                 ],
                 AppInputField(
-                  placeholder: 'Name',
+                  placeholder: 'Nome',
                   controller: _nameController,
                   errorText: _nameError,
                   textInputAction: TextInputAction.next,
@@ -127,7 +127,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 ),
                 const SizedBox(height: 14),
                 AppInputField(
-                  placeholder: 'Email',
+                  placeholder: 'E-mail',
                   controller: _emailController,
                   errorText: _emailError,
                   keyboardType: TextInputType.emailAddress,
@@ -148,7 +148,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                           ),
                         ),
                       )
-                    : PrimaryButton(label: 'Save Changes', onPressed: _save),
+                    : PrimaryButton(label: 'Salvar alterações', onPressed: _save),
                 const SizedBox(height: 32),
               ],
             ),
@@ -168,9 +168,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             height: 38,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.07)
-                  : Colors.black.withValues(alpha: 0.05),
+              color: t.surfaceEl,
+              border: Border.all(color: t.mist),
             ),
             child: Icon(
               Icons.arrow_back_ios_new_rounded,
@@ -180,7 +179,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           ),
         ),
         const SizedBox(width: 14),
-        Text('Edit Profile', style: AppTextStyles.h1(t.txtPrimary)),
+        Text('Editar perfil', style: AppTextStyles.h1(t.txtPrimary)),
       ],
     );
   }

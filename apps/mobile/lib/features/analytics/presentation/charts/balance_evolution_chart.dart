@@ -31,8 +31,7 @@ class BalanceEvolutionChart extends ConsumerWidget {
         final minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
         final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
         final pad = ((maxY - minY) * 0.15).clamp(1.0, double.infinity);
-        final isPositive = items.last.balance >= 0;
-        final color = isPositive ? t.success : t.error;
+        final color = t.accent;
 
         return SizedBox(
           height: compact ? 160 : 220,
@@ -61,8 +60,7 @@ class BalanceEvolutionChart extends ConsumerWidget {
                       final d = items[i].date;
                       return Text(
                         '${d.day}/${d.month}',
-                        style:
-                            AppTextStyles.caption(t.txtTertiary).copyWith(fontSize: 9),
+                        style: AppTextStyles.mono(t.txtTertiary, fontSize: 9),
                       );
                     },
                   ),
@@ -115,8 +113,8 @@ Widget _loader(bool compact) =>
 
 Widget _err(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('Could not load data', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Não foi possível carregar os dados', style: AppTextStyles.bodySm(t.txtTertiary))));
 
 Widget _empty(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('No data for this period', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Sem dados para este período', style: AppTextStyles.bodySm(t.txtTertiary))));

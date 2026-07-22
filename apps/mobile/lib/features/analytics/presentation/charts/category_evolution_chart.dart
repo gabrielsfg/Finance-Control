@@ -24,7 +24,7 @@ class CategoryEvolutionChart extends ConsumerWidget {
         height: 80,
         child: Center(
           child: Text(
-            'Select a category in the filter to see its evolution',
+            'Selecione uma categoria no filtro para ver sua evolução',
             style: AppTextStyles.bodySm(t.txtTertiary),
             textAlign: TextAlign.center,
           ),
@@ -43,8 +43,8 @@ class CategoryEvolutionChart extends ConsumerWidget {
             .map((e) => FlSpot(e.$1.toDouble(), e.$2.total / 100))
             .toList();
         final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
-        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        final months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+            'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
         return SizedBox(
           height: compact ? 160 : 220,
@@ -71,8 +71,7 @@ class CategoryEvolutionChart extends ConsumerWidget {
                       if (i < 0 || i >= items.length) return const SizedBox();
                       return Text(
                         months[items[i].month - 1],
-                        style: AppTextStyles.caption(t.txtTertiary)
-                            .copyWith(fontSize: 10),
+                        style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
                       );
                     },
                   ),
@@ -95,12 +94,12 @@ class CategoryEvolutionChart extends ConsumerWidget {
                 LineChartBarData(
                   spots: spots,
                   isCurved: true,
-                  color: t.error,
+                  color: t.clay,
                   barWidth: 2.5,
                   dotData: FlDotData(
                     show: items.length <= 6,
                     getDotPainter: (spot, xPercentage, bar, index) =>
-                        FlDotCirclePainter(radius: 4, color: t.error, strokeWidth: 0),
+                        FlDotCirclePainter(radius: 4, color: t.clay, strokeWidth: 0),
                   ),
                   belowBarData: BarAreaData(
                     show: true,
@@ -108,8 +107,8 @@ class CategoryEvolutionChart extends ConsumerWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        t.error.withValues(alpha: 0.15),
-                        t.error.withValues(alpha: 0.0),
+                        t.clay.withValues(alpha: 0.15),
+                        t.clay.withValues(alpha: 0.0),
                       ],
                     ),
                   ),
@@ -128,8 +127,8 @@ Widget _loader(bool compact) =>
 
 Widget _err(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('Could not load data', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Não foi possível carregar os dados', style: AppTextStyles.bodySm(t.txtTertiary))));
 
 Widget _empty(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('No data for this category', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Sem dados para esta categoria', style: AppTextStyles.bodySm(t.txtTertiary))));

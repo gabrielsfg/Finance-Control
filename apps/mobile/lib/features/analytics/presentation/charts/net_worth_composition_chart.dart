@@ -12,20 +12,22 @@ class NetWorthCompositionChart extends ConsumerWidget {
 
   final bool compact;
 
-  static const _palette = [
-    Color(0xFF7C3AED),
-    Color(0xFF2563EB),
-    Color(0xFF059669),
-    Color(0xFFD97706),
-    Color(0xFFDC2626),
-    Color(0xFF0891B2),
-    Color(0xFF65A30D),
-    Color(0xFFDB2777),
-  ];
+  // Quantia categorical palette — cycled across the stacked account segments.
+  List<Color> _paletteFor(AppThemeTokens t) => [
+        t.accent,
+        t.moss,
+        t.clay,
+        t.gold,
+        t.cobaltLift,
+        t.mossLift,
+        t.clayLift,
+        t.txtTertiary,
+      ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppThemeTokens.of(context);
+    final palette = _paletteFor(t);
     final async = ref.watch(netWorthEvolutionProvider);
 
     return async.when(
@@ -35,8 +37,8 @@ class NetWorthCompositionChart extends ConsumerWidget {
         if (items.isEmpty) return _empty(t);
 
         final fmt = AppLocaleScope.of(context);
-        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        final months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+            'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
         // Collect all account names in order of appearance
         final accountNames = <String>[];
@@ -61,7 +63,7 @@ class NetWorthCompositionChart extends ConsumerWidget {
             final rod = BarChartRodData(
               fromY: fromY,
               toY: fromY + value.clamp(0, double.infinity),
-              color: _palette[ai % _palette.length],
+              color: palette[ai % palette.length],
               width: compact ? 16.0 : 22.0,
               borderRadius: ai == 0
                   ? const BorderRadius.vertical(bottom: Radius.circular(4))
@@ -108,8 +110,7 @@ class NetWorthCompositionChart extends ConsumerWidget {
                           if (i < 0 || i >= items.length) return const SizedBox();
                           return Text(
                             months[items[i].month - 1],
-                            style: AppTextStyles.caption(t.txtTertiary)
-                                .copyWith(fontSize: 10),
+                            style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
                           );
                         },
                       ),
@@ -146,7 +147,7 @@ class NetWorthCompositionChart extends ConsumerWidget {
                         width: 10,
                         height: 10,
                         decoration: BoxDecoration(
-                          color: _palette[i % _palette.length],
+                          color: palette[i % palette.length],
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -171,8 +172,8 @@ Widget _loader(bool compact) =>
 
 Widget _err(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('Could not load data', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Não foi possível carregar os dados', style: AppTextStyles.bodySm(t.txtTertiary))));
 
 Widget _empty(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('No data for this period', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Sem dados para este período', style: AppTextStyles.bodySm(t.txtTertiary))));

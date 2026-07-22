@@ -30,7 +30,7 @@ class _HomeFilterSheetState extends ConsumerState<HomeFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final bg = t.isDark ? const Color(0xFF1A1730) : Colors.white;
+    final bg = t.surface;
 
     return Container(
       decoration: BoxDecoration(
@@ -38,7 +38,13 @@ class _HomeFilterSheetState extends ConsumerState<HomeFilterSheet> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.fromLTRB(
-          24, 16, 24, MediaQuery.viewInsetsOf(context).bottom + 32),
+        24,
+        16,
+        24,
+        MediaQuery.viewInsetsOf(context).bottom +
+            MediaQuery.viewPaddingOf(context).bottom +
+            24,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,10 +60,10 @@ class _HomeFilterSheetState extends ConsumerState<HomeFilterSheet> {
             ),
           ),
           const SizedBox(height: 20),
-          Text('Filter', style: AppTextStyles.h2(t.txtPrimary)),
+          Text('Filtro', style: AppTextStyles.h2(t.txtPrimary)),
           const SizedBox(height: 24),
           Text(
-            'PERIOD',
+            'PERÍODO',
             style: AppTextStyles.caption(t.txtTertiary).copyWith(
               fontSize: 10,
               fontWeight: FontWeight.w700,
@@ -75,7 +81,7 @@ class _HomeFilterSheetState extends ConsumerState<HomeFilterSheet> {
             children: [
               Expanded(
                 child: _DateButton(
-                  label: 'From',
+                  label: 'De',
                   date: _startDate,
                   onTap: () => _pickDate(context, isStart: true),
                 ),
@@ -83,7 +89,7 @@ class _HomeFilterSheetState extends ConsumerState<HomeFilterSheet> {
               const SizedBox(width: 12),
               Expanded(
                 child: _DateButton(
-                  label: 'To',
+                  label: 'Até',
                   date: _endDate,
                   onTap: () => _pickDate(context, isStart: false),
                 ),
@@ -92,7 +98,7 @@ class _HomeFilterSheetState extends ConsumerState<HomeFilterSheet> {
           ),
           const SizedBox(height: 32),
           PrimaryButton(
-            label: 'Apply',
+            label: 'Aplicar',
             onPressed: _apply,
           ),
         ],
@@ -138,13 +144,13 @@ class _QuickPeriods extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final periods = [
-      ('This month', DateTime(now.year, now.month, 1),
+      ('Este mês', DateTime(now.year, now.month, 1),
           DateTime(now.year, now.month + 1, 0)),
-      ('Last month', DateTime(now.year, now.month - 1, 1),
+      ('Mês passado', DateTime(now.year, now.month - 1, 1),
           DateTime(now.year, now.month, 0)),
-      ('Last 3M', DateTime(now.year, now.month - 3, 1),
+      ('Últimos 3 meses', DateTime(now.year, now.month - 3, 1),
           DateTime(now.year, now.month + 1, 0)),
-      ('This year', DateTime(now.year, 1, 1), DateTime(now.year, 12, 31)),
+      ('Este ano', DateTime(now.year, 1, 1), DateTime(now.year, 12, 31)),
     ];
 
     return SingleChildScrollView(

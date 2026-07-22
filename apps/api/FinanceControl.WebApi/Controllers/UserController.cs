@@ -105,6 +105,74 @@ namespace FinanceControl.WebApi.Controllers
             return NoContent();
         }
 
+        // ── Mobile auth ───────────────────────────────────────────────────────
+        // Native apps have no browser XSS surface, so they store the refresh
+        // token in the OS keystore (Keychain/Keystore) and carry it in the
+        // request body instead of an HttpOnly cookie. These variants return and
+        // accept the token pair in the body; the web endpoints above are the
+        // authoritative cookie-based flow and are intentionally left untouched.
+
+        [HttpPost("mobile/register")]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> RegisterMobileAsync([FromBody] CreateUserRequestDto requestDto)
+        {
+            var validationResult = _createUserValidator.Validate(requestDto);
+            if (validationResult.ToActionResult() is { } errorResult)
+                return errorResult;
+
+            var tokens = await _userService.RegisterUserAsync(requestDto);
+            if (tokens is null)
+                return BadRequest("Email already exists.");
+
+            return Ok(tokens);
+        }
+
+        [HttpPost("mobile/login")]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> LoginMobileAsync([FromBody] UserLoginRequestDto requestDto)
+        {
+            var validationResult = _userLoginValidator.Validate(requestDto);
+            if (validationResult.ToActionResult() is { } errorResult)
+                return errorResult;
+
+            var result = await _userService.UserLoginAsync(requestDto);
+
+            if (result.IsLockedOut)
+            {
+                var seconds = (int)Math.Ceiling(result.LockoutRemaining!.Value.TotalSeconds);
+                return StatusCode(423, new { message = "Account is locked. Try again later.", retryAfterSeconds = seconds });
+            }
+
+            if (result.AuthResponse is null)
+                return BadRequest("Invalid email or password.");
+
+            return Ok(result.AuthResponse);
+        }
+
+        [HttpPost("mobile/refresh")]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> RefreshMobileAsync([FromBody] RefreshTokenRequestDto requestDto)
+        {
+            if (string.IsNullOrWhiteSpace(requestDto.RefreshToken))
+                return Unauthorized("Refresh token is missing.");
+
+            var tokens = await _userService.RefreshTokenAsync(requestDto.RefreshToken);
+            if (tokens is null)
+                return Unauthorized("Invalid or expired refresh token.");
+
+            return Ok(tokens);
+        }
+
+        [HttpPost("mobile/logout")]
+        [Authorize]
+        public async Task<IActionResult> LogoutMobileAsync([FromBody] LogoutRequestDto requestDto)
+        {
+            if (!string.IsNullOrWhiteSpace(requestDto.RefreshToken))
+                await _userService.LogoutAsync(requestDto.RefreshToken);
+
+            return NoContent();
+        }
+
         [HttpGet("profile")]
         [Authorize]
         public async Task<IActionResult> GetProfileAsync()

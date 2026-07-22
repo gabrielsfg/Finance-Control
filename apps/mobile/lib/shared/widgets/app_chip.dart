@@ -22,14 +22,12 @@ class AppChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: AppRadius.pillAll,
           color: active
-              ? t.primary.withValues(alpha: t.isDark ? 0.25 : 0.12)
-              : t.surfaceEl.withValues(alpha: t.isDark ? 0.8 : 0.7),
+              ? t.accent.withValues(alpha: t.isDark ? 0.22 : 0.12)
+              : t.surface,
           border: Border.all(
             color: active
-                ? t.primary.withValues(alpha: t.isDark ? 0.55 : 0.45)
-                : t.isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : t.primary.withValues(alpha: 0.18),
+                ? t.accent.withValues(alpha: t.isDark ? 0.6 : 0.5)
+                : t.mist,
           ),
         ),
         child: Center(

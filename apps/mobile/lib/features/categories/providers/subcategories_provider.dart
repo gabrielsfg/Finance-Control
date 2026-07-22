@@ -26,17 +26,20 @@ class SubcategoriesNotifier extends AsyncNotifier<List<CategorySubcategory>> {
     state = await AsyncValue.guard(_fetch);
   }
 
-  Future<void> create(String name, int categoryId) async {
+  Future<void> create(String name, int categoryId, {String? emoji}) async {
     final dtos = await ref.read(subcategoryRepositoryProvider).create(
-          CreateSubcategoryRequestDto(name: name, categoryId: categoryId),
+          CreateSubcategoryRequestDto(
+              name: name, categoryId: categoryId, emoji: emoji),
         );
     state = AsyncData(dtos.map(CategorySubcategory.fromDto).toList());
     ref.read(categoriesNotifierProvider.notifier).refresh();
   }
 
-  Future<void> updateSubcategory(int id, String name, int categoryId) async {
+  Future<void> updateSubcategory(int id, String name, int categoryId,
+      {String? emoji}) async {
     final dtos = await ref.read(subcategoryRepositoryProvider).update(
-          UpdateSubcategoryRequestDto(id: id, name: name, categoryId: categoryId),
+          UpdateSubcategoryRequestDto(
+              id: id, name: name, categoryId: categoryId, emoji: emoji),
         );
     state = AsyncData(dtos.map(CategorySubcategory.fromDto).toList());
     ref.read(categoriesNotifierProvider.notifier).refresh();

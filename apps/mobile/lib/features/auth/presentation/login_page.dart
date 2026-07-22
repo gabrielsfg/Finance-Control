@@ -151,7 +151,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   // ── Email ──────────────────────────────────────────────────
                   AppInputField(
-                    placeholder: 'Email',
+                    placeholder: 'E-mail',
                     controller: _emailController,
                     errorText: _emailError,
                     keyboardType: TextInputType.emailAddress,
@@ -189,8 +189,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: GestureDetector(
                       onTap: () => context.push('/forgot-password'),
                       child: Text(
-                        'Forgot password?',
-                        style: AppTextStyles.body(t.primary).copyWith(
+                        'Esqueceu a senha?',
+                        style: AppTextStyles.body(t.accent).copyWith(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -230,7 +230,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           onTap: () => context.push('/register'),
                           child: Text(
                             'Cadastre-se',
-                            style: AppTextStyles.body(t.primary).copyWith(
+                            style: AppTextStyles.body(t.accent).copyWith(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),

@@ -6,7 +6,10 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/category_palette.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/color_picker_grid.dart';
+import '../../../shared/widgets/emoji_picker_sheet.dart';
 import '../data/category_repository.dart';
 import '../data/dtos/category_response_dto.dart';
 import '../providers/categories_provider.dart';
@@ -55,13 +58,35 @@ class _EditCategoriesPageState extends ConsumerState<EditCategoriesPage> {
     });
   }
 
-  Future<void> _saveAll() async {
-    if (_pendingChanges.isEmpty) return;
-    setState(() => _saving = true);
+  Future<void> _changeColor(int id, String currentName, String color) async {
+    final name = _pendingChanges[id] ?? currentName;
     try {
       await ref
           .read(categoriesNotifierProvider.notifier)
-          .updateCategories(Map.from(_pendingChanges));
+          .updateCategories({id: (name: name, color: color)});
+      ref.invalidate(_editCategoriesProvider);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro ao salvar a cor.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveAll() async {
+    if (_pendingChanges.isEmpty) return;
+    setState(() => _saving = true);
+    final cats = ref.read(_editCategoriesProvider).valueOrNull ?? [];
+    final colorById = {for (final c in cats) c.id: c.color};
+    final changes = <int, ({String name, String? color})>{
+      for (final e in _pendingChanges.entries)
+        e.key: (name: e.value, color: colorById[e.key]),
+    };
+    try {
+      await ref
+          .read(categoriesNotifierProvider.notifier)
+          .updateCategories(changes);
       if (mounted) {
         setState(() => _pendingChanges.clear());
         ScaffoldMessenger.of(context).showSnackBar(
@@ -166,6 +191,11 @@ class _EditCategoriesPageState extends ConsumerState<EditCategoriesPage> {
                         ),
                         onSubcategoryChanged: () =>
                             ref.invalidate(_editCategoriesProvider),
+                        onColorChanged: (color) => _changeColor(
+                          filtered[i].id,
+                          filtered[i].name,
+                          color,
+                        ),
                       ),
                     );
                   },
@@ -273,16 +303,10 @@ class _SearchBar extends StatelessWidget {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: t.isDark
-            ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-            : Colors.white.withValues(alpha: 0.9),
+        color: t.surface,
         borderRadius: AppRadius.baseAll,
-        border: Border.all(
-          color: t.isDark
-              ? Colors.white.withValues(alpha: 0.07)
-              : const Color(0xFF7C3AED).withValues(alpha: 0.12),
-        ),
-        boxShadow: t.isDark ? [] : AppShadows.cardLight,
+        border: Border.all(color: t.mist),
+        boxShadow: t.isDark ? AppShadows.cardDark : AppShadows.cardLight,
       ),
       child: TextField(
         controller: controller,
@@ -356,11 +380,7 @@ class _PrimaryActionButton extends StatelessWidget {
           height: 42,
           decoration: BoxDecoration(
             gradient: filled ? AppColors.primaryGradient : null,
-            color: filled
-                ? null
-                : (t.isDark
-                    ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-                    : Colors.white.withValues(alpha: 0.9)),
+            color: filled ? null : t.surface,
             borderRadius: AppRadius.baseAll,
             border: filled
                 ? null
@@ -392,6 +412,7 @@ class _CategoryGroup extends ConsumerStatefulWidget {
   final String? pendingName;
   final ValueChanged<String> onNameChanged;
   final VoidCallback onSubcategoryChanged;
+  final ValueChanged<String> onColorChanged;
 
   const _CategoryGroup({
     required this.category,
@@ -399,6 +420,7 @@ class _CategoryGroup extends ConsumerStatefulWidget {
     required this.pendingName,
     required this.onNameChanged,
     required this.onSubcategoryChanged,
+    required this.onColorChanged,
   });
 
   @override
@@ -426,7 +448,7 @@ class _CategoryGroupState extends ConsumerState<_CategoryGroup> {
   Future<void> _delete() async {
     final confirmed = await showDeleteConfirmDialog(
       context: context,
-      title: 'Delete Category',
+      title: 'Excluir categoria',
       itemName: widget.category.name,
     );
     if (confirmed != true) return;
@@ -439,10 +461,41 @@ class _CategoryGroupState extends ConsumerState<_CategoryGroup> {
       if (mounted) {
         setState(() => _deleting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to delete category.')),
+          const SnackBar(content: Text('Não foi possível excluir a categoria.')),
         );
       }
     }
+  }
+
+  Future<void> _pickColor(BuildContext context) async {
+    final t = AppThemeTokens.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: t.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.fromLTRB(
+            20, 20, 20, MediaQuery.viewPaddingOf(context).bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Cor da categoria', style: AppTextStyles.h3(t.txtPrimary)),
+            const SizedBox(height: 16),
+            ColorPickerGrid(
+              selected: widget.category.color,
+              onSelected: (c) {
+                Navigator.of(context).pop();
+                widget.onColorChanged(c);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -453,19 +506,13 @@ class _CategoryGroupState extends ConsumerState<_CategoryGroup> {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: t.isDark
-            ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-            : Colors.white.withValues(alpha: 0.9),
+        color: t.surface,
         borderRadius: AppRadius.xlAll,
         border: Border.all(
-          color: isDirty
-              ? t.primary.withValues(alpha: 0.5)
-              : (t.isDark
-                  ? Colors.white.withValues(alpha: 0.07)
-                  : const Color(0xFF7C3AED).withValues(alpha: 0.12)),
+          color: isDirty ? t.primary.withValues(alpha: 0.5) : t.mist,
           width: isDirty ? 1.5 : 1,
         ),
-        boxShadow: t.isDark ? [] : AppShadows.cardLight,
+        boxShadow: t.isDark ? AppShadows.cardDark : AppShadows.cardLight,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -476,6 +523,21 @@ class _CategoryGroupState extends ConsumerState<_CategoryGroup> {
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
+                GestureDetector(
+                  onTap: () => _pickColor(context),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    margin: const EdgeInsets.only(right: 10),
+                    decoration: BoxDecoration(
+                      color: categoryColor(
+                          widget.category.color, widget.category.name),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: t.mist),
+                    ),
+                  ),
+                ),
                 Expanded(
                   child: TextField(
                     controller: _nameController,
@@ -602,7 +664,7 @@ class _SubcategoryRowState extends ConsumerState<_SubcategoryRow> {
   Future<void> _delete() async {
     final confirmed = await showDeleteConfirmDialog(
       context: context,
-      title: 'Delete Subcategory',
+      title: 'Excluir subcategoria',
       itemName: widget.subcategory.name,
     );
 
@@ -617,7 +679,7 @@ class _SubcategoryRowState extends ConsumerState<_SubcategoryRow> {
       if (mounted) {
         setState(() => _deleting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to delete subcategory.')),
+          const SnackBar(content: Text('Não foi possível excluir a subcategoria.')),
         );
       }
     }
@@ -646,6 +708,11 @@ class _SubcategoryRowState extends ConsumerState<_SubcategoryRow> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
+              if (widget.subcategory.emoji?.isNotEmpty ?? false) ...[
+                Text(widget.subcategory.emoji!,
+                    style: AppTextStyles.emoji(fontSize: 18)),
+                const SizedBox(width: 10),
+              ],
               Expanded(
                 child: Text(
                   widget.subcategory.name,
@@ -659,7 +726,7 @@ class _SubcategoryRowState extends ConsumerState<_SubcategoryRow> {
                 onTap: _openEditSheet,
                 child: Text(
                   'Editar',
-                  style: AppTextStyles.bodySm(t.primary)
+                  style: AppTextStyles.bodySm(t.accent)
                       .copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -722,6 +789,7 @@ class _CreateSubcategorySheetState
   int? _selectedCategoryId;
   bool _loading = false;
   String? _nameError;
+  String? _emoji;
 
   @override
   void initState() {
@@ -752,7 +820,7 @@ class _CreateSubcategorySheetState
     try {
       await ref
           .read(subcategoriesNotifierProvider.notifier)
-          .create(name, _selectedCategoryId!);
+          .create(name, _selectedCategoryId!, emoji: _emoji);
       if (mounted) {
         Navigator.of(context).pop();
         widget.onCreated();
@@ -777,7 +845,7 @@ class _CreateSubcategorySheetState
           EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
         decoration: BoxDecoration(
-          color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+          color: t.surface,
           borderRadius: const BorderRadius.vertical(
               top: Radius.circular(AppRadius.xl3)),
           boxShadow: AppShadows.bottomSheet,
@@ -840,6 +908,22 @@ class _CreateSubcategorySheetState
             ),
             const SizedBox(height: 16),
             Text(
+              'Emoji (opcional)',
+              style: AppTextStyles.caption(t.txtSecondary)
+                  .copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            _EmojiField(
+              emoji: _emoji,
+              onTap: () async {
+                final e = await showEmojiPickerSheet(context);
+                if (e != null) {
+                  setState(() => _emoji = e.isEmpty ? null : e);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            Text(
               'Categoria',
               style: AppTextStyles.caption(t.txtSecondary)
                   .copyWith(fontWeight: FontWeight.w600),
@@ -887,6 +971,7 @@ class _EditSubcategorySheetState
   late int _selectedCategoryId;
   bool _loading = false;
   String? _nameError;
+  String? _emoji;
 
   @override
   void initState() {
@@ -894,6 +979,7 @@ class _EditSubcategorySheetState
     _nameController =
         TextEditingController(text: widget.subcategory.name);
     _selectedCategoryId = widget.subcategory.categoryId;
+    _emoji = widget.subcategory.emoji;
   }
 
   @override
@@ -917,7 +1003,8 @@ class _EditSubcategorySheetState
       await ref
           .read(subcategoriesNotifierProvider.notifier)
           .updateSubcategory(
-              widget.subcategory.id, name, _selectedCategoryId);
+              widget.subcategory.id, name, _selectedCategoryId,
+              emoji: _emoji);
       if (mounted) {
         Navigator.of(context).pop();
         widget.onUpdated();
@@ -942,7 +1029,7 @@ class _EditSubcategorySheetState
           EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
         decoration: BoxDecoration(
-          color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+          color: t.surface,
           borderRadius: const BorderRadius.vertical(
               top: Radius.circular(AppRadius.xl3)),
           boxShadow: AppShadows.bottomSheet,
@@ -1006,6 +1093,22 @@ class _EditSubcategorySheetState
             ),
             const SizedBox(height: 16),
             Text(
+              'Emoji (opcional)',
+              style: AppTextStyles.caption(t.txtSecondary)
+                  .copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            _EmojiField(
+              emoji: _emoji,
+              onTap: () async {
+                final e = await showEmojiPickerSheet(context);
+                if (e != null) {
+                  setState(() => _emoji = e.isEmpty ? null : e);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            Text(
               'Categoria',
               style: AppTextStyles.caption(t.txtSecondary)
                   .copyWith(fontWeight: FontWeight.w600),
@@ -1061,12 +1164,58 @@ class _CategoryDropdown extends StatelessWidget {
           value: selectedId,
           isExpanded: true,
           dropdownColor:
-              t.isDark ? const Color(0xFF1C1830) : Colors.white,
+              t.surface,
           style: AppTextStyles.body(t.txtPrimary).copyWith(fontSize: 15),
           items: categories
               .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
               .toList(),
           onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+class _EmojiField extends StatelessWidget {
+  final String? emoji;
+  final VoidCallback onTap;
+
+  const _EmojiField({required this.emoji, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    final has = emoji?.isNotEmpty ?? false;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: t.isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : t.primary.withValues(alpha: 0.04),
+          borderRadius: AppRadius.baseAll,
+          border: Border.all(color: t.primary.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            if (has)
+              Text(emoji!, style: AppTextStyles.emoji(fontSize: 22))
+            else
+              Icon(LucideIcons.smile, size: 20, color: t.txtTertiary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                has ? 'Emoji selecionado' : 'Escolher emoji',
+                style: AppTextStyles.body(has ? t.txtPrimary : t.txtTertiary)
+                    .copyWith(fontSize: 14),
+              ),
+            ),
+            Icon(LucideIcons.chevronRight, size: 16, color: t.txtTertiary),
+          ],
         ),
       ),
     );
@@ -1160,10 +1309,10 @@ class _ErrorView extends StatelessWidget {
         children: [
           Icon(LucideIcons.alertCircle, color: t.error, size: 32),
           const SizedBox(height: 8),
-          Text('Failed to load categories',
+          Text('Não foi possível carregar as categorias',
               style: AppTextStyles.body(t.txtSecondary)),
           const SizedBox(height: 12),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
+          TextButton(onPressed: onRetry, child: const Text('Tentar novamente')),
         ],
       ),
     );

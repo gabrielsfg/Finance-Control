@@ -40,11 +40,11 @@ class ProfilePage extends ConsumerWidget {
               const SizedBox(height: 28),
               const _ProfileCard(),
               const SizedBox(height: 24),
+              const _PlanningSection(),
+              const SizedBox(height: 16),
               const _PreferencesSection(),
               const SizedBox(height: 16),
               const _AccountSection(),
-              const SizedBox(height: 16),
-              const _SupportSection(),
               const SizedBox(height: 24),
               const _LogoutButton(),
               const SizedBox(height: 12),
@@ -67,7 +67,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
 
-    return Text('Profile', style: AppTextStyles.h1(t.txtPrimary));
+    return Text('Perfil', style: AppTextStyles.h1(t.txtPrimary));
   }
 }
 
@@ -115,16 +115,16 @@ class _ProfileCard extends ConsumerWidget {
               height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: t.primary.withValues(alpha: t.isDark ? 0.15 : 0.1),
+                color: t.accent.withValues(alpha: t.isDark ? 0.15 : 0.1),
                 border: Border.all(
-                  color: t.primary.withValues(alpha: 0.25),
+                  color: t.accent.withValues(alpha: 0.25),
                   width: 1,
                 ),
               ),
               child: Icon(
                 LucideIcons.pencil,
                 size: 15,
-                color: t.primary,
+                color: t.accent,
               ),
             ),
           ),
@@ -147,11 +147,7 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(left: 2, bottom: 10),
       child: Text(
         title.toUpperCase(),
-        style: AppTextStyles.caption(t.txtTertiary).copyWith(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.0,
-        ),
+        style: AppTextStyles.eyebrow(t.txtSecondary),
       ),
     );
   }
@@ -167,19 +163,8 @@ class _SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: t.isDark
-            ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-            : Colors.white.withValues(alpha: 0.9),
-        borderRadius: AppRadius.xlAll,
-        border: Border.all(
-          color: t.isDark
-              ? Colors.white.withValues(alpha: 0.07)
-              : const Color(0xFF7C3AED).withValues(alpha: 0.12),
-        ),
-        boxShadow: t.isDark ? [] : AppShadows.cardLight,
-      ),
+    return GlassCard(
+      padding: EdgeInsets.zero,
       child: Column(
         children: List.generate(items.length, (i) {
           final item = items[i];
@@ -192,7 +177,7 @@ class _SettingsCard extends StatelessWidget {
                   height: 1,
                   thickness: 1,
                   indent: 54,
-                  color: t.divider.withValues(alpha: t.isDark ? 0.3 : 0.6),
+                  color: t.mist,
                 ),
             ],
           );
@@ -281,6 +266,48 @@ class _SettingRowWidget extends StatelessWidget {
   }
 }
 
+// ── Planning Section ───────────────────────────────────────────────────────
+
+class _PlanningSection extends StatelessWidget {
+  const _PlanningSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Planejar'),
+        _SettingsCard(
+          items: [
+            _SettingRow(
+              icon: LucideIcons.target,
+              iconColor: t.accent,
+              label: 'Metas',
+              subtitle: 'Acompanhe seus objetivos',
+              onTap: () => context.push('/goals'),
+            ),
+            _SettingRow(
+              icon: LucideIcons.repeat,
+              iconColor: t.accent,
+              label: 'Recorrências',
+              subtitle: 'Assinaturas e parcelas',
+              onTap: () => context.push('/recurring'),
+            ),
+            _SettingRow(
+              icon: LucideIcons.lineChart,
+              iconColor: t.accent,
+              label: 'Análises',
+              subtitle: 'Gráficos e tendências',
+              onTap: () => context.push('/analytics'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 // ── Preferences Section ────────────────────────────────────────────────────
 
 class _PreferencesSection extends ConsumerWidget {
@@ -297,27 +324,14 @@ class _PreferencesSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: 'Preferences'),
+        const _SectionHeader(title: 'Preferências'),
         _SettingsCard(
           items: [
             _SettingRow(
-              icon: LucideIcons.bell,
-              iconColor: t.primary,
-              label: 'Notifications',
-              subtitle: 'Reminders and alerts',
-            ),
-            _SettingRow(
-              icon: LucideIcons.globe,
-              iconColor: const Color(0xFF06B6D4),
-              label: 'Language',
-              trailingLabel: localeLabel,
-              onTap: () => context.push('/profile/preferences'),
-            ),
-            _SettingRow(
-              icon: LucideIcons.dollarSign,
-              iconColor: const Color(0xFF22C55E),
-              label: 'Currency',
-              trailingLabel: currencyLabel,
+              icon: LucideIcons.settings,
+              iconColor: t.accent,
+              label: 'Preferências',
+              trailingLabel: '$currencyLabel · $localeLabel',
               onTap: () => context.push('/profile/preferences'),
             ),
           ],
@@ -339,54 +353,35 @@ class _AccountSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: 'Account'),
+        const _SectionHeader(title: 'Conta'),
         _SettingsCard(
           items: [
             _SettingRow(
               icon: LucideIcons.tag,
-              iconColor: const Color(0xFF8B5CF6),
+              iconColor: t.accent,
               label: 'Categorias',
               subtitle: 'Gerencie suas categorias',
               onTap: () => context.push('/categories'),
             ),
             _SettingRow(
-              icon: LucideIcons.heart,
-              iconColor: const Color(0xFFEC4899),
-              label: 'Wishlist',
-              subtitle: 'Items you want to buy',
-              onTap: () => context.push('/wishlist'),
-            ),
-            _SettingRow(
               icon: LucideIcons.user,
-              iconColor: t.primary,
-              label: 'Edit Profile',
-              subtitle: 'Name and email',
+              iconColor: t.accent,
+              label: 'Editar perfil',
+              subtitle: 'Nome e e-mail',
               onTap: () => context.push('/profile/edit'),
             ),
             _SettingRow(
-              icon: LucideIcons.shieldCheck,
-              iconColor: const Color(0xFF06B6D4),
-              label: 'Security',
-              subtitle: 'PIN and biometrics',
-            ),
-            _SettingRow(
-              icon: LucideIcons.download,
-              iconColor: const Color(0xFFF59E0B),
-              label: 'Export Data',
-              subtitle: 'Download your transactions',
-            ),
-            _SettingRow(
               icon: LucideIcons.rotateCcw,
-              iconColor: const Color(0xFFF59E0B),
-              label: 'Reset Data',
-              subtitle: 'Delete all financial records',
+              iconColor: t.gold,
+              label: 'Zerar dados',
+              subtitle: 'Apaga todos os registros financeiros',
               onTap: () => _showResetDataDialog(context, ref),
             ),
             _SettingRow(
               icon: LucideIcons.userX,
               iconColor: t.error,
-              label: 'Delete Account',
-              subtitle: 'Permanently remove your account',
+              label: 'Excluir conta',
+              subtitle: 'Remove sua conta permanentemente',
               onTap: () => _showDeleteAccountDialog(context, ref),
             ),
           ],
@@ -399,10 +394,10 @@ class _AccountSection extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (_) => _PasswordConfirmDialog(
-        title: 'Reset Data',
+        title: 'Zerar dados',
         warning:
-            'This will permanently delete all your transactions, accounts, budgets, and categories. Your account will be kept.',
-        confirmLabel: 'Reset',
+            'Isso vai excluir permanentemente todas as suas transações, contas, orçamentos e categorias. Sua conta será mantida.',
+        confirmLabel: 'Zerar',
         isDestructive: true,
         onConfirm: (password) async {
           await ref.read(authRepositoryProvider).resetData(password);
@@ -420,10 +415,10 @@ class _AccountSection extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (_) => _PasswordConfirmDialog(
-        title: 'Delete Account',
+        title: 'Excluir conta',
         warning:
-            'This will permanently delete your account and all associated data. This action cannot be undone.',
-        confirmLabel: 'Delete',
+            'Isso vai excluir permanentemente sua conta e todos os dados associados. Esta ação não pode ser desfeita.',
+        confirmLabel: 'Excluir',
         isDestructive: true,
         onConfirm: (password) async {
           await ref.read(authRepositoryProvider).deleteAccount(password);
@@ -469,7 +464,7 @@ class _PasswordConfirmDialogState extends State<_PasswordConfirmDialog> {
   Future<void> _submit() async {
     final password = _controller.text.trim();
     if (password.isEmpty) {
-      setState(() => _error = 'Password is required.');
+      setState(() => _error = 'Informe a senha.');
       return;
     }
     setState(() {
@@ -483,7 +478,7 @@ class _PasswordConfirmDialogState extends State<_PasswordConfirmDialog> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Invalid password.';
+          _error = 'Senha inválida.';
         });
       }
     }
@@ -507,7 +502,7 @@ class _PasswordConfirmDialogState extends State<_PasswordConfirmDialog> {
             obscureText: true,
             autofocus: true,
             decoration: InputDecoration(
-              labelText: 'Password',
+              labelText: 'Senha',
               errorText: _error,
             ),
             onSubmitted: (_) => _submit(),
@@ -517,7 +512,7 @@ class _PasswordConfirmDialogState extends State<_PasswordConfirmDialog> {
       actions: [
         TextButton(
           onPressed: _loading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text('Cancelar'),
         ),
         TextButton(
           onPressed: _loading ? null : _submit,
@@ -534,41 +529,6 @@ class _PasswordConfirmDialogState extends State<_PasswordConfirmDialog> {
                   widget.confirmLabel,
                   style: TextStyle(color: confirmColor),
                 ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Support Section ────────────────────────────────────────────────────────
-
-class _SupportSection extends StatelessWidget {
-  const _SupportSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader(title: 'Support'),
-        _SettingsCard(
-          items: [
-            const _SettingRow(
-              icon: LucideIcons.helpCircle,
-              iconColor: Color(0xFF8B5CF6),
-              label: 'Help Center',
-            ),
-            const _SettingRow(
-              icon: LucideIcons.messageCircle,
-              iconColor: Color(0xFF22C55E),
-              label: 'Send Feedback',
-            ),
-            const _SettingRow(
-              icon: LucideIcons.star,
-              iconColor: Color(0xFFF59E0B),
-              label: 'Rate the App',
-            ),
-          ],
         ),
       ],
     );
@@ -602,7 +562,7 @@ class _LogoutButton extends ConsumerWidget {
             Icon(LucideIcons.logOut, size: 18, color: t.error),
             const SizedBox(width: 8),
             Text(
-              'Log Out',
+              'Sair',
               style: AppTextStyles.body(t.error).copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 15,

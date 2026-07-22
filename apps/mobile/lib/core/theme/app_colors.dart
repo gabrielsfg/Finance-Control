@@ -1,93 +1,158 @@
 import 'package:flutter/material.dart';
 
+/// Quantia design-system palette.
+///
+/// Thesis: money is the material — cobalt-on-osso in light, cobalt-on-petroleum
+/// in dark. Signals are never crayon: positive = moss (petrol green),
+/// negative = clay (burnt orange). The hero panel is dark in BOTH themes and
+/// owns its own tokens so it never collides with `--background`/`--foreground`.
 class AppColors {
   AppColors._();
 
-  // Light
-  static const lightBg           = Color(0xFFF7F4FF);
-  static const lightSurface      = Color(0xFFFFFFFF);
-  static const lightSurfaceEl    = Color(0xFFEDE9FE);
-  static const lightDivider      = Color(0xFFDDD6FE);
-  static const lightPrimary      = Color(0xFF7C3AED);
-  static const lightPrimaryDark  = Color(0xFF6D28D9);
-  static const lightSecondary    = Color(0xFF6D28D9);
-  static const lightAccent       = Color(0xFF5B21B6);
-  static const lightTxtPrimary   = Color(0xFF1E1B4B);
-  static const lightTxtSecondary = Color(0xFF4B5563);
-  static const lightTxtTertiary  = Color(0xFF6B7280);
-  static const lightTxtDisabled  = Color(0xFF9CA3AF);
-  static const lightSuccess      = Color(0xFF15803D);
-  static const lightError        = Color(0xFFB91C1C);
-  static const lightWarning      = Color(0xFFB45309);
-  static const lightInfo         = Color(0xFF1D4ED8);
-  static const lightIncomeBg     = Color(0xFFDCFCE7);
-  static const lightExpenseBg    = Color(0xFFFEE2E2);
-  static const lightBudgetNeutral = Color(0xFF4F46E5);
+  // ── Brand (shared, role-separated) ─────────────────────────────────────────
+  // Cobalt as FILL (button bg, bar fill) vs cobalt as TEXT/mark (links, %).
+  static const cobaltLight     = Color(0xFF1F3CE0);
+  static const cobaltDark      = Color(0xFF3D5BFF);
+  static const cobaltLift      = Color(0xFF8197FF); // cobalt over dark / gradient top
+  static const accentLight     = Color(0xFF1F3CE0); // text/mark (light)
+  static const accentDark      = Color(0xFF8197FF); // text/mark (dark)
 
-  // Dark
-  static const darkBg            = Color(0xFF110E1B);
-  static const darkSurface       = Color(0xFF1C1830);
-  static const darkSurfaceEl     = Color(0xFF2D1B4E);
-  static const darkDivider       = Color(0xFF3B2F5C);
-  static const darkPrimary       = Color(0xFF8B5CF6);
-  static const darkPrimaryDark   = Color(0xFF7C3AED);
-  static const darkSecondary     = Color(0xFFA78BFA);
-  static const darkAccent        = Color(0xFFC4B5FD);
-  static const darkTxtPrimary    = Color(0xFFF8FAFC);
-  static const darkTxtSecondary  = Color(0xFFCBD5E1);
-  static const darkTxtTertiary   = Color(0xFF94A3B8);
-  static const darkTxtDisabled   = Color(0xFF64748B);
-  static const darkSuccess       = Color(0xFF22C55E);
-  static const darkError         = Color(0xFFEF4444);
-  static const darkWarning       = Color(0xFFF59E0B);
-  static const darkInfo          = Color(0xFF3B82F6);
-  static const darkIncomeBg      = Color(0xFF14532D);
-  static const darkExpenseBg     = Color(0xFF7F1D1D);
-  static const darkBudgetNeutral  = Color(0xFF6366F1);
+  static const mossLight       = Color(0xFF2C6B57); // positive / income
+  static const mossDark        = Color(0xFF5FC6A0);
+  static const mossLiftLight   = Color(0xFF5FC6A0);
+  static const mossLiftDark    = Color(0xFF7FE0BE);
+  static const clayLight       = Color(0xFFB0451F); // negative / expense
+  static const clayDark        = Color(0xFFFF8A5B);
+  static const clayLiftLight   = Color(0xFFFF8A5B);
+  static const clayLiftDark    = Color(0xFFFFB08A);
+  static const goldLight       = Color(0xFFC8932B); // warm punctual highlight
+  static const goldDark        = Color(0xFFE3B65A);
 
-  // Gradients
+  // ── Light ("osso" — warm bone) ─────────────────────────────────────────────
+  static const lightBg           = Color(0xFFEFEBE1); // paper
+  static const lightSurface      = Color(0xFFFAF8F3); // card
+  static const lightSurfaceEl    = Color(0xFFF3F0E8); // recessed / hover (surface-2)
+  static const lightSurface3     = Color(0xFFE7E3D8);
+  static const lightDivider      = Color(0xFFDCD7C9); // mist (hairline)
+  static const lightPrimary      = cobaltLight;
+  static const lightPrimaryDark  = Color(0xFF1A33C4); // cobalt hover
+  static const lightSecondary    = cobaltLight;
+  static const lightAccent       = accentLight;
+  static const lightTxtPrimary   = Color(0xFF17211D); // petroleum ink
+  static const lightTxtSecondary = Color(0xFF6B6657); // muted
+  static const lightTxtTertiary  = Color(0xFF8A8578);
+  static const lightTxtDisabled  = Color(0xFFA9A497);
+  static const lightSuccess      = mossLight;
+  static const lightError        = clayLight;
+  static const lightWarning      = goldLight;
+  static const lightInfo         = accentLight;
+  static const lightIncomeBg     = Color(0x242C6B57); // moss @ ~14%
+  static const lightExpenseBg    = Color(0x24B0451F); // clay @ ~14%
+  static const lightBudgetNeutral = cobaltLight;
+
+  // Hero panel — dark even in light theme.
+  static const lightPanel        = Color(0xFF17211D);
+  static const lightPanel2       = Color(0xFF1E2B26);
+  static const lightPanelText    = Color(0xFFEFEBE1);
+  static const lightPanelMuted   = Color(0xFFA7A293);
+
+  // ── Dark ("petróleo" — deep petrol) ─────────────────────────────────────────
+  static const darkBg            = Color(0xFF0E1613); // paper
+  // Cards sit clearly above the paper and the (darker) hero panel so the
+  // primary/secondary hierarchy reads in dark mode.
+  static const darkSurface       = Color(0xFF1D2A24); // card
+  static const darkSurfaceEl     = Color(0xFF25332C); // recessed / hover
+  static const darkSurface3      = Color(0xFF33403A);
+  static const darkDivider       = Color(0xFF2B3833); // mist
+  static const darkPrimary       = cobaltDark;
+  static const darkPrimaryDark   = Color(0xFF2E49E0);
+  static const darkSecondary     = accentDark;
+  static const darkAccent        = accentDark;
+  static const darkTxtPrimary    = Color(0xFFECE7DA); // osso text
+  static const darkTxtSecondary  = Color(0xFF8E9A91); // muted
+  static const darkTxtTertiary   = Color(0xFF76837A);
+  static const darkTxtDisabled   = Color(0xFF5E6B62);
+  static const darkSuccess       = mossDark;
+  static const darkError         = clayDark;
+  static const darkWarning       = goldDark;
+  static const darkInfo          = accentDark;
+  static const darkIncomeBg      = Color(0x245FC6A0); // moss @ ~14%
+  static const darkExpenseBg     = Color(0x24FF8A5B); // clay @ ~14%
+  static const darkBudgetNeutral  = cobaltDark;
+
+  // Hero panel — petrol-cobalt tint.
+  static const darkPanel         = Color(0xFF12201E);
+  static const darkPanel2        = Color(0xFF1A302C);
+  static const darkPanelText     = Color(0xFFECE7DA);
+  static const darkPanelMuted    = Color(0xFF8FA39A);
+
+  // ── Gradients ───────────────────────────────────────────────────────────────
+  // Cobalt fill — used on FAB, primary buttons, avatar, logo glyph.
   static const primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+    colors: [Color(0xFF3D5BFF), Color(0xFF1F3CE0)],
   );
 
   static const logoGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+    colors: [Color(0xFF3D5BFF), Color(0xFF152BB0)],
+  );
+
+  // Avatar — cobalt to deep cobalt (matches Quantia .avatar).
+  static const avatarGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF1F3CE0), Color(0xFF0C1F9C)],
   );
 }
 
+/// Theme-aware token bundle. Screens read `AppThemeTokens.of(context)` and use
+/// semantic fields so a single palette swap re-skins the whole app.
 class AppThemeTokens {
   final Color bg;
   final Color surface;
   final Color surfaceEl;
-  final Color divider;
-  final Color primary;
+  final Color surface3;
+  final Color divider; // == mist
+  final Color primary; // cobalt fill
   final Color primaryDark;
-  final Color accent;
+  final Color accent; // cobalt as text/mark
+  final Color cobaltLift;
   final Color txtPrimary;
   final Color txtSecondary;
   final Color txtTertiary;
   final Color txtDisabled;
-  final Color success;
-  final Color error;
-  final Color warning;
+  final Color success; // moss
+  final Color error; // clay
+  final Color warning; // gold
   final Color info;
+  final Color moss;
+  final Color mossLift;
+  final Color clay;
+  final Color clayLift;
+  final Color gold;
   final Color incomeBg;
   final Color expenseBg;
   final Color budgetNeutral;
+  // Hero panel (dark in both themes).
+  final Color panel;
+  final Color panel2;
+  final Color panelText;
+  final Color panelMuted;
   final bool isDark;
 
   const AppThemeTokens._({
     required this.bg,
     required this.surface,
     required this.surfaceEl,
+    required this.surface3,
     required this.divider,
     required this.primary,
     required this.primaryDark,
     required this.accent,
+    required this.cobaltLift,
     required this.txtPrimary,
     required this.txtSecondary,
     required this.txtTertiary,
@@ -96,20 +161,37 @@ class AppThemeTokens {
     required this.error,
     required this.warning,
     required this.info,
+    required this.moss,
+    required this.mossLift,
+    required this.clay,
+    required this.clayLift,
+    required this.gold,
     required this.incomeBg,
     required this.expenseBg,
     required this.budgetNeutral,
+    required this.panel,
+    required this.panel2,
+    required this.panelText,
+    required this.panelMuted,
     required this.isDark,
   });
+
+  /// Alias — Quantia calls the hairline "mist".
+  Color get mist => divider;
+
+  /// Alias — Quantia calls the recessed surface "surface-2".
+  Color get surface2 => surfaceEl;
 
   static const light = AppThemeTokens._(
     bg: AppColors.lightBg,
     surface: AppColors.lightSurface,
     surfaceEl: AppColors.lightSurfaceEl,
+    surface3: AppColors.lightSurface3,
     divider: AppColors.lightDivider,
     primary: AppColors.lightPrimary,
     primaryDark: AppColors.lightPrimaryDark,
     accent: AppColors.lightAccent,
+    cobaltLift: AppColors.cobaltLift,
     txtPrimary: AppColors.lightTxtPrimary,
     txtSecondary: AppColors.lightTxtSecondary,
     txtTertiary: AppColors.lightTxtTertiary,
@@ -118,9 +200,18 @@ class AppThemeTokens {
     error: AppColors.lightError,
     warning: AppColors.lightWarning,
     info: AppColors.lightInfo,
+    moss: AppColors.mossLight,
+    mossLift: AppColors.mossLiftLight,
+    clay: AppColors.clayLight,
+    clayLift: AppColors.clayLiftLight,
+    gold: AppColors.goldLight,
     incomeBg: AppColors.lightIncomeBg,
     expenseBg: AppColors.lightExpenseBg,
     budgetNeutral: AppColors.lightBudgetNeutral,
+    panel: AppColors.lightPanel,
+    panel2: AppColors.lightPanel2,
+    panelText: AppColors.lightPanelText,
+    panelMuted: AppColors.lightPanelMuted,
     isDark: false,
   );
 
@@ -128,10 +219,12 @@ class AppThemeTokens {
     bg: AppColors.darkBg,
     surface: AppColors.darkSurface,
     surfaceEl: AppColors.darkSurfaceEl,
+    surface3: AppColors.darkSurface3,
     divider: AppColors.darkDivider,
     primary: AppColors.darkPrimary,
     primaryDark: AppColors.darkPrimaryDark,
     accent: AppColors.darkAccent,
+    cobaltLift: AppColors.cobaltLift,
     txtPrimary: AppColors.darkTxtPrimary,
     txtSecondary: AppColors.darkTxtSecondary,
     txtTertiary: AppColors.darkTxtTertiary,
@@ -140,9 +233,18 @@ class AppThemeTokens {
     error: AppColors.darkError,
     warning: AppColors.darkWarning,
     info: AppColors.darkInfo,
+    moss: AppColors.mossDark,
+    mossLift: AppColors.mossLiftDark,
+    clay: AppColors.clayDark,
+    clayLift: AppColors.clayLiftDark,
+    gold: AppColors.goldDark,
     incomeBg: AppColors.darkIncomeBg,
     expenseBg: AppColors.darkExpenseBg,
     budgetNeutral: AppColors.darkBudgetNeutral,
+    panel: AppColors.darkPanel,
+    panel2: AppColors.darkPanel2,
+    panelText: AppColors.darkPanelText,
+    panelMuted: AppColors.darkPanelMuted,
     isDark: true,
   );
 

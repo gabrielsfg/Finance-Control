@@ -105,8 +105,8 @@ Widget _loader(bool compact) =>
 
 Widget _err(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('Could not load data', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Não foi possível carregar os dados', style: AppTextStyles.bodySm(t.txtTertiary))));
 
 Widget _empty(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('No expenses for this period', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Sem despesas para este período', style: AppTextStyles.bodySm(t.txtTertiary))));

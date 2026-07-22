@@ -20,45 +20,45 @@ enum ChartId {
 
 extension ChartIdLabel on ChartId {
   String get label => switch (this) {
-        ChartId.incomeExpense => 'Income vs Expense',
-        ChartId.balanceEvolution => 'Balance Evolution',
-        ChartId.expensesByCategory => 'Expenses by Category',
-        ChartId.topCategories => 'Top Categories',
-        ChartId.categoryEvolution => 'Category Evolution',
-        ChartId.budgetPace => 'Budget Pace',
-        ChartId.netWorthComposition => 'Net Worth Composition',
-        ChartId.netWorthEvolution => 'Net Worth Evolution',
-        ChartId.futureCommitments => 'Future Commitments',
-        ChartId.spendingHeatmap => 'Spending Heatmap',
-        ChartId.balanceProjection => 'Balance Projection',
-        ChartId.categoryProjection => 'Category Projection',
-        ChartId.netWorthProjection => 'Net Worth Projection',
-        ChartId.commitmentsImpact => 'Commitments Impact',
+        ChartId.incomeExpense => 'Receitas vs despesas',
+        ChartId.balanceEvolution => 'Evolução do saldo',
+        ChartId.expensesByCategory => 'Despesas por categoria',
+        ChartId.topCategories => 'Principais categorias',
+        ChartId.categoryEvolution => 'Evolução por categoria',
+        ChartId.budgetPace => 'Ritmo do orçamento',
+        ChartId.netWorthComposition => 'Composição do patrimônio',
+        ChartId.netWorthEvolution => 'Evolução do patrimônio',
+        ChartId.futureCommitments => 'Compromissos futuros',
+        ChartId.spendingHeatmap => 'Mapa de calor de gastos',
+        ChartId.balanceProjection => 'Projeção do saldo',
+        ChartId.categoryProjection => 'Projeção por categoria',
+        ChartId.netWorthProjection => 'Projeção do patrimônio',
+        ChartId.commitmentsImpact => 'Impacto dos compromissos',
       };
 
   String get description => switch (this) {
-        ChartId.incomeExpense => 'Monthly income vs expense grouped by month',
-        ChartId.balanceEvolution => 'Day-by-day balance within the period',
+        ChartId.incomeExpense => 'Receitas e despesas agrupadas por mês',
+        ChartId.balanceEvolution => 'Saldo dia a dia dentro do período',
         ChartId.expensesByCategory =>
-          'Donut chart with drill-down by subcategory',
-        ChartId.topCategories => 'Horizontal bar chart of top expense categories',
+          'Gráfico de rosca com detalhamento por subcategoria',
+        ChartId.topCategories => 'Gráfico de barras das maiores categorias de despesa',
         ChartId.categoryEvolution =>
-          'Monthly evolution of a specific category',
-        ChartId.budgetPace => 'Actual spending vs ideal daily pace',
+          'Evolução mensal de uma categoria específica',
+        ChartId.budgetPace => 'Gastos reais vs ritmo diário ideal',
         ChartId.netWorthComposition =>
-          'Monthly net worth broken down by account',
-        ChartId.netWorthEvolution => 'Net worth trend over time',
+          'Patrimônio mensal detalhado por conta',
+        ChartId.netWorthEvolution => 'Tendência do patrimônio ao longo do tempo',
         ChartId.futureCommitments =>
-          'Upcoming installments and recurring expenses',
-        ChartId.spendingHeatmap => 'Daily spending intensity calendar',
+          'Parcelas e despesas recorrentes futuras',
+        ChartId.spendingHeatmap => 'Calendário de intensidade de gastos diários',
         ChartId.balanceProjection =>
-          'Projected balance to end of month based on recent pace',
+          'Saldo projetado até o fim do mês com base no ritmo recente',
         ChartId.categoryProjection =>
-          'Projected vs historical spending per category',
+          'Gastos projetados vs históricos por categoria',
         ChartId.netWorthProjection =>
-          'Net worth trend and months until target or zero',
+          'Tendência do patrimônio e meses até a meta ou zero',
         ChartId.commitmentsImpact =>
-          'Future balance after accounting for all commitments',
+          'Saldo futuro considerando todos os compromissos',
       };
 
   bool get isProjection => switch (this) {

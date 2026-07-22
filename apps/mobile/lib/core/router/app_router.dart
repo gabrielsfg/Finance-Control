@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/accounts/presentation/account_detail_page.dart';
 import '../../features/accounts/presentation/accounts_page.dart';
 import '../../features/accounts/presentation/create_account_page.dart';
 import '../../features/accounts/presentation/edit_account_page.dart';
@@ -18,6 +19,7 @@ import '../../features/profile/presentation/profile_page.dart';
 import '../../features/auth/presentation/register_page.dart';
 import '../../features/auth/presentation/splash_page.dart';
 import '../../features/auth/providers/auth_provider.dart';
+import '../providers/overlay_provider.dart';
 import '../../features/budgets/data/models/budget_models.dart';
 import '../../features/budgets/presentation/budgets_page.dart';
 import '../../features/budgets/presentation/create_budget_step1_page.dart';
@@ -26,12 +28,15 @@ import '../../features/budgets/presentation/create_budget_step2_page.dart';
 import '../../features/budgets/presentation/create_budget_step3_page.dart';
 import '../../features/budgets/presentation/create_budget_step4_page.dart';
 import '../../features/analytics/presentation/analytics_page.dart';
+import '../../features/goals/presentation/goals_page.dart';
 import '../../features/home/presentation/home_page.dart';
+import '../../features/investments/presentation/investments_page.dart';
+import '../../features/investments/presentation/register_investment_page.dart';
+import '../../features/market/presentation/market_asset_page.dart';
+import '../../features/market/presentation/market_page.dart';
+import '../../features/menu/presentation/menu_page.dart';
+import '../../features/recurrences/presentation/recurrences_page.dart';
 import '../../features/transactions/data/models/transaction_item.dart';
-import '../../features/wishlist/data/models/wishlist_item.dart';
-import '../../features/wishlist/presentation/wishlist_detail_page.dart';
-import '../../features/wishlist/presentation/wishlist_form_page.dart';
-import '../../features/wishlist/presentation/wishlist_page.dart';
 import '../../features/transactions/presentation/add_transaction_page.dart';
 import '../../features/transactions/presentation/edit_transaction_page.dart';
 import '../../features/transactions/presentation/transaction_detail_page.dart';
@@ -44,6 +49,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
     initialLocation: '/splash',
     refreshListenable: notifier,
+    observers: [OverlayRouteObserver(ref)],
     redirect: (context, state) {
       final authState = ref.read(authNotifierProvider);
 
@@ -85,6 +91,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const AnalyticsPage(),
       ),
       GoRoute(
+        path: '/recurring',
+        builder: (_, _) => const RecurrencesPage(),
+      ),
+      GoRoute(
+        path: '/goals',
+        builder: (_, _) => const GoalsPage(),
+      ),
+      GoRoute(
+        path: '/investments',
+        builder: (_, _) => const InvestmentsPage(),
+        routes: [
+          GoRoute(
+            path: 'register',
+            builder: (_, _) => const RegisterInvestmentPage(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/market',
+        builder: (_, _) => const MarketPage(),
+        routes: [
+          GoRoute(
+            path: ':ticker',
+            builder: (_, state) =>
+                MarketAssetPage(ticker: state.pathParameters['ticker']!),
+          ),
+        ],
+      ),
+      GoRoute(
         path: '/transactions/add',
         builder: (_, _) => const AddTransactionPage(),
       ),
@@ -98,32 +133,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/accounts/create',
         builder: (_, _) => const CreateAccountPage(),
-      ),
-      GoRoute(
-        path: '/wishlist',
-        builder: (_, _) => const WishlistPage(),
-        routes: [
-          GoRoute(
-            path: 'create',
-            builder: (_, _) => const WishlistFormPage(),
-          ),
-          GoRoute(
-            path: ':id',
-            builder: (_, state) {
-              final id = int.parse(state.pathParameters['id']!);
-              return WishlistDetailPage(itemId: id);
-            },
-            routes: [
-              GoRoute(
-                path: 'edit',
-                builder: (_, state) {
-                  final item = state.extra as WishlistItem;
-                  return WishlistFormPage(item: item);
-                },
-              ),
-            ],
-          ),
-        ],
       ),
       GoRoute(
         path: '/categories',
@@ -144,11 +153,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
-        path: '/accounts/:id/edit',
+        path: '/accounts/:id',
         builder: (_, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return EditAccountPage(accountId: id);
+          return AccountDetailPage(accountId: id);
         },
+        routes: [
+          GoRoute(
+            path: 'edit',
+            builder: (_, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return EditAccountPage(accountId: id);
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: '/budgets/edit',
@@ -214,6 +232,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (_, _) => const PreferencesPage(),
               ),
             ],
+          ),
+          GoRoute(
+            path: '/menu',
+            builder: (_, _) => const MenuPage(),
           ),
         ],
       ),

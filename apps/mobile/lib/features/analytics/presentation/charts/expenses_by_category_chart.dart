@@ -21,20 +21,22 @@ class _ExpensesByCategoryChartState
     extends ConsumerState<ExpensesByCategoryChart> {
   int? _touched;
 
-  static const List<Color> _palette = [
-    Color(0xFF7C3AED),
-    Color(0xFF2563EB),
-    Color(0xFF059669),
-    Color(0xFFD97706),
-    Color(0xFFDC2626),
-    Color(0xFF7C3AED),
-    Color(0xFF0891B2),
-    Color(0xFF65A30D),
-  ];
+  // Quantia categorical palette — cycled across the pie slices.
+  List<Color> _paletteFor(AppThemeTokens t) => [
+        t.accent,
+        t.moss,
+        t.clay,
+        t.gold,
+        t.cobaltLift,
+        t.mossLift,
+        t.clayLift,
+        t.txtTertiary,
+      ];
 
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
+    final palette = _paletteFor(t);
     final async = ref.watch(expensesByCategoryProvider);
 
     return async.when(
@@ -45,7 +47,7 @@ class _ExpensesByCategoryChartState
       error: (e, _) => SizedBox(
         height: 80,
         child: Center(
-          child: Text('Could not load data',
+          child: Text('Não foi possível carregar os dados',
               style: AppTextStyles.bodySm(t.txtTertiary)),
         ),
       ),
@@ -54,7 +56,7 @@ class _ExpensesByCategoryChartState
           return SizedBox(
             height: 80,
             child: Center(
-              child: Text('No expenses for this period',
+              child: Text('Sem despesas para este período',
                   style: AppTextStyles.bodySm(t.txtTertiary)),
             ),
           );
@@ -69,7 +71,7 @@ class _ExpensesByCategoryChartState
           final pct = total > 0 ? item.total / total : 0.0;
           return PieChartSectionData(
             value: item.total.toDouble(),
-            color: _palette[i % _palette.length],
+            color: palette[i % palette.length],
             radius: isTouched
                 ? (widget.compact ? 52.0 : 68.0)
                 : (widget.compact ? 44.0 : 60.0),
@@ -122,7 +124,7 @@ class _ExpensesByCategoryChartState
                                   width: 10,
                                   height: 10,
                                   decoration: BoxDecoration(
-                                    color: _palette[i % _palette.length],
+                                    color: palette[i % palette.length],
                                     shape: BoxShape.circle,
                                   ),
                                 ),

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/app_locale.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../../accounts/providers/accounts_provider.dart';
 import '../../categories/providers/subcategories_provider.dart';
 import '../data/models/transaction_filter_state.dart';
@@ -50,12 +52,17 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final bottomPad = MediaQuery.viewPaddingOf(context).bottom;
+    final bottomPad = MediaQuery.viewInsetsOf(context).bottom +
+        MediaQuery.viewPaddingOf(context).bottom;
 
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+      ),
       decoration: BoxDecoration(
         color: t.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(AppRadius.xl3)),
       ),
       padding: EdgeInsets.fromLTRB(24, 16, 24, bottomPad + 24),
       child: SingleChildScrollView(
@@ -69,7 +76,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: t.divider,
+                  color: t.mist,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -80,20 +87,20 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Filters',
-                  style: AppTextStyles.h2(t.txtPrimary).copyWith(fontSize: 18),
+                  'Filtros',
+                  style: AppTextStyles.h2(t.txtPrimary),
                 ),
                 GestureDetector(
                   onTap: _clearAll,
                   child: Text(
-                    'Clear all',
-                    style: AppTextStyles.body(t.primary).copyWith(fontSize: 14),
+                    'Limpar tudo',
+                    style: AppTextStyles.body(t.accent).copyWith(fontSize: 14),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-            _SectionLabel(label: 'Period'),
+            _SectionLabel(label: 'Período'),
             const SizedBox(height: 10),
             _PeriodSelector(
               selected: _draft.period,
@@ -112,7 +119,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               },
             ),
             const SizedBox(height: 24),
-            _SectionLabel(label: 'Type'),
+            _SectionLabel(label: 'Tipo'),
             const SizedBox(height: 10),
             _TypeSelector(
               selected: _draft.typeFilter,
@@ -126,7 +133,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               },
             ),
             const SizedBox(height: 24),
-            _SectionLabel(label: 'Account'),
+            _SectionLabel(label: 'Conta'),
             const SizedBox(height: 10),
             _AccountSelector(
               selectedId: _draft.accountId,
@@ -142,7 +149,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               },
             ),
             const SizedBox(height: 24),
-            _SectionLabel(label: 'Subcategory'),
+            _SectionLabel(label: 'Subcategoria'),
             const SizedBox(height: 10),
             _SubcategorySelector(
               selectedId: _draft.subCategoryId,
@@ -158,7 +165,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               },
             ),
             const SizedBox(height: 24),
-            _SectionLabel(label: 'Area'),
+            _SectionLabel(label: 'Área'),
             const SizedBox(height: 10),
             _AreaSelector(
               selectedId: _draft.areaId,
@@ -174,7 +181,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               },
             ),
             const SizedBox(height: 24),
-            _SectionLabel(label: 'Value range'),
+            _SectionLabel(label: 'Faixa de valor'),
             const SizedBox(height: 10),
             _ValueRangeSelector(
               minCents: _draft.minValueCents,
@@ -193,23 +200,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
-              height: 50,
-              child: FilledButton(
-                onPressed: _apply,
-                style: FilledButton.styleFrom(
-                  backgroundColor: t.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: Text(
-                  'Apply',
-                  style: AppTextStyles.body(Colors.white).copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
+              child: PrimaryButton(label: 'Aplicar', onPressed: _apply),
             ),
           ],
         ),
@@ -229,11 +220,7 @@ class _SectionLabel extends StatelessWidget {
     final t = AppThemeTokens.of(context);
     return Text(
       label.toUpperCase(),
-      style: AppTextStyles.caption(t.txtTertiary).copyWith(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.8,
-      ),
+      style: AppTextStyles.eyebrow(t.txtSecondary),
     );
   }
 }
@@ -260,14 +247,14 @@ class _PeriodSelector extends StatelessWidget {
   });
 
   static const _options = [
-    (TransactionPeriod.currentBudget, 'Current budget'),
-    (TransactionPeriod.last7Days, 'Last 7 days'),
-    (TransactionPeriod.last15Days, 'Last 15 days'),
-    (TransactionPeriod.lastMonth, 'Last month'),
-    (TransactionPeriod.last3Months, 'Last 3 months'),
-    (TransactionPeriod.last6Months, 'Last 6 months'),
-    (TransactionPeriod.last365Days, 'Last year'),
-    (TransactionPeriod.custom, 'Custom range'),
+    (TransactionPeriod.currentBudget, 'Orçamento atual'),
+    (TransactionPeriod.last7Days, 'Últimos 7 dias'),
+    (TransactionPeriod.last15Days, 'Últimos 15 dias'),
+    (TransactionPeriod.lastMonth, 'Último mês'),
+    (TransactionPeriod.last3Months, 'Últimos 3 meses'),
+    (TransactionPeriod.last6Months, 'Últimos 6 meses'),
+    (TransactionPeriod.last365Days, 'Último ano'),
+    (TransactionPeriod.custom, 'Período personalizado'),
   ];
 
   @override
@@ -302,15 +289,11 @@ class _PeriodSelector extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: selected == period
-                    ? t.primary.withValues(alpha: 0.15)
-                    : (t.isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : t.primary.withValues(alpha: 0.04)),
-                borderRadius: BorderRadius.circular(10),
+                    ? t.accent.withValues(alpha: t.isDark ? 0.22 : 0.12)
+                    : t.surfaceEl,
+                borderRadius: AppRadius.mdAll,
                 border: Border.all(
-                  color: selected == period
-                      ? t.primary
-                      : Colors.transparent,
+                  color: selected == period ? t.accent : t.mist,
                   width: 1.5,
                 ),
               ),
@@ -322,7 +305,7 @@ class _PeriodSelector extends StatelessWidget {
                     ? '${fmt.formatDate(customFrom!)} – ${fmt.formatDate(customTo!)}'
                     : label,
                 style: AppTextStyles.body(
-                  selected == period ? t.primary : t.txtSecondary,
+                  selected == period ? t.accent : t.txtSecondary,
                 ).copyWith(fontSize: 13),
               ),
             ),
@@ -341,10 +324,10 @@ class _TypeSelector extends StatelessWidget {
   const _TypeSelector({required this.selected, required this.onChanged});
 
   static const _options = [
-    (null, 'All'),
-    ('Expense', 'Expenses'),
-    ('Income', 'Income'),
-    ('Recurring', 'Recurring'),
+    (null, 'Todas'),
+    ('Expense', 'Despesas'),
+    ('Income', 'Receitas'),
+    ('Recurring', 'Recorrentes'),
   ];
 
   @override
@@ -360,20 +343,18 @@ class _TypeSelector extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: selected == value
-                    ? t.primary.withValues(alpha: 0.15)
-                    : (t.isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : t.primary.withValues(alpha: 0.04)),
-                borderRadius: BorderRadius.circular(10),
+                    ? t.accent.withValues(alpha: t.isDark ? 0.22 : 0.12)
+                    : t.surfaceEl,
+                borderRadius: AppRadius.mdAll,
                 border: Border.all(
-                  color: selected == value ? t.primary : Colors.transparent,
+                  color: selected == value ? t.accent : t.mist,
                   width: 1.5,
                 ),
               ),
               child: Text(
                 label,
                 style: AppTextStyles.body(
-                  selected == value ? t.primary : t.txtSecondary,
+                  selected == value ? t.accent : t.txtSecondary,
                 ).copyWith(fontSize: 13),
               ),
             ),
@@ -407,7 +388,7 @@ class _AccountSelector extends ConsumerWidget {
       loading: () => const SizedBox(height: 36, child: LinearProgressIndicator()),
       error: (e, st) => const SizedBox.shrink(),
       data: (accounts) => _PickerRow(
-        label: selectedName ?? 'All accounts',
+        label: selectedName ?? 'Todas as contas',
         isSelected: selectedId != null,
         onTap: () => _showPicker(
           context,
@@ -444,7 +425,7 @@ class _SubcategorySelector extends ConsumerWidget {
       loading: () => const SizedBox(height: 36, child: LinearProgressIndicator()),
       error: (_, __) => const SizedBox.shrink(),
       data: (subs) => _PickerRow(
-        label: selectedName ?? 'All subcategories',
+        label: selectedName ?? 'Todas as subcategorias',
         isSelected: selectedId != null,
         onTap: () => _showPicker(
           context,
@@ -481,7 +462,7 @@ class _AreaSelector extends ConsumerWidget {
       loading: () => const SizedBox(height: 36, child: LinearProgressIndicator()),
       error: (_, __) => const SizedBox.shrink(),
       data: (areas) => _PickerRow(
-        label: selectedName ?? 'All areas',
+        label: selectedName ?? 'Todas as áreas',
         isSelected: selectedId != null,
         onTap: () => _showPicker(
           context,
@@ -553,17 +534,19 @@ class _ValueRangeSelectorState extends State<_ValueRangeSelector> {
     final t = AppThemeTokens.of(context);
     final fieldDecoration = InputDecoration(
       hintStyle: AppTextStyles.body(t.txtTertiary).copyWith(fontSize: 14),
+      filled: true,
+      fillColor: t.surfaceEl,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: t.divider),
+        borderRadius: AppRadius.baseAll,
+        borderSide: BorderSide(color: t.mist),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: t.divider),
+        borderRadius: AppRadius.baseAll,
+        borderSide: BorderSide(color: t.mist),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: t.primary, width: 1.5),
+        borderRadius: AppRadius.baseAll,
+        borderSide: BorderSide(color: t.accent, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       isDense: true,
@@ -578,7 +561,7 @@ class _ValueRangeSelectorState extends State<_ValueRangeSelector> {
                 const TextInputType.numberWithOptions(decimal: true),
             onChanged: (_) => _notify(),
             style: AppTextStyles.body(t.txtPrimary).copyWith(fontSize: 14),
-            decoration: fieldDecoration.copyWith(hintText: 'Min (R\$)'),
+            decoration: fieldDecoration.copyWith(hintText: 'Mín (R\$)'),
           ),
         ),
         Padding(
@@ -592,7 +575,7 @@ class _ValueRangeSelectorState extends State<_ValueRangeSelector> {
                 const TextInputType.numberWithOptions(decimal: true),
             onChanged: (_) => _notify(),
             style: AppTextStyles.body(t.txtPrimary).copyWith(fontSize: 14),
-            decoration: fieldDecoration.copyWith(hintText: 'Max (R\$)'),
+            decoration: fieldDecoration.copyWith(hintText: 'Máx (R\$)'),
           ),
         ),
       ],
@@ -623,13 +606,11 @@ class _PickerRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected
-              ? t.primary.withValues(alpha: 0.08)
-              : (t.isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : t.primary.withValues(alpha: 0.04)),
-          borderRadius: BorderRadius.circular(10),
+              ? t.accent.withValues(alpha: t.isDark ? 0.16 : 0.10)
+              : t.surfaceEl,
+          borderRadius: AppRadius.baseAll,
           border: Border.all(
-            color: isSelected ? t.primary : t.divider.withValues(alpha: 0.5),
+            color: isSelected ? t.accent : t.mist,
             width: 1.5,
           ),
         ),
@@ -639,7 +620,7 @@ class _PickerRow extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTextStyles.body(
-                  isSelected ? t.primary : t.txtSecondary,
+                  isSelected ? t.accent : t.txtSecondary,
                 ).copyWith(fontSize: 14),
               ),
             ),
@@ -711,7 +692,8 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
     return Container(
       decoration: BoxDecoration(
         color: t.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(AppRadius.xl3)),
       ),
       padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPad + 16),
       child: Column(
@@ -722,7 +704,7 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: t.divider,
+                color: t.mist,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -732,22 +714,24 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
             autofocus: true,
             onChanged: (v) => setState(() => _query = v),
             decoration: InputDecoration(
-              hintText: 'Search...',
+              hintText: 'Buscar...',
               hintStyle:
                   AppTextStyles.body(t.txtTertiary).copyWith(fontSize: 14),
               prefixIcon:
                   Icon(Icons.search_rounded, size: 20, color: t.txtTertiary),
+              filled: true,
+              fillColor: t.surfaceEl,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: t.divider),
+                borderRadius: AppRadius.baseAll,
+                borderSide: BorderSide(color: t.mist),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: t.divider),
+                borderRadius: AppRadius.baseAll,
+                borderSide: BorderSide(color: t.mist),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: t.primary, width: 1.5),
+                borderRadius: AppRadius.baseAll,
+                borderSide: BorderSide(color: t.accent, width: 1.5),
               ),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -759,7 +743,7 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
             ListTile(
               dense: true,
               title: Text(
-                'Clear selection',
+                'Limpar seleção',
                 style:
                     AppTextStyles.body(t.error).copyWith(fontSize: 14),
               ),
@@ -785,11 +769,11 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
                   title: Text(
                     name,
                     style: AppTextStyles.body(
-                      isSelected ? t.primary : t.txtPrimary,
+                      isSelected ? t.accent : t.txtPrimary,
                     ).copyWith(fontSize: 14),
                   ),
                   trailing: isSelected
-                      ? Icon(Icons.check_rounded, size: 18, color: t.primary)
+                      ? Icon(Icons.check_rounded, size: 18, color: t.accent)
                       : null,
                   onTap: () {
                     widget.onSelect(id, name);

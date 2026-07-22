@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/color_picker_grid.dart';
 import '../providers/categories_provider.dart';
 
 class CreateCategoryPage extends ConsumerStatefulWidget {
@@ -20,6 +21,7 @@ class _CreateCategoryPageState extends ConsumerState<CreateCategoryPage> {
   final _nameController = TextEditingController();
   String? _errorText;
   bool _loading = false;
+  String _color = '#00C98D';
 
   @override
   void dispose() {
@@ -38,7 +40,9 @@ class _CreateCategoryPageState extends ConsumerState<CreateCategoryPage> {
       _errorText = null;
     });
     try {
-      await ref.read(categoriesNotifierProvider.notifier).createCategory(name);
+      await ref
+          .read(categoriesNotifierProvider.notifier)
+          .createCategory(name, color: _color);
       if (mounted) context.pop();
     } catch (_) {
       if (mounted) {
@@ -83,9 +87,7 @@ class _CreateCategoryPageState extends ConsumerState<CreateCategoryPage> {
                           hintStyle: AppTextStyles.body(t.txtDisabled),
                           errorText: _errorText,
                           filled: true,
-                          fillColor: t.isDark
-                              ? Colors.white.withValues(alpha: 0.05)
-                              : const Color(0xFF7C3AED).withValues(alpha: 0.04),
+                          fillColor: t.surfaceEl,
                           border: OutlineInputBorder(
                             borderRadius: AppRadius.baseAll,
                             borderSide: BorderSide(color: t.divider),
@@ -97,7 +99,7 @@ class _CreateCategoryPageState extends ConsumerState<CreateCategoryPage> {
                           focusedBorder: OutlineInputBorder(
                             borderRadius: AppRadius.baseAll,
                             borderSide:
-                                BorderSide(color: t.primary, width: 1.5),
+                                BorderSide(color: t.accent, width: 1.5),
                           ),
                           errorBorder: OutlineInputBorder(
                             borderRadius: AppRadius.baseAll,
@@ -114,6 +116,13 @@ class _CreateCategoryPageState extends ConsumerState<CreateCategoryPage> {
                           }
                         },
                         onSubmitted: (_) => _submit(),
+                      ),
+                      const SizedBox(height: 24),
+                      _FieldLabel(label: 'Cor', tokens: t),
+                      const SizedBox(height: 12),
+                      ColorPickerGrid(
+                        selected: _color,
+                        onSelected: (c) => setState(() => _color = c),
                       ),
                       const SizedBox(height: 32),
                       _SubmitButton(loading: _loading, onTap: _submit),

@@ -7,11 +7,13 @@ class CategoryItemResponseDto {
   const CategoryItemResponseDto({
     required this.id,
     required this.name,
+    this.color,
     required this.subCategories,
   });
 
   final int id;
   final String name;
+  final String? color;
   final List<SubcategoryItemResponseDto> subCategories;
 
   factory CategoryItemResponseDto.fromJson(Map<String, dynamic> json) =>
@@ -25,6 +27,8 @@ class SubcategoryItemResponseDto {
     required this.name,
     required this.categoryId,
     this.categoryName,
+    this.categoryColor,
+    this.emoji,
   });
 
   final int id;
@@ -34,6 +38,9 @@ class SubcategoryItemResponseDto {
   /// Only present when fetched via GET /api/SubCategory/all.
   /// Not included when subcategories are nested inside a category response.
   final String? categoryName;
+
+  final String? categoryColor;
+  final String? emoji;
 
   factory SubcategoryItemResponseDto.fromJson(Map<String, dynamic> json) =>
       _$SubcategoryItemResponseDtoFromJson(json);

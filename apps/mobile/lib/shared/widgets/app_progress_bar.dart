@@ -17,9 +17,7 @@ class AppProgressBar extends StatelessWidget {
         : percent >= 0.8
             ? t.warning
             : (color ?? t.primary);
-    final trackColor = t.isDark
-        ? Colors.white.withValues(alpha: 0.1)
-        : const Color(0xFF7C3AED).withValues(alpha: 0.12);
+    final trackColor = t.surfaceEl;
     return LayoutBuilder(
       builder: (_, constraints) {
         final totalWidth = constraints.maxWidth;

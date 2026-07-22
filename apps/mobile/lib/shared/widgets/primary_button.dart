@@ -32,12 +32,16 @@ class PrimaryButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[icon!, const SizedBox(width: 6)],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: small ? 13 : 15,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: small ? 13 : 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],

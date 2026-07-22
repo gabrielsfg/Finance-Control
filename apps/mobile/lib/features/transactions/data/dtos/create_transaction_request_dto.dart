@@ -5,21 +5,26 @@ part 'create_transaction_request_dto.g.dart';
 @JsonSerializable(createFactory: false)
 class CreateTransactionRequestDto {
   const CreateTransactionRequestDto({
-    required this.subCategoryId,
+    this.subCategoryId,
     required this.accountId,
     required this.value,
     required this.type,
     required this.transactionDate,
     required this.paymentType,
     required this.includeInBudget,
+    this.destinationAccountId,
     this.description,
     this.totalInstallments,
     this.recurrence,
     this.paymentMethod,
   });
 
-  final int subCategoryId;
+  /// Null for transfers (which have no subcategory).
+  final int? subCategoryId;
   final int accountId;
+
+  /// Destination account for transfers (type == "Transfer").
+  final int? destinationAccountId;
 
   /// Always in cents. R$ 150,00 → 15000.
   final int value;
