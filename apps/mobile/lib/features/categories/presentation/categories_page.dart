@@ -131,10 +131,9 @@ class _Header extends StatelessWidget {
           child: Container(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: AppColors.primaryGradient,
-              boxShadow: AppShadows.fabShadow,
             ),
             child: const Icon(LucideIcons.plus, color: Colors.white, size: 18),
           ),

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 /// Quantia design-system palette.
 ///
-/// Thesis: money is the material — cobalt-on-osso in light, cobalt-on-petroleum
+/// Thesis: money is the material — cobalt-on-osso in light, cobalt-on-graphite
 /// in dark. Signals are never crayon: positive = moss (petrol green),
 /// negative = clay (burnt orange). The hero panel is dark in BOTH themes and
-/// owns its own tokens so it never collides with `--background`/`--foreground`.
+/// owns its own tokens so it never collides with `--background`/`--foreground`;
+/// in dark it is also the only tinted surface, which is what keeps the graphite
+/// base calm without losing the petrol identity.
 class AppColors {
   AppColors._();
 
@@ -56,22 +58,27 @@ class AppColors {
   static const lightPanelText    = Color(0xFFEFEBE1);
   static const lightPanelMuted   = Color(0xFFA7A293);
 
-  // ── Dark ("petróleo" — deep petrol) ─────────────────────────────────────────
-  static const darkBg            = Color(0xFF0E1613); // paper
+  // ── Dark ("grafite" — neutral graphite) ─────────────────────────────────────
+  // One hue (220°) held at chroma 2-3 across the whole ramp, so the surfaces
+  // read as grey and the hero panel is the ONLY tinted surface in the app.
+  // That makes the petrol panel a deliberate accent instead of ambient tint,
+  // and lets moss/clay/cobalt read as signals rather than blend into the base.
+  static const darkBg            = Color(0xFF0E0F10); // paper
   // Cards sit clearly above the paper and the (darker) hero panel so the
   // primary/secondary hierarchy reads in dark mode.
-  static const darkSurface       = Color(0xFF1D2A24); // card
-  static const darkSurfaceEl     = Color(0xFF25332C); // recessed / hover
-  static const darkSurface3      = Color(0xFF33403A);
-  static const darkDivider       = Color(0xFF2B3833); // mist
+  static const darkSurface       = Color(0xFF232325); // card
+  static const darkSurfaceEl     = Color(0xFF2D2E2F); // recessed / hover
+  static const darkSurface3      = Color(0xFF393A3C);
+  static const darkDivider       = Color(0xFF323335); // mist
   static const darkPrimary       = cobaltDark;
   static const darkPrimaryDark   = Color(0xFF2E49E0);
   static const darkSecondary     = accentDark;
   static const darkAccent        = accentDark;
   static const darkTxtPrimary    = Color(0xFFECE7DA); // osso text
-  static const darkTxtSecondary  = Color(0xFF8E9A91); // muted
-  static const darkTxtTertiary   = Color(0xFF76837A);
-  static const darkTxtDisabled   = Color(0xFF5E6B62);
+  static const darkTxtSecondary  = Color(0xFFA0A4A9); // muted — 6.3:1 on card
+  static const darkTxtTertiary   = Color(0xFF8A8D92); // 4.7:1 on card
+  // 4.1:1 on card — below AA, so disabled only (exempt from the requirement).
+  static const darkTxtDisabled   = Color(0xFF7E8287);
   static const darkSuccess       = mossDark;
   static const darkError         = clayDark;
   static const darkWarning       = goldDark;

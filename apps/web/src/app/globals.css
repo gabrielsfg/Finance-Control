@@ -130,20 +130,28 @@
   --shadow-md: 0 1px 0 rgba(23, 33, 29, 0.04), 0 26px 50px -34px rgba(23, 33, 29, 0.55);
 }
 
-/* ── Dark theme ─────────────────────────────────────────────────── */
+/* ── Dark theme ("grafite" — neutral graphite) ───────────────────── */
+/* One hue (220°) held at chroma 2-3 across the whole ramp, so the surfaces
+   read as grey and the hero panel is the ONLY tinted surface. That makes the
+   petrol panel a deliberate accent instead of ambient tint, and lets
+   moss/clay/cobalt read as signals rather than blend into the base.
+   Kept in sync with the mobile app's AppColors dark tokens. */
 .dark {
   color-scheme: dark;
 
-  --bg: #0e1613;
-  --surface: #16201c;
-  --surface2: #1e2a25;
-  --surface3: #2b3833;
-  --border-color: #2b3833;
-  --border-light: #243029;
+  --bg: #0e0f10;
+  --surface: #232325;
+  --surface2: #2d2e2f;
+  --surface3: #393a3c;
+  --border-color: #323335;
+  --border-light: #2a2b2d;
 
   --text: #ece7da;
-  --text-sub: #8e9a91;
-  --text-muted: #8e9a91;
+  /* 4.5:1 minimum holds on every surface above, surface3 included (4.54:1). */
+  --text-sub: #a0a4a9;
+  /* Only ever sits on --bg/--surface (5.8:1 / 4.7:1); the Tailwind
+     `text-text-muted` utility resolves to --text-sub, not this. */
+  --text-muted: #8a8d92;
 
   --brand-cobalt: #3d5bff;
   --brand-accent: #8197ff;

@@ -81,15 +81,6 @@ class AppShadows {
 
   static const List<BoxShadow> cardDark = [];
 
-  static final List<BoxShadow> fabShadow = [
-    BoxShadow(
-      color: _cobalt.withValues(alpha: 0.4),
-      blurRadius: 22,
-      spreadRadius: -6,
-      offset: const Offset(0, 8),
-    ),
-  ];
-
   static final List<BoxShadow> primaryBtnShadow = [
     BoxShadow(
       color: _cobalt.withValues(alpha: 0.35),
