@@ -21,6 +21,8 @@ namespace FinanceControl.Data.Data
         public DbSet<RecurringTransaction> RecurringTransactions { get; set; }
         public DbSet<Tag> Tags { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<SecurityCode> SecurityCodes { get; set; }
+        public DbSet<TrustedDevice> TrustedDevices { get; set; }
         public DbSet<UserPreferences> UserPreferences { get; set; }
         public DbSet<Goal> Goals { get; set; }
         public DbSet<MarketAsset> MarketAssets { get; set; }

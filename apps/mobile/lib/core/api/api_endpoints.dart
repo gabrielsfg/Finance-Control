@@ -11,6 +11,11 @@ abstract class ApiEndpoints {
   static const String register = '/api/user/mobile/register';
   static const String refreshToken = '/api/user/mobile/refresh';
   static const String logout = '/api/user/mobile/logout';
+  static const String verifyEmail = '/api/user/mobile/verify-email';
+  static const String twoFactorLogin = '/api/user/mobile/login/two-factor';
+  // No mobile variant — these carry no tokens either way, so both clients share them.
+  static const String resendVerificationCode = '/api/user/verify-email/resend';
+  static const String twoFactor = '/api/user/two-factor';
   static const String forgotPassword = '/api/user/forgot-password';
   static const String resetPassword = '/api/user/reset-password';
   static const String userProfile = '/api/user/profile';

@@ -34,8 +34,20 @@ namespace FinanceControl.Services.Services
                 .Where(r => r.IsRevoked || r.ExpiresAt < now)
                 .ExecuteDeleteAsync(cancellationToken);
 
+            // The emailed codes and the trusted devices grow the same way and are just as
+            // dead once spent or expired, so they are pruned on the same pass.
+            var deletedCodes = await context.SecurityCodes
+                .Where(c => c.ConsumedAt != null || c.ExpiresAt < now)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            var deletedDevices = await context.TrustedDevices
+                .Where(d => d.IsRevoked || d.ExpiresAt < now)
+                .ExecuteDeleteAsync(cancellationToken);
+
             _logger.LogInformation(
-                "RefreshTokenCleanupJob deleted {Count} expired/revoked refresh tokens.", deleted);
+                "RefreshTokenCleanupJob deleted {Count} expired/revoked refresh tokens, " +
+                "{CodeCount} security codes and {DeviceCount} trusted devices.",
+                deleted, deletedCodes, deletedDevices);
         }
     }
 }

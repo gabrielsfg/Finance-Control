@@ -7,5 +7,12 @@ namespace FinanceControl.Shared.Dtos.Response
     {
         public string AccessToken { get; set; } = string.Empty;
         public string RefreshToken { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Set only when the user just asked to trust this device. Web turns it into a
+        /// second HttpOnly cookie; mobile stores it in the keystore and replays it on the
+        /// next login.
+        /// </summary>
+        public string? TrustedDeviceToken { get; set; }
     }
 }

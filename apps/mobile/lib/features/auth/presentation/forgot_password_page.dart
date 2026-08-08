@@ -81,7 +81,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                       style: AppTextStyles.h1(t.txtPrimary)),
                   const SizedBox(height: 6),
                   Text(
-                    'Informe seu e-mail e enviaremos um link para redefinir a senha.',
+                    'Informe seu e-mail e enviaremos um código para você cadastrar uma nova senha.',
                     style: AppTextStyles.body(t.txtSecondary),
                   ),
                   const SizedBox(height: 32),
@@ -102,7 +102,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Se esse e-mail existir, enviamos um link de redefinição.',
+                              'Se esse e-mail existir, enviamos um código de 6 dígitos.',
                               style: AppTextStyles.body(t.success)
                                   .copyWith(fontSize: 14),
                             ),
@@ -113,7 +113,12 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                     const SizedBox(height: 24),
                     PrimaryButton(
                       label: 'Continuar para redefinir',
-                      onPressed: () => context.push('/reset-password'),
+                      // The reset screen needs the address to send along with the
+                      // code, and asking for it twice would be pure friction.
+                      onPressed: () => context.push(
+                        '/reset-password',
+                        extra: _emailController.text.trim(),
+                      ),
                     ),
                   ] else ...[
                     if (_globalError != null) ...[
@@ -153,7 +158,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                             ),
                           )
                         : PrimaryButton(
-                            label: 'Enviar link de redefinição',
+                            label: 'Enviar código',
                             onPressed: _submit,
                           ),
                   ],

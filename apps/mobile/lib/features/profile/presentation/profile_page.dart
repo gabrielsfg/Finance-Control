@@ -350,6 +350,11 @@ class _AccountSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppThemeTokens.of(context);
 
+    // While the profile loads, show the row as off rather than hiding it — a
+    // security control that appears late is easy to miss entirely.
+    final twoFactorEnabled =
+        ref.watch(userProfileProvider).valueOrNull?.twoFactorEnabled ?? false;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -371,6 +376,16 @@ class _AccountSection extends ConsumerWidget {
               onTap: () => context.push('/profile/edit'),
             ),
             _SettingRow(
+              icon: LucideIcons.shieldCheck,
+              iconColor: twoFactorEnabled ? t.success : t.txtTertiary,
+              label: 'Verificação em duas etapas',
+              subtitle: twoFactorEnabled
+                  ? 'Código por e-mail em dispositivos novos'
+                  : 'Adicione uma camada além da senha',
+              trailingLabel: twoFactorEnabled ? 'Ativada' : 'Desativada',
+              onTap: () => _showTwoFactorDialog(context, ref, twoFactorEnabled),
+            ),
+            _SettingRow(
               icon: LucideIcons.rotateCcw,
               iconColor: t.gold,
               label: 'Zerar dados',
@@ -387,6 +402,32 @@ class _AccountSection extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+
+  Future<void> _showTwoFactorDialog(
+    BuildContext context,
+    WidgetRef ref,
+    bool isEnabled,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _PasswordConfirmDialog(
+        title: isEnabled ? 'Desativar verificação' : 'Ativar verificação',
+        warning: isEnabled
+            ? 'Você deixará de receber um código ao entrar. Os dispositivos confiáveis também serão removidos.'
+            : 'A cada login em um dispositivo novo, enviaremos um código de 6 dígitos para o seu e-mail.',
+        confirmLabel: isEnabled ? 'Desativar' : 'Ativar',
+        isDestructive: isEnabled,
+        onConfirm: (password) async {
+          await ref.read(authRepositoryProvider).updateTwoFactor(
+                enabled: !isEnabled,
+                password: password,
+              );
+          // The endpoint answers 204, so the flag has to be re-read.
+          ref.invalidate(userProfileProvider);
+        },
+      ),
     );
   }
 

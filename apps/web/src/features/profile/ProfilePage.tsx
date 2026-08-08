@@ -5,6 +5,7 @@ import { PageTopbar } from "@/components/layout/PageTopbar";
 import { ProfileAvatarCard } from "@/features/profile/components/ProfileAvatarCard";
 import { ProfilePlanCard } from "@/features/profile/components/ProfilePlanCard";
 import { ProfileDangerZoneCard } from "@/features/profile/components/ProfileDangerZoneCard";
+import { ProfileTwoFactorCard } from "@/features/profile/components/ProfileTwoFactorCard";
 import { ProfilePreferencesCard } from "@/features/profile/components/ProfilePreferencesCard";
 import { ProfileNotificationsCard } from "@/features/profile/components/ProfileNotificationsCard";
 import { ProfileDefaultAccountCard } from "@/features/profile/components/ProfileDefaultAccountCard";
@@ -45,6 +46,7 @@ export function ProfilePage() {
         {/* Side column — plan + security */}
         <div className="col-span-12 flex flex-col gap-[22px] lg:col-span-4">
           <ProfilePlanCard />
+          <ProfileTwoFactorCard profile={profile} />
           <ProfileDangerZoneCard />
         </div>
       </div>

@@ -18,6 +18,8 @@ import '../../features/profile/presentation/preferences_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/auth/presentation/register_page.dart';
 import '../../features/auth/presentation/splash_page.dart';
+import '../../features/auth/presentation/two_factor_page.dart';
+import '../../features/auth/presentation/verify_email_page.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../providers/overlay_provider.dart';
 import '../../features/budgets/data/models/budget_models.dart';
@@ -43,6 +45,22 @@ import '../../features/transactions/presentation/transaction_detail_page.dart';
 import '../../features/transactions/presentation/transactions_page.dart';
 import '../../shared/widgets/app_shell.dart';
 
+/// Routes reachable without a session.
+///
+/// The verification and two-factor screens belong here even though they finish a
+/// login: at the moment they run there is no token yet, and the redirect below
+/// would bounce them straight back to /login. Password recovery had the same
+/// problem and was unreachable.
+const _publicRoutes = {
+  '/splash',
+  '/login',
+  '/register',
+  '/verify-email',
+  '/two-factor',
+  '/forgot-password',
+  '/reset-password',
+};
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = _RouterListenable(ref);
 
@@ -57,9 +75,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (authState.isLoading) return null;
 
       final isAuthenticated = authState.valueOrNull?.isAuthenticated ?? false;
-      final isOnAuthRoute = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register' ||
-          state.matchedLocation == '/splash';
+      final isOnAuthRoute = _publicRoutes.contains(state.matchedLocation);
 
       if (!isAuthenticated && !isOnAuthRoute) return '/login';
       if (isAuthenticated && isOnAuthRoute) return '/';
@@ -84,7 +100,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/reset-password',
-        builder: (_, _) => const ResetPasswordPage(),
+        builder: (_, state) => ResetPasswordPage(email: state.extra as String),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        builder: (_, state) => VerifyEmailPage(email: state.extra as String),
+      ),
+      GoRoute(
+        path: '/two-factor',
+        builder: (_, state) =>
+            TwoFactorPage(challengeToken: state.extra as String),
       ),
       GoRoute(
         path: '/analytics',

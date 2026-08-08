@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { authApi } from "@/lib/api/auth";
 import { profileApi } from "@/lib/api/profile";
+import type { UpdateTwoFactorRequest } from "@/lib/types/auth.types";
 import type { UpdateProfileRequest, UpdatePreferencesRequest, ResetDataRequest } from "@/lib/types/profile.types";
 
 export const useProfile = () =>
@@ -36,3 +38,13 @@ export const useResetData = () =>
   useMutation({
     mutationFn: (data: ResetDataRequest) => profileApi.resetData(data),
   });
+
+export const useUpdateTwoFactor = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: UpdateTwoFactorRequest) => authApi.updateTwoFactor(data),
+    // The endpoint answers 204, so there is nothing to write into the cache —
+    // refetch the profile to pick up the new flag.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile"] }),
+  });
+};

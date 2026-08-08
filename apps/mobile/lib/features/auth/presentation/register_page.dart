@@ -9,9 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/auth_repository.dart';
-import '../data/dtos/login_request_dto.dart';
 import '../data/dtos/register_request_dto.dart';
-import '../providers/auth_provider.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -110,25 +108,19 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     });
 
     try {
-      final repo = ref.read(authRepositoryProvider);
       final email = _emailController.text.trim();
-      final password = _passwordController.text;
 
-      await repo.register(RegisterRequestDto(
+      // Registering no longer signs anyone in — it creates the account and mails a
+      // code. The verification screen is what returns the tokens, so the login
+      // that used to run here would only be refused.
+      await ref.read(authRepositoryProvider).register(RegisterRequestDto(
         name: _nameController.text.trim(),
         email: email,
-        password: password,
+        password: _passwordController.text,
       ));
 
-      final authResponse = await repo.login(LoginRequestDto(
-        email: email,
-        password: password,
-      ));
-
-      await ref.read(authNotifierProvider.notifier).onLoginSuccess(
-        accessToken: authResponse.accessToken,
-        refreshToken: authResponse.refreshToken,
-      );
+      if (!mounted) return;
+      context.push('/verify-email', extra: email);
     } on DioException catch (e) {
       final status = e.response?.statusCode;
       final message = status == 429

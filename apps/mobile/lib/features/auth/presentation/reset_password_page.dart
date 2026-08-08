@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,19 +11,23 @@ import '../../../shared/widgets/app_widgets.dart';
 import '../data/auth_repository.dart';
 
 class ResetPasswordPage extends ConsumerStatefulWidget {
-  const ResetPasswordPage({super.key});
+  const ResetPasswordPage({required this.email, super.key});
+
+  /// Carried over from the screen that requested the code — the API needs the
+  /// address alongside it, since the code alone is only unique per user.
+  final String email;
 
   @override
   ConsumerState<ResetPasswordPage> createState() => _ResetPasswordPageState();
 }
 
 class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
-  final _tokenController = TextEditingController();
+  final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  String? _tokenError;
+  String? _codeError;
   String? _passwordError;
   String? _confirmError;
   String? _globalError;
@@ -31,34 +36,41 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
   @override
   void dispose() {
-    _tokenController.dispose();
+    _codeController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    final token = _tokenController.text.trim();
+    final code = _codeController.text.trim();
     final password = _passwordController.text;
     final confirm = _confirmController.text;
 
     setState(() {
-      _tokenError = null;
+      _codeError = null;
       _passwordError = null;
       _confirmError = null;
       _globalError = null;
     });
 
     var hasError = false;
-    if (token.isEmpty) {
-      setState(() => _tokenError = 'Informe o token de redefinição.');
+    if (code.length != 6) {
+      setState(() => _codeError = 'O código tem 6 dígitos.');
       hasError = true;
     }
+    // Mirrors the backend rule. Checking it here turns a 422 round trip into an
+    // inline message, and a reset must not be a way around the password policy.
     if (password.isEmpty) {
       setState(() => _passwordError = 'Informe sua senha.');
       hasError = true;
-    } else if (password.length < 6) {
-      setState(() => _passwordError = 'A senha deve ter pelo menos 6 caracteres.');
+    } else if (password.length < 8) {
+      setState(() => _passwordError = 'A senha deve ter pelo menos 8 caracteres.');
+      hasError = true;
+    } else if (!RegExp(r'(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9])')
+        .hasMatch(password)) {
+      setState(() => _passwordError =
+          'Use maiúscula, minúscula, número e caractere especial.');
       hasError = true;
     }
     if (confirm != password) {
@@ -69,12 +81,17 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
     setState(() => _isLoading = true);
     try {
-      await ref.read(authRepositoryProvider).resetPassword(token, password);
+      await ref.read(authRepositoryProvider).resetPassword(
+            email: widget.email,
+            code: code,
+            newPassword: password,
+          );
       if (mounted) setState(() => _success = true);
     } on DioException catch (e) {
       setState(() {
-        _globalError = e.response?.data?['message'] as String? ??
-            'Token de redefinição inválido ou expirado.';
+        _globalError = e.response?.statusCode == 429
+            ? 'Muitas tentativas. Aguarde alguns minutos.'
+            : 'Código inválido ou expirado.';
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -104,7 +121,8 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 Text('Redefinir senha', style: AppTextStyles.h1(t.txtPrimary)),
                 const SizedBox(height: 6),
                 Text(
-                  'Informe o token de redefinição e sua nova senha.',
+                  'Se existir uma conta para ${widget.email}, o código chegou por '
+                  'e-mail. Ele vale por 15 minutos.',
                   style: AppTextStyles.body(t.txtSecondary),
                 ),
                 const SizedBox(height: 32),
@@ -125,7 +143,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Senha redefinida com sucesso!',
+                            'Senha redefinida. Entre com a nova senha.',
                             style: AppTextStyles.body(t.success)
                                 .copyWith(fontSize: 14),
                           ),
@@ -154,11 +172,16 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                     const SizedBox(height: 16),
                   ],
                   AppInputField(
-                    placeholder: 'Token de redefinição',
-                    controller: _tokenController,
-                    errorText: _tokenError,
+                    placeholder: 'Código de 6 dígitos',
+                    controller: _codeController,
+                    errorText: _codeError,
+                    keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.next,
-                    onChanged: (_) => setState(() => _tokenError = null),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
+                    onChanged: (_) => setState(() => _codeError = null),
                   ),
                   const SizedBox(height: 14),
                   AppInputField(
