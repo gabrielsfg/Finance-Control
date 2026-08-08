@@ -45,7 +45,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="bg-background text-foreground h-full">
+      {/* Extensions (Grammarly, password managers) inject attributes onto <body>
+          before React hydrates, which React reports as a mismatch. The flag on
+          <html> doesn't cascade — it only covers one element — so <body> needs
+          its own. Scoped to this element's attributes; children still warn. */}
+      <body suppressHydrationWarning className="bg-background text-foreground h-full">
         <QueryProvider>
           <TooltipProvider delay={300}>{children}</TooltipProvider>
         </QueryProvider>
