@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
+import '../../../../shared/widgets/chart_reveal.dart';
 import '../../providers/analytics_provider.dart';
 
 class CommitmentsImpactChart extends ConsumerWidget {
@@ -68,93 +70,98 @@ class CommitmentsImpactChart extends ConsumerWidget {
               ),
             SizedBox(
               height: compact ? 140 : 200,
-              child: LineChart(
-                LineChartData(
-                  minY: minY - pad,
-                  maxY: maxY + pad,
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (val) {
-                      final isZero = val.abs() < 1;
-                      return FlLine(
-                        color: isZero
-                            ? t.clay.withValues(alpha: 0.5)
-                            : t.divider.withValues(alpha: 0.4),
-                        strokeWidth: isZero ? 1.5 : 1,
-                        dashArray: isZero ? null : [4, 4],
-                      );
-                    },
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(),
-                    rightTitles: const AxisTitles(),
-                    topTitles: const AxisTitles(),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: !compact,
-                        getTitlesWidget: (val, _) {
-                          final i = val.toInt();
-                          if (i < 0 || i >= impact.months.length) {
-                            return const SizedBox();
-                          }
-                          return Text(
-                            _monthNames[impact.months[i].month - 1],
-                            style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipColor: (_) => t.surface,
-                      getTooltipItems: (spots) => spots.map((s) {
-                        final m = impact.months[s.x.toInt()];
-                        final negative = m.isNegative;
-                        return LineTooltipItem(
-                          '${_monthNames[m.month - 1]} ${m.year}\n${fmt.formatCurrency(m.projectedBalance)}',
-                          AppTextStyles.bodySm(negative ? t.clay : t.txtPrimary)
-                              .copyWith(fontWeight: FontWeight.w600),
+              child: ChartReveal(
+                mode: ChartRevealMode.draw,
+                child: LineChart(
+                  LineChartData(
+                    minY: minY - pad,
+                    maxY: maxY + pad,
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (val) {
+                        final isZero = val.abs() < 1;
+                        return FlLine(
+                          color: isZero
+                              ? t.clay.withValues(alpha: 0.5)
+                              : t.divider.withValues(alpha: 0.4),
+                          strokeWidth: isZero ? 1.5 : 1,
+                          dashArray: isZero ? null : [4, 4],
                         );
-                      }).toList(),
+                      },
                     ),
-                  ),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: spots,
-                      isCurved: true,
-                      gradient: LinearGradient(
-                        colors: spots.any((s) => s.y < 0)
-                            ? [t.moss, t.clay]
-                            : [t.moss, t.moss],
-                      ),
-                      barWidth: 2.5,
-                      dotData: FlDotData(
-                        show: true,
-                        getDotPainter: (spot, xPercentage, bar, index) {
-                          final m = impact.months[index];
-                          return FlDotCirclePainter(
-                            radius: 5,
-                            color: m.isNegative ? t.clay : t.moss,
-                            strokeWidth: 0,
-                          );
-                        },
-                      ),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            t.moss.withValues(alpha: 0.10),
-                            t.moss.withValues(alpha: 0.0),
-                          ],
+                    borderData: FlBorderData(show: false),
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(),
+                      rightTitles: const AxisTitles(),
+                      topTitles: const AxisTitles(),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: !compact,
+                          getTitlesWidget: (val, _) {
+                            final i = val.toInt();
+                            if (i < 0 || i >= impact.months.length) {
+                              return const SizedBox();
+                            }
+                            return Text(
+                              _monthNames[impact.months[i].month - 1],
+                              style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
+                            );
+                          },
                         ),
                       ),
                     ),
-                  ],
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipColor: (_) => t.surface,
+                        getTooltipItems: (spots) => spots.map((s) {
+                          final m = impact.months[s.x.toInt()];
+                          final negative = m.isNegative;
+                          return LineTooltipItem(
+                            '${_monthNames[m.month - 1]} ${m.year}\n${fmt.formatCurrency(m.projectedBalance)}',
+                            AppTextStyles.bodySm(negative ? t.clay : t.txtPrimary)
+                                .copyWith(fontWeight: FontWeight.w600),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: spots,
+                        isCurved: true,
+                        gradient: LinearGradient(
+                          colors: spots.any((s) => s.y < 0)
+                              ? [t.moss, t.clay]
+                              : [t.moss, t.moss],
+                        ),
+                        barWidth: 2.5,
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, xPercentage, bar, index) {
+                            final m = impact.months[index];
+                            return FlDotCirclePainter(
+                              radius: 5,
+                              color: m.isNegative ? t.clay : t.moss,
+                              strokeWidth: 0,
+                            );
+                          },
+                        ),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              t.moss.withValues(alpha: 0.10),
+                              t.moss.withValues(alpha: 0.0),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  duration: AppMotion.slow,
+                  curve: AppMotion.settle,
                 ),
               ),
             ),

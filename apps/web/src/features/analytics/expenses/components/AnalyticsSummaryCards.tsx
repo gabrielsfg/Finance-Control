@@ -3,7 +3,7 @@
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
 import { FlowRow } from "@/components/shared/FlowBar";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { AnimatedCurrency } from "@/components/shared/AnimatedValue";
 import type { AnalyticsSummaryResponse } from "@/lib/types/analytics.types";
 
 type Props = { summary: AnalyticsSummaryResponse };
@@ -41,7 +41,7 @@ export const AnalyticsSummaryCards = ({ summary }: Props) => {
               Receita Média
             </div>
             <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--moss-lift)]">
-              {formatCurrency(summary.avgMonthlyIncome / 100)}
+              <AnimatedCurrency cents={summary.avgMonthlyIncome} />
             </div>
           </div>
           <div>
@@ -49,7 +49,7 @@ export const AnalyticsSummaryCards = ({ summary }: Props) => {
               Despesa Média
             </div>
             <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--clay-lift)]">
-              {formatCurrency(summary.avgMonthlyExpense / 100)}
+              <AnimatedCurrency cents={summary.avgMonthlyExpense} />
             </div>
           </div>
         </div>
@@ -67,7 +67,12 @@ export const AnalyticsSummaryCards = ({ summary }: Props) => {
         <FlowRow
           label={summary.bestMonth.label}
           dotColor="var(--moss-lift)"
-          value={`${summary.bestMonth.balance >= 0 ? "+ " : "− "}${formatCurrency(Math.abs(summary.bestMonth.balance) / 100)}`}
+          value={
+            <>
+              {summary.bestMonth.balance >= 0 ? "+ " : "− "}
+              <AnimatedCurrency cents={summary.bestMonth.balance} absolute />
+            </>
+          }
           valueColor="var(--moss-lift)"
           pct={bestPct}
           variant="in"
@@ -75,7 +80,12 @@ export const AnalyticsSummaryCards = ({ summary }: Props) => {
         <FlowRow
           label={summary.worstMonth.label}
           dotColor="var(--clay-lift)"
-          value={`${summary.worstMonth.balance >= 0 ? "" : "− "}${formatCurrency(Math.abs(summary.worstMonth.balance) / 100)}`}
+          value={
+            <>
+              {summary.worstMonth.balance >= 0 ? "" : "− "}
+              <AnimatedCurrency cents={summary.worstMonth.balance} absolute />
+            </>
+          }
           valueColor="var(--clay-lift)"
           pct={worstPct}
           variant="out"
@@ -93,7 +103,7 @@ export const AnalyticsSummaryCards = ({ summary }: Props) => {
             style={{ color: avgBalance >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
           >
             {avgBalance >= 0 ? "+ " : "− "}
-            {formatCurrency(Math.abs(avgBalance) / 100)}
+            <AnimatedCurrency cents={avgBalance} absolute />
           </span>
         </div>
       </div>

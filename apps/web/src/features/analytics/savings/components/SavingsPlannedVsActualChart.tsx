@@ -16,6 +16,7 @@ import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/index";
 import type { SavingsPeriodItem } from "@/lib/types/analytics.types";
 import { periodShortLabel } from "../savingsPeriod";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -73,8 +74,8 @@ export function SavingsPlannedVsActualChart({ periods, plannedSavings }: Props) 
                 />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--surface2)", opacity: 0.5 }} />
                 <ReferenceLine y={0} stroke="var(--border-color)" />
-                <Bar dataKey="planejado" name="Planejado" fill="var(--chart-2)" fillOpacity={0.45} radius={[4, 4, 0, 0]} maxBarSize={28} />
-                <Bar dataKey="executado" name="Executado" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                <Bar {...chartAnim(0)} dataKey="planejado" name="Planejado" fill="var(--chart-2)" fillOpacity={0.45} radius={[4, 4, 0, 0]} maxBarSize={28} />
+                <Bar {...chartAnim(1)} dataKey="executado" name="Executado" radius={[4, 4, 0, 0]} maxBarSize={28}>
                   {chartData.map((entry, i) => (
                     <Cell key={i} fill={entry.executado < 0 ? "var(--chart-3)" : "var(--chart-1)"} />
                   ))}

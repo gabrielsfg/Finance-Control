@@ -19,6 +19,8 @@ import { CategoryDonutChart } from "@/features/dashboard/components/CategoryDonu
 import { AiInsightCard } from "@/features/dashboard/components/AiInsightCard";
 import { UpcomingBillsCard } from "@/features/dashboard/components/UpcomingBillsCard";
 import { useUIStore } from "@/lib/stores/uiStore";
+import { Money, BigMoney } from "@/components/shared/Money";
+import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { TransactionDrawer } from "@/features/transactions/components/TransactionDrawer";
@@ -48,12 +50,6 @@ function toInclusiveEnd(exclusiveEndIso: string): string {
   return isoDate(d);
 }
 
-function fmtMoney(cents: number) {
-  const value = Math.abs(cents / 100);
-  const [int, dec] = value.toLocaleString("pt-BR", { minimumFractionDigits: 2 }).split(",");
-  return { int, dec };
-}
-
 const ACCOUNT_TYPE_COLORS: Record<string, string> = {
   Checking: "#1F3CE0",
   Savings:  "#2C6B57",
@@ -81,44 +77,6 @@ const TX_CATEGORY_COLORS: Record<string, string> = {
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
-
-function BigMoney({ cents, className, style }: { cents: number; className?: string; style?: React.CSSProperties }) {
-  const { int, dec } = fmtMoney(cents);
-  return (
-    <span className={cn("font-mono tabular-nums", className)} style={style}>
-      <span className="text-[0.34em] opacity-60 mr-[0.16em] align-[0.42em]">R$</span>
-      {int}
-      <span className="text-[0.42em] text-[var(--panel-muted)]">,{dec}</span>
-    </span>
-  );
-}
-
-function Money({
-  cents,
-  sign,
-  className,
-}: {
-  cents: number;
-  sign?: boolean;
-  className?: string;
-}) {
-  const neg = cents < 0;
-  const { int, dec } = fmtMoney(cents);
-  return (
-    <span
-      className={cn(
-        "font-mono tabular-nums font-medium tracking-[-0.01em]",
-        neg ? "text-[var(--clay)]" : sign ? "text-[var(--moss)]" : "text-[var(--text)]",
-        className,
-      )}
-    >
-      <span className="text-[0.62em] opacity-70 mr-[0.18em] align-[0.06em]">R$</span>
-      {neg ? "− " : sign ? "+ " : ""}
-      {int}
-      <span className="text-[0.66em] opacity-70">,{dec}</span>
-    </span>
-  );
-}
 
 function Card({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
@@ -303,7 +261,7 @@ function InvestmentsCard({ portfolio }: { portfolio: InvestmentPortfolio | undef
       {portfolio ? (
         <>
           <div className="mb-2 flex items-baseline justify-between">
-            <Money cents={portfolio.currentValue} className="text-[26px]" />
+            <Money cents={portfolio.currentValue} className="text-[26px]" animate />
             <span
               className={cn(
                 "font-mono text-[13px] font-medium",
@@ -497,16 +455,8 @@ export function DashboardPage() {
   const { data: goalsData } = useGoals({ status: "Active" });
   const { data: investments } = useInvestments();
 
-  // Animate flow bars and goal bars on load
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      document.body.classList.add("is-loaded");
-    });
-    return () => {
-      cancelAnimationFrame(frame);
-      document.body.classList.remove("is-loaded");
-    };
-  }, []);
+  // Flow/goal bars animate themselves on mount now (`.flow-fill` in globals.css),
+  // so there is no `is-loaded` gate to flip here any more.
 
   if (isLoading) {
     return (
@@ -605,7 +555,7 @@ export function DashboardPage() {
       </header>
 
       {/* ── 12-col editorial grid ── */}
-      <div className="grid grid-cols-12 gap-[22px]">
+      <div className="stagger grid grid-cols-12 gap-[22px]">
 
         {/* ── Hero panel (full width) ── */}
         <section
@@ -645,7 +595,8 @@ export function DashboardPage() {
                     style={{ background: "rgba(95,198,160,0.15)" }}
                   >
                     <ArrowUpRight size={13} strokeWidth={2.4} />
-                    {netWorthDelta > 0 ? "+" : ""}{netWorthDelta.toFixed(1)}%
+                    {netWorthDelta > 0 ? "+" : ""}
+                    <AnimatedCount value={netWorthDelta} decimals={1} suffix="%" />
                   </span>
                   <span className="text-[var(--panel-muted)]">vs. mês anterior</span>
                 </div>
@@ -656,13 +607,13 @@ export function DashboardPage() {
                 <div>
                   <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Em conta</div>
                   <div className="font-mono mt-[3px] text-[18px] font-medium">
-                    {formatCurrency(liquidBalance / 100)}
+                    <AnimatedCurrency cents={liquidBalance} />
                   </div>
                 </div>
                 <div>
                   <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Investido</div>
                   <div className="font-mono mt-[3px] text-[18px] font-medium">
-                    {formatCurrency(investedValue / 100)}
+                    <AnimatedCurrency cents={investedValue} />
                   </div>
                 </div>
                 <div>
@@ -671,7 +622,7 @@ export function DashboardPage() {
                     className="font-mono mt-[3px] text-[18px] font-medium"
                     style={{ color: periodBalance >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
                   >
-                    {formatCurrency(periodBalance / 100)}
+                    <AnimatedCurrency cents={periodBalance} />
                   </div>
                 </div>
               </div>
@@ -694,7 +645,7 @@ export function DashboardPage() {
                     Entradas
                   </span>
                   <span className="font-mono text-[14px] font-medium text-[var(--moss-lift)]">
-                    + {formatCurrency(totalIncome / 100)}
+                    + <AnimatedCurrency cents={totalIncome} />
                   </span>
                 </div>
                 <FlowBar pct={incomePct} variant="in" />
@@ -708,7 +659,7 @@ export function DashboardPage() {
                     Saídas
                   </span>
                   <span className="font-mono text-[14px] font-medium text-[var(--clay-lift)]">
-                    − {formatCurrency(totalExpenses / 100)}
+                    − <AnimatedCurrency cents={totalExpenses} />
                   </span>
                 </div>
                 <FlowBar pct={expensePct} variant="out" />
@@ -727,7 +678,7 @@ export function DashboardPage() {
                   style={{ color: periodBalance >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
                 >
                   {periodBalance >= 0 ? "+ " : "− "}
-                  {formatCurrency(Math.abs(periodBalance / 100))}
+                  <AnimatedCurrency cents={periodBalance} absolute />
                 </span>
               </div>
             </div>
@@ -756,7 +707,7 @@ export function DashboardPage() {
       </div>
 
       {/* ── Charts section (preserved from previous design) ── */}
-      <div className="mt-[22px] flex flex-col gap-[22px]">
+      <div className="stagger mt-[22px] flex flex-col gap-[22px]">
         <SpendingPredictionChart data={spendingPrediction ?? []} />
 
         <div className="grid grid-cols-1 gap-[22px] lg:grid-cols-[1fr_340px]">

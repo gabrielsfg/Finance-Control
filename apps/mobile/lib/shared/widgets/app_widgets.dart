@@ -1,6 +1,7 @@
 export 'app_avatar.dart';
 export 'delete_confirm_dialog.dart';
 export 'app_background.dart';
+export 'animated_fraction.dart';
 export 'app_chip.dart';
 export 'app_fab.dart';
 export 'app_input_field.dart';
@@ -8,6 +9,8 @@ export 'app_logo.dart';
 export 'app_nav_bar.dart';
 export 'app_outline_button.dart';
 export 'app_progress_bar.dart';
+export 'chart_reveal.dart';
+export 'fade_slide_in.dart';
 export 'glass_card.dart';
 export 'hero_panel.dart';
 export 'money.dart';

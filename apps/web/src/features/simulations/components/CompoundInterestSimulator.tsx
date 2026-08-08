@@ -19,6 +19,7 @@ import {
   CHART_GRID, axisTick, SERIES, FieldLabel, FieldShell, MoneyPrefix, UnitSuffix, fieldMono,
   SegRow, SegOption, PresetPill, ChartTooltip, LegendItem,
 } from "./simShared";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 type ViewMode = "gross" | "net";
 type BenchmarkId = "cdi" | "ipca5" | "ibov";
@@ -475,12 +476,12 @@ export const CompoundInterestSimulator = () => {
                 <XAxis dataKey="shortLabel" tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                 <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
                 <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="grossValue" name="Patrimônio bruto"   stroke={SERIES_COLORS.gross}    strokeWidth={2}   fill="url(#cis_gradTotal)" dot={{ r: 5, fill: SERIES_COLORS.gross,    stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.gross,    stroke: "var(--surface)", strokeWidth: 2 }} />
-                <Area type="monotone" dataKey="netValue"   name="Patrimônio líquido" stroke={SERIES_COLORS.net}      strokeWidth={1.5} fill="url(#cis_gradNet)"   strokeDasharray="4 2" dot={{ r: 5, fill: SERIES_COLORS.net,      stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.net,      stroke: "var(--surface)", strokeWidth: 2 }} />
-                <Area type="monotone" dataKey="invested"   name="Investido"           stroke={SERIES_COLORS.invested} strokeWidth={2}   fill="url(#cis_gradInv)"   dot={{ r: 5, fill: SERIES_COLORS.invested, stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.invested, stroke: "var(--surface)", strokeWidth: 2 }} />
-                {activeBenchmarks.has("cdi")   && <Line type="monotone" dataKey="bm_cdi"   name="CDI"     stroke={SERIES_COLORS.cdi}   strokeWidth={1.5} strokeDasharray="6 3" dot={{ r: 5, fill: SERIES_COLORS.cdi,   stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.cdi,   stroke: "var(--surface)", strokeWidth: 2 }} />}
-                {activeBenchmarks.has("ipca5") && <Line type="monotone" dataKey="bm_ipca5" name="IPCA+5%" stroke={SERIES_COLORS.ipca5} strokeWidth={1.5} strokeDasharray="6 3" dot={{ r: 5, fill: SERIES_COLORS.ipca5, stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.ipca5, stroke: "var(--surface)", strokeWidth: 2 }} />}
-                {activeBenchmarks.has("ibov")  && <Line type="monotone" dataKey="bm_ibov"  name="IBOV"    stroke={SERIES_COLORS.ibov}  strokeWidth={1.5} strokeDasharray="6 3" dot={{ r: 5, fill: SERIES_COLORS.ibov,  stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.ibov,  stroke: "var(--surface)", strokeWidth: 2 }} />}
+                <Area {...chartAnim(0)} type="monotone" dataKey="grossValue" name="Patrimônio bruto"   stroke={SERIES_COLORS.gross}    strokeWidth={2}   fill="url(#cis_gradTotal)" dot={{ r: 5, fill: SERIES_COLORS.gross,    stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.gross,    stroke: "var(--surface)", strokeWidth: 2 }} />
+                <Area {...chartAnim(1)} type="monotone" dataKey="netValue"   name="Patrimônio líquido" stroke={SERIES_COLORS.net}      strokeWidth={1.5} fill="url(#cis_gradNet)"   strokeDasharray="4 2" dot={{ r: 5, fill: SERIES_COLORS.net,      stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.net,      stroke: "var(--surface)", strokeWidth: 2 }} />
+                <Area {...chartAnim(2)} type="monotone" dataKey="invested"   name="Investido"           stroke={SERIES_COLORS.invested} strokeWidth={2}   fill="url(#cis_gradInv)"   dot={{ r: 5, fill: SERIES_COLORS.invested, stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.invested, stroke: "var(--surface)", strokeWidth: 2 }} />
+                {activeBenchmarks.has("cdi")   && <Line {...chartAnim(3)} type="monotone" dataKey="bm_cdi"   name="CDI"     stroke={SERIES_COLORS.cdi}   strokeWidth={1.5} strokeDasharray="6 3" dot={{ r: 5, fill: SERIES_COLORS.cdi,   stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.cdi,   stroke: "var(--surface)", strokeWidth: 2 }} />}
+                {activeBenchmarks.has("ipca5") && <Line {...chartAnim(4)} type="monotone" dataKey="bm_ipca5" name="IPCA+5%" stroke={SERIES_COLORS.ipca5} strokeWidth={1.5} strokeDasharray="6 3" dot={{ r: 5, fill: SERIES_COLORS.ipca5, stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.ipca5, stroke: "var(--surface)", strokeWidth: 2 }} />}
+                {activeBenchmarks.has("ibov")  && <Line {...chartAnim(5)} type="monotone" dataKey="bm_ibov"  name="IBOV"    stroke={SERIES_COLORS.ibov}  strokeWidth={1.5} strokeDasharray="6 3" dot={{ r: 5, fill: SERIES_COLORS.ibov,  stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 7, fill: SERIES_COLORS.ibov,  stroke: "var(--surface)", strokeWidth: 2 }} />}
               </AreaChart>
             </ResponsiveContainer>
           </div>

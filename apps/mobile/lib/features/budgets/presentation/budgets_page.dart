@@ -396,6 +396,7 @@ class _OverviewCard extends StatelessWidget {
                     size: 12,
                     weight: FontWeight.w700,
                     color: balance >= 0 ? t.mossLift : t.clayLift,
+                    animate: true,
                   ),
                 ],
               ),
@@ -438,7 +439,11 @@ class _OverviewStat extends StatelessWidget {
               .copyWith(fontSize: 10),
         ),
         const SizedBox(height: 2),
-        Money(cents, size: 13, weight: FontWeight.w700, color: color),
+        Money(cents,
+            size: 13,
+            weight: FontWeight.w700,
+            color: color,
+            animate: true),
       ],
     );
   }

@@ -7,6 +7,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { MonthlyData } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -38,9 +39,9 @@ export const AnalyticsTrendChart = ({ data }: Props) => (
               <XAxis dataKey="label" tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={70} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--surface2)", opacity: 0.5 }} />
-              <Bar dataKey="totalIncome" name="Receitas" fill="var(--chart-1)" radius={[4, 4, 0, 0]} maxBarSize={32} />
-              <Bar dataKey="totalExpense" name="Despesas" fill="var(--chart-3)" radius={[4, 4, 0, 0]} maxBarSize={32} />
-              <Bar dataKey="balance" name="Saldo" fill="var(--chart-2)" radius={[4, 4, 0, 0]} maxBarSize={32} />
+              <Bar {...chartAnim(0)} dataKey="totalIncome" name="Receitas" fill="var(--chart-1)" radius={[4, 4, 0, 0]} maxBarSize={32} />
+              <Bar {...chartAnim(1)} dataKey="totalExpense" name="Despesas" fill="var(--chart-3)" radius={[4, 4, 0, 0]} maxBarSize={32} />
+              <Bar {...chartAnim(2)} dataKey="balance" name="Saldo" fill="var(--chart-2)" radius={[4, 4, 0, 0]} maxBarSize={32} />
             </BarChart>
           </ResponsiveContainer>
         </div>

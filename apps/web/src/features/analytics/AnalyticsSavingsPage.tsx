@@ -108,7 +108,7 @@ export function AnalyticsSavingsPage() {
 
       <SavingsSummaryCards detail={detail} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="stagger grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SavingsPlannedVsActualChart periods={periods} plannedSavings={summary.plannedSavings} />
         <SavingsRateHistoryChart
           periods={periods}
@@ -117,7 +117,7 @@ export function AnalyticsSavingsPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="stagger grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SavingsAdherenceCard detail={detail} />
         <SavingsLeaksCard detail={detail} />
       </div>

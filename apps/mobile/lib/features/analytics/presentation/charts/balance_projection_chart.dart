@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
@@ -55,67 +56,72 @@ class BalanceProjectionChart extends ConsumerWidget {
           children: [
             SizedBox(
               height: compact ? 160 : 220,
-              child: LineChart(
-                LineChartData(
-                  minY: minY - pad,
-                  maxY: maxY + pad,
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) =>
-                        FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: const FlTitlesData(
-                    leftTitles: AxisTitles(),
-                    rightTitles: AxisTitles(),
-                    topTitles: AxisTitles(),
-                    bottomTitles: AxisTitles(),
-                  ),
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipColor: (_) => t.surface,
-                      getTooltipItems: (spots) => spots.map((s) {
-                        final label =
-                            s.barIndex == 0 ? 'Real' : 'Projetado';
-                        return LineTooltipItem(
-                          '$label\n${fmt.formatCurrency((s.y * 100).toInt())}',
-                          AppTextStyles.bodySm(t.txtPrimary)
-                              .copyWith(fontWeight: FontWeight.w600),
-                        );
-                      }).toList(),
+              child: ChartReveal(
+                mode: ChartRevealMode.draw,
+                child: LineChart(
+                  LineChartData(
+                    minY: minY - pad,
+                    maxY: maxY + pad,
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (_) =>
+                          FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
                     ),
-                  ),
-                  lineBarsData: [
-                    // Actual line
-                    LineChartBarData(
-                      spots: actualSpots,
-                      isCurved: true,
-                      color: t.accent,
-                      barWidth: 2.5,
-                      dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            t.accent.withValues(alpha: 0.15),
-                            t.accent.withValues(alpha: 0.0),
-                          ],
-                        ),
+                    borderData: FlBorderData(show: false),
+                    titlesData: const FlTitlesData(
+                      leftTitles: AxisTitles(),
+                      rightTitles: AxisTitles(),
+                      topTitles: AxisTitles(),
+                      bottomTitles: AxisTitles(),
+                    ),
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipColor: (_) => t.surface,
+                        getTooltipItems: (spots) => spots.map((s) {
+                          final label =
+                              s.barIndex == 0 ? 'Real' : 'Projetado';
+                          return LineTooltipItem(
+                            '$label\n${fmt.formatCurrency((s.y * 100).toInt())}',
+                            AppTextStyles.bodySm(t.txtPrimary)
+                                .copyWith(fontWeight: FontWeight.w600),
+                          );
+                        }).toList(),
                       ),
                     ),
-                    // Projected line (dashed)
-                    LineChartBarData(
-                      spots: projSpots,
-                      isCurved: true,
-                      color: projEndPositive ? t.moss : t.clay,
-                      barWidth: 2,
-                      dashArray: [6, 4],
-                      dotData: const FlDotData(show: false),
-                    ),
-                  ],
+                    lineBarsData: [
+                      // Actual line
+                      LineChartBarData(
+                        spots: actualSpots,
+                        isCurved: true,
+                        color: t.accent,
+                        barWidth: 2.5,
+                        dotData: const FlDotData(show: false),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              t.accent.withValues(alpha: 0.15),
+                              t.accent.withValues(alpha: 0.0),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Projected line (dashed)
+                      LineChartBarData(
+                        spots: projSpots,
+                        isCurved: true,
+                        color: projEndPositive ? t.moss : t.clay,
+                        barWidth: 2,
+                        dashArray: [6, 4],
+                        dotData: const FlDotData(show: false),
+                      ),
+                    ],
+                  ),
+                  duration: AppMotion.slow,
+                  curve: AppMotion.settle,
                 ),
               ),
             ),

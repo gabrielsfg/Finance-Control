@@ -16,11 +16,11 @@ export function CancelRecurringDialog({ item, loading, onConfirm, onClose }: Pro
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+      className="anim-fade fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[400px] rounded-[20px] border p-6 shadow-2xl"
+        className="anim-pop w-full max-w-[400px] rounded-[20px] border p-6 shadow-2xl"
         style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
         onClick={e => e.stopPropagation()}
       >

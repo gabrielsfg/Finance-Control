@@ -53,6 +53,7 @@ class SummaryPanel extends StatelessWidget {
             symbolScale: 0.36,
             centsScale: 0.46,
             signed: signed,
+            animate: true,
           ),
           if (belowHero != null) ...[
             const SizedBox(height: 14),
@@ -116,6 +117,7 @@ class SummaryStatRow extends StatelessWidget {
                 color: s.valueColor ?? t.panelText,
                 symbolColor: t.panelMuted,
                 signed: s.signed,
+                animate: true,
               ),
             ],
           ),

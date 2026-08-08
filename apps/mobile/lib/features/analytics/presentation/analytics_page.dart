@@ -65,13 +65,17 @@ class AnalyticsPage extends ConsumerWidget {
               if (history.isNotEmpty) ...[
                 const _SectionHeader(label: 'Histórico'),
                 const SizedBox(height: 12),
-                ...history.map((c) => _ChartCard(config: c)),
+                ...history.indexed.map(
+                  (e) => FadeSlideIn(index: e.$1, child: _ChartCard(config: e.$2)),
+                ),
               ],
               if (projections.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 const _SectionHeader(label: 'Projeções'),
                 const SizedBox(height: 12),
-                ...projections.map((c) => _ChartCard(config: c)),
+                ...projections.indexed.map(
+                  (e) => FadeSlideIn(index: e.$1, child: _ChartCard(config: e.$2)),
+                ),
               ],
               if (history.isEmpty && projections.isEmpty)
                 _EmptyState(

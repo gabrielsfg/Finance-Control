@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
+import '../../../../shared/widgets/chart_reveal.dart';
 import '../../providers/analytics_provider.dart';
 
 class NetWorthCompositionChart extends ConsumerWidget {
@@ -87,49 +89,54 @@ class NetWorthCompositionChart extends ConsumerWidget {
           children: [
             SizedBox(
               height: compact ? 160 : 220,
-              child: BarChart(
-                BarChartData(
-                  maxY: maxY * 1.15,
-                  barGroups: groups,
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) =>
-                        FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(),
-                    rightTitles: const AxisTitles(),
-                    topTitles: const AxisTitles(),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: !compact,
-                        getTitlesWidget: (val, _) {
-                          final i = val.toInt();
-                          if (i < 0 || i >= items.length) return const SizedBox();
-                          return Text(
-                            months[items[i].month - 1],
-                            style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
+              child: ChartReveal(
+                mode: ChartRevealMode.grow,
+                child: BarChart(
+                  BarChartData(
+                    maxY: maxY * 1.15,
+                    barGroups: groups,
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (_) =>
+                          FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(),
+                      rightTitles: const AxisTitles(),
+                      topTitles: const AxisTitles(),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: !compact,
+                          getTitlesWidget: (val, _) {
+                            final i = val.toInt();
+                            if (i < 0 || i >= items.length) return const SizedBox();
+                            return Text(
+                              months[items[i].month - 1],
+                              style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    barTouchData: BarTouchData(
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (_) => t.surface,
+                        getTooltipItem: (group, _, rod, rodIndex) {
+                          if (rodIndex >= accountNames.length) return null;
+                          final value = (rod.toY - rod.fromY) * 100;
+                          return BarTooltipItem(
+                            '${accountNames[rodIndex]}\n${fmt.formatCurrency(value.toInt())}',
+                            AppTextStyles.bodySm(t.txtPrimary)
+                                .copyWith(fontWeight: FontWeight.w600),
                           );
                         },
                       ),
                     ),
                   ),
-                  barTouchData: BarTouchData(
-                    touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (_) => t.surface,
-                      getTooltipItem: (group, _, rod, rodIndex) {
-                        if (rodIndex >= accountNames.length) return null;
-                        final value = (rod.toY - rod.fromY) * 100;
-                        return BarTooltipItem(
-                          '${accountNames[rodIndex]}\n${fmt.formatCurrency(value.toInt())}',
-                          AppTextStyles.bodySm(t.txtPrimary)
-                              .copyWith(fontWeight: FontWeight.w600),
-                        );
-                      },
-                    ),
-                  ),
+                  duration: AppMotion.slow,
+                  curve: AppMotion.settle,
                 ),
               ),
             ),

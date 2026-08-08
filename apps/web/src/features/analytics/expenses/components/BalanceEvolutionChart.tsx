@@ -7,6 +7,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { BalanceEvolutionPoint } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -66,6 +67,7 @@ export function BalanceEvolutionChart({ data }: Props) {
             />
             <Tooltip content={<CustomTooltip />} />
             <Area
+              {...chartAnim(0)}
               type="monotone"
               dataKey="balance"
               name="Saldo"

@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
+import '../../../../shared/widgets/chart_reveal.dart';
 import '../../providers/analytics_provider.dart';
 
 class FutureCommitmentsChart extends ConsumerWidget {
@@ -58,45 +60,50 @@ class FutureCommitmentsChart extends ConsumerWidget {
           children: [
             SizedBox(
               height: compact ? 140 : 200,
-              child: BarChart(
-                BarChartData(
-                  maxY: maxVal * 1.15,
-                  barGroups: groups,
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) =>
-                        FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(),
-                    rightTitles: const AxisTitles(),
-                    topTitles: const AxisTitles(),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (val, _) {
-                          final i = val.toInt();
-                          if (i < 0 || i >= items.length) return const SizedBox();
-                          return Text(
-                            _monthNames[items[i].month - 1],
-                            style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
-                          );
-                        },
+              child: ChartReveal(
+                mode: ChartRevealMode.grow,
+                child: BarChart(
+                  BarChartData(
+                    maxY: maxVal * 1.15,
+                    barGroups: groups,
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (_) =>
+                          FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(),
+                      rightTitles: const AxisTitles(),
+                      topTitles: const AxisTitles(),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (val, _) {
+                            final i = val.toInt();
+                            if (i < 0 || i >= items.length) return const SizedBox();
+                            return Text(
+                              _monthNames[items[i].month - 1],
+                              style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    barTouchData: BarTouchData(
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (_) => t.surface,
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+                          '${_monthNames[items[group.x].month - 1]}\n${fmt.formatCurrency(items[group.x].totalCommitted)}',
+                          AppTextStyles.bodySm(t.txtPrimary)
+                              .copyWith(fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                   ),
-                  barTouchData: BarTouchData(
-                    touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (_) => t.surface,
-                      getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
-                        '${_monthNames[items[group.x].month - 1]}\n${fmt.formatCurrency(items[group.x].totalCommitted)}',
-                        AppTextStyles.bodySm(t.txtPrimary)
-                            .copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
+                  duration: AppMotion.slow,
+                  curve: AppMotion.settle,
                 ),
               ),
             ),

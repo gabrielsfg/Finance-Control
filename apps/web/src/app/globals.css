@@ -189,6 +189,20 @@
   }
 }
 
+/* ── Motion vocabulary ─────────────────────────────────────────────
+   One easing (the "settle" curve) and one short duration scale, so every
+   entrance in the app reads as the same gesture. Numbers count up through
+   `useAnimatedNumber`; charts animate through `chartAnimation.ts`; everything
+   structural (pages, cards, drawers, modals) uses the classes below.
+
+   Durations are deliberately short — the motion should register, never delay. */
+:root {
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 180ms;
+  --dur-base: 260ms;
+  --dur-slow: 380ms;
+}
+
 /* Flow bar fill animation */
 @keyframes growX {
   from {
@@ -199,18 +213,120 @@
   }
 }
 
+/* Grows from the baseline on mount, then *transitions* to any later value —
+   so applying a filter slides the fill instead of snapping it. Deliberately
+   without `both`: a forwards fill would freeze the keyframe and make later
+   `--to` changes jump. */
 .flow-fill {
   transform: scaleX(var(--to, 1));
   transform-origin: left center;
+  animation: growX 0.7s var(--ease-settle);
+  transition: transform var(--dur-slow) var(--ease-settle);
 }
 
-.is-loaded .flow-fill {
-  animation: growX 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+/* Progress/budget bars: same idea, but they are sized by `width`. A keyframe
+   with only a `from` step animates up to whatever width the element computes. */
+@keyframes growWidth {
+  from {
+    width: 0;
+  }
+}
+
+.bar-grow {
+  animation: growWidth 0.55s var(--ease-settle);
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* Page / card / list entrance. `--anim-delay` staggers a group by hand. */
+.anim-rise {
+  animation: riseIn var(--dur-slow) var(--ease-settle) both;
+  animation-delay: var(--anim-delay, 0ms);
+}
+
+.anim-fade {
+  animation: fadeIn var(--dur-base) ease-out both;
+  animation-delay: var(--anim-delay, 0ms);
+}
+
+/* Centered dialogs — scale up from just below their resting position. */
+.anim-pop {
+  animation: popIn var(--dur-base) var(--ease-settle) both;
+}
+
+/* Right-hand drawers that mount on open instead of staying in the tree. */
+.anim-drawer {
+  animation: slideInRight var(--dur-slow) var(--ease-settle) both;
+}
+
+/* Auto-staggered children — for KPI rows, card grids and chart columns. */
+.stagger > * {
+  animation: riseIn var(--dur-slow) var(--ease-settle) both;
+}
+.stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 55ms;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 110ms;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 165ms;
+}
+.stagger > *:nth-child(5) {
+  animation-delay: 220ms;
+}
+.stagger > *:nth-child(6) {
+  animation-delay: 275ms;
+}
+.stagger > *:nth-child(n + 7) {
+  animation-delay: 330ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.001ms !important;
   }
   .flow-fill {

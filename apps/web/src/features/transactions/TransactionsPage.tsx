@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 import { TransactionsFilters } from "@/features/transactions/components/TransactionsFilters";
@@ -38,7 +38,27 @@ const TYPE_FILTER_LABELS: Record<TransactionsFilter["typeFilter"], string> = {
   Transfer: "Transferências",
 };
 
+/**
+ * `useSearchParams` can't resolve during the static prerender (`?date=` /
+ * `?new=` only exist per request), so the reader has to sit under a Suspense
+ * boundary for Next to fall back to on the server and hydrate on the client.
+ * Same shape as MarketRankingPage.
+ */
 export function TransactionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <Loader2 size={20} className="animate-spin text-[var(--brand-accent)]" />
+        </div>
+      }
+    >
+      <TransactionsContent />
+    </Suspense>
+  );
+}
+
+function TransactionsContent() {
   const searchParams = useSearchParams();
   const dateParam = searchParams.get("date");
 

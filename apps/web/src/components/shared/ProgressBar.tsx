@@ -30,7 +30,7 @@ export const ProgressBar = ({
       style={tinted ? { height, background: `color-mix(in srgb, ${color} 20%, transparent)` } : { height }}
     >
       <div
-        className="h-full rounded-full transition-all duration-300"
+        className="bar-grow h-full rounded-full transition-all duration-300"
         style={{
           width: `${pct}%`,
           backgroundColor: isOverflow ? overflowColor : color,

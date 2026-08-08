@@ -12,6 +12,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { PillSelect } from "@/components/shared/PillSelect";
 import { useInvestmentPriceHistory } from "@/features/investments/hooks/useInvestments";
 import type { Investment } from "@/lib/types/investments.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -135,6 +136,7 @@ export const InvestmentsPriceChart = ({ investments }: Props) => {
               <Tooltip content={<CustomTooltip />} />
               <ReferenceLine y={first} stroke="var(--border-color)" strokeDasharray="4 4" />
               <Area
+                {...chartAnim(0)}
                 type="monotone"
                 dataKey="price"
                 stroke={color}

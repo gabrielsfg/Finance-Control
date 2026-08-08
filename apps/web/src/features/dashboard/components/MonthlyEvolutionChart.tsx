@@ -16,6 +16,7 @@ import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrenc
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { analyticsApi } from "@/lib/api/analytics";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 type IncomeExpenseItem = {
   month: number;
@@ -113,6 +114,7 @@ export const MonthlyEvolutionChart = () => {
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Area
+                  {...chartAnim(0)}
                   type="monotone"
                   dataKey="Receitas"
                   stroke="var(--green)"
@@ -122,6 +124,7 @@ export const MonthlyEvolutionChart = () => {
                   activeDot={{ r: 5 }}
                 />
                 <Area
+                  {...chartAnim(1)}
                   type="monotone"
                   dataKey="Despesas"
                   stroke="var(--red)"

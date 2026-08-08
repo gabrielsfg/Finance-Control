@@ -156,6 +156,7 @@ class _Hero extends StatelessWidget {
             symbolColor: t.panelMuted,
             symbolScale: 0.34,
             centsScale: 0.44,
+            animate: true,
           ),
           if (data.monthlyIncome > 0) ...[
             const SizedBox(height: 14),
@@ -166,7 +167,7 @@ class _Hero extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.08),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
+                  child: AnimatedFraction(
                     widthFactor: share == 0 ? 0.001 : share,
                     child: Container(
                       decoration: BoxDecoration(
@@ -233,7 +234,11 @@ class _HeroStat extends StatelessWidget {
       children: [
         Text('$label · $count', style: AppTextStyles.eyebrow(t.panelMuted, fontSize: 10)),
         const SizedBox(height: 6),
-        Money(amount, size: 17, color: t.panelText, symbolColor: t.panelMuted),
+        Money(amount,
+            size: 17,
+            color: t.panelText,
+            symbolColor: t.panelMuted,
+            animate: true),
       ],
     );
   }

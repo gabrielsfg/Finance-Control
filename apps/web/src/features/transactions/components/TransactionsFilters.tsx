@@ -582,7 +582,7 @@ export function TransactionsFilters({ filter, onChange }: Props) {
               </button>
               <button
                 onClick={apply}
-                className="bg-green hover:bg-green/90 w-full rounded-lg py-1.5 text-center text-[12px] font-semibold text-black transition-colors"
+                className="bg-brand hover:bg-brand/90 w-full rounded-lg py-1.5 text-center text-[12px] font-semibold text-white transition-colors"
               >
                 Aplicar
               </button>

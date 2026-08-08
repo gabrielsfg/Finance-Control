@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
+import '../../../../shared/widgets/chart_reveal.dart';
 import '../../providers/analytics_provider.dart';
 
 class ExpensesByCategoryChart extends ConsumerStatefulWidget {
@@ -92,19 +94,24 @@ class _ExpensesByCategoryChartState
               child: Row(
                 children: [
                   Expanded(
-                    child: PieChart(
-                      PieChartData(
-                        sections: sections,
-                        centerSpaceRadius: widget.compact ? 32 : 44,
-                        sectionsSpace: 2,
-                        pieTouchData: PieTouchData(
-                          touchCallback: (_, response) {
-                            setState(() {
-                              _touched = response?.touchedSection
-                                  ?.touchedSectionIndex;
-                            });
-                          },
+                    child: ChartReveal(
+                      mode: ChartRevealMode.sweep,
+                      child: PieChart(
+                        PieChartData(
+                          sections: sections,
+                          centerSpaceRadius: widget.compact ? 32 : 44,
+                          sectionsSpace: 2,
+                          pieTouchData: PieTouchData(
+                            touchCallback: (_, response) {
+                              setState(() {
+                                _touched = response?.touchedSection
+                                    ?.touchedSectionIndex;
+                              });
+                            },
+                          ),
                         ),
+                        duration: AppMotion.slow,
+                        curve: AppMotion.settle,
                       ),
                     ),
                   ),

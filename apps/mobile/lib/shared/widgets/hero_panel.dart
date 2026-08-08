@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'money.dart';
@@ -20,12 +21,14 @@ class HeroPanel extends StatelessWidget {
       width: double.infinity,
       padding: padding ?? const EdgeInsets.fromLTRB(24, 26, 24, 24),
       decoration: BoxDecoration(
-        gradient: RadialGradient(
-          center: const Alignment(-0.8, -1.0),
-          radius: 1.35,
-          colors: [t.panel2, t.panel],
-          stops: const [0.0, 0.62],
-        ),
+        // Flat, deliberately. A gradient here cannot be both subtle and smooth:
+        // at this luminance the channels only span a handful of 8-bit values
+        // (panel -> panel2 is R 18-26, G 32-48, B 30-44), so a damped ramp
+        // traverses ~12 distinct colours over the panel height and quantises
+        // into visible horizontal bands — softening it further makes the bands
+        // wider, not smoother. A strong ramp is smooth but reads as an edge.
+        // Solid fill is the only version where no colour shift is perceptible.
+        color: t.panel,
         borderRadius: AppRadius.heroAll,
         border: Border.all(
           color: t.isDark ? t.mist : Colors.white.withValues(alpha: 0.05),
@@ -61,8 +64,10 @@ class FlowBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final maxVal = [incomeCents, expenseCents]
-        .fold<int>(1, (m, v) => v > m ? v : m);
+    final maxVal = [
+      incomeCents,
+      expenseCents,
+    ].fold<int>(1, (m, v) => v > m ? v : m);
     final net = incomeCents - expenseCents;
 
     return Column(
@@ -71,9 +76,7 @@ class FlowBar extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Expanded(
-              child: Text(title, style: AppTextStyles.h3(t.panelText)),
-            ),
+            Expanded(child: Text(title, style: AppTextStyles.h3(t.panelText))),
             if (periodLabel != null)
               Text(
                 periodLabel!.toUpperCase(),
@@ -121,6 +124,7 @@ class FlowBar extends StatelessWidget {
                   weight: FontWeight.w600,
                   color: net >= 0 ? t.mossLift : t.clayLift,
                   symbolColor: t.panelMuted,
+                  animate: true,
                 ),
               ],
             ),
@@ -165,11 +169,18 @@ class _FlowRow extends StatelessWidget {
             ),
             Text(
               label,
-              style: AppTextStyles.bodySm(t.panelText)
-                  .copyWith(fontWeight: FontWeight.w500),
+              style: AppTextStyles.bodySm(
+                t.panelText,
+              ).copyWith(fontWeight: FontWeight.w500),
             ),
             const Spacer(),
-            Money(cents, size: 14, color: t.panelText, symbolColor: t.panelMuted),
+            Money(
+              cents,
+              size: 14,
+              color: t.panelText,
+              symbolColor: t.panelMuted,
+              animate: true,
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -180,12 +191,18 @@ class _FlowRow extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.07),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: FractionallySizedBox(
-                widthFactor: fraction.clamp(0.0, 1.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: gradient),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
+              child: TweenAnimationBuilder<double>(
+                // begin: 0 so the bar grows on mount, not just on change.
+                tween: Tween(begin: 0, end: fraction.clamp(0.0, 1.0)),
+                duration: AppMotion.duration(context, AppMotion.slow),
+                curve: AppMotion.settle,
+                builder: (_, widthFactor, _) => FractionallySizedBox(
+                  widthFactor: widthFactor,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: gradient),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
                   ),
                 ),
               ),

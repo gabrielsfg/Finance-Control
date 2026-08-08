@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardHead } from "@/components/shared/Card";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import { CHART_GRID, axisTick, SERIES, ChartTooltip, LegendItem } from "./simShared";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 /** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
 const inputCls =
@@ -334,6 +335,7 @@ export const RetirementSimulator = () => {
 
                       {visibleSeries.has("aportado") && (
                         <Area
+                          {...chartAnim(0)}
                           type="monotone"
                           dataKey="aportado"
                           name="Total aportado"
@@ -347,6 +349,7 @@ export const RetirementSimulator = () => {
 
                       {visibleSeries.has("patrimonioNominal") && (
                         <Area
+                          {...chartAnim(1)}
                           type="monotone"
                           dataKey="patrimonioNominal"
                           name="Patrimônio nominal"
@@ -361,6 +364,7 @@ export const RetirementSimulator = () => {
 
                       {visibleSeries.has("patrimonio") && (
                         <Area
+                          {...chartAnim(2)}
                           type="monotone"
                           dataKey="patrimonio"
                           name="Patrimônio real"
@@ -374,6 +378,7 @@ export const RetirementSimulator = () => {
 
                       {visibleSeries.has("juros") && (
                         <Line
+                          {...chartAnim(3)}
                           type="monotone"
                           dataKey="juros"
                           name="Juros acumulados"
@@ -434,6 +439,7 @@ export const RetirementSimulator = () => {
                         <Tooltip content={<InflationTooltip />} />
                         <ReferenceLine y={100} stroke="var(--text-sub)" strokeDasharray="3 3" strokeWidth={1} />
                         <Area
+                          {...chartAnim(0)}
                           type="monotone"
                           dataKey="custoVidaPct"
                           name="Custo de vida"

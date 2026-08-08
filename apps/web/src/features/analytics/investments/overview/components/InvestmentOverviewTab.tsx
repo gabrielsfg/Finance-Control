@@ -11,6 +11,8 @@ import { AnalyticsInvestmentEvolutionChart } from "./AnalyticsInvestmentEvolutio
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
 import { FlowRow } from "@/components/shared/FlowBar";
+import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
+import { pieAnim } from "@/lib/config/chartAnimation";
 
 const ASSET_CLASS_ORDER = ["Renda Fixa", "Renda Variável", "FII", "Internacional", "Cripto"];
 
@@ -61,7 +63,7 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
                     Capital investido
                   </div>
                   <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--panel-foreground)]">
-                    {formatCurrency(data.totalInvested / 100)}
+                    <AnimatedCurrency cents={data.totalInvested} />
                   </div>
                 </div>
                 <div>
@@ -72,7 +74,8 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
                     className="font-mono mt-[3px] text-[18px] font-medium"
                     style={{ color: data.totalReturnPercent >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
                   >
-                    {data.totalReturnPercent >= 0 ? "+" : ""}{data.totalReturnPercent.toFixed(2)}%
+                    {data.totalReturnPercent >= 0 ? "+" : ""}
+                    <AnimatedCount value={data.totalReturnPercent} decimals={2} suffix="%" />
                   </div>
                 </div>
               </div>
@@ -90,7 +93,7 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
               <FlowRow
                 label="Capital investido"
                 dotColor="var(--moss-lift)"
-                value={formatCurrency(data.totalInvested / 100)}
+                value={<AnimatedCurrency cents={data.totalInvested} />}
                 valueColor="var(--moss-lift)"
                 pct={data.totalInvested / maxBar}
                 variant="in"
@@ -98,7 +101,12 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
               <FlowRow
                 label="Retorno total"
                 dotColor={data.totalReturn >= 0 ? "var(--moss-lift)" : "var(--clay-lift)"}
-                value={`${data.totalReturn >= 0 ? "+ " : "− "}${formatCurrency(Math.abs(data.totalReturn) / 100)}`}
+                value={
+                  <>
+                    {data.totalReturn >= 0 ? "+ " : "− "}
+                    <AnimatedCurrency cents={data.totalReturn} absolute />
+                  </>
+                }
                 valueColor={data.totalReturn >= 0 ? "var(--moss-lift)" : "var(--clay-lift)"}
                 pct={Math.abs(data.totalReturn) / maxBar}
                 variant={data.totalReturn >= 0 ? "in" : "out"}
@@ -112,7 +120,7 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
                   Valor atual
                 </span>
                 <span className="font-mono text-[22px] font-semibold text-[var(--panel-foreground)]">
-                  {formatCurrency(data.currentValue / 100)}
+                  <AnimatedCurrency cents={data.currentValue} />
                 </span>
               </div>
             </div>
@@ -131,6 +139,7 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
+                    {...pieAnim()}
                     data={data.allocations}
                     dataKey="value"
                     nameKey="assetClass"

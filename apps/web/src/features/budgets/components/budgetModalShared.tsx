@@ -428,7 +428,7 @@ export function Step2({
                               type="button"
                               onClick={() => confirmEditAlloc(area.id, a.id)}
                               disabled={editingCents <= 0}
-                              className="bg-green text-black h-9 w-9 rounded-lg flex items-center justify-center transition-opacity hover:opacity-90 disabled:opacity-40 shrink-0"
+                              className="bg-brand text-white h-9 w-9 rounded-lg flex items-center justify-center transition-opacity hover:opacity-90 disabled:opacity-40 shrink-0"
                             >
                               <Plus size={14} />
                             </button>
@@ -483,7 +483,7 @@ export function Step2({
                           type="button"
                           onClick={() => confirmAlloc(area.id)}
                           disabled={(centsByArea[area.id] ?? 0) <= 0}
-                          className="bg-green text-black h-9 w-9 rounded-lg flex items-center justify-center transition-opacity hover:opacity-90 disabled:opacity-40 shrink-0"
+                          className="bg-brand text-white h-9 w-9 rounded-lg flex items-center justify-center transition-opacity hover:opacity-90 disabled:opacity-40 shrink-0"
                         >
                           <Plus size={14} />
                         </button>

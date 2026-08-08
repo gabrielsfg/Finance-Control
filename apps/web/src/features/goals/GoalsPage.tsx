@@ -18,6 +18,7 @@ import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { PageTopbar } from "@/components/layout/PageTopbar";
 import { Money, BigMoney } from "@/components/shared/Money";
 import { HeroPanel } from "@/components/shared/HeroPanel";
+import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
 import { FlowRow } from "@/components/shared/FlowBar";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
@@ -1676,7 +1677,7 @@ export function GoalsPage() {
                     className="inline-flex items-center gap-1 rounded-full px-[9px] py-[3px]"
                     style={{ background: "rgba(129,151,255,0.18)", color: "var(--cobalt-lift)" }}
                   >
-                    {overallPct.toFixed(0)}%
+                    <AnimatedCount value={overallPct} suffix="%" />
                   </span>
                   <span className="text-[var(--panel-muted)]">do total das suas metas</span>
                 </div>
@@ -1684,15 +1685,21 @@ export function GoalsPage() {
                 <div className="mt-6 flex flex-wrap gap-[26px]">
                   <div>
                     <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--panel-muted)]">Meta total</div>
-                    <div className="mt-[3px] font-mono text-[18px] font-medium">{formatCurrency(totalTarget / 100)}</div>
+                    <div className="mt-[3px] font-mono text-[18px] font-medium">
+                      <AnimatedCurrency cents={totalTarget} />
+                    </div>
                   </div>
                   <div>
                     <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--panel-muted)]">Metas ativas</div>
-                    <div className="mt-[3px] font-mono text-[18px] font-medium">{active.length}</div>
+                    <div className="mt-[3px] font-mono text-[18px] font-medium">
+                      <AnimatedCount value={active.length} />
+                    </div>
                   </div>
                   <div>
                     <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--panel-muted)]">Concluídas</div>
-                    <div className="mt-[3px] font-mono text-[18px] font-medium">{achieved.length}/{data.length}</div>
+                    <div className="mt-[3px] font-mono text-[18px] font-medium">
+                      <AnimatedCount value={achieved.length} />/<AnimatedCount value={data.length} />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1702,14 +1709,14 @@ export function GoalsPage() {
                 <div className="mb-[18px] flex items-baseline justify-between">
                   <span className="font-display text-[16px] font-bold">Progresso geral</span>
                   <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--panel-muted)]">
-                    {formatCurrency(totalTarget / 100)}
+                    <AnimatedCurrency cents={totalTarget} />
                   </span>
                 </div>
 
                 <FlowRow
                   label="Guardado"
                   dotColor="var(--moss-lift)"
-                  value={formatCurrency(totalSaved / 100)}
+                  value={<AnimatedCurrency cents={totalSaved} />}
                   valueColor="var(--moss-lift)"
                   pct={savedFrac}
                   variant="in"
@@ -1717,7 +1724,7 @@ export function GoalsPage() {
                 <FlowRow
                   label="Falta juntar"
                   dotColor="var(--panel-muted)"
-                  value={formatCurrency(totalRemaining / 100)}
+                  value={<AnimatedCurrency cents={totalRemaining} />}
                   valueColor="var(--panel-muted)"
                   pct={remainingFrac}
                   variant="out"
@@ -1731,9 +1738,14 @@ export function GoalsPage() {
                     {etaMonths !== null ? "No ritmo atual" : "Falta juntar"}
                   </span>
                   <span className="font-mono text-[22px] font-semibold" style={{ color: "var(--panel-foreground)" }}>
-                    {etaMonths !== null
-                      ? `${etaMonths} ${etaMonths === 1 ? "mês" : "meses"}`
-                      : formatCurrency(totalRemaining / 100)}
+                    {etaMonths !== null ? (
+                      <>
+                        <AnimatedCount value={etaMonths} />{" "}
+                        {etaMonths === 1 ? "mês" : "meses"}
+                      </>
+                    ) : (
+                      <AnimatedCurrency cents={totalRemaining} />
+                    )}
                   </span>
                 </div>
               </div>

@@ -5,6 +5,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency } from "@/lib/utils/index";
 import type { SavingsDetailResponse } from "@/lib/types/analytics.types";
+import { pieAnim } from "@/lib/config/chartAnimation";
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
@@ -50,6 +51,7 @@ export function SavingsDestinationCard({ detail }: Props) {
               <PieChart>
                 <Tooltip content={<CustomTooltip />} />
                 <Pie
+                  {...pieAnim()}
                   data={slices}
                   dataKey="value"
                   nameKey="name"

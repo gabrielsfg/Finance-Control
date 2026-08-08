@@ -7,6 +7,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { InvestmentEvolutionResponse } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -97,6 +98,7 @@ export const AnalyticsInvestmentEvolutionChart = ({ data: response }: Props) => 
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border-color)", strokeWidth: 1, strokeDasharray: "4 4" }} />
             {SERIES.map(({ key, name, color }) => (
               <Line
+                {...chartAnim(0)}
                 key={key}
                 type="monotone"
                 dataKey={key}

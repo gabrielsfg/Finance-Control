@@ -16,6 +16,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import type { SavingsPeriodItem } from "@/lib/types/analytics.types";
 import { periodShortLabel } from "../savingsPeriod";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 function barFill(rate: number): string {
   if (rate < 10) return "var(--chart-3)";
@@ -122,7 +123,7 @@ export function SavingsRateHistoryChart({ periods, plannedRate, positiveStreak }
                     label={{ value: "Meta", fill: "var(--blue)", fontSize: 11, position: "right" }}
                   />
                 )}
-                <Bar dataKey="rate" name="Taxa de economia" radius={[4, 4, 0, 0]} maxBarSize={36}>
+                <Bar {...chartAnim(0)} dataKey="rate" name="Taxa de economia" radius={[4, 4, 0, 0]} maxBarSize={36}>
                   {chartData.map((entry, i) => (
                     <Cell key={i} fill={barFill(entry.rate)} />
                   ))}

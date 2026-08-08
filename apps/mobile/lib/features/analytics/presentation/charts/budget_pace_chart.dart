@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
+import '../../../../shared/widgets/chart_reveal.dart';
 import '../../data/analytics_repository.dart';
 import '../../data/models/analytics_models.dart';
 
@@ -65,74 +67,79 @@ class BudgetPaceChart extends ConsumerWidget {
 
         return SizedBox(
           height: compact ? 160 : 220,
-          child: LineChart(
-            LineChartData(
-              minY: 0,
-              maxY: maxY * 1.15,
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                getDrawingHorizontalLine: (_) =>
-                    FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
-              ),
-              borderData: FlBorderData(show: false),
-              titlesData: FlTitlesData(
-                leftTitles: const AxisTitles(),
-                rightTitles: const AxisTitles(),
-                topTitles: const AxisTitles(),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: !compact,
-                    interval: (dayCount / 5).ceilToDouble(),
-                    getTitlesWidget: (val, _) {
-                      final i = val.toInt();
-                      if (i < 0 || i >= pace.actual.length) {
-                        return const SizedBox();
-                      }
-                      final d = pace.actual[i].date;
-                      return Text('${d.day}',
-                          style: AppTextStyles.mono(t.txtTertiary, fontSize: 9));
-                    },
+          child: ChartReveal(
+            mode: ChartRevealMode.draw,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: maxY * 1.15,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (_) =>
+                      FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
+                ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: const AxisTitles(),
+                  rightTitles: const AxisTitles(),
+                  topTitles: const AxisTitles(),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: !compact,
+                      interval: (dayCount / 5).ceilToDouble(),
+                      getTitlesWidget: (val, _) {
+                        final i = val.toInt();
+                        if (i < 0 || i >= pace.actual.length) {
+                          return const SizedBox();
+                        }
+                        final d = pace.actual[i].date;
+                        return Text('${d.day}',
+                            style: AppTextStyles.mono(t.txtTertiary, fontSize: 9));
+                      },
+                    ),
                   ),
                 ),
-              ),
-              lineTouchData: LineTouchData(
-                touchTooltipData: LineTouchTooltipData(
-                  getTooltipColor: (_) => t.surface,
-                  getTooltipItems: (touchedSpots) =>
-                      touchedSpots.map((s) {
-                    final label = s.barIndex == 0 ? 'Real' : 'Ideal';
-                    return LineTooltipItem(
-                      '$label\n${fmt.formatCurrency((s.y * 100).toInt())}',
-                      AppTextStyles.bodySm(t.txtPrimary)
-                          .copyWith(fontWeight: FontWeight.w600),
-                    );
-                  }).toList(),
-                ),
-              ),
-              lineBarsData: [
-                // Actual spending
-                LineChartBarData(
-                  spots: actualSpots,
-                  isCurved: false,
-                  color: t.clay,
-                  barWidth: 2.5,
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    color: t.clay.withValues(alpha: 0.10),
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) => t.surface,
+                    getTooltipItems: (touchedSpots) =>
+                        touchedSpots.map((s) {
+                      final label = s.barIndex == 0 ? 'Real' : 'Ideal';
+                      return LineTooltipItem(
+                        '$label\n${fmt.formatCurrency((s.y * 100).toInt())}',
+                        AppTextStyles.bodySm(t.txtPrimary)
+                            .copyWith(fontWeight: FontWeight.w600),
+                      );
+                    }).toList(),
                   ),
                 ),
-                // Ideal pace (dashed look via dashArray)
-                LineChartBarData(
-                  spots: idealSpots,
-                  isCurved: false,
-                  color: t.txtTertiary,
-                  barWidth: 1.5,
-                  dashArray: [6, 4],
-                  dotData: const FlDotData(show: false),
-                ),
-              ],
+                lineBarsData: [
+                  // Actual spending
+                  LineChartBarData(
+                    spots: actualSpots,
+                    isCurved: false,
+                    color: t.clay,
+                    barWidth: 2.5,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: t.clay.withValues(alpha: 0.10),
+                    ),
+                  ),
+                  // Ideal pace (dashed look via dashArray)
+                  LineChartBarData(
+                    spots: idealSpots,
+                    isCurved: false,
+                    color: t.txtTertiary,
+                    barWidth: 1.5,
+                    dashArray: [6, 4],
+                    dotData: const FlDotData(show: false),
+                  ),
+                ],
+              ),
+              duration: AppMotion.slow,
+              curve: AppMotion.settle,
             ),
           ),
         );

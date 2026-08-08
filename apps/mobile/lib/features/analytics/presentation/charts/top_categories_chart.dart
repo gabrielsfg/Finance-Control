@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
+import '../../../../shared/widgets/chart_reveal.dart';
 import '../../providers/analytics_provider.dart';
 
 class TopCategoriesChart extends ConsumerWidget {
@@ -32,66 +34,71 @@ class TopCategoriesChart extends ConsumerWidget {
 
         return SizedBox(
           height: height,
-          child: BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.center,
-              maxY: maxVal * 1.15,
-              barGroups: top.indexed.map((entry) {
-                final (i, item) = entry;
-                return BarChartGroupData(
-                  x: i,
-                  barRods: [
-                    BarChartRodData(
-                      toY: item.total.toDouble(),
-                      color: t.primary,
-                      width: barHeight,
-                      borderRadius: BorderRadius.circular(4),
+          child: ChartReveal(
+            mode: ChartRevealMode.grow,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.center,
+                maxY: maxVal * 1.15,
+                barGroups: top.indexed.map((entry) {
+                  final (i, item) = entry;
+                  return BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: item.total.toDouble(),
+                        color: t.primary,
+                        width: barHeight,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ],
+                  );
+                }).toList(),
+                gridData: FlGridData(
+                  show: true,
+                  drawHorizontalLine: false,
+                  getDrawingVerticalLine: (_) =>
+                      FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
+                ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(),
+                  rightTitles: const AxisTitles(),
+                  bottomTitles: const AxisTitles(),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 100,
+                      getTitlesWidget: (val, _) {
+                        final i = val.toInt();
+                        if (i < 0 || i >= top.length) return const SizedBox();
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Text(
+                            top[i].categoryName,
+                            style: AppTextStyles.bodySm(t.txtSecondary)
+                                .copyWith(fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                          ),
+                        );
+                      },
                     ),
-                  ],
-                );
-              }).toList(),
-              gridData: FlGridData(
-                show: true,
-                drawHorizontalLine: false,
-                getDrawingVerticalLine: (_) =>
-                    FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
-              ),
-              borderData: FlBorderData(show: false),
-              titlesData: FlTitlesData(
-                topTitles: const AxisTitles(),
-                rightTitles: const AxisTitles(),
-                bottomTitles: const AxisTitles(),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 100,
-                    getTitlesWidget: (val, _) {
-                      final i = val.toInt();
-                      if (i < 0 || i >= top.length) return const SizedBox();
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Text(
-                          top[i].categoryName,
-                          style: AppTextStyles.bodySm(t.txtSecondary)
-                              .copyWith(fontSize: 11),
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                        ),
-                      );
-                    },
+                  ),
+                ),
+                barTouchData: BarTouchData(
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (_) => t.surface,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+                      fmt.formatCurrency(top[group.x].total),
+                      AppTextStyles.bodySm(t.txtPrimary)
+                          .copyWith(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
               ),
-              barTouchData: BarTouchData(
-                touchTooltipData: BarTouchTooltipData(
-                  getTooltipColor: (_) => t.surface,
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
-                    fmt.formatCurrency(top[group.x].total),
-                    AppTextStyles.bodySm(t.txtPrimary)
-                        .copyWith(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
+              duration: AppMotion.slow,
+              curve: AppMotion.settle,
             ),
           ),
         );

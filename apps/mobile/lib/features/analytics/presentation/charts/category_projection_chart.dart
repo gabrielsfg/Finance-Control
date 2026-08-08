@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
+import '../../../../shared/widgets/animated_fraction.dart';
 import '../../providers/analytics_provider.dart';
 
 class CategoryProjectionChart extends ConsumerWidget {
@@ -68,7 +69,7 @@ class CategoryProjectionChart extends ConsumerWidget {
                         ),
                       ),
                       // Month elapsed indicator
-                      FractionallySizedBox(
+                      AnimatedFraction(
                         widthFactor:
                             (item.monthElapsedPercent / 100).clamp(0.0, 1.0),
                         child: Container(
@@ -80,7 +81,7 @@ class CategoryProjectionChart extends ConsumerWidget {
                         ),
                       ),
                       // Spent bar
-                      FractionallySizedBox(
+                      AnimatedFraction(
                         widthFactor: ratio.clamp(0.0, 1.0),
                         child: Container(
                           height: 8,

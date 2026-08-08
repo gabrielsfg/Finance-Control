@@ -7,6 +7,7 @@ import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { PillSelect } from "@/components/shared/PillSelect";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { InvestmentPortfolio } from "@/lib/types/investments.types";
+import { pieAnim } from "@/lib/config/chartAnimation";
 
 // Token-driven palette (1=moss, 2=cobalt, 3=clay, 4=gold, 5=muted, then repeat).
 const SLICE_COLORS = [
@@ -101,6 +102,7 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <PieChart>
             <Pie
+              {...pieAnim()}
               data={chartData}
               dataKey="value"
               nameKey="name"

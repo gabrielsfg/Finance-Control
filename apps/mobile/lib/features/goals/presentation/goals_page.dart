@@ -147,6 +147,7 @@ class _Hero extends StatelessWidget {
             symbolColor: t.panelMuted,
             symbolScale: 0.34,
             centsScale: 0.44,
+            animate: true,
           ),
           const SizedBox(height: 16),
           ClipRRect(
@@ -156,7 +157,7 @@ class _Hero extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.08),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
+                child: AnimatedFraction(
                   widthFactor: share == 0 ? 0.001 : share,
                   child: Container(
                     decoration: BoxDecoration(
@@ -175,7 +176,11 @@ class _Hero extends StatelessWidget {
                   style: AppTextStyles.mono(t.panelMuted, fontSize: 11)),
               const Spacer(),
               Text('meta ', style: AppTextStyles.mono(t.panelMuted, fontSize: 11)),
-              Money(target, size: 12, color: t.panelText, symbolColor: t.panelMuted),
+              Money(target,
+                  size: 12,
+                  color: t.panelText,
+                  symbolColor: t.panelMuted,
+                  animate: true),
             ],
           ),
         ],

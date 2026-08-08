@@ -130,6 +130,7 @@ class _PortfolioHero extends StatelessWidget {
             symbolColor: t.panelMuted,
             symbolScale: 0.36,
             centsScale: 0.46,
+            animate: true,
           ),
           const SizedBox(height: 20),
           SummaryStatRow(

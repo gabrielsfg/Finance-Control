@@ -197,7 +197,7 @@ export function ImportReview({ flow }: { flow: Flow }) {
               "flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-[13px] font-medium transition-all",
               flow.selectedCount === 0 || flow.confirmMutation.isPending
                 ? "bg-surface2 text-text-muted cursor-not-allowed"
-                : "bg-green text-black hover:bg-green/90"
+                : "bg-brand text-white hover:bg-brand/90"
             )}
           >
             {flow.confirmMutation.isPending
@@ -311,7 +311,7 @@ export function ImportDone({ flow }: { flow: Flow }) {
         </button>
         <button
           onClick={flow.close}
-          className="bg-green hover:bg-green/90 rounded-xl px-5 py-2.5 text-sm font-medium text-black transition-colors"
+          className="bg-brand hover:bg-brand/90 rounded-xl px-5 py-2.5 text-sm font-medium text-white transition-colors"
         >
           Voltar às transações
         </button>

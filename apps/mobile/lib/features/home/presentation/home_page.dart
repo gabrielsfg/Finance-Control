@@ -87,24 +87,46 @@ class _HomePageState extends ConsumerState<HomePage> {
                     onToggle: (v) => setState(() => _showAnalytics = v),
                   ),
                   const SizedBox(height: 18),
+                  // Sections cascade in from the hero down, so the screen
+                  // assembles itself instead of appearing all at once.
                   if (!_showAnalytics) ...[
-                    _HeroSummary(
-                      summary: summary,
-                      monthLabel: AppLocaleScope.of(context)
-                          .formatMonthYear(state.startDate),
+                    FadeSlideIn(
+                      child: _HeroSummary(
+                        summary: summary,
+                        monthLabel: AppLocaleScope.of(context)
+                            .formatMonthYear(state.startDate),
+                      ),
                     ),
                     const SizedBox(height: 14),
-                    _BudgetCard(summary: summary),
+                    FadeSlideIn(
+                      index: 1,
+                      child: _BudgetCard(summary: summary),
+                    ),
                     const SizedBox(height: 26),
-                    _AccountsPreview(accounts: accounts),
+                    FadeSlideIn(
+                      index: 2,
+                      child: _AccountsPreview(accounts: accounts),
+                    ),
                     const SizedBox(height: 26),
-                    _TopCategoriesSection(categories: topCategories),
+                    FadeSlideIn(
+                      index: 3,
+                      child: _TopCategoriesSection(categories: topCategories),
+                    ),
                     const SizedBox(height: 26),
-                    _GoalsPreview(goals: activeGoals),
+                    FadeSlideIn(
+                      index: 4,
+                      child: _GoalsPreview(goals: activeGoals),
+                    ),
                     const SizedBox(height: 26),
-                    _RecurrencesPreview(items: recurring),
+                    FadeSlideIn(
+                      index: 5,
+                      child: _RecurrencesPreview(items: recurring),
+                    ),
                     const SizedBox(height: 26),
-                    _RecentTransactionsSection(transactions: recent),
+                    FadeSlideIn(
+                      index: 6,
+                      child: _RecentTransactionsSection(transactions: recent),
+                    ),
                   ] else
                     const HomeAnalyticsView(),
                   SizedBox(height: bottomPad + 76 + 24),
@@ -291,6 +313,7 @@ class _HeroSummary extends StatelessWidget {
             symbolColor: t.panelMuted,
             symbolScale: 0.34,
             centsScale: 0.44,
+            animate: true,
           ),
           const SizedBox(height: 26),
           FlowBar(

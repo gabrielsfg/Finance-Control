@@ -1,9 +1,9 @@
 "use client";
 
-import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
 import { FlowRow } from "@/components/shared/FlowBar";
+import { AnimatedCurrency } from "@/components/shared/AnimatedValue";
 import type { AccountItem } from "@/lib/types/accounts.types";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -44,7 +44,9 @@ export const AccountsNetWorthHero = ({ accounts }: { accounts: AccountItem[] }) 
             {byType.map((b) => (
               <div key={b.label}>
                 <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">{b.label}</div>
-                <div className="font-mono mt-[3px] text-[18px] font-medium">{formatCurrency(b.total / 100)}</div>
+                <div className="font-mono mt-[3px] text-[18px] font-medium">
+                  <AnimatedCurrency cents={b.total} />
+                </div>
               </div>
             ))}
           </div>
@@ -63,7 +65,7 @@ export const AccountsNetWorthHero = ({ accounts }: { accounts: AccountItem[] }) 
         <FlowRow
           label="Disponível"
           dotColor="var(--moss-lift)"
-          value={formatCurrency(netWorth / 100)}
+          value={<AnimatedCurrency cents={netWorth} />}
           valueColor="var(--moss-lift)"
           pct={netWorth > 0 ? 1 : 0}
           variant="in"
@@ -71,7 +73,7 @@ export const AccountsNetWorthHero = ({ accounts }: { accounts: AccountItem[] }) 
         <FlowRow
           label="Fatura a pagar"
           dotColor="var(--clay-lift)"
-          value={formatCurrency(totalInvoice / 100)}
+          value={<AnimatedCurrency cents={totalInvoice} />}
           valueColor="var(--clay-lift)"
           pct={invoicePct}
           variant="out"
@@ -84,7 +86,7 @@ export const AccountsNetWorthHero = ({ accounts }: { accounts: AccountItem[] }) 
             style={{ color: free >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
           >
             {free >= 0 ? "+ " : "− "}
-            {formatCurrency(Math.abs(free) / 100)}
+            <AnimatedCurrency cents={free} absolute />
           </span>
         </div>
       </div>

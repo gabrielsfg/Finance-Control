@@ -98,7 +98,7 @@ export const LoginForm = ({ onSwitch }: { onSwitch: () => void }) => {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="bg-green font-600 hover:bg-green/90 flex w-full items-center justify-center gap-2 rounded-[9px] py-[13px] font-sans text-[15px] text-black transition-colors disabled:opacity-60"
+        className="bg-brand font-600 hover:bg-brand/90 flex w-full items-center justify-center gap-2 rounded-[9px] py-[13px] font-sans text-[15px] text-white transition-colors disabled:opacity-60"
       >
         {isSubmitting && <Loader2 size={15} className="animate-spin" />}
         Entrar na conta

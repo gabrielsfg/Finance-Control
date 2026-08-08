@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/app_locale.dart';
@@ -160,57 +161,62 @@ class _PriceChart extends StatelessWidget {
 
     return SizedBox(
       height: 220,
-      child: LineChart(
-        LineChartData(
-          minY: minY - pad,
-          maxY: maxY + pad,
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (_) => FlLine(
-                color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
-          ),
-          borderData: FlBorderData(show: false),
-          titlesData: const FlTitlesData(
-            leftTitles: AxisTitles(),
-            rightTitles: AxisTitles(),
-            topTitles: AxisTitles(),
-            bottomTitles: AxisTitles(),
-          ),
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) => t.surface,
-              getTooltipItems: (touched) => touched.map((s) {
-                final point = history[s.x.toInt()];
-                final d = point.date;
-                return LineTooltipItem(
-                  '${d.day}/${d.month}/${d.year}\n${fmt.formatCurrency(point.priceCents)}',
-                  AppTextStyles.bodySm(t.txtPrimary)
-                      .copyWith(fontWeight: FontWeight.w600),
-                );
-              }).toList(),
+      child: ChartReveal(
+        mode: ChartRevealMode.draw,
+        child: LineChart(
+          LineChartData(
+            minY: minY - pad,
+            maxY: maxY + pad,
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (_) => FlLine(
+                  color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
             ),
-          ),
-          lineBarsData: [
-            LineChartBarData(
-              spots: spots,
-              isCurved: true,
-              color: color,
-              barWidth: 2,
-              dotData: const FlDotData(show: false),
-              belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    color.withValues(alpha: 0.18),
-                    color.withValues(alpha: 0.0),
-                  ],
-                ),
+            borderData: FlBorderData(show: false),
+            titlesData: const FlTitlesData(
+              leftTitles: AxisTitles(),
+              rightTitles: AxisTitles(),
+              topTitles: AxisTitles(),
+              bottomTitles: AxisTitles(),
+            ),
+            lineTouchData: LineTouchData(
+              touchTooltipData: LineTouchTooltipData(
+                getTooltipColor: (_) => t.surface,
+                getTooltipItems: (touched) => touched.map((s) {
+                  final point = history[s.x.toInt()];
+                  final d = point.date;
+                  return LineTooltipItem(
+                    '${d.day}/${d.month}/${d.year}\n${fmt.formatCurrency(point.priceCents)}',
+                    AppTextStyles.bodySm(t.txtPrimary)
+                        .copyWith(fontWeight: FontWeight.w600),
+                  );
+                }).toList(),
               ),
             ),
-          ],
+            lineBarsData: [
+              LineChartBarData(
+                spots: spots,
+                isCurved: true,
+                color: color,
+                barWidth: 2,
+                dotData: const FlDotData(show: false),
+                belowBarData: BarAreaData(
+                  show: true,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      color.withValues(alpha: 0.18),
+                      color.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          duration: AppMotion.slow,
+          curve: AppMotion.settle,
         ),
       ),
     );

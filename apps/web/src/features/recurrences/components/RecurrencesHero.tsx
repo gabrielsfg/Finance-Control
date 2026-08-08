@@ -1,9 +1,9 @@
 "use client";
 
-import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
 import { FlowRow } from "@/components/shared/FlowBar";
+import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
 
 type Props = {
   /** Net monthly recurring + installment commitment (signed cents; expenses negative). */
@@ -57,7 +57,7 @@ export const RecurrencesHero = ({
               className="inline-flex items-center gap-1 rounded-full px-[9px] py-[3px]"
               style={{ background: "rgba(255,138,91,0.16)", color: "var(--clay-lift)" }}
             >
-              {pctOfIncome.toFixed(0)}% da renda
+              <AnimatedCount value={pctOfIncome} suffix="% da renda" />
             </span>
           )}
           <span className="text-[var(--panel-muted)]">{nextNote}</span>
@@ -66,15 +66,21 @@ export const RecurrencesHero = ({
         <div className="mt-6 flex flex-wrap gap-[26px]">
           <div>
             <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Ativas</div>
-            <div className="font-mono mt-[3px] text-[18px] font-medium">{activeCount}</div>
+            <div className="font-mono mt-[3px] text-[18px] font-medium">
+              <AnimatedCount value={activeCount} />
+            </div>
           </div>
           <div>
             <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Pausadas</div>
-            <div className="font-mono mt-[3px] text-[18px] font-medium">{pausedCount}</div>
+            <div className="font-mono mt-[3px] text-[18px] font-medium">
+              <AnimatedCount value={pausedCount} />
+            </div>
           </div>
           <div>
             <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">No ano</div>
-            <div className="font-mono mt-[3px] text-[18px] font-medium">{formatCurrency(Math.abs(annual) / 100)}</div>
+            <div className="font-mono mt-[3px] text-[18px] font-medium">
+              <AnimatedCurrency cents={annual} absolute />
+            </div>
           </div>
         </div>
       </div>
@@ -89,7 +95,7 @@ export const RecurrencesHero = ({
         <FlowRow
           label="Renda livre"
           dotColor="var(--moss-lift)"
-          value={monthlyIncome > 0 ? formatCurrency(Math.max(0, free) / 100) : "—"}
+          value={monthlyIncome > 0 ? <AnimatedCurrency cents={Math.max(0, free)} /> : "—"}
           valueColor="var(--moss-lift)"
           pct={inPct}
           variant="in"
@@ -97,7 +103,7 @@ export const RecurrencesHero = ({
         <FlowRow
           label="Recorrente"
           dotColor="var(--clay-lift)"
-          value={formatCurrency(committed / 100)}
+          value={<AnimatedCurrency cents={committed} />}
           valueColor="var(--clay-lift)"
           pct={outPct}
           variant="out"
@@ -109,7 +115,14 @@ export const RecurrencesHero = ({
             className="font-mono text-[22px] font-semibold"
             style={{ color: free >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
           >
-            {monthlyIncome > 0 ? `${free >= 0 ? "+ " : "− "}${formatCurrency(Math.abs(free) / 100)}` : "—"}
+            {monthlyIncome > 0 ? (
+              <>
+                {free >= 0 ? "+ " : "− "}
+                <AnimatedCurrency cents={free} absolute />
+              </>
+            ) : (
+              "—"
+            )}
           </span>
         </div>
       </div>

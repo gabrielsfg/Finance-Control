@@ -12,6 +12,7 @@ import {
 import { useAnalyticsFilter } from "./AnalyticsFilterContext";
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
+import { AnimatedCount } from "@/components/shared/AnimatedValue";
 
 export function AnalyticsNetWorthPage() {
   const { start, finish, activeTagIds } = useAnalyticsFilter();
@@ -95,7 +96,14 @@ export function AnalyticsNetWorthPage() {
                           : "var(--panel-foreground)",
                   }}
                 >
-                  {value !== null ? `${value >= 0 ? "+" : ""}${value.toFixed(1)}%` : "—"}
+                  {value !== null ? (
+                    <>
+                      {value >= 0 ? "+" : ""}
+                      <AnimatedCount value={value} decimals={1} suffix="%" />
+                    </>
+                  ) : (
+                    "—"
+                  )}
                 </div>
               </div>
             ))}

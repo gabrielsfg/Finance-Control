@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 
 class AppProgressBar extends StatelessWidget {
   final double percent; // 0.0 to 1.0
   final Color? color;
 
-  const AppProgressBar({super.key, required this.percent, this.color});
+  /// Grows the fill from empty on mount and slides it whenever [percent]
+  /// changes. On by default — a bar that snaps reads as a layout glitch.
+  final bool animate;
+
+  const AppProgressBar({
+    super.key,
+    required this.percent,
+    this.color,
+    this.animate = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,40 +25,46 @@ class AppProgressBar extends StatelessWidget {
     final c = percent >= 1.0
         ? t.error
         : percent >= 0.8
-            ? t.warning
-            : (color ?? t.primary);
+        ? t.warning
+        : (color ?? t.primary);
     final trackColor = t.surfaceEl;
-    return LayoutBuilder(
-      builder: (_, constraints) {
-        final totalWidth = constraints.maxWidth;
-        final fillWidth =
-            (totalWidth * percent.clamp(0.0, 1.0)).clamp(0.0, totalWidth);
-        return SizedBox(
-          height: 6,
-          width: totalWidth,
-          child: Stack(
-            children: [
-              Container(
-                width: totalWidth,
-                height: 6,
-                decoration: BoxDecoration(
-                  borderRadius: AppRadius.pillAll,
-                  color: trackColor,
-                ),
-              ),
-              if (fillWidth > 0)
-                Container(
-                  width: fillWidth,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    borderRadius: AppRadius.pillAll,
-                    color: c,
-                  ),
-                ),
-            ],
+    final target = percent.clamp(0.0, 1.0);
+
+    return SizedBox(
+      height: 6,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.pillAll,
+          color: trackColor,
+        ),
+        child: ClipRRect(
+          borderRadius: AppRadius.pillAll,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: animate && !AppMotion.reduced(context)
+                ? TweenAnimationBuilder<double>(
+                    // begin: 0 so the fill grows on mount, not just on change.
+                    tween: Tween(begin: 0, end: target),
+                    duration: AppMotion.slow,
+                    curve: AppMotion.settle,
+                    builder: (_, value, _) => _fill(value, c),
+                  )
+                : _fill(target, c),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
+
+  Widget _fill(double fraction, Color fillColor) => FractionallySizedBox(
+    widthFactor: fraction,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.pillAll,
+        color: fillColor,
+      ),
+      // FractionallySizedBox needs a sized child to lay the fill out.
+      child: const SizedBox(height: 6),
+    ),
+  );
 }
