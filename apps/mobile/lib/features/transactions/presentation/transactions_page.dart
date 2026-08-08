@@ -10,9 +10,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/app_locale.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/transaction_item.dart';
+import '../providers/transaction_feed_provider.dart';
 import '../providers/transaction_filter_provider.dart';
-import '../providers/transaction_filtered_provider.dart';
-import '../providers/transaction_provider.dart';
 import 'filter_sheet.dart';
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -26,13 +25,35 @@ class TransactionsPage extends ConsumerStatefulWidget {
 
 class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
   Timer? _debounce;
+
+  /// How far from the bottom the next page starts loading. Roughly two rows, so
+  /// the append lands before the reader reaches the end.
+  static const _loadMoreThreshold = 320.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels < position.maxScrollExtent - _loadMoreThreshold) return;
+    // The notifier no-ops when a request is already in flight or the feed is
+    // exhausted, so firing on every frame near the bottom is fine.
+    ref.read(transactionFeedProvider.notifier).loadMore();
   }
 
   void _onSearchChanged(String value) {
@@ -64,8 +85,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.viewPaddingOf(context).bottom;
-    final asyncTx = ref.watch(transactionsNotifierProvider);
-    final filtered = ref.watch(transactionFilteredProvider);
+    final asyncFeed = ref.watch(transactionFeedProvider);
     final filterState = ref.watch(transactionFilterProvider);
     final activeCount = filterState.activeFilterCount;
 
@@ -73,21 +93,20 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
       scrollable: false,
       child: SafeArea(
         bottom: false,
-        child: asyncTx.when(
+        child: asyncFeed.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('Erro: $e')),
-          data: (_) {
-            final groups = _groupByDate(filtered);
+          data: (feed) {
+            final groups = _groupByDate(feed.items);
 
-            final income = filtered
-                .where((t) => t.amountCents > 0)
-                .fold(0, (sum, t) => sum + t.amountCents);
-            final expense = filtered
-                .where((t) => t.amountCents < 0)
-                .fold(0, (sum, t) => sum + t.amountCents.abs());
-            final balance = income - expense;
+            // Totals come from the server and cover the whole filtered period,
+            // so they stay correct while only part of the list is loaded.
+            final income = feed.totalIncomeCents;
+            final expense = feed.totalExpenseCents;
+            final balance = feed.balanceCents;
 
             return CustomScrollView(
+              controller: _scrollController,
               slivers: [
                 SliverPadding(
                   padding: AppSpacing.screenPadding.copyWith(bottom: 0),
@@ -133,9 +152,20 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                     ),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, index) =>
-                            _TransactionGroupSection(group: groups[index]),
-                        childCount: groups.length,
+                        (context, index) {
+                          if (index < groups.length) {
+                            return _TransactionGroupSection(
+                                group: groups[index]);
+                          }
+                          return _FeedFooter(
+                            feed: feed,
+                            onRetry: () => ref
+                                .read(transactionFeedProvider.notifier)
+                                .loadMore(),
+                          );
+                        },
+                        // One extra slot for the loading/end-of-feed footer.
+                        childCount: groups.length + 1,
                       ),
                     ),
                   ),
@@ -145,6 +175,68 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
         ),
       ),
     );
+  }
+}
+
+// ── Feed footer ─────────────────────────────────────────────────────────────
+
+/// Sits at the tail of the list: a spinner while the next page loads, a retry
+/// when appending failed, and a quiet end-of-feed marker once everything is in.
+class _FeedFooter extends StatelessWidget {
+  const _FeedFooter({required this.feed, required this.onRetry});
+
+  final TransactionFeed feed;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+
+    if (feed.loadMoreError != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: Column(
+            children: [
+              Text(
+                'Não foi possível carregar mais',
+                style: AppTextStyles.bodySm(t.txtTertiary),
+              ),
+              const SizedBox(height: 8),
+              AppOutlineButton(label: 'Tentar novamente', onPressed: onRetry),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (feed.isLoadingMore) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    // Only worth saying once the list is long enough that the reader wondered.
+    if (!feed.hasMore && feed.items.length > kTransactionPageSize) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: Text(
+            '${feed.totalItems} transações no período',
+            style: AppTextStyles.mono(t.txtTertiary, fontSize: 11),
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox(height: 8);
   }
 }
 

@@ -119,6 +119,31 @@ namespace FinanceControl.Services.Services
                 query = query.Where(t => subCategoryIds.Contains(t.SubCategoryId));
             }
 
+            if (requestDto.AreaIds is { Count: > 0 })
+                query = query.Where(t => t.AreaId != null && requestDto.AreaIds.Contains(t.AreaId.Value));
+
+            if (requestDto.Type is { } type)
+                query = query.Where(t => t.Type == type);
+
+            if (requestDto.PaymentType is { } paymentType)
+                query = query.Where(t => t.PaymentType == paymentType);
+
+            // Value is stored as a positive magnitude — the sign lives in Type.
+            if (requestDto.MinValue is { } minValue)
+                query = query.Where(t => t.Value >= minValue);
+
+            if (requestDto.MaxValue is { } maxValue)
+                query = query.Where(t => t.Value <= maxValue);
+
+            if (!string.IsNullOrWhiteSpace(requestDto.Search))
+            {
+                var search = requestDto.Search.Trim();
+                query = query.Where(t =>
+                    (t.Description != null && EF.Functions.ILike(t.Description, $"%{search}%")) ||
+                    EF.Functions.ILike(t.SubCategoryName, $"%{search}%") ||
+                    EF.Functions.ILike(t.AccountName, $"%{search}%"));
+            }
+
             var totals = await query
                 .GroupBy(_ => 1)
                 .Select(g => new
@@ -140,6 +165,13 @@ namespace FinanceControl.Services.Services
             var sorted = requestDto.SortField?.ToLower() == "value"
                 ? (sortAsc ? query.OrderBy(t => t.Value) : query.OrderByDescending(t => t.Value))
                 : (sortAsc ? query.OrderBy(t => t.TransactionDate) : query.OrderByDescending(t => t.TransactionDate));
+
+            // Id breaks ties. TransactionDate is a DateOnly, so dozens of rows share
+            // a key; without a deterministic tiebreaker Postgres is free to order
+            // ties differently per query and Skip/Take pages then overlap or drop
+            // rows. Invisible with numbered pages, but it duplicates rows in an
+            // append-as-you-scroll list.
+            sorted = sortAsc ? sorted.ThenBy(t => t.Id) : sorted.ThenByDescending(t => t.Id);
 
             var items = await sorted
                 .Skip((page - 1) * pageSize)

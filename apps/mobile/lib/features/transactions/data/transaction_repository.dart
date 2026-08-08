@@ -8,6 +8,8 @@ import 'dtos/create_transaction_response_dto.dart';
 import 'dtos/get_transaction_response_dto.dart';
 import 'dtos/update_recurring_request_dto.dart';
 import 'dtos/update_transaction_request_dto.dart';
+import 'models/transaction_item.dart';
+import 'models/transaction_page.dart';
 
 final transactionRepositoryProvider = Provider<TransactionRepository>(
   (ref) => TransactionRepository(ref.read(apiClientProvider).dio),
@@ -33,14 +35,6 @@ class TransactionRepository {
   }
 
   // ── Read ─────────────────────────────────────────────────────────────────
-
-  Future<List<GetTransactionResponseDto>> getAllTransactions() async {
-    final response = await _dio.get(ApiEndpoints.transactions);
-    return (response.data as List)
-        .map((e) =>
-            GetTransactionResponseDto.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
 
   Future<GetTransactionResponseDto> getTransactionById(int id) async {
     final response = await _dio.get(ApiEndpoints.transactionById(id));
@@ -72,6 +66,68 @@ class TransactionRepository {
         .map((e) =>
             GetTransactionResponseDto.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// One page of the filtered feed — the call behind the transactions list.
+  ///
+  /// Every filter is applied **server-side** on purpose. Filtering locally only
+  /// worked while the app held the entire history in memory; now that the list
+  /// arrives a page at a time, a local filter would search the loaded page
+  /// instead of the dataset and silently return the wrong rows.
+  Future<TransactionPage> getFilteredTransactions({
+    required DateTime startDate,
+    required DateTime finishDate,
+    int page = 1,
+    int pageSize = 25,
+    List<int>? budgetIds,
+    List<int>? accountIds,
+    List<int>? subCategoryIds,
+    List<int>? areaIds,
+    String? search,
+    String? type,
+    String? paymentType,
+    int? minValueCents,
+    int? maxValueCents,
+    String sortField = 'date',
+    String sortOrder = 'desc',
+  }) async {
+    final response = await _dio.get(
+      ApiEndpoints.transactionsFiltered,
+      queryParameters: <String, dynamic>{
+        'StartDate': _formatDate(startDate),
+        'FinishDate': _formatDate(finishDate),
+        'Page': page,
+        'PageSize': pageSize,
+        'SortField': sortField,
+        'SortOrder': sortOrder,
+        if (budgetIds != null && budgetIds.isNotEmpty) 'BudgetIds': budgetIds,
+        if (accountIds != null && accountIds.isNotEmpty) 'AccountIds': accountIds,
+        if (subCategoryIds != null && subCategoryIds.isNotEmpty)
+          'SubCategoryIds': subCategoryIds,
+        if (areaIds != null && areaIds.isNotEmpty) 'AreaIds': areaIds,
+        if (search != null && search.trim().isNotEmpty) 'Search': search.trim(),
+        'Type': ?type,
+        'PaymentType': ?paymentType,
+        'MinValue': ?minValueCents,
+        'MaxValue': ?maxValueCents,
+      },
+    );
+
+    final data = response.data as Map<String, dynamic>;
+    final pageJson = data['page'] as Map<String, dynamic>;
+
+    return TransactionPage(
+      items: (pageJson['items'] as List)
+          .map((e) => TransactionItem.fromDto(
+              GetTransactionResponseDto.fromJson(e as Map<String, dynamic>)))
+          .toList(),
+      currentPage: (pageJson['currentPage'] as num?)?.toInt() ?? page,
+      totalPages: (pageJson['totalPages'] as num?)?.toInt() ?? 1,
+      totalItems: (pageJson['totalItems'] as num?)?.toInt() ?? 0,
+      totalIncomeCents: (data['totalIncome'] as num?)?.toInt() ?? 0,
+      totalExpenseCents: (data['totalExpense'] as num?)?.toInt() ?? 0,
+      balanceCents: (data['balance'] as num?)?.toInt() ?? 0,
+    );
   }
 
   static String _formatDate(DateTime date) {

@@ -13,7 +13,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../budgets/providers/budget_provider.dart';
 import '../../home/providers/home_provider.dart';
 import '../../transactions/providers/picker_providers.dart';
-import '../../transactions/providers/transaction_provider.dart';
+import '../../transactions/providers/transaction_feed_provider.dart';
 import '../providers/user_preferences_provider.dart';
 import '../providers/user_provider.dart';
 
@@ -403,7 +403,7 @@ class _AccountSection extends ConsumerWidget {
           await ref.read(authRepositoryProvider).resetData(password);
           ref.invalidate(categoriesProvider);
           ref.invalidate(accountsNotifierProvider);
-          ref.invalidate(transactionsNotifierProvider);
+          ref.invalidate(transactionFeedProvider);
           ref.invalidate(homeNotifierProvider);
           ref.invalidate(budgetNotifierProvider);
         },
