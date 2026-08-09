@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, TrendingUp, Download, Gift, Plus } from "lucide-react";
+import { Loader2, TrendingUp, Gift, Plus } from "lucide-react";
 import { PageTopbar } from "@/components/layout/PageTopbar";
+import { ExportCsvButton } from "@/components/shared/ExportCsvButton";
+import { filterInvestments } from "@/features/investments/utils/filterInvestments";
+import { exportInvestmentsToCsv } from "@/features/investments/utils/investmentsCsv";
 import { InvestmentsSummaryHero } from "@/features/investments/components/InvestmentsSummaryHero";
 import { InvestmentsKpiCards } from "@/features/investments/components/InvestmentsKpiCards";
 import { InvestmentsAllocationChart } from "@/features/investments/components/InvestmentsAllocationChart";
@@ -32,6 +35,13 @@ export function InvestmentsPage() {
   usePageNova("Nova operação", () => setShowRegisterTx(true));
   usePageSearch((q) => setSearch(q), "Buscar ativo…");
 
+  // No round trip: the portfolio is already loaded and already filtered on screen, so
+  // the export is the same list the table is rendering.
+  function handleExport() {
+    const visible = filterInvestments(data?.investments ?? [], { search, visibleTypes });
+    exportInvestmentsToCsv(visible);
+  }
+
   usePageFilter(
     <div className="flex items-center gap-2">
       {/* Registrar dividendo */}
@@ -45,14 +55,7 @@ export function InvestmentsPage() {
       </button>
 
       {/* Exportar CSV */}
-      <button
-        onClick={() => {/* export CSV */}}
-        title="Exportar CSV"
-        aria-label="Exportar"
-        className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[var(--surface2)] text-[var(--text-sub)] transition-colors hover:bg-[var(--border-color)] hover:text-[var(--text)]"
-      >
-        <Download size={15} strokeWidth={1.75} />
-      </button>
+      <ExportCsvButton state="idle" onClick={handleExport} />
     </div>,
   );
 

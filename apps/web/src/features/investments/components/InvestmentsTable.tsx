@@ -5,7 +5,8 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { Money } from "@/components/shared/Money";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercentNeutral } from "@/lib/utils/formatNumber";
-import { cn, matchesSearch, assetTypeKeywords } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { filterInvestments } from "@/features/investments/utils/filterInvestments";
 import type { AssetType, Investment, InvestmentPortfolio } from "@/lib/types/investments.types";
 
 const ASSET_CLASSES: { assetClass: string; types: AssetType[] }[] = [
@@ -281,14 +282,9 @@ function ClassCard({
 export const InvestmentsTable = ({ portfolio, search, visibleTypes, onSelectInvestment }: Props) => {
   const { investments, currentValue: portfolioValue } = portfolio;
 
-  const filteredIds = search.trim()
-    ? new Set(
-        investments
-          .filter((inv) => matchesSearch(search, inv.name, inv.ticker, assetTypeKeywords(inv.assetType)))
-          .map((inv) => inv.id)
-      )
-    : null;
-
+  // Shared with the CSV export — see filterInvestments.
+  const visibleInvestments = filterInvestments(investments, { search, visibleTypes });
+  const isSearching = search.trim().length > 0;
   const visibleSet = new Set(visibleTypes);
 
   return (
@@ -296,12 +292,9 @@ export const InvestmentsTable = ({ portfolio, search, visibleTypes, onSelectInve
       {ASSET_CLASSES.map(({ assetClass, types }) => {
         if (!types.some((t) => visibleSet.has(t))) return null;
 
-        const items = investments.filter(
-          (inv) => types.includes(inv.assetType) && visibleSet.has(inv.assetType) &&
-            (filteredIds === null || filteredIds.has(inv.id))
-        );
+        const items = visibleInvestments.filter((inv) => types.includes(inv.assetType));
 
-        if (filteredIds !== null && items.length === 0) return null;
+        if (isSearching && items.length === 0) return null;
 
         return (
           <ClassCard
