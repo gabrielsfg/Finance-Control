@@ -18,6 +18,17 @@ export const transactionsApi = {
     return res.data;
   },
 
+  /**
+   * Every row the filters select, unpaged — feeds the CSV export. Same query string as
+   * getFiltered minus the paging, so the two can't drift apart.
+   */
+  exportFiltered: async (
+    params: Omit<GetTransactionsFilterParams, "page" | "pageSize">,
+  ): Promise<TransactionItem[]> => {
+    const res = await api.get<TransactionItem[]>("/transaction/export", { params });
+    return res.data;
+  },
+
   create: async (data: CreateTransactionRequest): Promise<TransactionItem[]> => {
     const res = await api.post<{ transactions: TransactionItem[] }>("/transaction", data);
     return res.data.transactions;
