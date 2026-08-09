@@ -129,6 +129,7 @@ abstract class ApiEndpoints {
   static String areaById(int id) => '/api/area/$id';
   static String budgetAreasByBudget(int budgetId) => '/api/area?budgetId=$budgetId';
   static const String allAreas = '/api/area/all';
+  static const String tags = '/api/tag';
 
   // Budget Allocations
   static String budgetAllocations(int budgetId) =>

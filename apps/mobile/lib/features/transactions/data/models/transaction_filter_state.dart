@@ -22,6 +22,8 @@ class TransactionFilterState {
     this.subCategoryName,
     this.areaId,
     this.areaName,
+    this.tagId,
+    this.tagName,
     this.minValueCents,
     this.maxValueCents,
   });
@@ -42,6 +44,8 @@ class TransactionFilterState {
   final String? subCategoryName;
   final int? areaId;
   final String? areaName;
+  final int? tagId;
+  final String? tagName;
   final int? minValueCents;
   final int? maxValueCents;
 
@@ -53,6 +57,7 @@ class TransactionFilterState {
     if (accountId != null) count++;
     if (subCategoryId != null) count++;
     if (areaId != null) count++;
+    if (tagId != null) count++;
     if (minValueCents != null || maxValueCents != null) count++;
     return count;
   }
@@ -76,6 +81,9 @@ class TransactionFilterState {
     int? areaId,
     String? areaName,
     bool clearArea = false,
+    int? tagId,
+    String? tagName,
+    bool clearTag = false,
     int? minValueCents,
     bool clearMinValue = false,
     int? maxValueCents,
@@ -95,6 +103,8 @@ class TransactionFilterState {
           clearSubCategory ? null : (subCategoryName ?? this.subCategoryName),
       areaId: clearArea ? null : (areaId ?? this.areaId),
       areaName: clearArea ? null : (areaName ?? this.areaName),
+      tagId: clearTag ? null : (tagId ?? this.tagId),
+      tagName: clearTag ? null : (tagName ?? this.tagName),
       minValueCents:
           clearMinValue ? null : (minValueCents ?? this.minValueCents),
       maxValueCents:

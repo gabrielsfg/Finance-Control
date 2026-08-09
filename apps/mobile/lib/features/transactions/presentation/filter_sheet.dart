@@ -10,6 +10,7 @@ import '../../accounts/providers/accounts_provider.dart';
 import '../../categories/providers/subcategories_provider.dart';
 import '../data/models/transaction_filter_state.dart';
 import '../providers/areas_provider.dart';
+import '../providers/tags_provider.dart';
 import '../providers/transaction_filter_provider.dart';
 
 class FilterSheet extends ConsumerStatefulWidget {
@@ -39,6 +40,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     notifier.updateAccount(_draft.accountId, _draft.accountName);
     notifier.updateSubCategory(_draft.subCategoryId, _draft.subCategoryName);
     notifier.updateArea(_draft.areaId, _draft.areaName);
+    notifier.updateTag(_draft.tagId, _draft.tagName);
     notifier.updateValueRange(_draft.minValueCents, _draft.maxValueCents);
     Navigator.of(context).pop();
   }
@@ -176,6 +178,22 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                     areaId: id,
                     areaName: name,
                     clearArea: id == null,
+                  );
+                });
+              },
+            ),
+            const SizedBox(height: 24),
+            _SectionLabel(label: 'Etiqueta'),
+            const SizedBox(height: 10),
+            _TagSelector(
+              selectedId: _draft.tagId,
+              selectedName: _draft.tagName,
+              onChanged: (id, name) {
+                setState(() {
+                  _draft = _draft.copyWith(
+                    tagId: id,
+                    tagName: name,
+                    clearTag: id == null,
                   );
                 });
               },
@@ -468,6 +486,43 @@ class _AreaSelector extends ConsumerWidget {
           context,
           t,
           items: areas.map((a) => (a.id, a.name)).toList(),
+          selectedId: selectedId,
+          onSelect: (id, name) => onChanged(id, name),
+          onClear: () => onChanged(null, null),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Tag selector ──────────────────────────────────────────────────────────────
+
+class _TagSelector extends ConsumerWidget {
+  final int? selectedId;
+  final String? selectedName;
+  final void Function(int? id, String? name) onChanged;
+
+  const _TagSelector({
+    required this.selectedId,
+    required this.selectedName,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tagsAsync = ref.watch(tagsProvider);
+    final t = AppThemeTokens.of(context);
+
+    return tagsAsync.when(
+      loading: () => const SizedBox(height: 36, child: LinearProgressIndicator()),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (tags) => _PickerRow(
+        label: selectedName ?? 'Todas as etiquetas',
+        isSelected: selectedId != null,
+        onTap: () => _showPicker(
+          context,
+          t,
+          items: tags.map((tag) => (tag.id, tag.name)).toList(),
           selectedId: selectedId,
           onSelect: (id, name) => onChanged(id, name),
           onClear: () => onChanged(null, null),

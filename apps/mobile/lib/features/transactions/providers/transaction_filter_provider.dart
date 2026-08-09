@@ -54,6 +54,14 @@ class TransactionFilterNotifier extends Notifier<TransactionFilterState> {
     );
   }
 
+  void updateTag(int? id, String? name) {
+    state = state.copyWith(
+      tagId: id,
+      tagName: name,
+      clearTag: id == null,
+    );
+  }
+
   void updateValueRange(int? min, int? max) {
     state = state.copyWith(
       minValueCents: min,

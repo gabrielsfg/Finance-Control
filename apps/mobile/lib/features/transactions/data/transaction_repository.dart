@@ -83,6 +83,7 @@ class TransactionRepository {
     List<int>? accountIds,
     List<int>? subCategoryIds,
     List<int>? areaIds,
+    List<int>? tagIds,
     String? search,
     String? type,
     String? paymentType,
@@ -105,6 +106,7 @@ class TransactionRepository {
         if (subCategoryIds != null && subCategoryIds.isNotEmpty)
           'SubCategoryIds': subCategoryIds,
         if (areaIds != null && areaIds.isNotEmpty) 'AreaIds': areaIds,
+        if (tagIds != null && tagIds.isNotEmpty) 'TagIds': tagIds,
         if (search != null && search.trim().isNotEmpty) 'Search': search.trim(),
         'Type': ?type,
         'PaymentType': ?paymentType,
