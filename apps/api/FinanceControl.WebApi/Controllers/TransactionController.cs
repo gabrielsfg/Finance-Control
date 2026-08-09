@@ -63,6 +63,17 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Feeds the CSV export on the transactions page: same filters as
+        /// <c>/filtered</c>, every matching row, no paging.
+        /// </summary>
+        [HttpGet("export")]
+        public async Task<IActionResult> ExportTransactionsAsync([FromQuery] GetTransactionsFilterRequestDto requestDto)
+        {
+            var result = await _transactionService.ExportFilteredTransactionsAsync(requestDto, GetUserId());
+            return Ok(result);
+        }
+
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetTransactionByIdAsync([FromRoute] int id)
         {

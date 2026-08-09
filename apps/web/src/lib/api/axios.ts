@@ -37,12 +37,23 @@ function refreshAccessToken(): Promise<string> {
   return refreshPromise;
 }
 
+// Endpoints that carry no session of their own. Refreshing before them is pointless
+// and, on a stale `isAuthenticated` flag, actively harmful: the failed refresh would
+// log the visitor out mid-signup. `/user/login` also covers `/user/login/two-factor`,
+// and `/user/verify-email` covers its `/resend`.
+// `/legal` is here for the same reason even though it is not an auth route: it is
+// anonymous, it is linked straight from the registration form, and a visitor reading
+// the terms must never be logged out by a refresh attempted on their behalf.
 function isAuthEndpoint(url: string): boolean {
   return (
+    url.includes("/legal") ||
     url.includes("/user/refresh") ||
     url.includes("/user/login") ||
     url.includes("/user/register") ||
-    url.includes("/user/logout")
+    url.includes("/user/logout") ||
+    url.includes("/user/verify-email") ||
+    url.includes("/user/forgot-password") ||
+    url.includes("/user/reset-password")
   );
 }
 

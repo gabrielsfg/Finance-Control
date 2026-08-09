@@ -3,6 +3,9 @@
 import { useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2, X } from "lucide-react";
+import { ExportCsvButton, type ExportState } from "@/components/shared/ExportCsvButton";
+import { transactionsApi } from "@/lib/api/transactions";
+import { exportTransactionsToCsv } from "@/features/transactions/utils/transactionsCsv";
 import { TransactionsFilters } from "@/features/transactions/components/TransactionsFilters";
 import { TransactionsSummary } from "@/features/transactions/components/TransactionsSummary";
 import { TransactionsList } from "@/features/transactions/components/TransactionsList";
@@ -22,6 +25,7 @@ import { useBudgets } from "@/features/budgets/hooks/useBudgets";
 import { useTags } from "@/features/transactions/hooks/useTags";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import { parseLocalDate } from "@/lib/utils/budgetPeriod";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { TransactionsFilter } from "@/features/transactions/types/filters.types";
 import type { TransactionItem } from "@/lib/types/transactions.types";
 
@@ -68,6 +72,7 @@ function TransactionsContent() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
+  const [exportState, setExportState] = useState<ExportState>("idle");
   const [drawerOpen, setDrawerOpen] = useState(() => searchParams.get("new") === "1");
   const [drawerMode, setDrawerMode] = useState<DrawerMode>(() =>
     searchParams.get("new") === "1" ? "create" : "create",
@@ -120,24 +125,62 @@ function TransactionsContent() {
     setDrawerOpen(true);
   });
   usePageImport(importFlow.open);
-  usePageSearch((q) => { setSearchQuery(q); setPage(1); }, "Buscar por descrição ou tag...");
-  usePageFilter(
-    <TransactionsFilters filter={filter} onChange={handleFilterChange} />
+  usePageSearch(
+    (q) => { setSearchQuery(q); setPage(1); },
+    "Buscar por descrição, tag, categoria ou conta...",
   );
 
   const { start, finish } = buildTxDateRange(filter);
 
-  const { data: response, isLoading, isError } = useTransactionsFiltered({
-    startDate: start,
-    finishDate: finish,
+  /**
+   * Every filter goes to the server, none of them to the loaded page. The list is
+   * paginated, so filtering client-side only ever filtered the rows that happened to be
+   * in hand — the totals came from the whole period while the table showed a subset of
+   * one page, and page 2 could hold matches nobody ever saw.
+   *
+   * Shared with the export, which sends the same object minus the paging.
+   */
+  const queryFilters = {
+    // A day picked from the calendar is just a one-day range.
+    startDate: filterDay ?? start,
+    finishDate: filterDay ?? finish,
     budgetIds: filter.budgetIds.length > 0 ? filter.budgetIds : undefined,
     accountIds: filter.accountIds.length > 0 ? filter.accountIds : undefined,
     categoryIds: filter.categoryIds.length > 0 ? filter.categoryIds : undefined,
     subCategoryIds: filter.subCategoryIds.length > 0 ? filter.subCategoryIds : undefined,
-    page,
-    pageSize,
+    tagIds: filter.tagIds.length > 0 ? filter.tagIds : undefined,
+    type: filter.typeFilter !== "All" ? filter.typeFilter : undefined,
+    minValue: filter.minValue ?? undefined,
+    maxValue: filter.maxValue ?? undefined,
+    search: searchQuery.trim() || undefined,
     sortField: filter.sortField,
     sortOrder: filter.sortOrder,
+  };
+
+  // Exporting the loaded page would hand the user a slice of what they asked for, which
+  // in a reconciliation file is worse than no export at all.
+  async function handleExport() {
+    setExportState("loading");
+    try {
+      const rows = await transactionsApi.exportFiltered(queryFilters);
+      exportTransactionsToCsv(rows);
+      setExportState("idle");
+    } catch {
+      setExportState("error");
+    }
+  }
+
+  usePageFilter(
+    <div className="flex items-center gap-2">
+      <TransactionsFilters filter={filter} onChange={handleFilterChange} />
+      <ExportCsvButton state={exportState} onClick={handleExport} />
+    </div>
+  );
+
+  const { data: response, isLoading, isError } = useTransactionsFiltered({
+    ...queryFilters,
+    page,
+    pageSize,
   });
 
   const items = response?.page.items ?? [];
@@ -150,27 +193,6 @@ function TransactionsContent() {
   const totalPages = response?.page.totalPages ?? 1;
   const totalItems = response?.page.totalItems ?? 0;
   const rowCount = response?.page.rowCount ?? 0;
-
-  const normalizeText = (s: string) =>
-    s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-
-  const visibleItems = useMemo(() => {
-    const needle = normalizeText(searchQuery.trim());
-    return items.filter((t) => {
-      if (filterDay && t.transactionDate !== filterDay) return false;
-      if (filter.typeFilter !== "All" && t.type !== filter.typeFilter) return false;
-      if (needle) {
-        const inDescription = t.description ? normalizeText(t.description).includes(needle) : false;
-        const inTags = t.tags ? t.tags.some((tag) => normalizeText(tag.name).includes(needle)) : false;
-        if (!inDescription && !inTags) return false;
-      }
-      if (filter.tagIds.length > 0) {
-        const txTagIds = t.tags.map(tag => tag.id);
-        if (!filter.tagIds.some(id => txTagIds.includes(id))) return false;
-      }
-      return true;
-    });
-  }, [items, filterDay, filter.typeFilter, searchQuery, filter.tagIds]);
 
   type Chip = { id: string; label: string; color?: string; onRemove: () => void };
 
@@ -190,6 +212,16 @@ function TransactionsContent() {
         id: "typeFilter",
         label: TYPE_FILTER_LABELS[filter.typeFilter],
         onRemove: () => { setFilter(f => ({ ...f, typeFilter: "All" })); setPage(1); },
+      });
+    }
+
+    if (filter.minValue !== null || filter.maxValue !== null) {
+      const min = filter.minValue === null ? null : formatCurrency(filter.minValue / 100);
+      const max = filter.maxValue === null ? null : formatCurrency(filter.maxValue / 100);
+      chips.push({
+        id: "valueRange",
+        label: min && max ? `${min} – ${max}` : min ? `A partir de ${min}` : `Até ${max}`,
+        onRemove: () => { setFilter(f => ({ ...f, minValue: null, maxValue: null })); setPage(1); },
       });
     }
 
@@ -333,7 +365,7 @@ function TransactionsContent() {
         />
 
         <TransactionsList
-          transactions={visibleItems}
+          transactions={items}
           subcategoryMeta={metaSubcategories}
           onView={(t) => {
             setDrawerTransaction(t);

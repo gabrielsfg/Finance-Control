@@ -14,6 +14,9 @@ namespace FinanceControl.Shared.Dtos.Request
         /// <summary>Budget area ids. A transaction's area comes from its budget allocation.</summary>
         public List<int>? AreaIds { get; set; }
 
+        /// <summary>A transaction matches when it carries any one of these tags.</summary>
+        public List<int>? TagIds { get; set; }
+
         /// <summary>Free text matched against description, subcategory name and account name.</summary>
         public string? Search { get; set; }
 

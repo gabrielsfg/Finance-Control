@@ -121,6 +121,7 @@ class TransactionFeedNotifier extends AsyncNotifier<TransactionFeed> {
           accountIds: _query.accountIds,
           subCategoryIds: _query.subCategoryIds,
           areaIds: _query.areaIds,
+          tagIds: _query.tagIds,
           search: _query.search,
           type: _query.type,
           paymentType: _query.paymentType,

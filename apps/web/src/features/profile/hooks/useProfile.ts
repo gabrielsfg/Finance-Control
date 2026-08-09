@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { authApi } from "@/lib/api/auth";
 import { profileApi } from "@/lib/api/profile";
+import type { UpdateTwoFactorRequest } from "@/lib/types/auth.types";
 import type { UpdateProfileRequest, UpdatePreferencesRequest, ResetDataRequest } from "@/lib/types/profile.types";
 
 export const useProfile = () =>
@@ -36,3 +38,32 @@ export const useResetData = () =>
   useMutation({
     mutationFn: (data: ResetDataRequest) => profileApi.resetData(data),
   });
+
+/**
+ * Downloads the export. The object URL is revoked right after the click because
+ * it pins the whole file in memory until it is.
+ */
+export const useExportData = () =>
+  useMutation({
+    mutationFn: profileApi.exportData,
+    onSuccess: ({ blob, fileName }) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    },
+  });
+
+export const useUpdateTwoFactor = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: UpdateTwoFactorRequest) => authApi.updateTwoFactor(data),
+    // The endpoint answers 204, so there is nothing to write into the cache —
+    // refetch the profile to pick up the new flag.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile"] }),
+  });
+};

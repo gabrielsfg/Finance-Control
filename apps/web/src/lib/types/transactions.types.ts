@@ -19,9 +19,12 @@ export type TagItem = {
 export type TransactionItem = {
   id: number;
   budgetId: number | null;
+  budgetName: string | null;
   subCategoryId: number;
   subCategoryName: string;
   subCategoryEmoji: string | null;
+  /** Parent category of the subcategory — carried so a row can be read on its own. */
+  categoryName: string;
   accountId: number;
   accountName: string;
   destinationAccountId: number | null;
@@ -90,6 +93,13 @@ export type GetTransactionsFilterParams = {
   accountIds?: number[];
   categoryIds?: number[];
   subCategoryIds?: number[];
+  tagIds?: number[];
+  type?: TransactionType;
+  /** Inclusive bounds on the transaction magnitude, in cents. */
+  minValue?: number;
+  maxValue?: number;
+  /** Matched against description, tag, subcategory and account name. */
+  search?: string;
   page?: number;
   pageSize?: number;
   sortField?: TxSortField;

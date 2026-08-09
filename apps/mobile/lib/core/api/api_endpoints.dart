@@ -11,8 +11,16 @@ abstract class ApiEndpoints {
   static const String register = '/api/user/mobile/register';
   static const String refreshToken = '/api/user/mobile/refresh';
   static const String logout = '/api/user/mobile/logout';
+  static const String verifyEmail = '/api/user/mobile/verify-email';
+  static const String twoFactorLogin = '/api/user/mobile/login/two-factor';
+  // No mobile variant — these carry no tokens either way, so both clients share them.
+  static const String resendVerificationCode = '/api/user/verify-email/resend';
+  static const String twoFactor = '/api/user/two-factor';
   static const String forgotPassword = '/api/user/forgot-password';
   static const String resetPassword = '/api/user/reset-password';
+
+  // Anonymous — the registration screen links to these before an account exists.
+  static String legalDocument(String type) => '/api/legal/$type';
   static const String userProfile = '/api/user/profile';
   static const String deleteAccount = '/api/user/me';
   static const String resetData = '/api/user/me/reset-data';
@@ -121,6 +129,7 @@ abstract class ApiEndpoints {
   static String areaById(int id) => '/api/area/$id';
   static String budgetAreasByBudget(int budgetId) => '/api/area?budgetId=$budgetId';
   static const String allAreas = '/api/area/all';
+  static const String tags = '/api/tag';
 
   // Budget Allocations
   static String budgetAllocations(int budgetId) =>

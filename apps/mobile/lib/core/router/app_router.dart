@@ -18,6 +18,8 @@ import '../../features/profile/presentation/preferences_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/auth/presentation/register_page.dart';
 import '../../features/auth/presentation/splash_page.dart';
+import '../../features/auth/presentation/two_factor_page.dart';
+import '../../features/auth/presentation/verify_email_page.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../providers/overlay_provider.dart';
 import '../../features/budgets/data/models/budget_models.dart';
@@ -35,6 +37,8 @@ import '../../features/investments/presentation/register_investment_page.dart';
 import '../../features/market/presentation/market_asset_page.dart';
 import '../../features/market/presentation/market_page.dart';
 import '../../features/menu/presentation/menu_page.dart';
+import '../../features/legal/data/legal_repository.dart';
+import '../../features/legal/presentation/legal_document_page.dart';
 import '../../features/recurrences/presentation/recurrences_page.dart';
 import '../../features/transactions/data/models/transaction_item.dart';
 import '../../features/transactions/presentation/add_transaction_page.dart';
@@ -42,6 +46,30 @@ import '../../features/transactions/presentation/edit_transaction_page.dart';
 import '../../features/transactions/presentation/transaction_detail_page.dart';
 import '../../features/transactions/presentation/transactions_page.dart';
 import '../../shared/widgets/app_shell.dart';
+
+/// Routes reachable without a session.
+///
+/// The verification and two-factor screens belong here even though they finish a
+/// login: at the moment they run there is no token yet, and the redirect below
+/// would bounce them straight back to /login. Password recovery had the same
+/// problem and was unreachable.
+const _publicRoutes = {
+  '/splash',
+  '/login',
+  '/register',
+  '/verify-email',
+  '/two-factor',
+  '/forgot-password',
+  '/reset-password',
+};
+
+/// Reachable in both states, so neither redirect rule may claim them: the legal
+/// documents are linked from the signup form and have to stay readable after the
+/// account exists.
+const _openRoutes = {
+  '/legal/privacy',
+  '/legal/terms',
+};
 
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = _RouterListenable(ref);
@@ -56,10 +84,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Do not redirect while auth state is loading
       if (authState.isLoading) return null;
 
+      if (_openRoutes.contains(state.matchedLocation)) return null;
+
       final isAuthenticated = authState.valueOrNull?.isAuthenticated ?? false;
-      final isOnAuthRoute = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register' ||
-          state.matchedLocation == '/splash';
+      final isOnAuthRoute = _publicRoutes.contains(state.matchedLocation);
 
       if (!isAuthenticated && !isOnAuthRoute) return '/login';
       if (isAuthenticated && isOnAuthRoute) return '/';
@@ -84,7 +112,30 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/reset-password',
-        builder: (_, _) => const ResetPasswordPage(),
+        builder: (_, state) => ResetPasswordPage(email: state.extra as String),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        builder: (_, state) => VerifyEmailPage(email: state.extra as String),
+      ),
+      GoRoute(
+        path: '/two-factor',
+        builder: (_, state) =>
+            TwoFactorPage(challengeToken: state.extra as String),
+      ),
+      GoRoute(
+        path: '/legal/privacy',
+        builder: (_, _) => const LegalDocumentPage(
+          type: LegalDocumentTypes.privacyPolicy,
+          title: 'Política de Privacidade',
+        ),
+      ),
+      GoRoute(
+        path: '/legal/terms',
+        builder: (_, _) => const LegalDocumentPage(
+          type: LegalDocumentTypes.termsOfUse,
+          title: 'Termos de Uso',
+        ),
       ),
       GoRoute(
         path: '/analytics',

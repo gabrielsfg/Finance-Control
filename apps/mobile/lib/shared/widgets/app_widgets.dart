@@ -3,6 +3,7 @@ export 'delete_confirm_dialog.dart';
 export 'app_background.dart';
 export 'animated_fraction.dart';
 export 'app_chip.dart';
+export 'app_error_banner.dart';
 export 'app_fab.dart';
 export 'app_input_field.dart';
 export 'app_logo.dart';

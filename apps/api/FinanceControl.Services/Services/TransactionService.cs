@@ -98,51 +98,7 @@ namespace FinanceControl.Services.Services
 
         public async Task<GetTransactionsFilteredResponseDto> GetAllTransactionsFilteredAsync(GetTransactionsFilterRequestDto requestDto, int userId)
         {
-            var query = GetTransactionQuery(userId)
-                .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate);
-
-            if (requestDto.BudgetIds is { Count: > 0 })
-                query = query.Where(t => t.BudgetId != null && requestDto.BudgetIds.Contains(t.BudgetId.Value));
-
-            if (requestDto.AccountIds is { Count: > 0 })
-                query = query.Where(t => requestDto.AccountIds.Contains(t.AccountId));
-
-            if (requestDto.SubCategoryIds is { Count: > 0 })
-                query = query.Where(t => requestDto.SubCategoryIds.Contains(t.SubCategoryId));
-
-            if (requestDto.CategoryIds is { Count: > 0 })
-            {
-                var subCategoryIds = await _context.SubCategories
-                    .Where(sc => requestDto.CategoryIds.Contains(sc.CategoryId) && sc.UserId == userId)
-                    .Select(sc => sc.Id)
-                    .ToListAsync();
-                query = query.Where(t => subCategoryIds.Contains(t.SubCategoryId));
-            }
-
-            if (requestDto.AreaIds is { Count: > 0 })
-                query = query.Where(t => t.AreaId != null && requestDto.AreaIds.Contains(t.AreaId.Value));
-
-            if (requestDto.Type is { } type)
-                query = query.Where(t => t.Type == type);
-
-            if (requestDto.PaymentType is { } paymentType)
-                query = query.Where(t => t.PaymentType == paymentType);
-
-            // Value is stored as a positive magnitude — the sign lives in Type.
-            if (requestDto.MinValue is { } minValue)
-                query = query.Where(t => t.Value >= minValue);
-
-            if (requestDto.MaxValue is { } maxValue)
-                query = query.Where(t => t.Value <= maxValue);
-
-            if (!string.IsNullOrWhiteSpace(requestDto.Search))
-            {
-                var search = requestDto.Search.Trim();
-                query = query.Where(t =>
-                    (t.Description != null && EF.Functions.ILike(t.Description, $"%{search}%")) ||
-                    EF.Functions.ILike(t.SubCategoryName, $"%{search}%") ||
-                    EF.Functions.ILike(t.AccountName, $"%{search}%"));
-            }
+            var query = await ApplyFiltersAsync(requestDto, userId);
 
             var totals = await query
                 .GroupBy(_ => 1)
@@ -795,6 +751,110 @@ namespace FinanceControl.Services.Services
             return [transaction];
         }
 
+        /// <summary>
+        /// The filter half of the transactions list, shared with the CSV export.
+        /// </summary>
+        /// <remarks>
+        /// Shared on purpose: an export that reimplemented the filters would eventually
+        /// disagree with the screen it was exported from, and the user would have no way
+        /// of telling which one is lying.
+        /// </remarks>
+        private async Task<IQueryable<GetTransactionResponseDto>> ApplyFiltersAsync(
+            GetTransactionsFilterRequestDto requestDto,
+            int userId)
+        {
+            var query = GetTransactionQuery(userId)
+                .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate);
+
+            if (requestDto.BudgetIds is { Count: > 0 })
+                query = query.Where(t => t.BudgetId != null && requestDto.BudgetIds.Contains(t.BudgetId.Value));
+
+            if (requestDto.AccountIds is { Count: > 0 })
+                query = query.Where(t => requestDto.AccountIds.Contains(t.AccountId));
+
+            if (requestDto.SubCategoryIds is { Count: > 0 })
+                query = query.Where(t => requestDto.SubCategoryIds.Contains(t.SubCategoryId));
+
+            if (requestDto.CategoryIds is { Count: > 0 })
+            {
+                var subCategoryIds = await _context.SubCategories
+                    .Where(sc => requestDto.CategoryIds.Contains(sc.CategoryId) && sc.UserId == userId)
+                    .Select(sc => sc.Id)
+                    .ToListAsync();
+                query = query.Where(t => subCategoryIds.Contains(t.SubCategoryId));
+            }
+
+            if (requestDto.TagIds is { Count: > 0 })
+            {
+                // Resolved to ids first, like the category branch above: the tag link is a
+                // join table on the entity, and the query has already been projected.
+                var taggedTransactionIds = await _context.Transactions
+                    .Where(t => t.UserId == userId && t.Tags.Any(tag => requestDto.TagIds.Contains(tag.Id)))
+                    .Select(t => t.Id)
+                    .ToListAsync();
+                query = query.Where(t => taggedTransactionIds.Contains(t.Id));
+            }
+
+            if (requestDto.AreaIds is { Count: > 0 })
+                query = query.Where(t => t.AreaId != null && requestDto.AreaIds.Contains(t.AreaId.Value));
+
+            if (requestDto.Type is { } type)
+                query = query.Where(t => t.Type == type);
+
+            if (requestDto.PaymentType is { } paymentType)
+                query = query.Where(t => t.PaymentType == paymentType);
+
+            // Value is stored as a positive magnitude — the sign lives in Type.
+            if (requestDto.MinValue is { } minValue)
+                query = query.Where(t => t.Value >= minValue);
+
+            if (requestDto.MaxValue is { } maxValue)
+                query = query.Where(t => t.Value <= maxValue);
+
+            if (!string.IsNullOrWhiteSpace(requestDto.Search))
+            {
+                var search = requestDto.Search.Trim();
+
+                // Tags are part of what the search box promises, and the web page used to
+                // deliver it by filtering the rows it had in hand. Resolved to ids first
+                // for the same reason as the branches above: the query is already
+                // projected, so its Tags list is not a navigation any more.
+                var tagMatchIds = await _context.Transactions
+                    .Where(t => t.UserId == userId && t.Tags.Any(tag => EF.Functions.ILike(tag.Name, $"%{search}%")))
+                    .Select(t => t.Id)
+                    .ToListAsync();
+
+                query = query.Where(t =>
+                    (t.Description != null && EF.Functions.ILike(t.Description, $"%{search}%")) ||
+                    EF.Functions.ILike(t.SubCategoryName, $"%{search}%") ||
+                    EF.Functions.ILike(t.AccountName, $"%{search}%") ||
+                    tagMatchIds.Contains(t.Id));
+            }
+
+            return query;
+        }
+
+        /// <summary>
+        /// Every row matching the filters, unpaged — what the user is looking at, not the
+        /// page they happen to be on. Ordering mirrors the list so the file reads in the
+        /// same sequence as the screen.
+        /// </summary>
+        public async Task<List<GetTransactionResponseDto>> ExportFilteredTransactionsAsync(
+            GetTransactionsFilterRequestDto requestDto,
+            int userId)
+        {
+            var query = await ApplyFiltersAsync(requestDto, userId);
+
+            var sortAsc = requestDto.SortOrder?.ToLower() == "asc";
+            var sorted = requestDto.SortField?.ToLower() == "value"
+                ? (sortAsc ? query.OrderBy(t => t.Value) : query.OrderByDescending(t => t.Value))
+                : (sortAsc ? query.OrderBy(t => t.TransactionDate) : query.OrderByDescending(t => t.TransactionDate));
+
+            sorted = sortAsc ? sorted.ThenBy(t => t.Id) : sorted.ThenByDescending(t => t.Id);
+
+            return await sorted.ToListAsync();
+        }
+
         private IQueryable<GetTransactionResponseDto> GetTransactionQuery(int userId)
         {
             return _context.Transactions
@@ -803,9 +863,11 @@ namespace FinanceControl.Services.Services
                 {
                     Id = t.Id,
                     BudgetId = t.BudgetId,
+                    BudgetName = t.Budget != null ? t.Budget.Name : null,
                     SubCategoryId = t.SubCategoryId,
                     SubCategoryName = t.SubCategory.Name,
                     SubCategoryEmoji = t.SubCategory.Emoji,
+                    CategoryName = t.SubCategory.Category.Name,
                     AccountId = t.AccountId,
                     AccountName = t.Account.Name,
                     DestinationAccountId = t.DestinationAccountId,
@@ -842,9 +904,11 @@ namespace FinanceControl.Services.Services
                 {
                     Id = t.Id,
                     BudgetId = t.BudgetId,
+                    BudgetName = t.Budget != null ? t.Budget.Name : null,
                     SubCategoryId = t.SubCategoryId,
                     SubCategoryName = t.SubCategory.Name,
                     SubCategoryEmoji = t.SubCategory.Emoji,
+                    CategoryName = t.SubCategory.Category.Name,
                     AccountId = t.AccountId,
                     AccountName = t.Account.Name,
                     DestinationAccountId = t.DestinationAccountId,
@@ -880,21 +944,51 @@ namespace FinanceControl.Services.Services
             if (tagNames is null || tagNames.Count == 0)
                 return;
 
-            var normalizedNames = tagNames.Select(n => n.Trim()).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-            if (normalizedNames.Count == 0)
+            var requestedNames = tagNames
+                .Select(n => n.Trim())
+                .Where(n => n.Length > 0)
+                .DistinctBy(TextNormalization.ToComparisonKey)
+                .ToList();
+
+            if (requestedNames.Count == 0)
                 return;
 
-            var existingTags = await _context.Tags
-                .Where(t => t.UserId == userId && normalizedNames.Contains(t.Name))
+            // The whole tag list, matched in memory by comparison key. The previous
+            // version looked the names up with an IN clause, which Postgres resolves
+            // case-sensitively: sending "viagem" when "Viagem" already existed created a
+            // second tag, and the two drifted apart from there. Accents did the same to
+            // "férias". A user has a handful of tags, so loading them is cheaper than
+            // being wrong.
+            var userTags = await _context.Tags
+                .Where(t => t.UserId == userId)
                 .ToListAsync();
 
-            var existingNames = existingTags.Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            foreach (var name in normalizedNames.Where(n => !existingNames.Contains(n)))
+            var tagsByKey = new Dictionary<string, Tag>();
+            foreach (var tag in userTags)
+                tagsByKey.TryAdd(TextNormalization.ToComparisonKey(tag.Name), tag);
+
+            var resolvedTags = new List<Tag>();
+            foreach (var name in requestedNames)
             {
-                var tag = new Tag { UserId = userId, Name = name };
-                _context.Tags.Add(tag);
-                existingTags.Add(tag);
+                var key = TextNormalization.ToComparisonKey(name);
+                if (key.Length == 0)
+                    continue;
+
+                // An existing tag keeps its own spelling — the first one created is the
+                // canonical one, and later transactions attach to it rather than renaming it.
+                if (tagsByKey.TryGetValue(key, out var existing))
+                {
+                    resolvedTags.Add(existing);
+                    continue;
+                }
+
+                var created = new Tag { UserId = userId, Name = name };
+                _context.Tags.Add(created);
+                tagsByKey[key] = created;
+                resolvedTags.Add(created);
             }
+
+            var existingTags = resolvedTags;
 
             await _context.SaveChangesAsync();
 

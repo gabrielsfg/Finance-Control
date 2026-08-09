@@ -5,5 +5,10 @@ namespace FinanceControl.Shared.Dtos.Response
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+
+        /// <summary>Drives the security section: the toggle state, and whether to offer it at all.</summary>
+        public bool TwoFactorEnabled { get; set; }
+
+        public bool EmailVerified { get; set; }
     }
 }

@@ -1,4 +1,8 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using FinanceControl.Domain.Interfaces.Service;
+using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Extensions;
 using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
@@ -17,22 +21,43 @@ namespace FinanceControl.WebApi.Controllers
     public class UserController : BaseController
     {
         private const string RefreshTokenCookieName = "refreshToken";
+        private const string TrustedDeviceCookieName = "trustedDevice";
+
+        private static readonly JsonSerializerOptions ExportJsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            Converters = { new JsonStringEnumConverter() }
+        };
 
         private readonly IUserService _userService;
+        private readonly IDataExportService _dataExportService;
         private readonly IValidator<CreateUserRequestDto> _createUserValidator;
         private readonly IValidator<UserLoginRequestDto> _userLoginValidator;
         private readonly IValidator<UpdateUserPreferencesRequestDto> _updatePreferencesValidator;
+        private readonly IValidator<VerifyEmailRequestDto> _verifyEmailValidator;
+        private readonly IValidator<TwoFactorLoginRequestDto> _twoFactorLoginValidator;
+        private readonly IValidator<ResetPasswordRequestDto> _resetPasswordValidator;
 
         public UserController(
             IUserService userService,
+            IDataExportService dataExportService,
             IValidator<CreateUserRequestDto> createUserValidator,
             IValidator<UserLoginRequestDto> userLoginValidator,
-            IValidator<UpdateUserPreferencesRequestDto> updatePreferencesValidator)
+            IValidator<UpdateUserPreferencesRequestDto> updatePreferencesValidator,
+            IValidator<VerifyEmailRequestDto> verifyEmailValidator,
+            IValidator<TwoFactorLoginRequestDto> twoFactorLoginValidator,
+            IValidator<ResetPasswordRequestDto> resetPasswordValidator)
         {
             _userService = userService;
+            _dataExportService = dataExportService;
             _createUserValidator = createUserValidator;
             _userLoginValidator = userLoginValidator;
             _updatePreferencesValidator = updatePreferencesValidator;
+            _verifyEmailValidator = verifyEmailValidator;
+            _twoFactorLoginValidator = twoFactorLoginValidator;
+            _resetPasswordValidator = resetPasswordValidator;
         }
 
         [HttpPost("register")]
@@ -43,12 +68,43 @@ namespace FinanceControl.WebApi.Controllers
             if (validatonResult.ToActionResult() is { } errorResult)
                 return errorResult;
 
-            var tokens = await _userService.RegisterUserAsync(requestDto);
-            if (tokens is null)
-                return BadRequest("Email already exists.");
+            var result = await _userService.RegisterUserAsync(requestDto, GetClientIpAddress(), GetUserAgent());
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
 
-            SetRefreshTokenCookie(tokens.RefreshToken);
-            return Ok(new AuthResponseDto { AccessToken = tokens.AccessToken });
+            // No tokens yet — the client goes to the verification screen and comes back
+            // through verify-email, which is what signs the user in.
+            return Ok(new { verificationRequired = true });
+        }
+
+        [HttpPost("verify-email")]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> VerifyEmailAsync([FromBody] VerifyEmailRequestDto requestDto)
+        {
+            var validationResult = _verifyEmailValidator.Validate(requestDto);
+            if (validationResult.ToActionResult() is { } errorResult)
+                return errorResult;
+
+            var result = await _userService.VerifyEmailAsync(requestDto);
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            SetRefreshTokenCookie(result.Value!.RefreshToken);
+            return Ok(new AuthResponseDto { AccessToken = result.Value.AccessToken });
+        }
+
+        [HttpPost("verify-email/resend")]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> ResendVerificationCodeAsync([FromBody] ResendVerificationCodeRequestDto requestDto)
+        {
+            if (string.IsNullOrWhiteSpace(requestDto.Email))
+                return BadRequest("Email is required.");
+
+            await _userService.ResendVerificationCodeAsync(requestDto.Email);
+
+            // Always 204, even for an address that does not exist or is already verified:
+            // any difference here is a way to test whether an email is registered.
+            return NoContent();
         }
 
         [HttpPost("login")]
@@ -59,7 +115,7 @@ namespace FinanceControl.WebApi.Controllers
             if (validatonResult.ToActionResult() is { } errorResult)
                 return errorResult;
 
-            var result = await _userService.UserLoginAsync(requestDto);
+            var result = await _userService.UserLoginAsync(requestDto, Request.Cookies[TrustedDeviceCookieName]);
 
             if (result.IsLockedOut)
             {
@@ -67,11 +123,58 @@ namespace FinanceControl.WebApi.Controllers
                 return StatusCode(423, new { message = "Account is locked. Try again later.", retryAfterSeconds = seconds });
             }
 
+            // 503, not 400: the credentials were fine and retrying is the right move.
+            if (result.EmailDeliveryFailed)
+                return StatusCode(503, new { error = "Could not send the verification code. Please try again." });
+
+            // The password was right but a second gate is open. 200 with the reason, not an
+            // error status: nothing went wrong, the flow simply has another step.
+            if (result.Challenge is { } challenge)
+                return Ok(new LoginChallengeResponseDto { Challenge = challenge, ChallengeToken = result.ChallengeToken });
+
             if (result.AuthResponse is null)
                 return BadRequest("Invalid email or password.");
 
             SetRefreshTokenCookie(result.AuthResponse.RefreshToken);
             return Ok(new AuthResponseDto { AccessToken = result.AuthResponse.AccessToken });
+        }
+
+        [HttpPost("login/two-factor")]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> VerifyTwoFactorAsync([FromBody] TwoFactorLoginRequestDto requestDto)
+        {
+            var validationResult = _twoFactorLoginValidator.Validate(requestDto);
+            if (validationResult.ToActionResult() is { } errorResult)
+                return errorResult;
+
+            var result = await _userService.VerifyTwoFactorAsync(requestDto, Request.Headers.UserAgent.ToString());
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            SetRefreshTokenCookie(result.Value!.RefreshToken);
+
+            if (result.Value.TrustedDeviceToken is { } trustedDeviceToken)
+                SetTrustedDeviceCookie(trustedDeviceToken);
+
+            return Ok(new AuthResponseDto { AccessToken = result.Value.AccessToken });
+        }
+
+        [HttpPatch("two-factor")]
+        [Authorize]
+        public async Task<IActionResult> UpdateTwoFactorAsync([FromBody] UpdateTwoFactorRequestDto requestDto)
+        {
+            if (string.IsNullOrWhiteSpace(requestDto.Password))
+                return BadRequest("Password is required.");
+
+            var result = await _userService.UpdateTwoFactorAsync(GetUserId(), requestDto);
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            // The cookie on this browser is meaningless once the devices are dropped.
+            if (!requestDto.Enabled)
+                ClearTrustedDeviceCookie();
+
+            return NoContent();
         }
 
         [HttpPost("refresh")]
@@ -101,6 +204,8 @@ namespace FinanceControl.WebApi.Controllers
 
             // Clear the cookie regardless of whether the token was valid —
             // the client should always end up logged out.
+            // The trusted-device cookie deliberately survives: logging out is not
+            // distrusting the machine, and clearing it would ask for a code on every login.
             ClearRefreshTokenCookie();
             return NoContent();
         }
@@ -120,11 +225,26 @@ namespace FinanceControl.WebApi.Controllers
             if (validationResult.ToActionResult() is { } errorResult)
                 return errorResult;
 
-            var tokens = await _userService.RegisterUserAsync(requestDto);
-            if (tokens is null)
-                return BadRequest("Email already exists.");
+            var result = await _userService.RegisterUserAsync(requestDto, GetClientIpAddress(), GetUserAgent());
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
 
-            return Ok(tokens);
+            return Ok(new { verificationRequired = true });
+        }
+
+        [HttpPost("mobile/verify-email")]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> VerifyEmailMobileAsync([FromBody] VerifyEmailRequestDto requestDto)
+        {
+            var validationResult = _verifyEmailValidator.Validate(requestDto);
+            if (validationResult.ToActionResult() is { } errorResult)
+                return errorResult;
+
+            var result = await _userService.VerifyEmailAsync(requestDto);
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(result.Value);
         }
 
         [HttpPost("mobile/login")]
@@ -135,7 +255,9 @@ namespace FinanceControl.WebApi.Controllers
             if (validationResult.ToActionResult() is { } errorResult)
                 return errorResult;
 
-            var result = await _userService.UserLoginAsync(requestDto);
+            // The trust token lives in the keystore and rides in the body here — there is
+            // no cookie jar on the device to carry it automatically.
+            var result = await _userService.UserLoginAsync(requestDto, requestDto.TrustedDeviceToken);
 
             if (result.IsLockedOut)
             {
@@ -143,10 +265,34 @@ namespace FinanceControl.WebApi.Controllers
                 return StatusCode(423, new { message = "Account is locked. Try again later.", retryAfterSeconds = seconds });
             }
 
+            // 503, not 400: the credentials were fine and retrying is the right move.
+            if (result.EmailDeliveryFailed)
+                return StatusCode(503, new { error = "Could not send the verification code. Please try again." });
+
+            if (result.Challenge is { } challenge)
+                return Ok(new LoginChallengeResponseDto { Challenge = challenge, ChallengeToken = result.ChallengeToken });
+
             if (result.AuthResponse is null)
                 return BadRequest("Invalid email or password.");
 
             return Ok(result.AuthResponse);
+        }
+
+        [HttpPost("mobile/login/two-factor")]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> VerifyTwoFactorMobileAsync([FromBody] TwoFactorLoginRequestDto requestDto)
+        {
+            var validationResult = _twoFactorLoginValidator.Validate(requestDto);
+            if (validationResult.ToActionResult() is { } errorResult)
+                return errorResult;
+
+            var result = await _userService.VerifyTwoFactorAsync(requestDto, deviceName: null);
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            // TrustedDeviceToken travels in the body; the app keeps it beside the refresh
+            // token and sends it back on the next login.
+            return Ok(result.Value);
         }
 
         [HttpPost("mobile/refresh")]
@@ -233,6 +379,7 @@ namespace FinanceControl.WebApi.Controllers
                 return BadRequest("Invalid password.");
 
             ClearRefreshTokenCookie();
+            ClearTrustedDeviceCookie();
             return NoContent();
         }
 
@@ -250,6 +397,26 @@ namespace FinanceControl.WebApi.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Data portability (LGPD art. 18, V): everything the account holds, as a JSON
+        /// file the user can download and read.
+        /// </summary>
+        [HttpGet("me/export")]
+        [Authorize]
+        public async Task<IActionResult> ExportDataAsync()
+        {
+            var export = await _dataExportService.ExportUserDataAsync(GetUserId());
+            if (export is null)
+                return NotFound();
+
+            // Serialised here rather than returned as an object so the browser receives a
+            // named file: indented and with accents left alone, because a human opens it.
+            var json = JsonSerializer.SerializeToUtf8Bytes(export, ExportJsonOptions);
+            var fileName = $"meus-dados-{DateTime.UtcNow:yyyy-MM-dd}.json";
+
+            return File(json, "application/json", fileName);
+        }
+
         [HttpPost("forgot-password")]
         [EnableRateLimiting("auth")]
         public async Task<IActionResult> ForgotPasswordAsync([FromBody] ForgotPasswordRequestDto requestDto)
@@ -257,24 +424,28 @@ namespace FinanceControl.WebApi.Controllers
             if (string.IsNullOrWhiteSpace(requestDto.Email))
                 return BadRequest("Email is required.");
 
-            var token = await _userService.ForgotPasswordAsync(requestDto.Email);
+            await _userService.ForgotPasswordAsync(requestDto.Email);
 
-            // Always return 200 to avoid email enumeration.
-            // Token is returned directly (dev mode — replace with email delivery in production).
-            return Ok(new { resetToken = token });
+            // Always 200 and never the code itself: the response is identical for a
+            // registered and an unregistered address, so it cannot be used to enumerate.
+            return Ok(new { message = "If the email exists, a reset code has been sent." });
         }
 
         [HttpPost("reset-password")]
         [EnableRateLimiting("auth")]
         public async Task<IActionResult> ResetPasswordAsync([FromBody] ResetPasswordRequestDto requestDto)
         {
-            if (string.IsNullOrWhiteSpace(requestDto.Token) || string.IsNullOrWhiteSpace(requestDto.NewPassword))
-                return BadRequest("Token and new password are required.");
+            var validationResult = _resetPasswordValidator.Validate(requestDto);
+            if (validationResult.ToActionResult() is { } errorResult)
+                return errorResult;
 
-            var success = await _userService.ResetPasswordAsync(requestDto.Token, requestDto.NewPassword);
+            var success = await _userService.ResetPasswordAsync(requestDto);
             if (!success)
-                return BadRequest("Invalid or expired reset token.");
+                return BadRequest("Invalid or expired code.");
 
+            // Every session died with the old password, this one included.
+            ClearRefreshTokenCookie();
+            ClearTrustedDeviceCookie();
             return Ok(new { message = "Password reset successfully." });
         }
 
@@ -295,6 +466,33 @@ namespace FinanceControl.WebApi.Controllers
         private void ClearRefreshTokenCookie()
         {
             Response.Cookies.Append(RefreshTokenCookieName, string.Empty, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UnixEpoch,
+                Path = "/"
+            });
+        }
+
+        // Same protections as the refresh cookie, and for the same reason: whoever holds
+        // this value skips the second factor, so script must never be able to read it.
+        // Its lifetime matches TrustedDeviceLifetime in UserService.
+        private void SetTrustedDeviceCookie(string trustedDeviceToken)
+        {
+            Response.Cookies.Append(TrustedDeviceCookieName, trustedDeviceToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddDays(30),
+                Path = "/"
+            });
+        }
+
+        private void ClearTrustedDeviceCookie()
+        {
+            Response.Cookies.Append(TrustedDeviceCookieName, string.Empty, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
