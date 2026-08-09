@@ -3,6 +3,7 @@ using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
+using FinanceControl.Shared.Helpers;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,9 +29,19 @@ namespace FinanceControl.Services.Services
 
         public async Task<Result<GetTagResponseDto>> CreateTagAsync(CreateTagRequestDto requestDto, int userId)
         {
-            var exists = await _context.Tags
-                .AnyAsync(t => t.UserId == userId && t.Name.ToLower() == requestDto.Name.ToLower());
-            if (exists)
+            // Compared by the same key the transaction form uses, so "Férias" and "ferias"
+            // cannot both exist — the point of a tag is that everything filed under it
+            // comes back together.
+            var key = TextNormalization.ToComparisonKey(requestDto.Name);
+            if (key.Length == 0)
+                return Result<GetTagResponseDto>.Failure("Tag name is required.");
+
+            var userTagNames = await _context.Tags
+                .Where(t => t.UserId == userId)
+                .Select(t => t.Name)
+                .ToListAsync();
+
+            if (userTagNames.Any(name => TextNormalization.ToComparisonKey(name) == key))
                 return Result<GetTagResponseDto>.Failure("A tag with this name already exists.");
 
             var tag = new Tag { UserId = userId, Name = requestDto.Name.Trim() };
