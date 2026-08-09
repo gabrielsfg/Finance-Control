@@ -6,9 +6,18 @@ namespace FinanceControl.Shared.Dtos.Response
     {
         public int Id { get; set; }
         public int? BudgetId { get; set; }
+        public string? BudgetName { get; set; }
         public int SubCategoryId { get; set; }
         public string SubCategoryName { get; set; }
         public string? SubCategoryEmoji { get; set; }
+
+        /// <summary>
+        /// The parent category of <see cref="SubCategoryName"/>. Carried on the row so a
+        /// consumer that only has the transaction — the CSV export, for one — can name it
+        /// without loading the whole category tree.
+        /// </summary>
+        public string CategoryName { get; set; } = string.Empty;
+
         public int AccountId { get; set; }
         public string AccountName { get; set; }
         public int? DestinationAccountId { get; set; }

@@ -3,7 +3,7 @@
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
 import { FlowRow } from "@/components/shared/FlowBar";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { AnimatedCurrency } from "@/components/shared/AnimatedValue";
 import type { SavingsDetailResponse } from "@/lib/types/analytics.types";
 
 type Props = { detail: SavingsDetailResponse };
@@ -37,7 +37,7 @@ export function SavingsSummaryCards({ detail }: Props) {
               Recebido
             </div>
             <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--moss-lift)]">
-              {formatCurrency(detail.income / 100)}
+              <AnimatedCurrency cents={detail.income} />
             </div>
           </div>
           <div>
@@ -45,7 +45,7 @@ export function SavingsSummaryCards({ detail }: Props) {
               Gasto
             </div>
             <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--clay-lift)]">
-              {formatCurrency(detail.expense / 100)}
+              <AnimatedCurrency cents={detail.expense} />
             </div>
           </div>
           {detail.plannedSavings > 0 && (
@@ -54,7 +54,7 @@ export function SavingsSummaryCards({ detail }: Props) {
                 Meta de economia
               </div>
               <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--panel-foreground)]">
-                {formatCurrency(detail.plannedSavings / 100)}
+                <AnimatedCurrency cents={detail.plannedSavings} />
               </div>
             </div>
           )}
@@ -73,7 +73,7 @@ export function SavingsSummaryCards({ detail }: Props) {
         <FlowRow
           label="Recebido"
           dotColor="var(--moss-lift)"
-          value={formatCurrency(detail.income / 100)}
+          value={<AnimatedCurrency cents={detail.income} />}
           valueColor="var(--moss-lift)"
           pct={detail.income / max}
           variant="in"
@@ -81,7 +81,7 @@ export function SavingsSummaryCards({ detail }: Props) {
         <FlowRow
           label="Gasto"
           dotColor="var(--clay-lift)"
-          value={formatCurrency(detail.expense / 100)}
+          value={<AnimatedCurrency cents={detail.expense} />}
           valueColor="var(--clay-lift)"
           pct={detail.expense / max}
           variant="out"
@@ -98,7 +98,7 @@ export function SavingsSummaryCards({ detail }: Props) {
             className="font-mono text-[22px] font-semibold"
             style={{ color: detail.invested > 0 ? "var(--moss-lift)" : "var(--panel-muted)" }}
           >
-            {formatCurrency(detail.invested / 100)}
+            <AnimatedCurrency cents={detail.invested} />
           </span>
         </div>
       </div>

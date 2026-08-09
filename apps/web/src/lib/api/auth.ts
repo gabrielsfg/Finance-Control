@@ -1,20 +1,62 @@
 import { api } from "./axios";
-import type { AuthResponse } from "@/lib/types/auth.types";
-import type { LoginRequest, RegisterRequest } from "@/lib/types/auth.types";
+import type {
+  AuthResponse,
+  LoginRequest,
+  LoginResult,
+  RegisterRequest,
+  RegisterResponse,
+  ResetPasswordRequest,
+  TwoFactorLoginRequest,
+  UpdateTwoFactorRequest,
+  VerifyEmailRequest,
+} from "@/lib/types/auth.types";
 
 export const authApi = {
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>("/user/login", data);
+  // Answers with tokens or with a challenge (unverified email, two-factor) — both 200.
+  // Narrow the result with isLoginChallenge before reading accessToken.
+  login: async (data: LoginRequest): Promise<LoginResult> => {
+    const response = await api.post<LoginResult>("/user/login", data);
     return response.data;
   },
 
-  register: async (data: Omit<RegisterRequest, "confirmPassword">): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>("/user/register", {
+  // No tokens here: the account is created but unusable until the emailed code is
+  // confirmed through verifyEmail, which is what signs the user in.
+  register: async (data: Omit<RegisterRequest, "confirmPassword">): Promise<RegisterResponse> => {
+    const response = await api.post<RegisterResponse>("/user/register", {
       name: data.name,
       email: data.email,
       password: data.password,
+      acceptedTerms: data.acceptedTerms,
     });
     return response.data;
+  },
+
+  verifyEmail: async (data: VerifyEmailRequest): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>("/user/verify-email", data);
+    return response.data;
+  },
+
+  resendVerificationCode: async (email: string): Promise<void> => {
+    await api.post("/user/verify-email/resend", { email });
+  },
+
+  verifyTwoFactor: async (data: TwoFactorLoginRequest): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>("/user/login/two-factor", data);
+    return response.data;
+  },
+
+  // Always resolves, even for an address that is not registered — the response is
+  // deliberately identical either way.
+  forgotPassword: async (email: string): Promise<void> => {
+    await api.post("/user/forgot-password", { email });
+  },
+
+  resetPassword: async (data: ResetPasswordRequest): Promise<void> => {
+    await api.post("/user/reset-password", data);
+  },
+
+  updateTwoFactor: async (data: UpdateTwoFactorRequest): Promise<void> => {
+    await api.patch("/user/two-factor", data);
   },
 
   // Refresh token travels as HttpOnly cookie — no body needed.

@@ -10,9 +10,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/app_locale.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/transaction_item.dart';
+import '../providers/transaction_feed_provider.dart';
 import '../providers/transaction_filter_provider.dart';
-import '../providers/transaction_filtered_provider.dart';
-import '../providers/transaction_provider.dart';
 import 'filter_sheet.dart';
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -26,13 +25,35 @@ class TransactionsPage extends ConsumerStatefulWidget {
 
 class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
   Timer? _debounce;
+
+  /// How far from the bottom the next page starts loading. Roughly two rows, so
+  /// the append lands before the reader reaches the end.
+  static const _loadMoreThreshold = 320.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels < position.maxScrollExtent - _loadMoreThreshold) return;
+    // The notifier no-ops when a request is already in flight or the feed is
+    // exhausted, so firing on every frame near the bottom is fine.
+    ref.read(transactionFeedProvider.notifier).loadMore();
   }
 
   void _onSearchChanged(String value) {
@@ -64,8 +85,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.viewPaddingOf(context).bottom;
-    final asyncTx = ref.watch(transactionsNotifierProvider);
-    final filtered = ref.watch(transactionFilteredProvider);
+    final asyncFeed = ref.watch(transactionFeedProvider);
     final filterState = ref.watch(transactionFilterProvider);
     final activeCount = filterState.activeFilterCount;
 
@@ -73,21 +93,20 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
       scrollable: false,
       child: SafeArea(
         bottom: false,
-        child: asyncTx.when(
+        child: asyncFeed.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
-          data: (_) {
-            final groups = _groupByDate(filtered);
+          error: (e, _) => Center(child: Text('Erro: $e')),
+          data: (feed) {
+            final groups = _groupByDate(feed.items);
 
-            final income = filtered
-                .where((t) => t.amountCents > 0)
-                .fold(0, (sum, t) => sum + t.amountCents);
-            final expense = filtered
-                .where((t) => t.amountCents < 0)
-                .fold(0, (sum, t) => sum + t.amountCents.abs());
-            final balance = income - expense;
+            // Totals come from the server and cover the whole filtered period,
+            // so they stay correct while only part of the list is loaded.
+            final income = feed.totalIncomeCents;
+            final expense = feed.totalExpenseCents;
+            final balance = feed.balanceCents;
 
             return CustomScrollView(
+              controller: _scrollController,
               slivers: [
                 SliverPadding(
                   padding: AppSpacing.screenPadding.copyWith(bottom: 0),
@@ -117,7 +136,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 80),
                         child: Text(
-                          'No transactions found',
+                          'Nenhuma transação encontrada',
                           style: AppTextStyles.body(
                             AppThemeTokens.of(context).txtTertiary,
                           ),
@@ -133,9 +152,20 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                     ),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, index) =>
-                            _TransactionGroupSection(group: groups[index]),
-                        childCount: groups.length,
+                        (context, index) {
+                          if (index < groups.length) {
+                            return _TransactionGroupSection(
+                                group: groups[index]);
+                          }
+                          return _FeedFooter(
+                            feed: feed,
+                            onRetry: () => ref
+                                .read(transactionFeedProvider.notifier)
+                                .loadMore(),
+                          );
+                        },
+                        // One extra slot for the loading/end-of-feed footer.
+                        childCount: groups.length + 1,
                       ),
                     ),
                   ),
@@ -145,6 +175,68 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
         ),
       ),
     );
+  }
+}
+
+// ── Feed footer ─────────────────────────────────────────────────────────────
+
+/// Sits at the tail of the list: a spinner while the next page loads, a retry
+/// when appending failed, and a quiet end-of-feed marker once everything is in.
+class _FeedFooter extends StatelessWidget {
+  const _FeedFooter({required this.feed, required this.onRetry});
+
+  final TransactionFeed feed;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+
+    if (feed.loadMoreError != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: Column(
+            children: [
+              Text(
+                'Não foi possível carregar mais',
+                style: AppTextStyles.bodySm(t.txtTertiary),
+              ),
+              const SizedBox(height: 8),
+              AppOutlineButton(label: 'Tentar novamente', onPressed: onRetry),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (feed.isLoadingMore) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    // Only worth saying once the list is long enough that the reader wondered.
+    if (!feed.hasMore && feed.items.length > kTransactionPageSize) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: Text(
+            '${feed.totalItems} transações no período',
+            style: AppTextStyles.mono(t.txtTertiary, fontSize: 11),
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox(height: 8);
   }
 }
 
@@ -173,17 +265,16 @@ class _SearchBar extends StatelessWidget {
           child: Container(
             height: 44,
             decoration: BoxDecoration(
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : t.primary.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(12),
+              color: t.surfaceEl,
+              borderRadius: AppRadius.baseAll,
+              border: Border.all(color: t.mist),
             ),
             child: TextField(
               controller: controller,
               onChanged: onChanged,
               style: AppTextStyles.body(t.txtPrimary).copyWith(fontSize: 14),
               decoration: InputDecoration(
-                hintText: 'Search transactions...',
+                hintText: 'Buscar transações...',
                 hintStyle:
                     AppTextStyles.body(t.txtTertiary).copyWith(fontSize: 14),
                 prefixIcon:
@@ -206,16 +297,19 @@ class _SearchBar extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: filterCount > 0
-                      ? t.primary.withValues(alpha: 0.15)
-                      : (t.isDark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : t.primary.withValues(alpha: 0.06)),
-                  borderRadius: BorderRadius.circular(12),
+                      ? t.accent.withValues(alpha: 0.15)
+                      : t.surfaceEl,
+                  borderRadius: AppRadius.baseAll,
+                  border: Border.all(
+                    color: filterCount > 0
+                        ? t.accent.withValues(alpha: 0.4)
+                        : t.mist,
+                  ),
                 ),
                 child: Icon(
                   Icons.tune_rounded,
                   size: 20,
-                  color: filterCount > 0 ? t.primary : t.txtTertiary,
+                  color: filterCount > 0 ? t.accent : t.txtTertiary,
                 ),
               ),
               if (filterCount > 0)
@@ -265,94 +359,29 @@ class _SummaryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Transactions',
-          style: AppTextStyles.h2(t.txtPrimary).copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 22,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 14),
-        GlassCard(
-          child: Row(
-            children: [
-              Expanded(
-                child: _SummaryColumn(
-                  label: 'Income',
-                  value: fmt.formatCurrency(income),
-                  color: t.success,
-                ),
-              ),
-              _VerticalDivider(),
-              Expanded(
-                child: _SummaryColumn(
-                  label: 'Expenses',
-                  value: fmt.formatCurrency(expense),
-                  color: t.error,
-                ),
-              ),
-              _VerticalDivider(),
-              Expanded(
-                child: _SummaryColumn(
-                  label: 'Balance',
-                  value: fmt.formatCurrency(balance),
-                  color: t.success,
-                ),
-              ),
-            ],
-          ),
+        const PageHeader(title: 'Extrato'),
+        const SizedBox(height: 16),
+        SummaryPanel(
+          eyebrow: 'SALDO DO PERÍODO',
+          valueCents: balance,
+          stats: [
+            SummaryStat(
+              label: 'RECEITAS',
+              valueCents: income,
+              valueColor: t.mossLift,
+            ),
+            SummaryStat(
+              label: 'DESPESAS',
+              valueCents: expense,
+              valueColor: t.clayLift,
+            ),
+          ],
         ),
       ],
-    );
-  }
-}
-
-class _SummaryColumn extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _SummaryColumn({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-    return Column(
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.caption(t.txtSecondary).copyWith(fontSize: 11),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: AppTextStyles.mono(color, fontSize: 13).copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-}
-
-class _VerticalDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-    return Container(
-      width: 1,
-      height: 32,
-      color: t.divider.withValues(alpha: t.isDark ? 0.4 : 0.6),
     );
   }
 }
@@ -379,8 +408,8 @@ class _TransactionGroupSection extends StatelessWidget {
   }
 
   String _groupLabel(AppLocale fmt) {
-    if (_isToday(group.date)) return 'TODAY';
-    if (_isYesterday(group.date)) return 'YESTERDAY';
+    if (_isToday(group.date)) return 'HOJE';
+    if (_isYesterday(group.date)) return 'ONTEM';
     return fmt.formatDayHeader(group.date);
   }
 
@@ -398,11 +427,7 @@ class _TransactionGroupSection extends StatelessWidget {
         const SizedBox(height: 20),
         Text(
           headerText,
-          style: AppTextStyles.caption(t.txtTertiary).copyWith(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-          ),
+          style: AppTextStyles.eyebrow(t.txtTertiary),
         ),
         const SizedBox(height: 8),
         GlassCard(
@@ -432,11 +457,8 @@ class _TransactionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
     final isExpense = item.amountCents < 0;
-    final amountColor = isExpense ? t.error : t.success;
-    final sign = isExpense ? '-' : '+';
-    final amountStr = '$sign${fmt.formatCurrency(item.amountCents.abs())}';
+    final signalColor = isExpense ? t.clay : t.moss;
 
     return Column(
       children: [
@@ -451,8 +473,7 @@ class _TransactionRow extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color:
-                        (isExpense ? t.error : t.success).withValues(alpha: 0.15),
+                    color: isExpense ? t.expenseBg : t.incomeBg,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -461,7 +482,7 @@ class _TransactionRow extends StatelessWidget {
                           ? Icons.arrow_upward_rounded
                           : Icons.arrow_downward_rounded,
                       size: 20,
-                      color: isExpense ? t.error : t.success,
+                      color: signalColor,
                     ),
                   ),
                 ),
@@ -486,11 +507,11 @@ class _TransactionRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                Text(
-                  amountStr,
-                  style: AppTextStyles.mono(amountColor, fontSize: 13).copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                Money(
+                  item.amountCents,
+                  signed: true,
+                  size: 14,
+                  weight: FontWeight.w600,
                 ),
               ],
             ),
@@ -500,7 +521,7 @@ class _TransactionRow extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: t.divider.withValues(alpha: t.isDark ? 0.35 : 0.6),
+            color: t.mist,
           ),
       ],
     );

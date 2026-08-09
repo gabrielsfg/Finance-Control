@@ -15,6 +15,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { FinancialMilestonesResponse, FinancialMilestone } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -132,6 +133,7 @@ export function FinancialTimelineChart({ data }: Props) {
               cursor={{ stroke: "var(--border-color)", strokeWidth: 1, strokeDasharray: "4 4" }}
             />
             <Area
+              {...chartAnim(0)}
               type="monotone"
               dataKey="netWorth"
               name="Patrimônio"

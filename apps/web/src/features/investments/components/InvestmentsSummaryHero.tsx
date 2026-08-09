@@ -1,10 +1,10 @@
 "use client";
 
-import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercentNeutral } from "@/lib/utils/formatNumber";
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
 import { FlowRow } from "@/components/shared/FlowBar";
+import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
 import type { InvestmentPortfolio } from "@/lib/types/investments.types";
 
 type Props = { summary: InvestmentPortfolio };
@@ -51,7 +51,7 @@ export const InvestmentsSummaryHero = ({ summary }: Props) => {
           </span>
           <span className="text-[var(--panel-muted)]">
             {isPositive ? "+ " : "− "}
-            {formatCurrency(Math.abs(summary.totalReturn) / 100)} de retorno
+            <AnimatedCurrency cents={summary.totalReturn} absolute /> de retorno
           </span>
         </div>
 
@@ -63,16 +63,20 @@ export const InvestmentsSummaryHero = ({ summary }: Props) => {
               style={{ color: dayPositive ? "var(--moss-lift)" : "var(--clay-lift)" }}
             >
               {dayPositive ? "+ " : "− "}
-              {formatCurrency(Math.abs(dayChange) / 100)}
+              <AnimatedCurrency cents={dayChange} absolute />
             </div>
           </div>
           <div>
             <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Investido</div>
-            <div className="font-mono mt-[3px] text-[18px] font-medium">{formatCurrency(summary.totalInvested / 100)}</div>
+            <div className="font-mono mt-[3px] text-[18px] font-medium">
+              <AnimatedCurrency cents={summary.totalInvested} />
+            </div>
           </div>
           <div>
             <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Ativos</div>
-            <div className="font-mono mt-[3px] text-[18px] font-medium">{summary.investments.length}</div>
+            <div className="font-mono mt-[3px] text-[18px] font-medium">
+              <AnimatedCount value={summary.investments.length} />
+            </div>
           </div>
         </div>
       </div>
@@ -89,7 +93,7 @@ export const InvestmentsSummaryHero = ({ summary }: Props) => {
         <FlowRow
           label="Total aportado"
           dotColor="var(--moss-lift)"
-          value={formatCurrency(summary.totalInvested / 100)}
+          value={<AnimatedCurrency cents={summary.totalInvested} />}
           valueColor="var(--moss-lift)"
           pct={investedPct}
           variant="in"
@@ -97,7 +101,12 @@ export const InvestmentsSummaryHero = ({ summary }: Props) => {
         <FlowRow
           label="Rendimento"
           dotColor={returnColor}
-          value={`${isPositive ? "+ " : "− "}${formatCurrency(Math.abs(summary.totalReturn) / 100)}`}
+          value={
+            <>
+              {isPositive ? "+ " : "− "}
+              <AnimatedCurrency cents={summary.totalReturn} absolute />
+            </>
+          }
           valueColor={returnColor}
           pct={returnPct}
           variant={isPositive ? "in" : "out"}
@@ -111,7 +120,7 @@ export const InvestmentsSummaryHero = ({ summary }: Props) => {
             Patrimônio atual
           </span>
           <span className="font-mono text-[22px] font-semibold">
-            {formatCurrency(summary.currentValue / 100)}
+            <AnimatedCurrency cents={summary.currentValue} />
           </span>
         </div>
       </div>

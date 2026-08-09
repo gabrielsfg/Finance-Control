@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Services.Extensions;
+using FinanceControl.Services.Seeds;
 using FinanceControl.Services.Services;
 using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
@@ -41,9 +42,15 @@ builder.Services.AddAplicationServices(builder.Configuration);
 builder.Services.AddHostedService<RecurringTransactionHostedService>();
 builder.Services.AddHostedService<RefreshTokenCleanupHostedService>();
 builder.Services.AddHostedService<NotificationReminderHostedService>();
-builder.Services.AddHostedService<BrapiPriceUpdateHostedService>();
-builder.Services.AddHostedService<BrapiIntradayHostedService>();
-builder.Services.AddHostedService<BrapiCleanupHostedService>();
+
+// Brapi sync jobs — desativados enquanto a assinatura está cancelada (pré-lançamento).
+// Sem assinatura ativa eles só acumulariam erro de autenticação a cada janela de sync.
+// Reativar junto com a assinatura: basta descomentar as três linhas. O restante do
+// Brapi (BrapiSettings, os JobServices, os endpoints de mercado sob demanda) continua
+// registrado — só a execução agendada está parada.
+// builder.Services.AddHostedService<BrapiPriceUpdateHostedService>();
+// builder.Services.AddHostedService<BrapiIntradayHostedService>();
+// builder.Services.AddHostedService<BrapiCleanupHostedService>();
 builder.Services.AddMemoryCache();
 
 //DI Repositories
@@ -152,24 +159,55 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    options.AddFixedWindowLimiter("general", opt =>
-    {
-        opt.PermitLimit = 100;
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 0;
-    });
+    // Both policies are partitioned by caller IP. AddFixedWindowLimiter builds a single
+    // limiter shared by every request on the policy, which means one user burning the
+    // budget locks out everyone else — with "auth" at five per fifteen minutes, two
+    // people signing up at once was enough to break the second one.
+    //
+    // Behind the reverse proxy the real client address arrives via X-Forwarded-For, which
+    // UseForwardedHeaders has already folded into RemoteIpAddress by the time this runs.
+    options.AddPolicy("general", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: GetClientKey(httpContext),
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 100,
+            Window = TimeSpan.FromMinutes(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        }));
 
-    options.AddFixedWindowLimiter("auth", opt =>
-    {
-        opt.PermitLimit = 5;
-        opt.Window = TimeSpan.FromMinutes(15);
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 0;
-    });
+    // 20 per 15 minutes per IP. The old budget of 5 predates the emailed codes and is now
+    // too tight to reach the app's own limits: a signup spends one request registering and
+    // one verifying, a wrong code costs another, and the code itself allows five attempts
+    // before it burns. At 5 the rate limiter fired first and the user hit a wall that read
+    // like a bug. Brute force is still bounded by the things that actually count it — the
+    // account lockout after 5 bad passwords and the 5 attempts per code.
+    options.AddPolicy("auth", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: GetClientKey(httpContext),
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 20,
+            Window = TimeSpan.FromMinutes(15),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        }));
+
+    // A missing remote address (in-process test hosts, some socket setups) would otherwise
+    // collapse every such caller into one partition, so they share a named bucket instead
+    // of silently sharing the anonymous one.
+    static string GetClientKey(HttpContext httpContext) =>
+        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 });
 
 var app = builder.Build();
+
+// Publishes any legal document version that is not in the database yet. Runs before the
+// first request on purpose: registration records consent against these rows, so an app
+// that starts without them would create accounts with no proof of what was accepted.
+using (var scope = app.Services.CreateScope())
+{
+    await scope.ServiceProvider.GetRequiredService<LegalDocumentSeeder>().SeedAsync();
+}
 
 // ForwardedHeaders must run before anything that reads scheme/IP (HTTPS redirect, cookie policy).
 app.UseForwardedHeaders();

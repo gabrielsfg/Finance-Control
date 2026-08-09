@@ -36,11 +36,21 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<void> onLoginSuccess({
     required String accessToken,
     required String refreshToken,
+    String? trustedDeviceToken,
   }) async {
-    await ref.read(tokenStorageProvider).saveTokens(
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-        );
+    final storage = ref.read(tokenStorageProvider);
+
+    await storage.saveTokens(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+    );
+
+    // Only present when the user just asked to trust this device. Kept apart from
+    // the session tokens so it survives logout.
+    if (trustedDeviceToken != null) {
+      await storage.saveTrustedDeviceToken(trustedDeviceToken);
+    }
+
     state = AsyncData(AuthState(isAuthenticated: true, accessToken: accessToken));
   }
 

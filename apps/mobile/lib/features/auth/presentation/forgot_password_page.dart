@@ -38,7 +38,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     });
 
     if (email.isEmpty) {
-      setState(() => _emailError = 'Email is required.');
+      setState(() => _emailError = 'Informe seu e-mail.');
       return;
     }
 
@@ -49,7 +49,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     } on DioException catch (e) {
       setState(() {
         _globalError =
-            e.response?.data?['message'] as String? ?? 'Something went wrong.';
+            e.response?.data?['message'] as String? ?? 'Algo deu errado.';
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -77,11 +77,11 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                         color: t.txtPrimary, size: 24),
                   ),
                   const SizedBox(height: 32),
-                  Text('Forgot password',
+                  Text('Recuperar senha',
                       style: AppTextStyles.h1(t.txtPrimary)),
                   const SizedBox(height: 6),
                   Text(
-                    'Enter your email and we\'ll send you a reset link.',
+                    'Informe seu e-mail e enviaremos um código para você cadastrar uma nova senha.',
                     style: AppTextStyles.body(t.txtSecondary),
                   ),
                   const SizedBox(height: 32),
@@ -102,7 +102,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'If that email exists, a reset link has been sent.',
+                              'Se esse e-mail existir, enviamos um código de 6 dígitos.',
                               style: AppTextStyles.body(t.success)
                                   .copyWith(fontSize: 14),
                             ),
@@ -112,8 +112,13 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                     ),
                     const SizedBox(height: 24),
                     PrimaryButton(
-                      label: 'Continue to reset',
-                      onPressed: () => context.push('/reset-password'),
+                      label: 'Continuar para redefinir',
+                      // The reset screen needs the address to send along with the
+                      // code, and asking for it twice would be pure friction.
+                      onPressed: () => context.push(
+                        '/reset-password',
+                        extra: _emailController.text.trim(),
+                      ),
                     ),
                   ] else ...[
                     if (_globalError != null) ...[
@@ -131,7 +136,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                       const SizedBox(height: 16),
                     ],
                     AppInputField(
-                      placeholder: 'Email',
+                      placeholder: 'E-mail',
                       controller: _emailController,
                       errorText: _emailError,
                       keyboardType: TextInputType.emailAddress,
@@ -153,7 +158,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                             ),
                           )
                         : PrimaryButton(
-                            label: 'Send reset link',
+                            label: 'Enviar código',
                             onPressed: _submit,
                           ),
                   ],
@@ -162,8 +167,8 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                     child: GestureDetector(
                       onTap: () => context.pop(),
                       child: Text(
-                        'Back to login',
-                        style: AppTextStyles.body(t.primary).copyWith(
+                        'Voltar para o login',
+                        style: AppTextStyles.body(t.accent).copyWith(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),

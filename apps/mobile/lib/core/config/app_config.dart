@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 /// Application environment configuration.
 ///
 /// To switch environments, change [_current] to the desired [AppEnv].
@@ -11,11 +13,13 @@ abstract class AppConfig {
   static String get apiBaseUrl {
     switch (_current) {
       case AppEnv.local:
-        // IIS Express only binds to localhost — use the Kestrel HTTP profile instead.
-        // Run the API with: dotnet run --launch-profile http
-        // Android emulator: 10.0.2.2 maps to host machine localhost.
-        // iOS simulator: use 'localhost' instead.
-        return 'http://localhost:5112';
+        // Run the API with the Kestrel HTTP profile: dotnet run --launch-profile http
+        // (IIS Express only binds to localhost and won't accept the emulator's traffic).
+        // Android emulator: 10.0.2.2 is the host-machine loopback alias.
+        // iOS simulator: localhost already points at the host.
+        // Physical device: replace with your machine's LAN IP, e.g. 192.168.x.x.
+        final host = Platform.isAndroid ? '10.0.2.2' : 'localhost';
+        return 'http://$host:5112';
       case AppEnv.staging:
         return 'https://staging-api.financecontrol.example.com';
       case AppEnv.production:

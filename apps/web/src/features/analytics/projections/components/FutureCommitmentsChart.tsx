@@ -7,6 +7,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { FutureCommitmentsItem } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -74,7 +75,7 @@ export function FutureCommitmentsChart({ data }: Props) {
               axisLine={false} tickLine={false} width={56}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="total" name="Comprometido" fill="var(--gold)" radius={[4, 4, 0, 0]} />
+            <Bar {...chartAnim(0)} dataKey="total" name="Comprometido" fill="var(--gold)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

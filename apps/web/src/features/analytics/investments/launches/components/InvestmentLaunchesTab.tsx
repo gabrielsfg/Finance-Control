@@ -19,6 +19,8 @@ import { useInvestmentLaunches } from "@/features/analytics/hooks/useAnalytics";
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
 import { FlowRow } from "@/components/shared/FlowBar";
+import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 type FilterOp = "all" | "buy" | "sell";
 
@@ -94,7 +96,7 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
                     Total vendido
                   </div>
                   <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--clay-lift)]">
-                    {formatCurrency(totalSold / 100)}
+                    <AnimatedCurrency cents={totalSold} />
                   </div>
                 </div>
                 <div>
@@ -102,7 +104,7 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
                     Vendas
                   </div>
                   <div className="font-mono mt-[3px] text-[18px] font-medium text-[var(--panel-foreground)]">
-                    {summary?.sellCount ?? 0}
+                    <AnimatedCount value={summary?.sellCount ?? 0} />
                   </div>
                 </div>
               </div>
@@ -120,7 +122,12 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
               <FlowRow
                 label="Comprado"
                 dotColor="var(--moss-lift)"
-                value={`+ ${formatCurrency(totalBought / 100)}`}
+                value={
+                  <>
+                    {"+ "}
+                    <AnimatedCurrency cents={totalBought} />
+                  </>
+                }
                 valueColor="var(--moss-lift)"
                 pct={totalBought / max}
                 variant="in"
@@ -128,7 +135,12 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
               <FlowRow
                 label="Vendido"
                 dotColor="var(--clay-lift)"
-                value={`− ${formatCurrency(totalSold / 100)}`}
+                value={
+                  <>
+                    {"− "}
+                    <AnimatedCurrency cents={totalSold} />
+                  </>
+                }
                 valueColor="var(--clay-lift)"
                 pct={totalSold / max}
                 variant="out"
@@ -146,7 +158,7 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
                   style={{ color: netFlow >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
                 >
                   {netFlow >= 0 ? "+ " : "− "}
-                  {formatCurrency(Math.abs(netFlow) / 100)}
+                  <AnimatedCurrency cents={netFlow} absolute />
                 </span>
               </div>
             </div>
@@ -182,8 +194,8 @@ export function InvestmentLaunchesTab({ startDate, finishDate }: { startDate: st
                     width={64}
                   />
                   <Tooltip content={<BarTooltip />} cursor={{ fill: "var(--surface2)" }} />
-                  <Bar dataKey="bought" name="Comprado" fill="var(--moss)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="sold"   name="Vendido"  fill="var(--clay)"  radius={[4, 4, 0, 0]} />
+                  <Bar {...chartAnim(0)} dataKey="bought" name="Comprado" fill="var(--moss)" radius={[4, 4, 0, 0]} />
+                  <Bar {...chartAnim(1)} dataKey="sold"   name="Vendido"  fill="var(--clay)"  radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

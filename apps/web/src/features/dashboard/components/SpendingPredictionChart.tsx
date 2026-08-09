@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { SpendingPredictionItem } from "@/lib/types/dashboard.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 type Props = {
   data: SpendingPredictionItem[];
@@ -92,6 +93,7 @@ export const SpendingPredictionChart = ({ data }: Props) => {
               strokeWidth={1}
             />
             <Line
+              {...chartAnim(0)}
               type="monotone"
               dataKey="historicalAverage"
               name="Média histórica"
@@ -101,6 +103,7 @@ export const SpendingPredictionChart = ({ data }: Props) => {
               activeDot={{ r: 4 }}
             />
             <Line
+              {...chartAnim(1)}
               type="monotone"
               dataKey="currentExpense"
               name="Gasto atual"
@@ -111,6 +114,7 @@ export const SpendingPredictionChart = ({ data }: Props) => {
               connectNulls={false}
             />
             <Line
+              {...chartAnim(2)}
               type="monotone"
               dataKey="forecastExpense"
               name="Previsão"

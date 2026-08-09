@@ -17,6 +17,7 @@ import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrenc
 import { useGoals } from "@/features/goals/hooks/useGoals";
 import type { PassiveIncomeProjectionResponse } from "@/lib/types/analytics.types";
 import type { Goal } from "@/lib/types/goal.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -246,6 +247,7 @@ export function PassiveIncomeChart({ data }: Props) {
               label={{ value: "Custo de vida", fill: "var(--red)", fontSize: 10, position: "right" }}
             />
             <Area
+              {...chartAnim(0)}
               type="monotone"
               dataKey="livingCost"
               name="Custo de vida"
@@ -256,6 +258,7 @@ export function PassiveIncomeChart({ data }: Props) {
               connectNulls={false}
             />
             <Area
+              {...chartAnim(1)}
               type="monotone"
               dataKey="passiveIncome"
               name="Renda passiva"
@@ -266,6 +269,7 @@ export function PassiveIncomeChart({ data }: Props) {
               connectNulls={false}
             />
             <Area
+              {...chartAnim(2)}
               type="monotone"
               dataKey="passiveProjected"
               name="Projeção renda"

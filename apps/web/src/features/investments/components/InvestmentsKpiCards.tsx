@@ -11,7 +11,7 @@ export const InvestmentsKpiCards = ({ summary }: Props) => {
   const returnPositive = summary.totalReturn >= 0;
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard
         label="Patrimônio total"
         value={summary.currentValue / 100}

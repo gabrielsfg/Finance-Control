@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { ASSET_TYPE_LABELS } from "@/features/investments/utils/assetLabels";
 import { useRegisterTransaction } from "@/features/investments/hooks/useInvestments";
 import { useMarketSearch } from "@/features/market/hooks/useMarket";
 import type { AssetType, InvestmentOperation } from "@/lib/types/investments.types";
@@ -42,23 +43,6 @@ const ASSET_TYPE_QUANTITY_DECIMALS: Record<AssetType, number> = {
   Index:             2,
   Outro:             2,
   Cripto:            8,
-};
-
-const ASSET_TYPE_LABELS: Record<AssetType, string> = {
-  Acao:              "Ação",
-  FundoInvestimento: "Fundo de Investimento",
-  FII:               "FII",
-  Cripto:            "Cripto",
-  Stock:             "Stock",
-  Reit:              "REIT",
-  BDR:               "BDR",
-  ETF:               "ETF",
-  ETFInternacional:  "ETF Internacional",
-  TesouroDireto:     "Tesouro Direto",
-  RendaFixa:         "Renda Fixa",
-  Moeda:             "Moeda",
-  Index:             "Índice",
-  Outro:             "Outro",
 };
 
 const schema = z.object({

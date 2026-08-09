@@ -143,3 +143,21 @@ String formatMonthYear(DateTime date) =>
 /// Returns a formatted date string like "18/02/2026" in pt-BR.
 /// Prefer [AppLocale.formatDate] in widgets.
 String formatDate(DateTime date) => AppLocale.defaultLocale.formatDate(date);
+
+/// Maps a backend RecurrenceType wire value (e.g. "Monthly") to its pt-BR
+/// display label. The wire value is still what gets sent to / stored by the
+/// API — this is display-only. Unknown values fall back to the input.
+String recurrenceLabelPt(String wire) {
+  const map = {
+    'None': 'Nenhuma',
+    'Daily': 'Diária',
+    'WorkDay': 'Dias úteis',
+    'Weekly': 'Semanal',
+    'Biweekly': 'Quinzenal',
+    'Monthly': 'Mensal',
+    'Quarterly': 'Trimestral',
+    'Semiannually': 'Semestral',
+    'Annually': 'Anual',
+  };
+  return map[wire] ?? wire;
+}

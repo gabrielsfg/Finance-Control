@@ -22,6 +22,7 @@ import {
   useInvestmentProfitabilityVsBenchmarks,
 } from "@/features/analytics/hooks/useAnalytics";
 import { cn } from "@/lib/utils";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 type BenchmarkId = "cdi" | "ibov" | "ipca5";
 
@@ -203,10 +204,10 @@ export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: {
                 <YAxis tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1) + "%"} width={46} />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--surface2)" }} />
                 <ReferenceLine y={0} stroke="var(--border-color)" strokeWidth={1} />
-                <Bar dataKey="portfolioPct" name="Carteira" fill="var(--moss)" radius={[3, 3, 0, 0]} />
-                {activeBenchmarks.has("cdi")   && <Bar dataKey="cdiPct"       name="CDI"     fill="var(--blue)"   radius={[3, 3, 0, 0]} />}
-                {activeBenchmarks.has("ibov")  && <Bar dataKey="ibovPct"      name="IBOV"    fill="var(--orange)" radius={[3, 3, 0, 0]} />}
-                {activeBenchmarks.has("ipca5") && <Bar dataKey="ipcaPlus5Pct" name="IPCA+5%" fill="var(--purple)" radius={[3, 3, 0, 0]} />}
+                <Bar {...chartAnim(0)} dataKey="portfolioPct" name="Carteira" fill="var(--moss)" radius={[3, 3, 0, 0]} />
+                {activeBenchmarks.has("cdi")   && <Bar {...chartAnim(1)} dataKey="cdiPct"       name="CDI"     fill="var(--blue)"   radius={[3, 3, 0, 0]} />}
+                {activeBenchmarks.has("ibov")  && <Bar {...chartAnim(2)} dataKey="ibovPct"      name="IBOV"    fill="var(--orange)" radius={[3, 3, 0, 0]} />}
+                {activeBenchmarks.has("ipca5") && <Bar {...chartAnim(3)} dataKey="ipcaPlus5Pct" name="IPCA+5%" fill="var(--purple)" radius={[3, 3, 0, 0]} />}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -228,10 +229,10 @@ export function AnalyticsInvestmentProfitabilityTab({ startDate, finishDate }: {
                 <YAxis tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1) + "%"} width={50} />
                 <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--border-color)", strokeWidth: 1, strokeDasharray: "4 4" }} />
                 <ReferenceLine y={0} stroke="var(--border-color)" strokeWidth={1} />
-                <Line type="monotone" dataKey="portfolio" name="Carteira" stroke="var(--moss)" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
-                {activeBenchmarks.has("cdi")   && <Line type="monotone" dataKey="cdi"   name="CDI"     stroke="var(--blue)"   strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4 }} />}
-                {activeBenchmarks.has("ibov")  && <Line type="monotone" dataKey="ibov"  name="IBOV"    stroke="var(--orange)" strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4 }} />}
-                {activeBenchmarks.has("ipca5") && <Line type="monotone" dataKey="ipca5" name="IPCA+5%" stroke="var(--purple)" strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4 }} />}
+                <Line {...chartAnim(0)} type="monotone" dataKey="portfolio" name="Carteira" stroke="var(--moss)" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                {activeBenchmarks.has("cdi")   && <Line {...chartAnim(1)} type="monotone" dataKey="cdi"   name="CDI"     stroke="var(--blue)"   strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4 }} />}
+                {activeBenchmarks.has("ibov")  && <Line {...chartAnim(2)} type="monotone" dataKey="ibov"  name="IBOV"    stroke="var(--orange)" strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4 }} />}
+                {activeBenchmarks.has("ipca5") && <Line {...chartAnim(3)} type="monotone" dataKey="ipca5" name="IPCA+5%" stroke="var(--purple)" strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4 }} />}
               </LineChart>
             </ResponsiveContainer>
           </div>

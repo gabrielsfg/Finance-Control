@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseLocalDate } from "@/lib/utils/budgetPeriod";
+import { centsToInput, inputToCents } from "@/lib/utils/currencyInput";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
@@ -17,7 +18,7 @@ import type { TransactionsFilter, TxDatePreset, TxSortField, TxSortOrder } from 
 import { activeTxDateLabel, availableTxYears, defaultTxFilter } from "../utils/filterDates";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Section = "date" | "categories" | "type" | "accounts" | "budgets" | "tags" | "sort";
+type Section = "date" | "categories" | "type" | "accounts" | "budgets" | "tags" | "value" | "sort";
 
 const DATE_PRESETS: { id: TxDatePreset; label: string }[] = [
   { id: "current-month",  label: "Mês atual" },
@@ -352,6 +353,29 @@ function SectionContent({
     );
   }
 
+  if (section === "value") {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-text-muted text-[13px] leading-relaxed">
+          Filtra pelo valor da transação, sem considerar se é entrada ou saída. Deixe um
+          dos campos vazio para não limitar aquele lado.
+        </p>
+        <div className="flex items-center gap-2">
+          <ValueField
+            label="De"
+            cents={draft.minValue}
+            onChange={(cents) => setDraft(d => ({ ...d, minValue: cents }))}
+          />
+          <ValueField
+            label="Até"
+            cents={draft.maxValue}
+            onChange={(cents) => setDraft(d => ({ ...d, maxValue: cents }))}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (section === "sort") {
     return (
       <div className="flex flex-col gap-1">
@@ -386,6 +410,42 @@ function SectionContent({
   return null;
 }
 
+/**
+ * Kept as text while the user types — reformatting a partially typed number moves the
+ * caret and fights the person typing. It settles into the canonical form on blur.
+ */
+function ValueField({
+  label,
+  cents,
+  onChange,
+}: {
+  label: string;
+  cents: number | null;
+  onChange: (cents: number | null) => void;
+}) {
+  const [text, setText] = useState(() => centsToInput(cents));
+
+  return (
+    <label className="flex flex-1 flex-col gap-1.5">
+      <span className="text-text-muted text-[12px] font-medium tracking-wide uppercase">{label}</span>
+      <div className="border-border bg-surface2 focus-within:border-green/60 flex h-9 items-center gap-1.5 rounded-lg border px-3">
+        <span className="text-text-muted text-[13px]">R$</span>
+        <input
+          inputMode="decimal"
+          placeholder="0,00"
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            onChange(inputToCents(e.target.value));
+          }}
+          onBlur={() => setText(centsToInput(inputToCents(text)))}
+          className="text-text placeholder:text-text-muted w-full bg-transparent text-[13px] outline-none"
+        />
+      </div>
+    </label>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 const FILTER_SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: "date",       label: "Data",       icon: CalendarDays },
@@ -394,6 +454,7 @@ const FILTER_SECTIONS: { id: Section; label: string; icon: React.ElementType }[]
   { id: "accounts",   label: "Contas",     icon: Wallet },
   { id: "budgets",    label: "Orçamentos", icon: BookOpen },
   { id: "tags",       label: "Tags",       icon: Hash },
+  { id: "value",      label: "Valor",      icon: DollarSign },
 ];
 
 const SORT_SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
@@ -409,6 +470,7 @@ function countActive(filter: TransactionsFilter): number {
   if (filter.accountIds.length > 0) n++;
   if (filter.budgetIds.length > 0) n++;
   if (filter.tagIds.length > 0) n++;
+  if (filter.minValue !== null || filter.maxValue !== null) n++;
   return n;
 }
 
@@ -512,6 +574,7 @@ export function TransactionsFilters({ filter, onChange }: Props) {
               if (id === "accounts")    badge = draft.accountIds.length;
               if (id === "budgets")     badge = draft.budgetIds.length;
               if (id === "tags")        badge = draft.tagIds.length;
+              if (id === "value" && (draft.minValue !== null || draft.maxValue !== null)) badge = 1;
               if (id === "date" && draft.preset !== "current-month") badge = 1;
               if (id === "type" && draft.typeFilter !== "All") badge = 1;
 
@@ -582,7 +645,7 @@ export function TransactionsFilters({ filter, onChange }: Props) {
               </button>
               <button
                 onClick={apply}
-                className="bg-green hover:bg-green/90 w-full rounded-lg py-1.5 text-center text-[12px] font-semibold text-black transition-colors"
+                className="bg-brand hover:bg-brand/90 w-full rounded-lg py-1.5 text-center text-[12px] font-semibold text-white transition-colors"
               >
                 Aplicar
               </button>

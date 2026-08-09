@@ -41,12 +41,12 @@ export function ImportDrawer({ flow }: Props) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+        className="anim-fade fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
         onClick={flow.close}
       />
 
       {/* Drawer panel */}
-      <div className="border-border bg-surface fixed inset-y-0 right-0 z-50 flex w-full max-w-[520px] flex-col border-l shadow-2xl">
+      <div className="anim-drawer border-border bg-surface fixed inset-y-0 right-0 z-50 flex w-full max-w-[520px] flex-col border-l shadow-2xl">
         <div className="border-border flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="bg-green/10 flex h-8 w-8 items-center justify-center rounded-[9px]">
@@ -184,7 +184,7 @@ export function ImportDrawer({ flow }: Props) {
               "flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-all",
               !flow.file || flow.accountId === "" || flow.parseMutation.isPending
                 ? "bg-surface2 text-text-muted cursor-not-allowed"
-                : "bg-green text-black hover:bg-green/90"
+                : "bg-brand text-white hover:bg-brand/90"
             )}
           >
             {flow.parseMutation.isPending

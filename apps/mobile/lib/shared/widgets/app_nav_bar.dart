@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -14,32 +15,25 @@ class AppNavBar extends StatelessWidget {
     final t = AppThemeTokens.of(context);
 
     const tabs = [
-      (LucideIcons.home, 'Início'),
-      (LucideIcons.list, 'Extrato'),
-      (LucideIcons.pieChart, 'Budget'),
+      (LucideIcons.layoutDashboard, 'Início'),
+      (LucideIcons.arrowLeftRight, 'Extrato'),
+      (LucideIcons.pieChart, 'Orçamento'),
       (LucideIcons.wallet, 'Contas'),
-      (LucideIcons.user, 'Perfil'),
+      (LucideIcons.menu, 'Menu'),
     ];
 
     return Container(
       height: 76,
       decoration: BoxDecoration(
-        color: t.isDark
-            ? const Color(0xFF110E1B).withValues(alpha: 0.97)
-            : const Color(0xFFF7F4FF).withValues(alpha: 0.97),
-        border: Border(
-          top: BorderSide(
-            color: t.isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : const Color(0xFF7C3AED).withValues(alpha: 0.12),
-          ),
-        ),
+        color: t.surface,
+        border: Border(top: BorderSide(color: t.mist)),
       ),
       child: Row(
         children: tabs.asMap().entries.map((e) {
           final i = e.key;
           final (icon, label) = e.value;
           final isActive = i == activeIndex;
+          final color = isActive ? t.accent : t.txtTertiary;
           return Expanded(
             child: GestureDetector(
               onTap: () => onTap?.call(i),
@@ -50,24 +44,24 @@ class AppNavBar extends StatelessWidget {
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     height: 3,
-                    width: isActive ? 32 : 0,
+                    width: isActive ? 30 : 0,
                     decoration: BoxDecoration(
-                      color: t.primary,
+                      color: t.accent,
                       borderRadius: const BorderRadius.only(
                         bottomLeft: Radius.circular(3),
                         bottomRight: Radius.circular(3),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Icon(icon, size: 22, color: isActive ? t.primary : t.txtDisabled),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 8),
+                  Icon(icon, size: 21, color: color),
+                  const SizedBox(height: 4),
                   Text(
                     label,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                      color: isActive ? t.primary : t.txtDisabled,
+                    style: GoogleFonts.hankenGrotesk(
+                      fontSize: 10.5,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                      color: color,
                     ),
                   ),
                 ],

@@ -7,6 +7,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { CategoryBreakdown, CategoryMonthlyData } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -57,6 +58,7 @@ export const AnalyticsCategoryEvolutionChart = ({ data, categories }: Props) => 
                 const color = cat.color ?? "var(--chart-5)";
                 return (
                   <Line
+                    {...chartAnim(0)}
                     key={cat.categoryName}
                     type="monotone"
                     dataKey={cat.categoryName}

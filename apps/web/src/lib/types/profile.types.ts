@@ -2,6 +2,8 @@ export type UserProfile = {
   id: number;
   name: string;
   email: string;
+  twoFactorEnabled: boolean;
+  emailVerified: boolean;
 };
 
 export type UpdateProfileRequest = {

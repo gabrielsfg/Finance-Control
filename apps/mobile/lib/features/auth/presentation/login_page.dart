@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/storage/token_storage.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/auth_repository.dart';
 import '../data/dtos/login_request_dto.dart';
+import '../data/models/login_outcome.dart';
 import '../providers/auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -66,17 +68,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _globalError = null;
     });
 
+    final email = _emailController.text.trim();
+
     try {
-      final authResponse = await ref.read(authRepositoryProvider).login(
+      // Replayed on every login: if this device was trusted, the server skips the
+      // two-factor step instead of mailing another code.
+      final trustedDeviceToken =
+          await ref.read(tokenStorageProvider).getTrustedDeviceToken();
+
+      final outcome = await ref.read(authRepositoryProvider).login(
         LoginRequestDto(
-          email: _emailController.text.trim(),
+          email: email,
           password: _passwordController.text,
+          trustedDeviceToken: trustedDeviceToken,
         ),
       );
-      await ref.read(authNotifierProvider.notifier).onLoginSuccess(
-        accessToken: authResponse.accessToken,
-        refreshToken: authResponse.refreshToken,
-      );
+
+      if (!mounted) return;
+
+      switch (outcome) {
+        case LoginAuthenticated(:final tokens):
+          await ref.read(authNotifierProvider.notifier).onLoginSuccess(
+                accessToken: tokens.accessToken,
+                refreshToken: tokens.refreshToken,
+              );
+
+        // The password was right — this is a second gate, not a failure, so the
+        // user moves forward to the code screen instead of seeing an error.
+        case LoginChallenged(challenge: LoginChallenge.emailNotVerified):
+          context.push('/verify-email', extra: email);
+
+        case LoginChallenged(:final challengeToken):
+          context.push('/two-factor', extra: challengeToken);
+      }
     } on DioException catch (e) {
       final status = e.response?.statusCode;
       String message;
@@ -90,6 +114,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         }
       } else if (status == 429) {
         message = 'Muitas tentativas. Aguarde alguns minutos.';
+      } else if (status == 503) {
+        // Credentials were accepted — only the code email failed. Blaming the
+        // password here would send the user to reset one that works.
+        message = 'Não conseguimos enviar seu código agora. Tente entrar novamente.';
       } else if (status == 401 || status == 400) {
         message = 'E-mail ou senha incorretos.';
       } else {
@@ -145,13 +173,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   // ── Global error ───────────────────────────────────────────
                   if (_globalError != null) ...[
-                    _ErrorBanner(message: _globalError!),
+                    AppErrorBanner(message: _globalError!),
                     const SizedBox(height: 16),
                   ],
 
                   // ── Email ──────────────────────────────────────────────────
                   AppInputField(
-                    placeholder: 'Email',
+                    placeholder: 'E-mail',
                     controller: _emailController,
                     errorText: _emailError,
                     keyboardType: TextInputType.emailAddress,
@@ -189,8 +217,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: GestureDetector(
                       onTap: () => context.push('/forgot-password'),
                       child: Text(
-                        'Forgot password?',
-                        style: AppTextStyles.body(t.primary).copyWith(
+                        'Esqueceu a senha?',
+                        style: AppTextStyles.body(t.accent).copyWith(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -230,7 +258,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           onTap: () => context.push('/register'),
                           child: Text(
                             'Cadastre-se',
-                            style: AppTextStyles.body(t.primary).copyWith(
+                            style: AppTextStyles.body(t.accent).copyWith(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
@@ -250,30 +278,3 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: t.error.withValues(alpha: t.isDark ? 0.15 : 0.08),
-        borderRadius: AppRadius.baseAll,
-        border: Border.all(color: t.error.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: t.error, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(message, style: AppTextStyles.bodySm(t.error)),
-          ),
-        ],
-      ),
-    );
-  }
-}

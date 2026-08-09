@@ -1,10 +1,10 @@
 "use client";
 
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
 import { FlowRow } from "@/components/shared/FlowBar";
+import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
 
 type Props = {
   totalIncome: number;
@@ -35,7 +35,7 @@ function ChangeChip({ pct, lowerIsBetter = false }: { pct: number | undefined; l
       }}
     >
       {pct >= 0 ? <ArrowUpRight size={11} strokeWidth={2.4} /> : <ArrowDownRight size={11} strokeWidth={2.4} />}
-      {Math.abs(pct).toFixed(1)}%
+      <AnimatedCount value={Math.abs(pct)} decimals={1} suffix="%" />
     </span>
   );
 }
@@ -75,14 +75,18 @@ export const TransactionsSummary = ({
           <div>
             <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Entradas</div>
             <div className="mt-[3px] flex items-center gap-2">
-              <span className="font-mono text-[18px] font-medium text-[var(--moss-lift)]">{formatCurrency(totalIncome / 100)}</span>
+              <span className="font-mono text-[18px] font-medium text-[var(--moss-lift)]">
+                <AnimatedCurrency cents={totalIncome} />
+              </span>
               <ChangeChip pct={incomePct} />
             </div>
           </div>
           <div>
             <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Saídas</div>
             <div className="mt-[3px] flex items-center gap-2">
-              <span className="font-mono text-[18px] font-medium text-[var(--clay-lift)]">{formatCurrency(totalExpense / 100)}</span>
+              <span className="font-mono text-[18px] font-medium text-[var(--clay-lift)]">
+                <AnimatedCurrency cents={totalExpense} />
+              </span>
               <ChangeChip pct={expensePct} lowerIsBetter />
             </div>
           </div>
@@ -99,7 +103,12 @@ export const TransactionsSummary = ({
         <FlowRow
           label="Entradas"
           dotColor="var(--moss-lift)"
-          value={`+ ${formatCurrency(totalIncome / 100)}`}
+          value={
+            <>
+              {"+ "}
+              <AnimatedCurrency cents={totalIncome} />
+            </>
+          }
           valueColor="var(--moss-lift)"
           pct={totalIncome / max}
           variant="in"
@@ -107,7 +116,12 @@ export const TransactionsSummary = ({
         <FlowRow
           label="Saídas"
           dotColor="var(--clay-lift)"
-          value={`− ${formatCurrency(totalExpense / 100)}`}
+          value={
+            <>
+              {"− "}
+              <AnimatedCurrency cents={totalExpense} />
+            </>
+          }
           valueColor="var(--clay-lift)"
           pct={totalExpense / max}
           variant="out"
@@ -120,7 +134,7 @@ export const TransactionsSummary = ({
             style={{ color: balance >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
           >
             {balance >= 0 ? "+ " : "− "}
-            {formatCurrency(Math.abs(balance) / 100)}
+            <AnimatedCurrency cents={balance} absolute />
           </span>
         </div>
       </div>

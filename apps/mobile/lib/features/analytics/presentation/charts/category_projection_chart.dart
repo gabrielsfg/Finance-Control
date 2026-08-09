@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
+import '../../../../shared/widgets/animated_fraction.dart';
 import '../../providers/analytics_provider.dart';
 
 class CategoryProjectionChart extends ConsumerWidget {
@@ -32,7 +33,7 @@ class CategoryProjectionChart extends ConsumerWidget {
                 ? (item.spentSoFar / item.historicalMonthlyAvg).clamp(0.0, 1.5)
                 : 0.0;
             final isOver = item.spentSoFar > item.historicalMonthlyAvg;
-            final barColor = isOver ? t.error : t.primary;
+            final barColor = isOver ? t.clay : t.primary;
 
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
@@ -52,8 +53,7 @@ class CategoryProjectionChart extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Text(
                         '${fmt.formatCurrency(item.spentSoFar)} / ${fmt.formatCurrency(item.historicalMonthlyAvg.toInt())}',
-                        style: AppTextStyles.caption(t.txtTertiary)
-                            .copyWith(fontSize: 10),
+                        style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
                       ),
                     ],
                   ),
@@ -64,14 +64,12 @@ class CategoryProjectionChart extends ConsumerWidget {
                       Container(
                         height: 8,
                         decoration: BoxDecoration(
-                          color: t.isDark
-                              ? Colors.white.withValues(alpha: 0.07)
-                              : Colors.black.withValues(alpha: 0.06),
+                          color: t.surfaceEl,
                           borderRadius: AppRadius.pillAll,
                         ),
                       ),
                       // Month elapsed indicator
-                      FractionallySizedBox(
+                      AnimatedFraction(
                         widthFactor:
                             (item.monthElapsedPercent / 100).clamp(0.0, 1.0),
                         child: Container(
@@ -83,7 +81,7 @@ class CategoryProjectionChart extends ConsumerWidget {
                         ),
                       ),
                       // Spent bar
-                      FractionallySizedBox(
+                      AnimatedFraction(
                         widthFactor: ratio.clamp(0.0, 1.0),
                         child: Container(
                           height: 8,
@@ -101,15 +99,15 @@ class CategoryProjectionChart extends ConsumerWidget {
                       children: [
                         Text(
                           isOver
-                              ? 'Over by ${fmt.formatCurrency(item.spentSoFar - item.historicalMonthlyAvg.toInt())}'
-                              : 'Projected: ${fmt.formatCurrency(item.projectedTotal)}',
+                              ? 'Acima em ${fmt.formatCurrency(item.spentSoFar - item.historicalMonthlyAvg.toInt())}'
+                              : 'Projetado: ${fmt.formatCurrency(item.projectedTotal)}',
                           style: AppTextStyles.caption(
-                            isOver ? t.error : t.txtTertiary,
+                            isOver ? t.clay : t.txtTertiary,
                           ).copyWith(fontSize: 10),
                         ),
                         const Spacer(),
                         Text(
-                          '${item.monthElapsedPercent.toStringAsFixed(0)}% of month elapsed',
+                          '${item.monthElapsedPercent.toStringAsFixed(0)}% do mês decorrido',
                           style: AppTextStyles.caption(t.txtTertiary)
                               .copyWith(fontSize: 10),
                         ),
@@ -131,8 +129,8 @@ Widget _loader(bool compact) =>
 
 Widget _err(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('Could not load data', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Não foi possível carregar os dados', style: AppTextStyles.bodySm(t.txtTertiary))));
 
 Widget _empty(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('No category data available', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Nenhum dado de categoria disponível', style: AppTextStyles.bodySm(t.txtTertiary))));

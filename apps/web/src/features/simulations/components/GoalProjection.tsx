@@ -16,6 +16,7 @@ import {
   CHART_GRID, axisTick, SERIES, FieldLabel, FieldShell, MoneyPrefix, UnitSuffix, fieldMono,
   SegRow, SegOption, LegendItem,
 } from "./simShared";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 /** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
 const inputCls =
@@ -355,9 +356,9 @@ export const GoalProjection = () => {
                         strokeWidth={1.5}
                         label={{ value: "Meta", fill: SERIES.gold, fontSize: 11, position: "insideTopRight" }}
                       />
-                      <Area type="monotone" dataKey="invested"   name="Investido"           stroke={GOAL_SERIES.invested} strokeWidth={2}   fill="url(#gp_gradInv)"   dot={{ r: 5, fill: GOAL_SERIES.invested, stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: GOAL_SERIES.invested, stroke: "var(--surface)", strokeWidth: 2 }} />
-                      <Area type="monotone" dataKey="grossValue" name="Patrimônio bruto"    stroke={GOAL_SERIES.gross}    strokeWidth={2.5} fill="url(#gp_gradGross)" dot={{ r: 5, fill: GOAL_SERIES.gross,    stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: GOAL_SERIES.gross,    stroke: "var(--surface)", strokeWidth: 2 }} />
-                      <Line  type="monotone" dataKey="netValue"   name="Patrimônio líquido" stroke={GOAL_SERIES.net}      strokeWidth={2.5} strokeDasharray="4 2"      dot={{ r: 5, fill: GOAL_SERIES.net,      stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: GOAL_SERIES.net,      stroke: "var(--surface)", strokeWidth: 2 }} />
+                      <Area {...chartAnim(0)} type="monotone" dataKey="invested"   name="Investido"           stroke={GOAL_SERIES.invested} strokeWidth={2}   fill="url(#gp_gradInv)"   dot={{ r: 5, fill: GOAL_SERIES.invested, stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: GOAL_SERIES.invested, stroke: "var(--surface)", strokeWidth: 2 }} />
+                      <Area {...chartAnim(1)} type="monotone" dataKey="grossValue" name="Patrimônio bruto"    stroke={GOAL_SERIES.gross}    strokeWidth={2.5} fill="url(#gp_gradGross)" dot={{ r: 5, fill: GOAL_SERIES.gross,    stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: GOAL_SERIES.gross,    stroke: "var(--surface)", strokeWidth: 2 }} />
+                      <Line {...chartAnim(2)}  type="monotone" dataKey="netValue"   name="Patrimônio líquido" stroke={GOAL_SERIES.net}      strokeWidth={2.5} strokeDasharray="4 2"      dot={{ r: 5, fill: GOAL_SERIES.net,      stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: GOAL_SERIES.net,      stroke: "var(--surface)", strokeWidth: 2 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>

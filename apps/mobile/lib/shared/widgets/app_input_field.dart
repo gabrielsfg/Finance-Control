@@ -43,9 +43,23 @@ class AppInputField extends StatefulWidget {
 
 class _AppInputFieldState extends State<AppInputField> {
   final _focusNode = FocusNode();
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (_focusNode.hasFocus != _focused) {
+      setState(() => _focused = _focusNode.hasFocus);
+    }
+  }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     super.dispose();
   }
@@ -54,6 +68,11 @@ class _AppInputFieldState extends State<AppInputField> {
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
     final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
+    final borderColor = hasError
+        ? t.error
+        : _focused
+            ? t.accent
+            : t.mist;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -70,18 +89,21 @@ class _AppInputFieldState extends State<AppInputField> {
           child: Container(
             height: 48,
             decoration: BoxDecoration(
-              color: t.isDark
-                  ? const Color(0xFF1C1830).withValues(alpha: 0.85)
-                  : const Color(0xFFEDE9FE).withValues(alpha: 0.5),
+              color: t.surfaceEl,
               borderRadius: AppRadius.baseAll,
               border: Border.all(
-                color: hasError
-                    ? t.error
-                    : t.isDark
-                        ? Colors.white.withValues(alpha: 0.09)
-                        : const Color(0xFF7C3AED).withValues(alpha: 0.18),
-                width: 1.5,
+                color: borderColor,
+                width: _focused || hasError ? 1.6 : 1.2,
               ),
+              boxShadow: _focused && !hasError
+                  ? [
+                      BoxShadow(
+                        color: t.accent.withValues(alpha: 0.12),
+                        blurRadius: 0,
+                        spreadRadius: 3,
+                      ),
+                    ]
+                  : null,
             ),
             child: Row(
               children: [

@@ -14,6 +14,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { PortfolioCompositionProjectionResponse } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -156,8 +157,9 @@ export function PortfolioCompositionChart({ data }: Props) {
                 label={{ value: "Projeção →", position: "insideTopRight", fontSize: 11, fill: "var(--text-muted)" }}
               />
             )}
-            {assetClasses.map((cls) => (
+            {assetClasses.map((cls, i) => (
               <Area
+                {...chartAnim(i)}
                 key={cls}
                 type="monotone"
                 dataKey={cls}

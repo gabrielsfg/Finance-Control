@@ -2,6 +2,7 @@
 
 import { TrendingUp, ArrowUp } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area } from "recharts";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 type Props = {
   savingsRate: number;
@@ -51,13 +52,13 @@ export const SavingsRateCard = ({
               </linearGradient>
             </defs>
             <Area
+              {...chartAnim(0)}
               type="monotone"
               dataKey="v"
               stroke="#00c98d"
               strokeWidth={2}
               fill="url(#sgFill)"
               dot={false}
-              isAnimationActive={false}
             />
           </AreaChart>
         </ResponsiveContainer>

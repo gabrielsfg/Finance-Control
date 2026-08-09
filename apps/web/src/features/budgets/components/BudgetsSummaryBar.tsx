@@ -1,9 +1,9 @@
 "use client";
 
-import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
 import { FlowRow } from "@/components/shared/FlowBar";
+import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
 import type { Budget } from "@/lib/types/budgets.types";
 
 type Props = {
@@ -58,15 +58,19 @@ export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props)
               color: isOver ? "var(--clay-lift)" : "var(--cobalt-lift)",
             }}
           >
-            {pct.toFixed(0)}% usado
+            <AnimatedCount value={pct} suffix="% usado" />
           </span>
-          <span className="text-[var(--panel-muted)]">de {formatCurrency(totalAllocated / 100)} orçados</span>
+          <span className="text-[var(--panel-muted)]">
+            de <AnimatedCurrency cents={totalAllocated} /> orçados
+          </span>
         </div>
 
         <div className="mt-6 flex flex-wrap gap-[26px]">
           <div>
             <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Orçado</div>
-            <div className="font-mono mt-[3px] text-[18px] font-medium">{formatCurrency(totalAllocated / 100)}</div>
+            <div className="font-mono mt-[3px] text-[18px] font-medium">
+              <AnimatedCurrency cents={totalAllocated} />
+            </div>
           </div>
           <div>
             <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Disponível</div>
@@ -74,7 +78,7 @@ export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props)
               className="font-mono mt-[3px] text-[18px] font-medium"
               style={{ color: available < 0 ? "var(--clay-lift)" : "var(--moss-lift)" }}
             >
-              {formatCurrency(available / 100)}
+              <AnimatedCurrency cents={available} />
             </div>
           </div>
           <div>
@@ -82,7 +86,7 @@ export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props)
               {overrun > 0 ? "Estouradas" : "Dias restantes"}
             </div>
             <div className="font-mono mt-[3px] text-[18px] font-medium">
-              {overrun > 0 ? overrun : daysLeft}
+              <AnimatedCount value={overrun > 0 ? overrun : daysLeft} />
             </div>
           </div>
         </div>
@@ -100,7 +104,7 @@ export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props)
         <FlowRow
           label="Gasto"
           dotColor="var(--clay-lift)"
-          value={formatCurrency(totalSpent / 100)}
+          value={<AnimatedCurrency cents={totalSpent} />}
           valueColor="var(--clay-lift)"
           pct={spentPct}
           variant="out"
@@ -108,7 +112,7 @@ export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props)
         <FlowRow
           label="Disponível"
           dotColor="var(--moss-lift)"
-          value={formatCurrency(Math.max(0, available) / 100)}
+          value={<AnimatedCurrency cents={Math.max(0, available)} />}
           valueColor="var(--moss-lift)"
           pct={availPct}
           variant="in"
@@ -126,7 +130,7 @@ export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props)
             style={{ color: isOver ? "var(--clay-lift)" : "var(--moss-lift)" }}
           >
             {isOver ? "− " : "+ "}
-            {formatCurrency(Math.abs(available) / 100)}
+            <AnimatedCurrency cents={available} absolute />
           </span>
         </div>
 

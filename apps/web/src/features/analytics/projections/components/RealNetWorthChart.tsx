@@ -13,6 +13,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { RealNetWorthResponse } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -154,6 +155,7 @@ export function RealNetWorthChart({ data }: Props) {
               cursor={{ stroke: "var(--border-color)", strokeWidth: 1, strokeDasharray: "4 4" }}
             />
             <Line
+              {...chartAnim(0)}
               type="monotone"
               dataKey="nominalNetWorth"
               name="Nominal"
@@ -163,6 +165,7 @@ export function RealNetWorthChart({ data }: Props) {
               activeDot={{ r: 4 }}
             />
             <Line
+              {...chartAnim(1)}
               type="monotone"
               dataKey="realNetWorth"
               name="Real (deflacionado pelo IPCA)"

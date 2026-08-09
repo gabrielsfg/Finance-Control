@@ -538,6 +538,41 @@ namespace FinanceControl.Data.Migrations
                     b.ToTable("InvestmentTransactions", (string)null);
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.LegalDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Type", "Version")
+                        .IsUnique();
+
+                    b.ToTable("LegalDocuments", (string)null);
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.MarketAsset", b =>
                 {
                     b.Property<int>("Id")
@@ -932,6 +967,54 @@ namespace FinanceControl.Data.Migrations
                     b.ToTable("RefreshTokens", (string)null);
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.SecurityCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Attempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("ChallengeTokenHash")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChallengeTokenHash")
+                        .HasFilter("\"ChallengeTokenHash\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "Purpose");
+
+                    b.ToTable("SecurityCodes", (string)null);
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.SubCategory", b =>
                 {
                     b.Property<int>("Id")
@@ -1101,6 +1184,51 @@ namespace FinanceControl.Data.Migrations
                     b.ToTable("Transactions", (string)null);
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.TrustedDevice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("DeviceName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsRevoked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TrustedDevices", (string)null);
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -1121,6 +1249,9 @@ namespace FinanceControl.Data.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("FailedLoginAttempts")
                         .ValueGeneratedOnAdd()
@@ -1143,12 +1274,6 @@ namespace FinanceControl.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("PasswordResetToken")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("PasswordResetTokenExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("PreferredCurrency")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -1161,6 +1286,11 @@ namespace FinanceControl.Data.Migrations
                         .HasColumnType("text")
                         .HasDefaultValue("pt-BR");
 
+                    b.Property<bool>("TwoFactorEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone");
@@ -1170,10 +1300,41 @@ namespace FinanceControl.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.HasIndex("PasswordResetToken")
-                        .HasFilter("\"PasswordResetToken\" IS NOT NULL");
-
                     b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.UserConsent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<int>("LegalDocumentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LegalDocumentId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserConsents", (string)null);
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.UserPreferences", b =>
@@ -1493,6 +1654,17 @@ namespace FinanceControl.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.SecurityCode", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.SubCategory", b =>
                 {
                     b.HasOne("FinanceControl.Domain.Entities.Category", "Category")
@@ -1572,6 +1744,36 @@ namespace FinanceControl.Data.Migrations
                     b.Navigation("SubCategory");
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.TrustedDevice", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.UserConsent", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.LegalDocument", "LegalDocument")
+                        .WithMany("Consents")
+                        .HasForeignKey("LegalDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FinanceControl.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LegalDocument");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.UserPreferences", b =>
                 {
                     b.HasOne("FinanceControl.Domain.Entities.User", "User")
@@ -1631,6 +1833,11 @@ namespace FinanceControl.Data.Migrations
                     b.Navigation("Dividends");
 
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.LegalDocument", b =>
+                {
+                    b.Navigation("Consents");
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.MarketAsset", b =>

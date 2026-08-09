@@ -2,35 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardHead } from "@/components/shared/Card";
+import { Switch } from "@/components/shared/Switch";
 import { cn } from "@/lib/utils";
 import type { NotificationPreferences } from "@/lib/types/notifications.types";
 import {
   useNotificationPreferences,
   useUpdateNotificationPreferences,
 } from "@/features/notifications/hooks/useNotifications";
-
-// Quantia switch — 40×23 pill, cobalt fill + translated knob when on.
-function Switch({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={value}
-      onClick={() => onChange(!value)}
-      className={cn(
-        "relative h-[23px] w-10 shrink-0 rounded-full border transition-colors",
-        value ? "border-[var(--brand-cobalt)] bg-[var(--brand-cobalt)]" : "border-[var(--border-color)] bg-[var(--surface2)]",
-      )}
-    >
-      <span
-        className={cn(
-          "absolute top-[2px] h-[17px] w-[17px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform",
-          value ? "translate-x-[17px] bg-white" : "translate-x-[2px] bg-[var(--surface)]",
-        )}
-      />
-    </button>
-  );
-}
 
 // Compact numeric stepper that commits on blur to avoid a request per keystroke.
 function NumberField({

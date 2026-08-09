@@ -35,7 +35,7 @@ class AnalyticsPage extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: t.bg,
         elevation: 0,
-        title: Text('Analytics', style: AppTextStyles.h2(t.txtPrimary)),
+        title: Text('Análises', style: AppTextStyles.h2(t.txtPrimary)),
         actions: [
           IconButton(
             icon: Icon(Icons.tune_rounded, color: t.txtSecondary),
@@ -46,7 +46,7 @@ class AnalyticsPage extends ConsumerWidget {
       body: configAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text('Error loading config', style: AppTextStyles.body(t.error)),
+          child: Text('Erro ao carregar configuração', style: AppTextStyles.body(t.error)),
         ),
         data: (configs) {
           final history = configs
@@ -63,21 +63,23 @@ class AnalyticsPage extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 120),
             children: [
               if (history.isNotEmpty) ...[
-                const _SectionHeader(label: 'Historical'),
+                const _SectionHeader(label: 'Histórico'),
                 const SizedBox(height: 12),
-                ...history.map((c) => _ChartCard(config: c)),
+                ...history.indexed.map(
+                  (e) => FadeSlideIn(index: e.$1, child: _ChartCard(config: e.$2)),
+                ),
               ],
               if (projections.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                const _SectionHeader(label: 'Projections'),
+                const _SectionHeader(label: 'Projeções'),
                 const SizedBox(height: 12),
-                ...projections.map((c) => _ChartCard(config: c)),
+                ...projections.indexed.map(
+                  (e) => FadeSlideIn(index: e.$1, child: _ChartCard(config: e.$2)),
+                ),
               ],
               if (history.isEmpty && projections.isEmpty)
                 _EmptyState(
                     onCustomize: () => _openCustomizeSheet(context, ref)),
-              const SizedBox(height: 24),
-              _AiPlaceholderCard(),
             ],
           );
         },
@@ -104,11 +106,7 @@ class _SectionHeader extends StatelessWidget {
     final t = AppThemeTokens.of(context);
     return Text(
       label.toUpperCase(),
-      style: AppTextStyles.caption(t.txtTertiary).copyWith(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-      ),
+      style: AppTextStyles.eyebrow(t.txtTertiary),
     );
   }
 }
@@ -125,16 +123,10 @@ class _ChartCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
-        color: t.isDark
-            ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-            : Colors.white.withValues(alpha: 0.9),
+        color: t.surface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(
-          color: t.isDark
-              ? Colors.white.withValues(alpha: 0.07)
-              : t.primary.withValues(alpha: 0.10),
-        ),
-        boxShadow: t.isDark ? [] : AppShadows.cardLight,
+        border: Border.all(color: t.mist),
+        boxShadow: t.isDark ? AppShadows.cardDark : AppShadows.cardLight,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,83 +173,16 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(Icons.bar_chart_rounded, size: 56, color: t.txtDisabled),
           const SizedBox(height: 16),
-          Text('No charts selected',
+          Text('Nenhum gráfico selecionado',
               style: AppTextStyles.h3(t.txtPrimary)),
           const SizedBox(height: 8),
-          Text('Tap Customize to choose which charts to display',
+          Text('Toque em Personalizar para escolher quais gráficos exibir',
               style: AppTextStyles.bodySm(t.txtTertiary),
               textAlign: TextAlign.center),
           const SizedBox(height: 24),
           SizedBox(
             width: 180,
-            child: PrimaryButton(label: 'Customize', onPressed: onCustomize),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AiPlaceholderCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-    return Container(
-      padding: AppSpacing.cardPadding,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            t.primary.withValues(alpha: 0.15),
-            t.primary.withValues(alpha: 0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: AppRadius.xlAll,
-        border: Border.all(color: t.primary.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: t.primary.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.auto_awesome_rounded, color: t.primary, size: 22),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text('AI Analysis',
-                        style: AppTextStyles.body(t.txtPrimary)
-                            .copyWith(fontWeight: FontWeight.w600)),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: t.primary,
-                        borderRadius: AppRadius.pillAll,
-                      ),
-                      child: Text('Premium',
-                          style: AppTextStyles.caption(Colors.white)
-                              .copyWith(fontSize: 10, fontWeight: FontWeight.w700)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Get personalized insights powered by AI — coming soon.',
-                  style: AppTextStyles.bodySm(t.txtTertiary),
-                ),
-              ],
-            ),
+            child: PrimaryButton(label: 'Personalizar', onPressed: onCustomize),
           ),
         ],
       ),
@@ -287,7 +212,7 @@ class _CustomizeSheetState extends ConsumerState<_CustomizeSheet> {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final bg = t.isDark ? const Color(0xFF1A1730) : Colors.white;
+    final bg = t.surface;
 
     final historical = _configs.where((c) => !c.chartId.isProjection).toList()
       ..sort((a, b) => a.order.compareTo(b.order));
@@ -319,12 +244,12 @@ class _CustomizeSheetState extends ConsumerState<_CustomizeSheet> {
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
             child: Row(
               children: [
-                Text('Customize Charts',
+                Text('Personalizar gráficos',
                     style: AppTextStyles.h2(t.txtPrimary)),
                 const Spacer(),
                 TextButton(
                   onPressed: _save,
-                  child: Text('Done',
+                  child: Text('Concluído',
                       style: AppTextStyles.body(t.primary)
                           .copyWith(fontWeight: FontWeight.w600)),
                 ),
@@ -337,7 +262,7 @@ class _CustomizeSheetState extends ConsumerState<_CustomizeSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _SheetSectionLabel(label: 'Historical'),
+                  const _SheetSectionLabel(label: 'Histórico'),
                   const SizedBox(height: 8),
                   ReorderableListView.builder(
                     shrinkWrap: true,
@@ -352,7 +277,7 @@ class _CustomizeSheetState extends ConsumerState<_CustomizeSheet> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const _SheetSectionLabel(label: 'Projections'),
+                  const _SheetSectionLabel(label: 'Projeções'),
                   const SizedBox(height: 8),
                   ReorderableListView.builder(
                     shrinkWrap: true,
@@ -413,11 +338,7 @@ class _SheetSectionLabel extends StatelessWidget {
     final t = AppThemeTokens.of(context);
     return Text(
       label.toUpperCase(),
-      style: AppTextStyles.caption(t.txtTertiary).copyWith(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.0,
-      ),
+      style: AppTextStyles.eyebrow(t.txtTertiary, fontSize: 10),
     );
   }
 }
@@ -440,9 +361,7 @@ class _ChartToggleRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: t.isDark
-            ? Colors.white.withValues(alpha: 0.04)
-            : Colors.black.withValues(alpha: 0.03),
+        color: t.surfaceEl,
         borderRadius: AppRadius.baseAll,
       ),
       child: Row(

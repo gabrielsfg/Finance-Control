@@ -15,6 +15,7 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import type { MonthlyData } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const RECOMMENDED_RATE = 20;
 
@@ -131,7 +132,7 @@ export function SavingsRateChart({ data }: Props) {
               strokeWidth={1.5}
               label={{ value: "Meta 20%", fill: "var(--brand-cobalt)", fontSize: 11, position: "right" }}
             />
-            <Bar dataKey="savingsRate" name="Taxa de poupança" radius={[4, 4, 0, 0]} maxBarSize={36}>
+            <Bar {...chartAnim(0)} dataKey="savingsRate" name="Taxa de poupança" radius={[4, 4, 0, 0]} maxBarSize={36}>
               {chartData.map((entry) => (
                 <Cell key={entry.label} fill={barFill(entry.savingsRate)} />
               ))}

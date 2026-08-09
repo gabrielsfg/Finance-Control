@@ -11,7 +11,6 @@ import '../../../core/theme/theme_mode_provider.dart';
 import '../../../core/utils/countries.dart';
 import '../../../core/utils/timezones.dart';
 import '../../../shared/widgets/app_widgets.dart';
-import '../data/dtos/currency_response_dto.dart';
 import '../data/dtos/update_user_preferences_request_dto.dart';
 import '../providers/user_preferences_provider.dart';
 
@@ -40,6 +39,15 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
   static const _locales = [
     _LocaleOption(code: 'pt-BR', label: 'Português (Brasil)'),
     _LocaleOption(code: 'en-US', label: 'English (US)'),
+  ];
+
+  // Currency is a display preference only — it drives no value conversion
+  // anywhere (mirrors the web app, which formats all money as BRL cents).
+  static const _currencies = [
+    _CurrencyOption(code: 'BRL', label: 'Real Brasileiro'),
+    _CurrencyOption(code: 'USD', label: 'Dólar Americano'),
+    _CurrencyOption(code: 'EUR', label: 'Euro'),
+    _CurrencyOption(code: 'GBP', label: 'Libra Esterlina'),
   ];
 
   Future<void> _save() async {
@@ -72,7 +80,7 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
 
       if (mounted) context.pop();
     } catch (_) {
-      setState(() => _submitError = 'Could not save preferences. Try again.');
+      setState(() => _submitError = 'Não foi possível salvar as preferências. Tente novamente.');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -82,7 +90,6 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
     final prefsAsync = ref.watch(userPreferencesProvider);
-    final currenciesAsync = ref.watch(currenciesProvider);
 
     final currentCurrency =
         _selectedCurrency ?? prefsAsync.valueOrNull?.currencyCode ?? 'BRL';
@@ -121,30 +128,19 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
                 ],
 
                 // ── Currency ─────────────────────────────────────────────
-                _SectionLabel(title: 'Currency'),
+                _SectionLabel(title: 'Moeda'),
                 const SizedBox(height: 10),
-                currenciesAsync.when(
-                  loading: () => const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                  error: (_, __) => const _InlineError(
-                    message: 'Could not load currencies.',
-                  ),
-                  data: (currencies) => _CurrencySelector(
-                    currencies: currencies,
-                    selected: currentCurrency,
-                    onChanged: (code) =>
-                        setState(() => _selectedCurrency = code),
-                  ),
+                _CurrencySelector(
+                  currencies: _currencies,
+                  selected: currentCurrency,
+                  onChanged: (code) =>
+                      setState(() => _selectedCurrency = code),
                 ),
 
                 const SizedBox(height: 28),
 
                 // ── Language ─────────────────────────────────────────────
-                _SectionLabel(title: 'Language'),
+                _SectionLabel(title: 'Idioma'),
                 const SizedBox(height: 10),
                 _LocaleSelector(
                   locales: _locales,
@@ -156,7 +152,7 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
                 const SizedBox(height: 28),
 
                 // ── Theme ────────────────────────────────────────────────
-                _SectionLabel(title: 'Theme'),
+                _SectionLabel(title: 'Tema'),
                 const SizedBox(height: 10),
                 _ThemeSelector(
                   selected: ref.watch(themeModeProvider),
@@ -168,7 +164,7 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
                 const SizedBox(height: 28),
 
                 // ── Country ──────────────────────────────────────────────
-                _SectionLabel(title: 'Country'),
+                _SectionLabel(title: 'País'),
                 const SizedBox(height: 10),
                 _CountrySelector(
                   selected: _selectedCountry,
@@ -178,7 +174,7 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
                 const SizedBox(height: 28),
 
                 // ── Timezone ─────────────────────────────────────────────
-                _SectionLabel(title: 'Timezone'),
+                _SectionLabel(title: 'Fuso horário'),
                 const SizedBox(height: 10),
                 _TimezoneSelector(
                   selected: _selectedTimezone ?? localSettings?.timezone ?? 'America/Sao_Paulo',
@@ -188,7 +184,7 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
                 const SizedBox(height: 28),
 
                 // ── First Day of Week ─────────────────────────────────────
-                _SectionLabel(title: 'First Day of Week'),
+                _SectionLabel(title: 'Primeiro dia da semana'),
                 const SizedBox(height: 10),
                 _FirstDaySelector(
                   selected: localSettings?.firstDayOfWeek ?? 0,
@@ -212,7 +208,7 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
                         ),
                       )
                     : PrimaryButton(
-                        label: 'Save Preferences',
+                        label: 'Salvar preferências',
                         onPressed: _save,
                       ),
                 const SizedBox(height: 32),
@@ -234,9 +230,8 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
             height: 38,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.07)
-                  : Colors.black.withValues(alpha: 0.05),
+              color: t.surfaceEl,
+              border: Border.all(color: t.mist),
             ),
             child: Icon(
               Icons.arrow_back_ios_new_rounded,
@@ -246,7 +241,7 @@ class _PreferencesPageState extends ConsumerState<PreferencesPage> {
           ),
         ),
         const SizedBox(width: 14),
-        Text('Preferences', style: AppTextStyles.h1(t.txtPrimary)),
+        Text('Preferências', style: AppTextStyles.h1(t.txtPrimary)),
       ],
     );
   }
@@ -265,11 +260,7 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(left: 2, bottom: 2),
       child: Text(
         title.toUpperCase(),
-        style: AppTextStyles.caption(t.txtTertiary).copyWith(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.0,
-        ),
+        style: AppTextStyles.eyebrow(t.txtSecondary),
       ),
     );
   }
@@ -312,7 +303,7 @@ class _CurrencySelector extends StatefulWidget {
     required this.onChanged,
   });
 
-  final List<CurrencyResponseDto> currencies;
+  final List<_CurrencyOption> currencies;
   final String selected;
   final ValueChanged<String> onChanged;
 
@@ -329,11 +320,13 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
     super.dispose();
   }
 
-  List<CurrencyResponseDto> _filter(String q) {
+  List<_CurrencyOption> _filter(String q) {
     if (q.isEmpty) return widget.currencies;
     final lower = q.toLowerCase();
     return widget.currencies
-        .where((c) => c.code.toLowerCase().contains(lower))
+        .where((c) =>
+            c.code.toLowerCase().contains(lower) ||
+            c.label.toLowerCase().contains(lower))
         .toList();
   }
 
@@ -350,7 +343,7 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
           return Container(
             height: MediaQuery.of(ctx).size.height * 0.75,
             decoration: BoxDecoration(
-              color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+              color: t.surface,
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(24)),
             ),
@@ -369,7 +362,7 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child:
-                      Text('Select Currency', style: AppTextStyles.h3(t.txtPrimary)),
+                      Text('Selecionar moeda', style: AppTextStyles.h3(t.txtPrimary)),
                 ),
                 const SizedBox(height: 12),
                 Padding(
@@ -378,14 +371,12 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
                     controller: _searchController,
                     autofocus: true,
                     decoration: InputDecoration(
-                      hintText: 'Search currency code...',
+                      hintText: 'Buscar código da moeda...',
                       hintStyle: AppTextStyles.bodySm(t.txtTertiary),
                       prefixIcon:
                           Icon(Icons.search, size: 18, color: t.txtTertiary),
                       filled: true,
-                      fillColor: t.isDark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : Colors.black.withValues(alpha: 0.04),
+                      fillColor: t.surfaceEl,
                       contentPadding:
                           const EdgeInsets.symmetric(vertical: 10),
                       border: OutlineInputBorder(
@@ -433,7 +424,7 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
                                     Text(
                                       currency.code,
                                       style: AppTextStyles.body(
-                                        isSelected ? t.primary : t.txtPrimary,
+                                        isSelected ? t.accent : t.txtPrimary,
                                       ).copyWith(
                                         fontWeight: isSelected
                                             ? FontWeight.w700
@@ -443,7 +434,7 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
                                     ),
                                     const SizedBox(height: 1),
                                     Text(
-                                      '1 USD = ${currency.rate.toStringAsFixed(4)} ${currency.code}',
+                                      currency.label,
                                       style: AppTextStyles.caption(t.txtTertiary)
                                           .copyWith(fontSize: 11),
                                     ),
@@ -452,7 +443,7 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
                               ),
                               if (isSelected)
                                 Icon(Icons.check_rounded,
-                                    size: 18, color: t.primary)
+                                    size: 18, color: t.accent)
                               else
                                 const SizedBox(width: 18),
                             ],
@@ -480,15 +471,9 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: t.isDark
-              ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-              : Colors.white.withValues(alpha: 0.9),
+          color: t.surface,
           borderRadius: AppRadius.xlAll,
-          border: Border.all(
-            color: t.isDark
-                ? Colors.white.withValues(alpha: 0.07)
-                : const Color(0xFF7C3AED).withValues(alpha: 0.12),
-          ),
+          border: Border.all(color: t.mist),
         ),
         child: Row(
           children: [
@@ -514,6 +499,12 @@ class _CurrencySelectorState extends State<_CurrencySelector> {
 
 // ── Locale Selector ────────────────────────────────────────────────────────
 
+class _CurrencyOption {
+  const _CurrencyOption({required this.code, required this.label});
+  final String code;
+  final String label;
+}
+
 class _LocaleOption {
   const _LocaleOption({required this.code, required this.label});
   final String code;
@@ -537,15 +528,9 @@ class _LocaleSelector extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: t.isDark
-            ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-            : Colors.white.withValues(alpha: 0.9),
+        color: t.surface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(
-          color: t.isDark
-              ? Colors.white.withValues(alpha: 0.07)
-              : const Color(0xFF7C3AED).withValues(alpha: 0.12),
-        ),
+        border: Border.all(color: t.mist),
       ),
       child: Column(
         children: List.generate(locales.length, (i) {
@@ -569,7 +554,7 @@ class _LocaleSelector extends StatelessWidget {
                         child: Text(
                           locale.label,
                           style: AppTextStyles.body(
-                            isSelected ? t.primary : t.txtPrimary,
+                            isSelected ? t.accent : t.txtPrimary,
                           ).copyWith(
                             fontWeight:
                                 isSelected ? FontWeight.w600 : FontWeight.w400,
@@ -578,7 +563,7 @@ class _LocaleSelector extends StatelessWidget {
                         ),
                       ),
                       if (isSelected)
-                        Icon(LucideIcons.check, size: 16, color: t.primary)
+                        Icon(LucideIcons.check, size: 16, color: t.accent)
                       else
                         const SizedBox(width: 16),
                     ],
@@ -610,9 +595,9 @@ class _ThemeSelector extends StatelessWidget {
   final ValueChanged<ThemeMode> onChanged;
 
   static const _options = [
-    (mode: ThemeMode.system, label: 'System', icon: LucideIcons.monitor),
-    (mode: ThemeMode.light, label: 'Light', icon: LucideIcons.sun),
-    (mode: ThemeMode.dark, label: 'Dark', icon: LucideIcons.moon),
+    (mode: ThemeMode.system, label: 'Sistema', icon: LucideIcons.monitor),
+    (mode: ThemeMode.light, label: 'Claro', icon: LucideIcons.sun),
+    (mode: ThemeMode.dark, label: 'Escuro', icon: LucideIcons.moon),
   ];
 
   @override
@@ -631,14 +616,12 @@ class _ThemeSelector extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? t.primary.withValues(alpha: t.isDark ? 0.2 : 0.1)
-                    : t.isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.white.withValues(alpha: 0.8),
+                    ? t.accent.withValues(alpha: t.isDark ? 0.2 : 0.1)
+                    : t.surfaceEl,
                 borderRadius: AppRadius.mdAll,
                 border: Border.all(
                   color: isSelected
-                      ? t.primary.withValues(alpha: 0.6)
+                      ? t.accent.withValues(alpha: 0.6)
                       : t.divider.withValues(alpha: 0.4),
                   width: isSelected ? 1.5 : 1,
                 ),
@@ -648,13 +631,13 @@ class _ThemeSelector extends StatelessWidget {
                   Icon(
                     opt.icon,
                     size: 18,
-                    color: isSelected ? t.primary : t.txtTertiary,
+                    color: isSelected ? t.accent : t.txtTertiary,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     opt.label,
                     style: AppTextStyles.caption(
-                      isSelected ? t.primary : t.txtSecondary,
+                      isSelected ? t.accent : t.txtSecondary,
                     ).copyWith(
                       fontWeight:
                           isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -680,13 +663,13 @@ class _FirstDaySelector extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   static const _days = [
-    (index: 0, label: 'Sun'),
-    (index: 1, label: 'Mon'),
-    (index: 2, label: 'Tue'),
-    (index: 3, label: 'Wed'),
-    (index: 4, label: 'Thu'),
-    (index: 5, label: 'Fri'),
-    (index: 6, label: 'Sat'),
+    (index: 0, label: 'Dom'),
+    (index: 1, label: 'Seg'),
+    (index: 2, label: 'Ter'),
+    (index: 3, label: 'Qua'),
+    (index: 4, label: 'Qui'),
+    (index: 5, label: 'Sex'),
+    (index: 6, label: 'Sáb'),
   ];
 
   @override
@@ -705,14 +688,12 @@ class _FirstDaySelector extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? t.primary.withValues(alpha: t.isDark ? 0.2 : 0.1)
-                    : t.isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.white.withValues(alpha: 0.8),
+                    ? t.accent.withValues(alpha: t.isDark ? 0.2 : 0.1)
+                    : t.surfaceEl,
                 borderRadius: AppRadius.mdAll,
                 border: Border.all(
                   color: isSelected
-                      ? t.primary.withValues(alpha: 0.6)
+                      ? t.accent.withValues(alpha: 0.6)
                       : t.divider.withValues(alpha: 0.4),
                   width: isSelected ? 1.5 : 1,
                 ),
@@ -721,7 +702,7 @@ class _FirstDaySelector extends StatelessWidget {
                 day.label,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.caption(
-                  isSelected ? t.primary : t.txtSecondary,
+                  isSelected ? t.accent : t.txtSecondary,
                 ).copyWith(
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   fontSize: 10,
@@ -779,7 +760,7 @@ class _CountrySelectorState extends State<_CountrySelector> {
           return Container(
             height: MediaQuery.of(ctx).size.height * 0.75,
             decoration: BoxDecoration(
-              color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+              color: t.surface,
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(24)),
             ),
@@ -797,7 +778,7 @@ class _CountrySelectorState extends State<_CountrySelector> {
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text('Select Country',
+                  child: Text('Selecionar país',
                       style: AppTextStyles.h3(t.txtPrimary)),
                 ),
                 const SizedBox(height: 12),
@@ -807,14 +788,12 @@ class _CountrySelectorState extends State<_CountrySelector> {
                     controller: _searchController,
                     autofocus: true,
                     decoration: InputDecoration(
-                      hintText: 'Search country...',
+                      hintText: 'Buscar país...',
                       hintStyle: AppTextStyles.bodySm(t.txtTertiary),
                       prefixIcon:
                           Icon(Icons.search, size: 18, color: t.txtTertiary),
                       filled: true,
-                      fillColor: t.isDark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : Colors.black.withValues(alpha: 0.04),
+                      fillColor: t.surfaceEl,
                       contentPadding:
                           const EdgeInsets.symmetric(vertical: 10),
                       border: OutlineInputBorder(
@@ -864,7 +843,7 @@ class _CountrySelectorState extends State<_CountrySelector> {
                                 child: Text(
                                   country.name,
                                   style: AppTextStyles.body(
-                                    isSelected ? t.primary : t.txtPrimary,
+                                    isSelected ? t.accent : t.txtPrimary,
                                   ).copyWith(
                                     fontWeight: isSelected
                                         ? FontWeight.w600
@@ -881,7 +860,7 @@ class _CountrySelectorState extends State<_CountrySelector> {
                               const SizedBox(width: 8),
                               if (isSelected)
                                 Icon(Icons.check_rounded,
-                                    size: 18, color: t.primary)
+                                    size: 18, color: t.accent)
                               else
                                 const SizedBox(width: 18),
                             ],
@@ -912,15 +891,9 @@ class _CountrySelectorState extends State<_CountrySelector> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: t.isDark
-              ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-              : Colors.white.withValues(alpha: 0.9),
+          color: t.surface,
           borderRadius: AppRadius.xlAll,
-          border: Border.all(
-            color: t.isDark
-                ? Colors.white.withValues(alpha: 0.07)
-                : const Color(0xFF7C3AED).withValues(alpha: 0.12),
-          ),
+          border: Border.all(color: t.mist),
         ),
         child: Row(
           children: [
@@ -946,7 +919,7 @@ class _CountrySelectorState extends State<_CountrySelector> {
             ] else
               Expanded(
                 child: Text(
-                  'Select your country',
+                  'Selecione seu país',
                   style: AppTextStyles.body(t.txtTertiary)
                       .copyWith(fontSize: 14),
                 ),
@@ -1007,7 +980,7 @@ class _TimezoneSelectorState extends State<_TimezoneSelector> {
           return Container(
             height: MediaQuery.of(ctx).size.height * 0.75,
             decoration: BoxDecoration(
-              color: t.isDark ? const Color(0xFF1C1830) : Colors.white,
+              color: t.surface,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Column(
@@ -1025,7 +998,7 @@ class _TimezoneSelectorState extends State<_TimezoneSelector> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
-                    'Select Timezone',
+                    'Selecionar fuso horário',
                     style: AppTextStyles.h3(t.txtPrimary),
                   ),
                 ),
@@ -1036,13 +1009,11 @@ class _TimezoneSelectorState extends State<_TimezoneSelector> {
                     controller: _searchController,
                     autofocus: true,
                     decoration: InputDecoration(
-                      hintText: 'Search by city or offset...',
+                      hintText: 'Buscar por cidade ou fuso...',
                       hintStyle: AppTextStyles.bodySm(t.txtTertiary),
                       prefixIcon: Icon(Icons.search, size: 18, color: t.txtTertiary),
                       filled: true,
-                      fillColor: t.isDark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : Colors.black.withValues(alpha: 0.04),
+                      fillColor: t.surfaceEl,
                       contentPadding: const EdgeInsets.symmetric(vertical: 10),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1091,7 +1062,7 @@ class _TimezoneSelectorState extends State<_TimezoneSelector> {
                                     Text(
                                       tz.label,
                                       style: AppTextStyles.body(
-                                        isSelected ? t.primary : t.txtPrimary,
+                                        isSelected ? t.accent : t.txtPrimary,
                                       ).copyWith(
                                         fontWeight: isSelected
                                             ? FontWeight.w600
@@ -1109,7 +1080,7 @@ class _TimezoneSelectorState extends State<_TimezoneSelector> {
                                 ),
                               ),
                               if (isSelected)
-                                Icon(Icons.check_rounded, size: 18, color: t.primary)
+                                Icon(Icons.check_rounded, size: 18, color: t.accent)
                               else
                                 const SizedBox(width: 18),
                             ],
@@ -1140,15 +1111,9 @@ class _TimezoneSelectorState extends State<_TimezoneSelector> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: t.isDark
-              ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-              : Colors.white.withValues(alpha: 0.9),
+          color: t.surface,
           borderRadius: AppRadius.xlAll,
-          border: Border.all(
-            color: t.isDark
-                ? Colors.white.withValues(alpha: 0.07)
-                : const Color(0xFF7C3AED).withValues(alpha: 0.12),
-          ),
+          border: Border.all(color: t.mist),
         ),
         child: Row(
           children: [
@@ -1211,16 +1176,3 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-class _InlineError extends StatelessWidget {
-  const _InlineError({required this.message});
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Text(message, style: AppTextStyles.bodySm(t.error)),
-    );
-  }
-}

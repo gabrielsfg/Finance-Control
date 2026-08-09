@@ -15,6 +15,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { NetWorthProjectionResponse } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -172,6 +173,7 @@ export function ProjectedNetWorthChart({ data }: Props) {
               />
             )}
             <Line
+              {...chartAnim(0)}
               type="monotone"
               dataKey="historical"
               name="Histórico"
@@ -182,6 +184,7 @@ export function ProjectedNetWorthChart({ data }: Props) {
               connectNulls={false}
             />
             <Line
+              {...chartAnim(1)}
               type="monotone"
               dataKey="projected"
               name="Projeção"

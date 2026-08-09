@@ -1,101 +1,152 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'app_colors.dart';
 
+/// Material theme wired to the Quantia tokens. Screens mostly read
+/// `AppThemeTokens.of(context)` directly; this theme covers the Material
+/// primitives (dialogs, inputs, buttons, text defaults, selection).
 abstract class AppTheme {
-  static ThemeData get light => ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        colorScheme: const ColorScheme.light(
-          primary: AppColors.lightPrimary,
-          secondary: AppColors.lightSecondary,
-          surface: AppColors.lightSurface,
-          error: AppColors.lightError,
-          onPrimary: Colors.white,
-          onSurface: AppColors.lightTxtPrimary,
+  static InputDecorationTheme _input({
+    required Color fill,
+    required Color border,
+    required Color focus,
+  }) =>
+      InputDecorationTheme(
+        filled: true,
+        fillColor: fill,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadiusValue.input),
+          borderSide: BorderSide(color: border),
         ),
-        scaffoldBackgroundColor: AppColors.lightBg,
-        dividerColor: AppColors.lightDivider,
-        cardTheme: const CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(16)),
-          ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadiusValue.input),
+          borderSide: BorderSide(color: border, width: 1.2),
         ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFFEDE9FE).withValues(alpha: 0.5),
-          border: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-            borderSide: BorderSide(color: Color(0x2D7C3AED)),
-          ),
-          enabledBorder: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-            borderSide: BorderSide(color: Color(0x2D7C3AED), width: 1.5),
-          ),
-          focusedBorder: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-            borderSide: BorderSide(color: AppColors.lightPrimary, width: 1.5),
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-            backgroundColor: AppColors.lightPrimary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadiusValue.input),
+          borderSide: BorderSide(color: focus, width: 1.6),
         ),
       );
 
-  static ThemeData get dark => ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: const ColorScheme.dark(
-          primary: AppColors.darkPrimary,
-          secondary: AppColors.darkSecondary,
-          surface: AppColors.darkSurface,
-          error: AppColors.darkError,
-          onPrimary: Colors.white,
-          onSurface: AppColors.darkTxtPrimary,
+  static ThemeData get light {
+    final scheme = const ColorScheme.light(
+      primary: AppColors.lightPrimary,
+      secondary: AppColors.lightAccent,
+      surface: AppColors.lightSurface,
+      error: AppColors.lightError,
+      onPrimary: Colors.white,
+      onSurface: AppColors.lightTxtPrimary,
+    );
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: AppColors.lightBg,
+      dividerColor: AppColors.lightDivider,
+      textTheme: GoogleFonts.hankenGroteskTextTheme(
+        ThemeData.light().textTheme,
+      ).apply(
+        bodyColor: AppColors.lightTxtPrimary,
+        displayColor: AppColors.lightTxtPrimary,
+      ),
+      cardTheme: const CardThemeData(
+        elevation: 0,
+        color: AppColors.lightSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(20)),
         ),
-        scaffoldBackgroundColor: AppColors.darkBg,
-        dividerColor: AppColors.darkDivider,
-        cardTheme: const CardThemeData(
-          elevation: 0,
+      ),
+      inputDecorationTheme: _input(
+        fill: AppColors.lightSurface,
+        border: AppColors.lightDivider,
+        focus: AppColors.lightPrimary,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(50),
+          backgroundColor: AppColors.lightPrimary,
+          foregroundColor: Colors.white,
+          textStyle: GoogleFonts.hankenGrotesk(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(16)),
+            borderRadius: BorderRadius.circular(AppRadiusValue.input),
           ),
         ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFF1C1830).withValues(alpha: 0.85),
-          border: OutlineInputBorder(
-            borderRadius: const BorderRadius.all(Radius.circular(10)),
-            borderSide: BorderSide(
-              color: Colors.white.withValues(alpha: 0.09),
-            ),
+      ),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: AppColors.lightPrimary,
+        selectionColor: Color(0x331F3CE0),
+        selectionHandleColor: AppColors.lightPrimary,
+      ),
+      progressIndicatorTheme:
+          const ProgressIndicatorThemeData(color: AppColors.lightPrimary),
+    );
+  }
+
+  static ThemeData get dark {
+    final scheme = const ColorScheme.dark(
+      primary: AppColors.darkPrimary,
+      secondary: AppColors.darkAccent,
+      surface: AppColors.darkSurface,
+      error: AppColors.darkError,
+      onPrimary: Colors.white,
+      onSurface: AppColors.darkTxtPrimary,
+    );
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: AppColors.darkBg,
+      dividerColor: AppColors.darkDivider,
+      textTheme: GoogleFonts.hankenGroteskTextTheme(
+        ThemeData.dark().textTheme,
+      ).apply(
+        bodyColor: AppColors.darkTxtPrimary,
+        displayColor: AppColors.darkTxtPrimary,
+      ),
+      cardTheme: const CardThemeData(
+        elevation: 0,
+        color: AppColors.darkSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+        ),
+      ),
+      inputDecorationTheme: _input(
+        fill: AppColors.darkSurface,
+        border: AppColors.darkDivider,
+        focus: AppColors.darkPrimary,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(50),
+          backgroundColor: AppColors.darkPrimary,
+          foregroundColor: Colors.white,
+          textStyle: GoogleFonts.hankenGrotesk(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: const BorderRadius.all(Radius.circular(10)),
-            borderSide: BorderSide(
-              color: Colors.white.withValues(alpha: 0.09),
-              width: 1.5,
-            ),
-          ),
-          focusedBorder: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-            borderSide: BorderSide(color: AppColors.darkPrimary, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadiusValue.input),
           ),
         ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-            backgroundColor: AppColors.darkPrimary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        ),
-      );
+      ),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: AppColors.darkPrimary,
+        selectionColor: Color(0x443D5BFF),
+        selectionHandleColor: AppColors.darkPrimary,
+      ),
+      progressIndicatorTheme:
+          const ProgressIndicatorThemeData(color: AppColors.darkPrimary),
+    );
+  }
+}
+
+/// Small holder so the theme file doesn't import app_spacing (avoids a cycle
+/// with widgets that import both). Mirrors the Quantia input/button radius.
+class AppRadiusValue {
+  AppRadiusValue._();
+  static const double input = 13;
 }

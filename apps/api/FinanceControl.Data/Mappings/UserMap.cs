@@ -22,6 +22,9 @@ namespace FinanceControl.Data.Mappings
             builder.Property(u => u.PasswordHash);
             builder.Property(u => u.Name);
             builder.Property(u => u.IsActive).HasDefaultValue(true);
+            builder.Property(u => u.EmailVerifiedAt)
+                .HasColumnType("timestamp with time zone");
+            builder.Property(u => u.TwoFactorEnabled).HasDefaultValue(false).IsRequired();
             builder.Property(u => u.CreatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("now()")
@@ -37,11 +40,9 @@ namespace FinanceControl.Data.Mappings
             builder.Property(u => u.PreferredLanguage).HasDefaultValue("pt-BR").IsRequired();
             builder.Property(u => u.Country).HasMaxLength(2);
 
-            // Partial index: only the (rare) rows with an active reset token are indexed,
-            // so the reset-password lookup is an index seek instead of a full table scan
-            // while the index itself stays tiny.
-            builder.HasIndex(u => u.PasswordResetToken)
-                .HasFilter("\"PasswordResetToken\" IS NOT NULL");
+            // The reset token used to live on this table. It moved to SecurityCodes, which
+            // holds the emailed 6-digit codes for verification, reset and two-factor alike
+            // — one expiry and one attempt counter covering all three.
         }
     }
 }

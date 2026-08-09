@@ -8,8 +8,17 @@ namespace FinanceControl.Domain.Entities
         public string PasswordHash { get; set; }
         public string Name { get; set; }
         public Boolean IsActive { get; set; } = true;
-        public string? PasswordResetToken { get; set; }
-        public DateTime? PasswordResetTokenExpiresAt { get; set; }
+
+        /// <summary>
+        /// When the address was confirmed. Null means the account was created but never
+        /// verified, and login is refused until it is — the email is the only way back
+        /// into the account, so it has to be proven before it is relied on.
+        /// </summary>
+        public DateTime? EmailVerifiedAt { get; set; }
+
+        /// <summary>Opt-in, off by default: ask for an emailed code on every untrusted device.</summary>
+        public bool TwoFactorEnabled { get; set; } = false;
+
         public int FailedLoginAttempts { get; set; } = 0;
         public DateTime? LockoutEnd { get; set; }
         public string PreferredCurrency { get; set; } = "BRL";

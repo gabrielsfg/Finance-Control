@@ -19,6 +19,35 @@ export const registerSchema = z
     email: z.string().min(1, "E-mail obrigatório").email("E-mail inválido"),
     password: passwordSchema,
     confirmPassword: z.string().min(1, "Confirme sua senha"),
+    // The backend refuses a registration without it either way; blocking here just
+    // turns a rejected request into an unchecked box the user can see.
+    acceptedTerms: z.boolean().refine((accepted) => accepted, {
+      message: "Você precisa aceitar os Termos de Uso e a Política de Privacidade",
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "As senhas não conferem",
+    path: ["confirmPassword"],
+  });
+
+const codeSchema = z
+  .string()
+  .trim()
+  .regex(/^[0-9]{6}$/, "O código tem 6 dígitos");
+
+export const verificationCodeSchema = z.object({
+  code: codeSchema,
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, "E-mail obrigatório").email("E-mail inválido"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    code: codeSchema,
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, "Confirme sua senha"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "As senhas não conferem",
@@ -27,6 +56,9 @@ export const registerSchema = z
 
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;
+export type VerificationCodeFormData = z.infer<typeof verificationCodeSchema>;
+export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export type PasswordStrength = "fraca" | "média" | "forte";
 

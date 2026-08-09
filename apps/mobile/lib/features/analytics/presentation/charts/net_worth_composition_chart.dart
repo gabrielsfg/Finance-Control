@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
+import '../../../../shared/widgets/chart_reveal.dart';
 import '../../providers/analytics_provider.dart';
 
 class NetWorthCompositionChart extends ConsumerWidget {
@@ -12,20 +14,22 @@ class NetWorthCompositionChart extends ConsumerWidget {
 
   final bool compact;
 
-  static const _palette = [
-    Color(0xFF7C3AED),
-    Color(0xFF2563EB),
-    Color(0xFF059669),
-    Color(0xFFD97706),
-    Color(0xFFDC2626),
-    Color(0xFF0891B2),
-    Color(0xFF65A30D),
-    Color(0xFFDB2777),
-  ];
+  // Quantia categorical palette — cycled across the stacked account segments.
+  List<Color> _paletteFor(AppThemeTokens t) => [
+        t.accent,
+        t.moss,
+        t.clay,
+        t.gold,
+        t.cobaltLift,
+        t.mossLift,
+        t.clayLift,
+        t.txtTertiary,
+      ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppThemeTokens.of(context);
+    final palette = _paletteFor(t);
     final async = ref.watch(netWorthEvolutionProvider);
 
     return async.when(
@@ -35,8 +39,8 @@ class NetWorthCompositionChart extends ConsumerWidget {
         if (items.isEmpty) return _empty(t);
 
         final fmt = AppLocaleScope.of(context);
-        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        final months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+            'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
         // Collect all account names in order of appearance
         final accountNames = <String>[];
@@ -61,7 +65,7 @@ class NetWorthCompositionChart extends ConsumerWidget {
             final rod = BarChartRodData(
               fromY: fromY,
               toY: fromY + value.clamp(0, double.infinity),
-              color: _palette[ai % _palette.length],
+              color: palette[ai % palette.length],
               width: compact ? 16.0 : 22.0,
               borderRadius: ai == 0
                   ? const BorderRadius.vertical(bottom: Radius.circular(4))
@@ -85,50 +89,54 @@ class NetWorthCompositionChart extends ConsumerWidget {
           children: [
             SizedBox(
               height: compact ? 160 : 220,
-              child: BarChart(
-                BarChartData(
-                  maxY: maxY * 1.15,
-                  barGroups: groups,
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) =>
-                        FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(),
-                    rightTitles: const AxisTitles(),
-                    topTitles: const AxisTitles(),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: !compact,
-                        getTitlesWidget: (val, _) {
-                          final i = val.toInt();
-                          if (i < 0 || i >= items.length) return const SizedBox();
-                          return Text(
-                            months[items[i].month - 1],
-                            style: AppTextStyles.caption(t.txtTertiary)
-                                .copyWith(fontSize: 10),
+              child: ChartReveal(
+                mode: ChartRevealMode.grow,
+                child: BarChart(
+                  BarChartData(
+                    maxY: maxY * 1.15,
+                    barGroups: groups,
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (_) =>
+                          FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(),
+                      rightTitles: const AxisTitles(),
+                      topTitles: const AxisTitles(),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: !compact,
+                          getTitlesWidget: (val, _) {
+                            final i = val.toInt();
+                            if (i < 0 || i >= items.length) return const SizedBox();
+                            return Text(
+                              months[items[i].month - 1],
+                              style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    barTouchData: BarTouchData(
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (_) => t.surface,
+                        getTooltipItem: (group, _, rod, rodIndex) {
+                          if (rodIndex >= accountNames.length) return null;
+                          final value = (rod.toY - rod.fromY) * 100;
+                          return BarTooltipItem(
+                            '${accountNames[rodIndex]}\n${fmt.formatCurrency(value.toInt())}',
+                            AppTextStyles.bodySm(t.txtPrimary)
+                                .copyWith(fontWeight: FontWeight.w600),
                           );
                         },
                       ),
                     ),
                   ),
-                  barTouchData: BarTouchData(
-                    touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (_) => t.surface,
-                      getTooltipItem: (group, _, rod, rodIndex) {
-                        if (rodIndex >= accountNames.length) return null;
-                        final value = (rod.toY - rod.fromY) * 100;
-                        return BarTooltipItem(
-                          '${accountNames[rodIndex]}\n${fmt.formatCurrency(value.toInt())}',
-                          AppTextStyles.bodySm(t.txtPrimary)
-                              .copyWith(fontWeight: FontWeight.w600),
-                        );
-                      },
-                    ),
-                  ),
+                  duration: AppMotion.slow,
+                  curve: AppMotion.settle,
                 ),
               ),
             ),
@@ -146,7 +154,7 @@ class NetWorthCompositionChart extends ConsumerWidget {
                         width: 10,
                         height: 10,
                         decoration: BoxDecoration(
-                          color: _palette[i % _palette.length],
+                          color: palette[i % palette.length],
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -171,8 +179,8 @@ Widget _loader(bool compact) =>
 
 Widget _err(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('Could not load data', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Não foi possível carregar os dados', style: AppTextStyles.bodySm(t.txtTertiary))));
 
 Widget _empty(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('No data for this period', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Sem dados para este período', style: AppTextStyles.bodySm(t.txtTertiary))));

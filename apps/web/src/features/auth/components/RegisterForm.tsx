@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -11,12 +10,16 @@ import {
   getPasswordStrength,
 } from "@/features/auth/schemas/authSchema";
 import { authApi } from "@/lib/api/auth";
-import { useAuthStore } from "@/lib/stores/authStore";
 import { cn } from "@/lib/utils";
 
-export const RegisterForm = ({ onSwitch }: { onSwitch: () => void }) => {
-  const router = useRouter();
-  const { login } = useAuthStore();
+export const RegisterForm = ({
+  onSwitch,
+  onRegistered,
+}: {
+  onSwitch: () => void;
+  /** Registration only creates the account — the code screen is what signs the user in. */
+  onRegistered: (email: string) => void;
+}) => {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordValue, setPasswordValue] = useState("");
   const [serverError, setServerError] = useState<string | null>(null);
@@ -25,7 +28,10 @@ export const RegisterForm = ({ onSwitch }: { onSwitch: () => void }) => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData>({ resolver: zodResolver(registerSchema) });
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { acceptedTerms: false },
+  });
 
   const passwordStrength = getPasswordStrength(passwordValue);
 
@@ -38,12 +44,15 @@ export const RegisterForm = ({ onSwitch }: { onSwitch: () => void }) => {
   const onSubmit = async (data: RegisterFormData) => {
     setServerError(null);
     try {
-      const response = await authApi.register(data);
-      login(response.accessToken);
-      router.refresh();
-      router.push("/dashboard");
-    } catch {
-      setServerError("Este e-mail já está em uso. Tente fazer login.");
+      await authApi.register(data);
+      onRegistered(data.email);
+    } catch (err: unknown) {
+      const status = (err as { response?: { status: number } })?.response?.status;
+      setServerError(
+        status === 429
+          ? "Muitas tentativas. Aguarde alguns minutos e tente novamente."
+          : "Este e-mail já está em uso. Tente fazer login.",
+      );
     }
   };
 
@@ -153,6 +162,41 @@ export const RegisterForm = ({ onSwitch }: { onSwitch: () => void }) => {
         )}
       </div>
 
+      {/* Consent */}
+      <div className="mt-5 mb-4">
+        <label className="flex cursor-pointer items-start gap-2.5">
+          <input
+            type="checkbox"
+            {...register("acceptedTerms")}
+            className="accent-green border-border mt-0.5 size-[15px] shrink-0 cursor-pointer rounded-[4px]"
+          />
+          <span className="text-text-sub text-[12.5px] leading-relaxed">
+            Li e aceito os{" "}
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green hover:underline"
+            >
+              Termos de Uso
+            </a>{" "}
+            e a{" "}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green hover:underline"
+            >
+              Política de Privacidade
+            </a>
+            .
+          </span>
+        </label>
+        {errors.acceptedTerms && (
+          <p className="text-red mt-1.5 text-[13px]">{errors.acceptedTerms.message}</p>
+        )}
+      </div>
+
       {serverError && (
         <div className="border-red/30 bg-red/10 text-red mb-4 rounded-[8px] border px-4 py-3 text-[13px]">
           {serverError}
@@ -162,23 +206,11 @@ export const RegisterForm = ({ onSwitch }: { onSwitch: () => void }) => {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="bg-green font-600 hover:bg-green/90 flex w-full items-center justify-center gap-2 rounded-[9px] py-[13px] font-sans text-[15px] text-black transition-colors disabled:opacity-60"
+        className="bg-brand font-600 hover:bg-brand/90 flex w-full items-center justify-center gap-2 rounded-[9px] py-[13px] font-sans text-[15px] text-white transition-colors disabled:opacity-60"
       >
         {isSubmitting && <Loader2 size={15} className="animate-spin" />}
         Criar conta grátis
       </button>
-
-      <p className="text-text-muted mt-4 text-center text-[12px] leading-relaxed">
-        Ao criar uma conta, você concorda com os{" "}
-        <a href="#" className="text-text-sub hover:text-green">
-          Termos de Uso
-        </a>{" "}
-        e a{" "}
-        <a href="#" className="text-text-sub hover:text-green">
-          Política de Privacidade
-        </a>
-        .
-      </p>
 
       <p className="text-text-muted mt-4 text-center text-[14px]">
         Já tem uma conta?{" "}

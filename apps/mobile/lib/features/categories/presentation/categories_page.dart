@@ -131,10 +131,9 @@ class _Header extends StatelessWidget {
           child: Container(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: AppColors.primaryGradient,
-              boxShadow: AppShadows.fabShadow,
             ),
             child: const Icon(LucideIcons.plus, color: Colors.white, size: 18),
           ),
@@ -185,18 +184,18 @@ class _CategoryCardState extends ConsumerState<_CategoryCard> {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: t.isDark ? const Color(0xFF1C1830) : Colors.white,
-        title: Text('Delete category?', style: AppTextStyles.h3(t.txtPrimary)),
+        backgroundColor: t.surface,
+        title: Text('Excluir categoria?', style: AppTextStyles.h3(t.txtPrimary)),
         content: Text(
           subCount > 0
-              ? 'Delete "${widget.category.name}" and its $subCount subcategor${subCount == 1 ? 'y' : 'ies'}? Transactions linked to them will keep the reference.'
-              : 'Delete "${widget.category.name}"? This action cannot be undone.',
+              ? 'Excluir "${widget.category.name}" e suas $subCount ${subCount == 1 ? 'subcategoria' : 'subcategorias'}? As transações vinculadas a elas manterão a referência.'
+              : 'Excluir "${widget.category.name}"? Esta ação não pode ser desfeita.',
           style: AppTextStyles.body(t.txtSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: AppTextStyles.body(t.txtSecondary)),
+            child: Text('Cancelar', style: AppTextStyles.body(t.txtSecondary)),
           ),
           TextButton(
             onPressed: () {
@@ -205,7 +204,7 @@ class _CategoryCardState extends ConsumerState<_CategoryCard> {
                   .read(categoriesNotifierProvider.notifier)
                   .deleteCategory(widget.category.id);
             },
-            child: Text('Delete', style: AppTextStyles.body(t.error)),
+            child: Text('Excluir', style: AppTextStyles.body(t.error)),
           ),
         ],
       ),
@@ -217,21 +216,12 @@ class _CategoryCardState extends ConsumerState<_CategoryCard> {
     final t = AppThemeTokens.of(context);
     final hasSubs = widget.category.subcategories.isNotEmpty;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: t.isDark
-            ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-            : Colors.white.withValues(alpha: 0.9),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: EdgeInsets.zero,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(
-          color: t.isDark
-              ? Colors.white.withValues(alpha: 0.07)
-              : const Color(0xFF7C3AED).withValues(alpha: 0.12),
-        ),
-        boxShadow: t.isDark ? [] : AppShadows.cardLight,
-      ),
-      child: Column(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Header row ──────────────────────────────────────────────
@@ -248,10 +238,10 @@ class _CategoryCardState extends ConsumerState<_CategoryCard> {
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: t.primary.withValues(alpha: 0.12),
+                          color: t.accent.withValues(alpha: 0.14),
                           borderRadius: AppRadius.lgAll,
                         ),
-                        child: Icon(LucideIcons.tag, color: t.primary, size: 18),
+                        child: Icon(LucideIcons.tag, color: t.accent, size: 18),
                       ),
                       const SizedBox(width: 12),
                     ],
@@ -273,7 +263,7 @@ class _CategoryCardState extends ConsumerState<_CategoryCard> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          '${widget.category.subcategories.length} subcategor${widget.category.subcategories.length == 1 ? 'y' : 'ies'}',
+                          '${widget.category.subcategories.length} ${widget.category.subcategories.length == 1 ? 'subcategoria' : 'subcategorias'}',
                           style: AppTextStyles.caption(t.txtTertiary),
                         ),
                       ],
@@ -316,6 +306,7 @@ class _CategoryCardState extends ConsumerState<_CategoryCard> {
             ),
           ],
         ],
+        ),
       ),
     );
   }
@@ -344,7 +335,7 @@ class _SubcategoryRow extends StatelessWidget {
                 height: 6,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: t.txtDisabled,
+                  color: t.accent,
                 ),
               ),
               const SizedBox(width: 10),
@@ -413,11 +404,11 @@ class _ErrorView extends StatelessWidget {
           Icon(LucideIcons.alertCircle, color: t.error, size: 32),
           const SizedBox(height: 8),
           Text(
-            'Failed to load categories',
+            'Não foi possível carregar as categorias',
             style: AppTextStyles.body(t.txtSecondary),
           ),
           const SizedBox(height: 12),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
+          TextButton(onPressed: onRetry, child: const Text('Tentar novamente')),
         ],
       ),
     );

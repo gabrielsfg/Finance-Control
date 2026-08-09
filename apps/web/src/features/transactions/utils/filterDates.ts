@@ -51,6 +51,8 @@ export function defaultTxFilter(): TransactionsFilter {
     categoryIds: [],
     subCategoryIds: [],
     typeFilter: "All",
+    minValue: null,
+    maxValue: null,
     sortField: "date",
     sortOrder: "desc",
   };

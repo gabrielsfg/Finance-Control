@@ -15,6 +15,7 @@ import type { PortfolioAsset } from "@/lib/types/simulation";
 import { PortfolioBuilder, PORTFOLIO_COLORS, makeEmptyAsset, MIN_ASSETS } from "./PortfolioBuilder";
 import { MonthRangePicker } from "@/components/shared/MonthRangePicker";
 import { CHART_GRID, axisTick, SERIES, PresetPill, PrimaryButton, ChartTooltip, LegendItem } from "./simShared";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 /** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
 const inputCls =
@@ -289,8 +290,8 @@ function PortfolioBacktest({
                     <XAxis dataKey="label" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                     <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Area type="monotone" dataKey="invested" name="Total aportado" stroke={SERIES.gold} strokeWidth={2} fill="url(#pf_gradI)" dot={false} activeDot={{ r: 5 }} />
-                    <Area type="monotone" dataKey="value"    name="Carteira"        stroke={SERIES.moss} strokeWidth={2} fill="url(#pf_gradV)" dot={false} activeDot={{ r: 5 }} />
+                    <Area {...chartAnim(0)} type="monotone" dataKey="invested" name="Total aportado" stroke={SERIES.gold} strokeWidth={2} fill="url(#pf_gradI)" dot={false} activeDot={{ r: 5 }} />
+                    <Area {...chartAnim(1)} type="monotone" dataKey="value"    name="Carteira"        stroke={SERIES.moss} strokeWidth={2} fill="url(#pf_gradV)" dot={false} activeDot={{ r: 5 }} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -658,6 +659,7 @@ function PortfolioProjection({
                     <Tooltip content={<ChartTooltip colorKey="fill" />} />
                     {projection.perAsset.map((pa, i) => (
                       <Area
+                        {...chartAnim(i)}
                         key={pa.asset.id}
                         type="monotone"
                         dataKey={pa.asset.id}

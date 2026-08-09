@@ -8,61 +8,24 @@ import '../data/dtos/create_transaction_request_dto.dart';
 import '../data/dtos/create_transaction_response_dto.dart';
 import '../data/dtos/update_recurring_request_dto.dart';
 import '../data/dtos/update_transaction_request_dto.dart';
-import '../data/models/transaction_item.dart';
 import '../data/transaction_repository.dart';
+import 'transaction_feed_provider.dart';
 
 // ---------------------------------------------------------------------------
-// Transactions list
+// Shared invalidation
 // ---------------------------------------------------------------------------
 
-class TransactionsNotifier extends AsyncNotifier<List<TransactionItem>> {
-  @override
-  Future<List<TransactionItem>> build() async {
-    final dtos = await ref
-        .read(transactionRepositoryProvider)
-        .getAllTransactions();
-    return dtos.map(TransactionItem.fromDto).toList();
-  }
-
-  Future<void> deleteTransaction(int id) async {
-    final dtos = await ref
-        .read(transactionRepositoryProvider)
-        .deleteTransaction(id);
-    state = AsyncData(dtos.map(TransactionItem.fromDto).toList());
-  }
-
-  Future<void> updateTransaction(
-    int id,
-    UpdateTransactionRequestDto dto,
-  ) async {
-    final dtos = await ref
-        .read(transactionRepositoryProvider)
-        .updateTransaction(id, dto);
-    state = AsyncData(dtos.map(TransactionItem.fromDto).toList());
-  }
-
-  Future<void> updateRecurringTransaction(
-    int recurringId,
-    UpdateRecurringRequestDto dto,
-  ) async {
-    final dtos = await ref
-        .read(transactionRepositoryProvider)
-        .updateRecurringTransaction(recurringId, dto);
-    state = AsyncData(dtos.map(TransactionItem.fromDto).toList());
-  }
-
-  Future<void> cancelRecurringTransaction(int recurringId) async {
-    final dtos = await ref
-        .read(transactionRepositoryProvider)
-        .cancelRecurringTransaction(recurringId);
-    state = AsyncData(dtos.map(TransactionItem.fromDto).toList());
-  }
+/// Refreshes everything that reads from transactions after a mutation.
+///
+/// The list itself lives in [transactionFeedProvider], which pages the server —
+/// so a mutation invalidates it and lets it refetch page 1, instead of the app
+/// holding the whole history in memory and patching it locally.
+void _invalidateTransactionDependents(Ref ref) {
+  ref.invalidate(transactionFeedProvider);
+  ref.invalidate(homeNotifierProvider);
+  ref.invalidate(accountsNotifierProvider);
+  ref.invalidate(budgetNotifierProvider);
 }
-
-final transactionsNotifierProvider =
-    AsyncNotifierProvider<TransactionsNotifier, List<TransactionItem>>(
-  TransactionsNotifier.new,
-);
 
 // ---------------------------------------------------------------------------
 // Create transaction state
@@ -112,10 +75,7 @@ class CreateTransactionNotifier extends Notifier<CreateTransactionState> {
           .read(transactionRepositoryProvider)
           .createTransaction(dto);
       // Invalidate all providers that display transaction-derived data.
-      ref.invalidate(transactionsNotifierProvider);
-      ref.invalidate(homeNotifierProvider);
-      ref.invalidate(accountsNotifierProvider);
-      ref.invalidate(budgetNotifierProvider);
+      _invalidateTransactionDependents(ref);
       state = CreateTransactionSuccess(transactions: result.transactions);
     } on DioException catch (e) {
       state = _mapDioError(e);
@@ -222,9 +182,8 @@ class TransactionActionNotifier extends Notifier<TransactionActionState> {
   Future<void> delete(int id) async {
     state = const TransactionActionLoading();
     try {
-      await ref
-          .read(transactionsNotifierProvider.notifier)
-          .deleteTransaction(id);
+      await ref.read(transactionRepositoryProvider).deleteTransaction(id);
+      _invalidateTransactionDependents(ref);
       state = const TransactionActionSuccess();
     } on DioException catch (e) {
       state = TransactionActionError(message: _mapError(e));
@@ -237,9 +196,8 @@ class TransactionActionNotifier extends Notifier<TransactionActionState> {
   Future<void> update(int id, UpdateTransactionRequestDto dto) async {
     state = const TransactionActionLoading();
     try {
-      await ref
-          .read(transactionsNotifierProvider.notifier)
-          .updateTransaction(id, dto);
+      await ref.read(transactionRepositoryProvider).updateTransaction(id, dto);
+      _invalidateTransactionDependents(ref);
       state = const TransactionActionSuccess();
     } on DioException catch (e) {
       state = TransactionActionError(message: _mapError(e));
@@ -256,8 +214,9 @@ class TransactionActionNotifier extends Notifier<TransactionActionState> {
     state = const TransactionActionLoading();
     try {
       await ref
-          .read(transactionsNotifierProvider.notifier)
+          .read(transactionRepositoryProvider)
           .updateRecurringTransaction(recurringId, dto);
+      _invalidateTransactionDependents(ref);
       state = const TransactionActionSuccess();
     } on DioException catch (e) {
       state = TransactionActionError(message: _mapError(e));
@@ -271,8 +230,9 @@ class TransactionActionNotifier extends Notifier<TransactionActionState> {
     state = const TransactionActionLoading();
     try {
       await ref
-          .read(transactionsNotifierProvider.notifier)
+          .read(transactionRepositoryProvider)
           .cancelRecurringTransaction(recurringId);
+      _invalidateTransactionDependents(ref);
       state = const TransactionActionSuccess();
     } on DioException catch (e) {
       state = TransactionActionError(message: _mapError(e));

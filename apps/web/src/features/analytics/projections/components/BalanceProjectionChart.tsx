@@ -7,6 +7,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { BalanceProjectionResponse } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -85,6 +86,7 @@ export function BalanceProjectionChart({ data }: Props) {
             <Tooltip content={<CustomTooltip />} />
             <ReferenceLine y={0} stroke="var(--border-color)" strokeDasharray="4 4" />
             <Line
+              {...chartAnim(0)}
               type="monotone"
               dataKey="actual"
               name="Real"
@@ -94,6 +96,7 @@ export function BalanceProjectionChart({ data }: Props) {
               connectNulls={false}
             />
             <Line
+              {...chartAnim(1)}
               type="monotone"
               dataKey="projected"
               name="Projetado"

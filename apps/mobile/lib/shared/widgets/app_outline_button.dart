@@ -24,13 +24,11 @@ class AppOutlineButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
     final borderColor = danger
-        ? t.error
-        : t.isDark
-            ? const Color(0xFF8B5CF6).withValues(alpha: 0.5)
-            : const Color(0xFF7C3AED).withValues(alpha: 0.4);
+        ? t.error.withValues(alpha: 0.55)
+        : t.primary.withValues(alpha: t.isDark ? 0.5 : 0.4);
     final bgColor = danger
-        ? t.error.withValues(alpha: t.isDark ? 0.0 : 0.04)
-        : t.primary.withValues(alpha: t.isDark ? 0.0 : 0.04);
+        ? t.error.withValues(alpha: t.isDark ? 0.0 : 0.05)
+        : t.primary.withValues(alpha: t.isDark ? 0.0 : 0.05);
 
     return GestureDetector(
       onTap: onPressed,

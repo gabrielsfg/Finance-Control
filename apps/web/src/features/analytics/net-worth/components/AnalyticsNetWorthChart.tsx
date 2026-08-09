@@ -7,6 +7,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { NetWorthPoint } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -91,9 +92,9 @@ export const AnalyticsNetWorthChart = ({ data }: Props) => {
               width={70}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />
-            <Area type="monotone" dataKey="assets"      name="Ativos"              stroke="var(--blue)"  strokeWidth={2} fill="url(#gradAssets)" />
-            <Area type="monotone" dataKey="netWorth"    name="Patrimônio líquido"  stroke="var(--green)" strokeWidth={2} fill="url(#gradNetWorth)" />
-            <Area type="monotone" dataKey="liabilities" name="Passivos"            stroke="var(--red)"   strokeWidth={2} fill="url(#gradLiabilities)" strokeDasharray="4 3" />
+            <Area {...chartAnim(0)} type="monotone" dataKey="assets"      name="Ativos"              stroke="var(--blue)"  strokeWidth={2} fill="url(#gradAssets)" />
+            <Area {...chartAnim(1)} type="monotone" dataKey="netWorth"    name="Patrimônio líquido"  stroke="var(--green)" strokeWidth={2} fill="url(#gradNetWorth)" />
+            <Area {...chartAnim(2)} type="monotone" dataKey="liabilities" name="Passivos"            stroke="var(--red)"   strokeWidth={2} fill="url(#gradLiabilities)" strokeDasharray="4 3" />
           </AreaChart>
         </ResponsiveContainer>
       </div>

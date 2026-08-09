@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
+import '../../../../shared/widgets/app_widgets.dart';
 import '../../providers/analytics_provider.dart';
 
 class NetWorthProjectionChart extends ConsumerWidget {
@@ -13,8 +15,8 @@ class NetWorthProjectionChart extends ConsumerWidget {
 
   final bool compact;
 
-  static const _monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  static const _monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,82 +58,86 @@ class NetWorthProjectionChart extends ConsumerWidget {
           children: [
             SizedBox(
               height: compact ? 160 : 220,
-              child: LineChart(
-                LineChartData(
-                  minY: minY - pad,
-                  maxY: maxY + pad,
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) =>
-                        FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(),
-                    rightTitles: const AxisTitles(),
-                    topTitles: const AxisTitles(),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: !compact,
-                        interval: (proj.historical.length / 4).ceilToDouble(),
-                        getTitlesWidget: (val, _) {
-                          final i = val.toInt();
-                          if (i < 0 || i >= proj.historical.length) {
-                            return const SizedBox();
-                          }
-                          final item = proj.historical[i];
-                          return Text(
-                            _monthNames[item.month - 1],
-                            style: AppTextStyles.caption(t.txtTertiary)
-                                .copyWith(fontSize: 9),
-                          );
-                        },
-                      ),
+              child: ChartReveal(
+                mode: ChartRevealMode.draw,
+                child: LineChart(
+                  LineChartData(
+                    minY: minY - pad,
+                    maxY: maxY + pad,
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (_) =>
+                          FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
                     ),
-                  ),
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipColor: (_) => t.surface,
-                      getTooltipItems: (spots) => spots.map((s) {
-                        final label =
-                            s.barIndex == 0 ? 'Historical' : 'Projected';
-                        return LineTooltipItem(
-                          '$label\n${fmt.formatCurrency((s.y * 100).toInt())}',
-                          AppTextStyles.bodySm(t.txtPrimary)
-                              .copyWith(fontWeight: FontWeight.w600),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: historicalSpots,
-                      isCurved: true,
-                      color: t.primary,
-                      barWidth: 2.5,
-                      dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            t.primary.withValues(alpha: 0.15),
-                            t.primary.withValues(alpha: 0.0),
-                          ],
+                    borderData: FlBorderData(show: false),
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(),
+                      rightTitles: const AxisTitles(),
+                      topTitles: const AxisTitles(),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: !compact,
+                          interval: (proj.historical.length / 4).ceilToDouble(),
+                          getTitlesWidget: (val, _) {
+                            final i = val.toInt();
+                            if (i < 0 || i >= proj.historical.length) {
+                              return const SizedBox();
+                            }
+                            final item = proj.historical[i];
+                            return Text(
+                              _monthNames[item.month - 1],
+                              style: AppTextStyles.mono(t.txtTertiary, fontSize: 9),
+                            );
+                          },
                         ),
                       ),
                     ),
-                    LineChartBarData(
-                      spots: projSpots,
-                      isCurved: true,
-                      color: growing ? t.success : t.error,
-                      barWidth: 2,
-                      dashArray: [6, 4],
-                      dotData: const FlDotData(show: false),
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipColor: (_) => t.surface,
+                        getTooltipItems: (spots) => spots.map((s) {
+                          final label =
+                              s.barIndex == 0 ? 'Histórico' : 'Projetado';
+                          return LineTooltipItem(
+                            '$label\n${fmt.formatCurrency((s.y * 100).toInt())}',
+                            AppTextStyles.bodySm(t.txtPrimary)
+                                .copyWith(fontWeight: FontWeight.w600),
+                          );
+                        }).toList(),
+                      ),
                     ),
-                  ],
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: historicalSpots,
+                        isCurved: true,
+                        color: t.accent,
+                        barWidth: 2.5,
+                        dotData: const FlDotData(show: false),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              t.accent.withValues(alpha: 0.15),
+                              t.accent.withValues(alpha: 0.0),
+                            ],
+                          ),
+                        ),
+                      ),
+                      LineChartBarData(
+                        spots: projSpots,
+                        isCurved: true,
+                        color: growing ? t.moss : t.clay,
+                        barWidth: 2,
+                        dashArray: [6, 4],
+                        dotData: const FlDotData(show: false),
+                      ),
+                    ],
+                  ),
+                  duration: AppMotion.slow,
+                  curve: AppMotion.settle,
                 ),
               ),
             ),
@@ -160,34 +166,34 @@ class _InsightCard extends StatelessWidget {
     return Column(
       children: [
         _Row(
-          label: 'Current net worth',
-          value: fmt.formatCurrency(proj.currentNetWorth),
-          color: proj.currentNetWorth >= 0 ? t.success : t.error,
+          label: 'Patrimônio atual',
+          cents: proj.currentNetWorth,
+          color: proj.currentNetWorth >= 0 ? t.moss : t.clay,
           t: t,
         ),
         const SizedBox(height: 6),
         _Row(
-          label: 'Monthly avg growth',
-          value:
-              '${growing ? '+' : ''}${fmt.formatCurrency(proj.monthlyAvgGrowth.toInt())}',
-          color: growing ? t.success : t.error,
+          label: 'Crescimento médio mensal',
+          cents: proj.monthlyAvgGrowth.toInt(),
+          signed: true,
+          color: growing ? t.moss : t.clay,
           t: t,
         ),
         if (proj.monthsUntilZero != null) ...[
           const SizedBox(height: 6),
           _Row(
-            label: 'Months until net worth reaches zero',
+            label: 'Meses até o patrimônio chegar a zero',
             value: '${proj.monthsUntilZero}',
-            color: t.error,
+            color: t.clay,
             t: t,
           ),
         ],
         if (proj.monthsUntilTarget != null) ...[
           const SizedBox(height: 6),
           _Row(
-            label: 'Months until target (${fmt.formatCurrency(proj.targetAmount ?? 0)})',
+            label: 'Meses até a meta (${fmt.formatCurrency(proj.targetAmount ?? 0)})',
             value: '${proj.monthsUntilTarget}',
-            color: t.success,
+            color: t.moss,
             t: t,
           ),
         ],
@@ -199,12 +205,16 @@ class _InsightCard extends StatelessWidget {
 class _Row extends StatelessWidget {
   const _Row(
       {required this.label,
-      required this.value,
+      this.value,
+      this.cents,
+      this.signed = false,
       required this.color,
       required this.t});
 
   final String label;
-  final String value;
+  final String? value;
+  final int? cents;
+  final bool signed;
   final Color color;
   final AppThemeTokens t;
 
@@ -213,18 +223,20 @@ class _Row extends StatelessWidget {
     return Container(
       padding: AppSpacing.cardPaddingSm,
       decoration: BoxDecoration(
-        color: t.isDark
-            ? Colors.white.withValues(alpha: 0.04)
-            : Colors.black.withValues(alpha: 0.02),
+        color: t.surfaceEl,
         borderRadius: AppRadius.smAll,
       ),
       child: Row(
         children: [
           Expanded(child: Text(label, style: AppTextStyles.bodySm(t.txtSecondary))),
           const SizedBox(width: 8),
-          Text(value,
-              style: AppTextStyles.body(color)
-                  .copyWith(fontWeight: FontWeight.w700, fontSize: 14)),
+          if (cents != null)
+            Money(cents!,
+                size: 14, weight: FontWeight.w700, color: color, signed: signed)
+          else
+            Text(value ?? '',
+                style: AppTextStyles.body(color)
+                    .copyWith(fontWeight: FontWeight.w700, fontSize: 14)),
         ],
       ),
     );
@@ -236,8 +248,8 @@ Widget _loader(bool compact) =>
 
 Widget _err(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('Could not load data', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Não foi possível carregar os dados', style: AppTextStyles.bodySm(t.txtTertiary))));
 
 Widget _empty(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('Not enough data to project', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Dados insuficientes para projetar', style: AppTextStyles.bodySm(t.txtTertiary))));

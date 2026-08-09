@@ -4,9 +4,41 @@ import { useState } from "react";
 import Link from "next/link";
 import { LoginForm } from "@/features/auth/components/LoginForm";
 import { RegisterForm } from "@/features/auth/components/RegisterForm";
+import { ForgotPasswordForm } from "@/features/auth/components/ForgotPasswordForm";
+import { ResetPasswordForm } from "@/features/auth/components/ResetPasswordForm";
+import { TwoFactorForm } from "@/features/auth/components/TwoFactorForm";
+import { VerifyEmailForm } from "@/features/auth/components/VerifyEmailForm";
+import type { LoginChallengeResponse } from "@/lib/types/auth.types";
+
+/**
+ * The screens that interrupt a login. They are steps of the same flow rather than
+ * routes: putting them on their own URLs would mean parking a challenge token in the
+ * address bar, and a refresh would land on a page whose state no longer exists.
+ */
+type ChallengeView =
+  | { kind: "verify"; email: string }
+  | { kind: "twoFactor"; challengeToken: string }
+  | { kind: "forgot"; email: string }
+  | { kind: "reset"; email: string };
 
 export function LoginPage() {
   const [tab, setTab] = useState<"login" | "register">("login");
+  const [view, setView] = useState<ChallengeView | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const backToLogin = () => {
+    setView(null);
+    setTab("login");
+  };
+
+  const handleChallenge = (challenge: LoginChallengeResponse, email: string) => {
+    setNotice(null);
+    setView(
+      challenge.challenge === "EmailNotVerified"
+        ? { kind: "verify", email }
+        : { kind: "twoFactor", challengeToken: challenge.challengeToken ?? "" },
+    );
+  };
 
   return (
     <div className="flex flex-1">
@@ -96,35 +128,71 @@ export function LoginPage() {
         </Link>
 
         <div className="w-full max-w-[400px]">
-          {/* Tabs */}
-          <div className="border-border bg-surface2 mb-7 flex rounded-[10px] border p-1">
-            <button
-              onClick={() => setTab("login")}
-              className={`font-500 flex-1 rounded-[7px] py-[9px] font-sans text-[14px] transition-all duration-150 ${
-                tab === "login"
-                  ? "bg-surface text-text shadow-sm"
-                  : "text-text-muted hover:text-text-sub bg-transparent"
-              }`}
-            >
-              Entrar
-            </button>
-            <button
-              onClick={() => setTab("register")}
-              className={`font-500 flex-1 rounded-[7px] py-[9px] font-sans text-[14px] transition-all duration-150 ${
-                tab === "register"
-                  ? "bg-surface text-text shadow-sm"
-                  : "text-text-muted hover:text-text-sub bg-transparent"
-              }`}
-            >
-              Criar conta
-            </button>
-          </div>
-
-          {tab === "login" ? (
-            <LoginForm onSwitch={() => setTab("register")} />
-          ) : (
-            <RegisterForm onSwitch={() => setTab("login")} />
+          {/* Tabs — hidden mid-flow, where switching would drop the pending challenge. */}
+          {view === null && (
+            <div className="border-border bg-surface2 mb-7 flex rounded-[10px] border p-1">
+              <button
+                onClick={() => setTab("login")}
+                className={`font-500 flex-1 rounded-[7px] py-[9px] font-sans text-[14px] transition-all duration-150 ${
+                  tab === "login"
+                    ? "bg-surface text-text shadow-sm"
+                    : "text-text-muted hover:text-text-sub bg-transparent"
+                }`}
+              >
+                Entrar
+              </button>
+              <button
+                onClick={() => setTab("register")}
+                className={`font-500 flex-1 rounded-[7px] py-[9px] font-sans text-[14px] transition-all duration-150 ${
+                  tab === "register"
+                    ? "bg-surface text-text shadow-sm"
+                    : "text-text-muted hover:text-text-sub bg-transparent"
+                }`}
+              >
+                Criar conta
+              </button>
+            </div>
           )}
+
+          {view?.kind === "verify" && <VerifyEmailForm email={view.email} onBack={backToLogin} />}
+
+          {view?.kind === "twoFactor" && (
+            <TwoFactorForm challengeToken={view.challengeToken} onBack={backToLogin} />
+          )}
+
+          {view?.kind === "forgot" && (
+            <ForgotPasswordForm
+              defaultEmail={view.email}
+              onCodeSent={(email) => setView({ kind: "reset", email })}
+              onBack={backToLogin}
+            />
+          )}
+
+          {view?.kind === "reset" && (
+            <ResetPasswordForm
+              email={view.email}
+              onDone={() => {
+                setNotice("Senha redefinida. Entre com a nova senha.");
+                backToLogin();
+              }}
+              onBack={backToLogin}
+            />
+          )}
+
+          {view === null &&
+            (tab === "login" ? (
+              <LoginForm
+                onSwitch={() => setTab("register")}
+                onChallenge={handleChallenge}
+                onForgotPassword={(email) => setView({ kind: "forgot", email })}
+                notice={notice}
+              />
+            ) : (
+              <RegisterForm
+                onSwitch={() => setTab("login")}
+                onRegistered={(email) => setView({ kind: "verify", email })}
+              />
+            ))}
         </div>
       </div>
     </div>

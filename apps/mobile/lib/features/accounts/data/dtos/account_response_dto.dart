@@ -10,6 +10,7 @@ class GetAccountItemResponseDto {
     required this.type,
     required this.currentAmount,
     required this.isDefaultAccount,
+    this.creditLimit,
   });
 
   final int id;
@@ -20,6 +21,9 @@ class GetAccountItemResponseDto {
 
   final int currentAmount;
   final bool isDefaultAccount;
+
+  /// Credit limit in cents. Only present for Credit accounts.
+  final int? creditLimit;
 
   factory GetAccountItemResponseDto.fromJson(Map<String, dynamic> json) =>
       _$GetAccountItemResponseDtoFromJson(json);

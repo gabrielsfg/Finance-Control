@@ -383,7 +383,7 @@ export function AnalyticsFilters({ filter, onChange, mode }: Props) {
               <button onClick={clearAll} className="text-text-muted hover:text-text w-full rounded-lg py-1.5 text-center text-[12px] transition-colors hover:bg-surface3">
                 Limpar tudo
               </button>
-              <button onClick={apply} className="bg-green hover:bg-green/90 w-full rounded-lg py-1.5 text-center text-[12px] font-semibold text-black transition-colors">
+              <button onClick={apply} className="bg-brand hover:bg-brand/90 w-full rounded-lg py-1.5 text-center text-[12px] font-semibold text-white transition-colors">
                 Aplicar
               </button>
             </div>

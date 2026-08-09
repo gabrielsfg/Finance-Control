@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDateMonth } from "@/lib/utils/formatDate";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import type { TopCategoryItem } from "@/lib/types/dashboard.types";
+import { pieAnim } from "@/lib/config/chartAnimation";
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
@@ -64,6 +65,7 @@ export const CategoryDonutChart = ({ categories }: Props) => {
         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <PieChart>
             <Pie
+              {...pieAnim()}
               data={data}
               cx="50%"
               cy="50%"

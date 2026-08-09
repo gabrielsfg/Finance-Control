@@ -3,6 +3,7 @@
 import { AnalyticsHeader } from "./components/AnalyticsHeader";
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
+import { AnimatedCurrency } from "@/components/shared/AnimatedValue";
 import { ProjectedNetWorthChart } from "./projections/components/ProjectedNetWorthChart";
 import { PassiveIncomeChart } from "./projections/components/PassiveIncomeChart";
 import { SavingsRateChart } from "./projections/components/SavingsRateChart";
@@ -26,7 +27,6 @@ import {
   useCommitmentsImpact,
 } from "./hooks/useAnalytics";
 import { useAnalyticsFilter } from "./AnalyticsFilterContext";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 export function AnalyticsProjectionsPage() {
   const { start, finish, activeTagIds } = useAnalyticsFilter();
@@ -82,16 +82,16 @@ export function AnalyticsProjectionsPage() {
           </div>
           <div className="grid grid-cols-3 gap-6">
             {[
-              { label: "Próx. compromissos", value: nextCommitments > 0 ? formatCurrency(nextCommitments / 100) : "—", color: "var(--gold)" },
-              { label: "Patrimônio em 12m",  value: projectedIn12m > 0  ? formatCurrency(projectedIn12m / 100)  : "—", color: "var(--panel-foreground)" },
-              { label: "Meta poupança",      value: annualSavingsGoal > 0 ? formatCurrency(annualSavingsGoal / 100) : "—", color: "var(--panel-foreground)" },
-            ].map(({ label, value, color }) => (
+              { label: "Próx. compromissos", cents: nextCommitments, color: "var(--gold)" },
+              { label: "Patrimônio em 12m",  cents: projectedIn12m,  color: "var(--panel-foreground)" },
+              { label: "Meta poupança",      cents: annualSavingsGoal, color: "var(--panel-foreground)" },
+            ].map(({ label, cents, color }) => (
               <div key={label}>
                 <div className="font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--panel-muted)] mb-[6px]">
                   {label}
                 </div>
                 <div className="font-mono text-[17px] font-semibold leading-snug" style={{ color }}>
-                  {value}
+                  {cents > 0 ? <AnimatedCurrency cents={cents} /> : "—"}
                 </div>
               </div>
             ))}
@@ -103,7 +103,7 @@ export function AnalyticsProjectionsPage() {
       <FinancialTimelineChart data={milestones.data ?? { timeline: [], milestones: [] }} />
 
       {/* Grid 2 colunas com os gráficos */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="stagger grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ProjectedNetWorthChart data={netWorthProjection.data ?? { historical: [], projected: [], currentNetWorth: 0, monthlyAvgGrowth: 0, monthsUntilZero: null, monthsUntilTarget: null, targetAmount: null }} />
         <RealNetWorthChart data={realNetWorth.data ?? { points: [], totalNominalGrowthPct: 0, totalRealGrowthPct: 0, totalInflationPct: 0 }} />
         <PassiveIncomeChart data={passiveIncome.data ?? { history: [], projected: [], currentMonthlyPassiveIncome: 0, projectedAnnualPassiveIncome: 0, monthlyLivingCost: 0, coveragePercent: 0, monthsUntilFinancialFreedom: null }} />

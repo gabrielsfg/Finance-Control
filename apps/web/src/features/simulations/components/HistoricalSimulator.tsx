@@ -15,6 +15,7 @@ import { BENCHMARK_LABELS, BENCHMARK_SEARCH_KEYWORDS } from "@/lib/types/simulat
 import type { AvailableBenchmark } from "@/lib/api/simulation";
 import { MonthRangePicker } from "@/components/shared/MonthRangePicker";
 import { CHART_GRID, axisTick, SERIES, PresetPill, PrimaryButton, ChartTooltip, LegendItem } from "./simShared";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 /** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
 const inputCls =
@@ -531,6 +532,7 @@ export const HistoricalSimulator = () => {
                       />
                       {/* Total aportado */}
                       <Area
+                        {...chartAnim(0)}
                         type="monotone"
                         dataKey="invested"
                         name="Total aportado"
@@ -542,6 +544,7 @@ export const HistoricalSimulator = () => {
                       />
                       {/* Patrimônio real */}
                       <Area
+                        {...chartAnim(1)}
                         type="monotone"
                         dataKey="value"
                         name="Patrimônio real"
@@ -553,6 +556,7 @@ export const HistoricalSimulator = () => {
                       />
                       {/* Rendimento mensal como linha */}
                       <Line
+                        {...chartAnim(2)}
                         type="monotone"
                         dataKey="interest"
                         name="Rendimento/mês"

@@ -20,6 +20,7 @@ import {
   PRESET_ASSETS, PRESET_ASSET_GROUPS,
 } from "@/lib/types/simulation";
 import { CHART_GRID, axisTick, SERIES, PresetPill, SegRow, SegOption } from "./simShared";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 /** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
 const inputCls =
@@ -116,10 +117,10 @@ function AssetPicker({
   }, [search, activeGroup]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
         style={{ background: "var(--surface)", borderColor: "var(--border-color)" }}
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-[20px] border shadow-2xl"
+        className="anim-pop flex max-h-[85vh] w-full max-w-2xl flex-col rounded-[20px] border shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-[var(--border-color)] px-5 py-4">
@@ -591,8 +592,9 @@ export const ScenarioComparator = () => {
                     <XAxis dataKey="label" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                     <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v / 100)} width={72} />
                     <Tooltip content={<CustomTooltip />} />
-                    {liveScenarios.map((s) => (
+                    {liveScenarios.map((s, i) => (
                       <Line
+                        {...chartAnim(i)}
                         key={s.id}
                         type="monotone"
                         dataKey={s.label}

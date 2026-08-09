@@ -6,7 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/app_locale.dart';
+import '../../../core/utils/account_visuals.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/models/account.dart';
 import '../providers/accounts_provider.dart';
@@ -31,31 +31,12 @@ class AccountsPage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
-              const _Header(),
+              const PageHeader(title: 'Contas'),
               const SizedBox(height: 20),
               accountsAsync.when(
-                loading: () => const _NetWorthCard(
-                  netWorthCents: 0,
-                  includedCount: 0,
-                  excludedCount: 0,
-                  totalCount: 0,
-                ),
-                error: (_, s) => const _NetWorthCard(
-                  netWorthCents: 0,
-                  includedCount: 0,
-                  excludedCount: 0,
-                  totalCount: 0,
-                ),
-                data: (accounts) {
-                  final netWorth = accounts
-                      .fold(0, (sum, a) => sum + a.balanceCents);
-                  return _NetWorthCard(
-                    netWorthCents: netWorth,
-                    includedCount: accounts.length,
-                    excludedCount: 0,
-                    totalCount: accounts.length,
-                  );
-                },
+                loading: () => const _AccountsSummary(accounts: []),
+                error: (_, s) => const _AccountsSummary(accounts: []),
+                data: (accounts) => _AccountsSummary(accounts: accounts),
               ),
               const SizedBox(height: 24),
               accountsAsync.when(
@@ -75,169 +56,43 @@ class AccountsPage extends ConsumerWidget {
   }
 }
 
-// ── Header ─────────────────────────────────────────────────────────────────
+// ── Summary (totalizador) ────────────────────────────────────────────────────
+//
+// Total held in non-credit accounts (hero) plus the credit-card view: current
+// invoice to pay, available credit limit, and the cards' net balance. Mirrors
+// the web accounts summary.
 
-class _Header extends StatelessWidget {
-  const _Header();
+class _AccountsSummary extends StatelessWidget {
+  const _AccountsSummary({required this.accounts});
+
+  final List<Account> accounts;
 
   @override
   Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
+    var totalInAccounts = 0;
+    var creditBalance = 0;
+    var currentInvoice = 0;
+    var availableLimit = 0;
 
-    return Row(
-      children: [
-        const SizedBox(width: 36),
-        Expanded(
-          child: Text(
-            'Accounts',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.body(t.txtPrimary).copyWith(
-              fontWeight: FontWeight.w700,
-              fontSize: 17,
-            ),
-          ),
-        ),
-        _AddAccountButton(),
+    for (final a in accounts) {
+      if (a.isCredit) {
+        creditBalance += a.balanceCents;
+        currentInvoice += a.balanceCents.abs();
+        final free = (a.creditLimitCents ?? 0) - a.balanceCents.abs();
+        if (free > 0) availableLimit += free;
+      } else {
+        totalInAccounts += a.balanceCents;
+      }
+    }
+
+    return SummaryPanel(
+      eyebrow: 'TOTAL EM CONTAS',
+      valueCents: totalInAccounts,
+      stats: [
+        SummaryStat(label: 'FATURA ATUAL', valueCents: currentInvoice),
+        SummaryStat(label: 'DISPONÍVEL', valueCents: availableLimit),
+        SummaryStat(label: 'SALDO CARTÕES', valueCents: creditBalance),
       ],
-    );
-  }
-}
-
-class _AddAccountButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push('/accounts/create'),
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: AppColors.primaryGradient,
-          boxShadow: AppShadows.fabShadow,
-        ),
-        child: const Icon(LucideIcons.plus, color: Colors.white, size: 18),
-      ),
-    );
-  }
-}
-
-// ── Net Worth Card ─────────────────────────────────────────────────────────
-
-class _NetWorthCard extends StatelessWidget {
-  final int netWorthCents;
-  final int includedCount;
-  final int excludedCount;
-  final int totalCount;
-
-  const _NetWorthCard({
-    required this.netWorthCents,
-    required this.includedCount,
-    required this.excludedCount,
-    required this.totalCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
-
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'NET WORTH',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.caption(t.txtTertiary).copyWith(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.0,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            fmt.formatCurrency(netWorthCents),
-            textAlign: TextAlign.center,
-            style: AppTextStyles.moneyLg(t.txtPrimary).copyWith(fontSize: 34),
-          ),
-          const SizedBox(height: 16),
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: t.divider.withValues(alpha: t.isDark ? 0.4 : 0.6),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _NetWorthStat(
-                label: 'Included',
-                count: includedCount,
-                icon: LucideIcons.checkCircle,
-                color: t.success,
-              ),
-              Container(
-                width: 1,
-                height: 32,
-                color: t.divider.withValues(alpha: t.isDark ? 0.4 : 0.6),
-              ),
-              _NetWorthStat(
-                label: 'Excluded',
-                count: excludedCount,
-                icon: LucideIcons.minusCircle,
-                color: t.txtTertiary,
-              ),
-              Container(
-                width: 1,
-                height: 32,
-                color: t.divider.withValues(alpha: t.isDark ? 0.4 : 0.6),
-              ),
-              _NetWorthStat(
-                label: 'Total',
-                count: totalCount,
-                icon: LucideIcons.wallet,
-                color: t.primary,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NetWorthStat extends StatelessWidget {
-  final String label;
-  final int count;
-  final IconData icon;
-  final Color color;
-
-  const _NetWorthStat({
-    required this.label,
-    required this.count,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(height: 4),
-          Text(
-            '$count',
-            style: AppTextStyles.h3(t.txtPrimary).copyWith(fontSize: 16),
-          ),
-          Text(
-            label,
-            style: AppTextStyles.caption(t.txtTertiary),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -258,10 +113,10 @@ class _AccountsSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('My Accounts', style: AppTextStyles.h3(t.txtPrimary)),
+            Text('Minhas contas', style: AppTextStyles.h3(t.txtPrimary)),
             const Spacer(),
             Text(
-              '${accounts.length} accounts',
+              '${accounts.length} contas',
               style: AppTextStyles.bodySm(t.txtTertiary),
             ),
           ],
@@ -283,36 +138,24 @@ class _AccountCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final isNegative = account.balanceCents < 0;
-    final balanceColor = isNegative ? t.error : t.txtPrimary;
 
-    return GestureDetector(
-      onTap: () => context.push('/accounts/${account.id}/edit'),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        onTap: () => context.push('/accounts/${account.id}'),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: t.isDark
-              ? const Color(0xFF1C1830).withValues(alpha: 0.72)
-              : Colors.white.withValues(alpha: 0.9),
-          borderRadius: AppRadius.xlAll,
-          border: Border.all(
-            color: t.isDark
-                ? Colors.white.withValues(alpha: 0.07)
-                : const Color(0xFF7C3AED).withValues(alpha: 0.12),
-          ),
-          boxShadow: t.isDark ? [] : AppShadows.cardLight,
-        ),
+        borderRadius: AppRadius.xlAll,
         child: Row(
           children: [
             Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: t.primary.withValues(alpha: 0.15),
+                color: t.accent.withValues(alpha: 0.14),
                 borderRadius: AppRadius.lgAll,
               ),
-              child: Icon(LucideIcons.wallet, color: t.primary, size: 22),
+              child: Icon(accountTypeIcon(account.type),
+                  color: t.accent, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -333,9 +176,14 @@ class _AccountCard extends StatelessWidget {
                       ),
                       if (account.isDefault) ...[
                         const SizedBox(width: 6),
-                        _Badge(label: 'Default', color: t.primary),
+                        const TonalTag('Padrão'),
                       ],
                     ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    accountTypeLabel(account.type),
+                    style: AppTextStyles.bodySm(t.txtTertiary),
                   ),
                 ],
               ),
@@ -344,11 +192,7 @@ class _AccountCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  AppLocaleScope.of(context).formatCurrency(account.balanceCents),
-                  style: AppTextStyles.moneyMd(balanceColor)
-                      .copyWith(fontSize: 15),
-                ),
+                Money(account.balanceCents, size: 15, weight: FontWeight.w600),
                 const SizedBox(height: 2),
                 Icon(
                   LucideIcons.chevronRight,
@@ -358,36 +202,6 @@ class _AccountCard extends StatelessWidget {
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _Badge({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 0.8,
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: color,
         ),
       ),
     );
@@ -411,11 +225,11 @@ class _ErrorView extends StatelessWidget {
           Icon(LucideIcons.alertCircle, color: t.error, size: 32),
           const SizedBox(height: 8),
           Text(
-            'Failed to load accounts',
+            'Não foi possível carregar as contas',
             style: AppTextStyles.body(t.txtSecondary),
           ),
           const SizedBox(height: 12),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
+          TextButton(onPressed: onRetry, child: const Text('Tentar novamente')),
         ],
       ),
     );

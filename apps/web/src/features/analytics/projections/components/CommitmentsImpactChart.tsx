@@ -7,6 +7,7 @@ import { Card, CardHead } from "@/components/shared/Card";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 import type { CommitmentsImpactResponse } from "@/lib/types/analytics.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -83,9 +84,10 @@ export function CommitmentsImpactChart({ data }: Props) {
               axisLine={false} tickLine={false} width={56}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="income" name="Receita" fill="var(--moss)" opacity={0.7} radius={[3, 3, 0, 0]} />
-            <Bar dataKey="commitments" name="Comprometido" fill="var(--clay)" opacity={0.7} radius={[3, 3, 0, 0]} />
+            <Bar {...chartAnim(0)} dataKey="income" name="Receita" fill="var(--moss)" opacity={0.7} radius={[3, 3, 0, 0]} />
+            <Bar {...chartAnim(1)} dataKey="commitments" name="Comprometido" fill="var(--clay)" opacity={0.7} radius={[3, 3, 0, 0]} />
             <Line
+              {...chartAnim(2)}
               type="monotone"
               dataKey="balance"
               name="Saldo projetado"

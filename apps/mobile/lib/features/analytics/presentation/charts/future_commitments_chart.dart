@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_locale.dart';
+import '../../../../shared/widgets/chart_reveal.dart';
 import '../../providers/analytics_provider.dart';
 
 class FutureCommitmentsChart extends ConsumerWidget {
@@ -13,8 +15,8 @@ class FutureCommitmentsChart extends ConsumerWidget {
 
   final bool compact;
 
-  static const _monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  static const _monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +31,7 @@ class FutureCommitmentsChart extends ConsumerWidget {
           return SizedBox(
             height: 80,
             child: Center(
-              child: Text('No upcoming commitments',
+              child: Text('Nenhum compromisso futuro',
                   style: AppTextStyles.bodySm(t.txtTertiary)),
             ),
           );
@@ -45,7 +47,7 @@ class FutureCommitmentsChart extends ConsumerWidget {
             barRods: [
               BarChartRodData(
                 toY: item.totalCommitted.toDouble(),
-                color: t.warning,
+                color: t.gold,
                 width: compact ? 20.0 : 28.0,
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -58,46 +60,50 @@ class FutureCommitmentsChart extends ConsumerWidget {
           children: [
             SizedBox(
               height: compact ? 140 : 200,
-              child: BarChart(
-                BarChartData(
-                  maxY: maxVal * 1.15,
-                  barGroups: groups,
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) =>
-                        FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(),
-                    rightTitles: const AxisTitles(),
-                    topTitles: const AxisTitles(),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (val, _) {
-                          final i = val.toInt();
-                          if (i < 0 || i >= items.length) return const SizedBox();
-                          return Text(
-                            _monthNames[items[i].month - 1],
-                            style: AppTextStyles.caption(t.txtTertiary)
-                                .copyWith(fontSize: 10),
-                          );
-                        },
+              child: ChartReveal(
+                mode: ChartRevealMode.grow,
+                child: BarChart(
+                  BarChartData(
+                    maxY: maxVal * 1.15,
+                    barGroups: groups,
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (_) =>
+                          FlLine(color: t.divider.withValues(alpha: 0.5), strokeWidth: 1),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(),
+                      rightTitles: const AxisTitles(),
+                      topTitles: const AxisTitles(),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (val, _) {
+                            final i = val.toInt();
+                            if (i < 0 || i >= items.length) return const SizedBox();
+                            return Text(
+                              _monthNames[items[i].month - 1],
+                              style: AppTextStyles.mono(t.txtTertiary, fontSize: 10),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    barTouchData: BarTouchData(
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (_) => t.surface,
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+                          '${_monthNames[items[group.x].month - 1]}\n${fmt.formatCurrency(items[group.x].totalCommitted)}',
+                          AppTextStyles.bodySm(t.txtPrimary)
+                              .copyWith(fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                   ),
-                  barTouchData: BarTouchData(
-                    touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (_) => t.surface,
-                      getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
-                        '${_monthNames[items[group.x].month - 1]}\n${fmt.formatCurrency(items[group.x].totalCommitted)}',
-                        AppTextStyles.bodySm(t.txtPrimary)
-                            .copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
+                  duration: AppMotion.slow,
+                  curve: AppMotion.settle,
                 ),
               ),
             ),
@@ -126,9 +132,7 @@ class _MonthDetail extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: AppSpacing.cardPaddingSm,
       decoration: BoxDecoration(
-        color: t.isDark
-            ? Colors.white.withValues(alpha: 0.04)
-            : Colors.black.withValues(alpha: 0.03),
+        color: t.surfaceEl,
         borderRadius: AppRadius.baseAll,
       ),
       child: Column(
@@ -141,7 +145,7 @@ class _MonthDetail extends StatelessWidget {
                       .copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
               const Spacer(),
               Text(fmt.formatCurrency(item.totalCommitted),
-                  style: AppTextStyles.body(t.warning)
+                  style: AppTextStyles.body(t.gold)
                       .copyWith(fontWeight: FontWeight.w700, fontSize: 13)),
             ],
           ),
@@ -173,4 +177,4 @@ Widget _loader(bool compact) =>
 
 Widget _err(AppThemeTokens t) => SizedBox(
     height: 80,
-    child: Center(child: Text('Could not load data', style: AppTextStyles.bodySm(t.txtTertiary))));
+    child: Center(child: Text('Não foi possível carregar os dados', style: AppTextStyles.bodySm(t.txtTertiary))));

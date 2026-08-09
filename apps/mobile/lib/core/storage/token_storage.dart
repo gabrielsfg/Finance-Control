@@ -8,6 +8,7 @@ class TokenStorage {
 
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
+  static const _trustedDeviceTokenKey = 'trusted_device_token';
 
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -33,4 +34,18 @@ class TokenStorage {
       _storage.delete(key: _refreshTokenKey),
     ]);
   }
+
+  // ── Trusted device ────────────────────────────────────────────────────────
+  // Deliberately outside saveTokens/clearTokens: this token says "this phone is
+  // known", not "someone is signed in". Logging out must not discard it, or
+  // every logout would cost the user another two-factor code on the way back.
+
+  Future<String?> getTrustedDeviceToken() =>
+      _storage.read(key: _trustedDeviceTokenKey);
+
+  Future<void> saveTrustedDeviceToken(String token) =>
+      _storage.write(key: _trustedDeviceTokenKey, value: token);
+
+  Future<void> clearTrustedDeviceToken() =>
+      _storage.delete(key: _trustedDeviceTokenKey);
 }

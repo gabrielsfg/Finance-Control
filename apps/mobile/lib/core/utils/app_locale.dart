@@ -78,6 +78,22 @@ class AppLocale {
     return '$sign$currencySymbol $formatted';
   }
 
+  /// Splits [cents] into its display parts so a widget can style the currency
+  /// symbol and the decimals differently from the integer (the Quantia "money
+  /// as typography" signature). `decimal` includes the separator (",56"/".56").
+  ({String symbol, String integer, String decimal, bool negative})
+      currencyParts(int cents) {
+    final absStr = (cents.abs() / 100).toStringAsFixed(2);
+    final parts = absStr.split('.');
+    final decSep = _usesCommaSeparator ? ',' : '.';
+    return (
+      symbol: currencySymbol,
+      integer: _groupThousands(parts[0]),
+      decimal: '$decSep${parts[1]}',
+      negative: cents < 0,
+    );
+  }
+
   String _groupThousands(String intStr) {
     final sep = _usesCommaSeparator ? '.' : ',';
     final buf = StringBuffer();

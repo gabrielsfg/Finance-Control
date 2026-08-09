@@ -23,6 +23,7 @@ import {
   Globe,
   Landmark,
   ChevronDown,
+  ChevronsLeft,
   Percent,
   PiggyBank,
   History,
@@ -129,9 +130,35 @@ function BrandGlyph() {
   );
 }
 
+/**
+ * Labels stay mounted and squeeze to nothing as the rail narrows, so they
+ * travel with the sidebar width instead of vanishing on the first frame.
+ */
+function NavLabel({
+  collapsed,
+  children,
+  className,
+}: {
+  collapsed: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-300 ease-out",
+        collapsed ? "pointer-events-none max-w-0 opacity-0" : "max-w-[170px] opacity-100",
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 export const Sidebar = () => {
   const pathname = usePathname();
-  const { theme } = useUIStore();
+  const { sidebarCollapsed, toggleSidebar, setSidebarCollapsed } = useUIStore();
   const { user } = useAuthStore();
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
@@ -141,6 +168,13 @@ export const Sidebar = () => {
   }));
 
   function toggleGroup(href: string) {
+    // On the collapsed rail there is no room for a submenu — expand the sidebar
+    // and open the group in one gesture.
+    if (sidebarCollapsed) {
+      setSidebarCollapsed(false);
+      setOpenGroups((prev) => ({ ...prev, [href]: true }));
+      return;
+    }
     setOpenGroups((prev) => ({ ...prev, [href]: !prev[href] }));
   }
 
@@ -153,31 +187,69 @@ export const Sidebar = () => {
     ? user.name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()
     : "U";
 
-  const isDark = theme === "dark";
+  const collapsed = sidebarCollapsed;
 
   return (
-    <aside className="relative flex h-full w-[252px] shrink-0 flex-col border-r border-[var(--border-color)] bg-gradient-to-b from-[var(--surface)] to-[var(--surface2)]">
+    <aside
+      className={cn(
+        "relative flex h-full shrink-0 flex-col border-r border-[var(--border-color)] bg-gradient-to-b from-[var(--surface)] to-[var(--surface2)]",
+        "transition-[width] duration-300 ease-out",
+        collapsed ? "w-[76px]" : "w-[252px]",
+      )}
+    >
+      {/* Collapse toggle — a squared handle straddling the rail edge, vertically
+          centred on the brand glyph so it reads as part of the header chrome.
+          Squared radius (not a circle) to stay inside the Quantia radius scale;
+          one icon that rotates, so the control animates with the rail. */}
+      <button
+        onClick={toggleSidebar}
+        aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+        aria-expanded={!collapsed}
+        title={collapsed ? "Expandir menu" : "Recolher menu"}
+        className={cn(
+          "absolute -right-[15px] top-[30px] z-20 flex h-[30px] w-[30px] items-center justify-center rounded-[10px]",
+          "border border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-sub)]",
+          "shadow-[var(--shadow-sm)] transition-colors duration-200",
+          "hover:border-[var(--brand-cobalt)] hover:bg-[var(--surface2)] hover:text-[var(--brand-cobalt)]",
+        )}
+      >
+        <ChevronsLeft
+          size={15}
+          strokeWidth={2}
+          className={cn("transition-transform duration-300 ease-out", collapsed && "rotate-180")}
+        />
+      </button>
+
       {/* Brand */}
-      <div className="flex items-center gap-[11px] px-[18px] pt-[26px] pb-4">
+      <div className={cn("flex items-center gap-[11px] pt-[26px] pb-4", collapsed ? "justify-center px-0" : "px-[18px]")}>
         <BrandGlyph />
-        <div>
-          <div className="font-display text-[22px] font-extrabold tracking-[-0.02em] text-[var(--text)]">
-            Quan<span className="text-[var(--brand-accent)]">tia</span>
+        {!collapsed && (
+          <div className="anim-fade">
+            <div className="font-display text-[22px] font-extrabold tracking-[-0.02em] text-[var(--text)]">
+              Quan<span className="text-[var(--brand-accent)]">tia</span>
+            </div>
+            <span className="font-mono text-[9.5px] tracking-[0.22em] uppercase text-[var(--text-sub)] mt-[-3px] block">
+              controle financeiro
+            </span>
           </div>
-          <span className="font-mono text-[9.5px] tracking-[0.22em] uppercase text-[var(--text-sub)] mt-[-3px] block">
-            controle financeiro
-          </span>
-        </div>
+        )}
       </div>
 
       {/* Nav */}
-      <nav className="flex flex-1 flex-col overflow-y-auto px-[18px] pb-4" style={{ gap: "6px" }}>
+      <nav
+        className={cn("flex flex-1 flex-col overflow-y-auto overflow-x-hidden pb-4", collapsed ? "px-[14px]" : "px-[18px]")}
+        style={{ gap: "6px" }}
+      >
         {navGroups.map((group) => (
           <div key={group.label} className="flex flex-col gap-[2px]">
-            {/* Group label */}
-            <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--text-sub)] px-3 py-[6px]">
-              {group.label}
-            </div>
+            {/* Group label — becomes a hairline divider on the collapsed rail */}
+            {collapsed ? (
+              <div className="mx-auto my-[7px] h-px w-6 bg-[var(--border-color)]" aria-hidden="true" />
+            ) : (
+              <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--text-sub)] px-3 py-[6px]">
+                {group.label}
+              </div>
+            )}
 
             {/* Group items */}
             {group.items.map((item) => {
@@ -185,62 +257,85 @@ export const Sidebar = () => {
               const active = isItemActive(item);
 
               if (item.children) {
-                const open = !!openGroups[item.href];
+                const open = !collapsed && !!openGroups[item.href];
 
                 return (
                   <div key={item.href}>
                     <button
                       onClick={() => toggleGroup(item.href)}
+                      title={collapsed ? item.label : undefined}
                       className={cn(
-                        "relative flex w-full items-center gap-[11px] rounded-[13px] px-3 py-[9px] text-[14px] font-medium transition-colors duration-150",
+                        "relative flex w-full items-center rounded-[13px] py-[9px] text-[14px] font-medium transition-[background-color,color,gap,padding] duration-300",
+                        collapsed ? "justify-center gap-0 px-0" : "gap-[11px] px-3",
                         active
                           ? "bg-[var(--text)] text-[var(--bg)]"
                           : "text-[var(--text)] hover:bg-[var(--surface2)]",
                       )}
                     >
                       {active && (
-                        <span className="absolute -left-[18px] top-1/2 -translate-y-1/2 w-1 h-[22px] rounded-r-[4px] bg-[var(--brand-accent)]" />
+                        <span
+                          className={cn(
+                            "absolute top-1/2 -translate-y-1/2 w-1 h-[22px] rounded-r-[4px] bg-[var(--brand-accent)]",
+                            collapsed ? "-left-[14px]" : "-left-[18px]",
+                          )}
+                        />
                       )}
                       <Icon
                         size={18}
                         strokeWidth={1.7}
                         className={cn("shrink-0", active ? "opacity-100" : "opacity-70")}
                       />
-                      <span className="flex-1 text-left">{item.label}</span>
+                      <NavLabel collapsed={collapsed} className={collapsed ? undefined : "flex-1 text-left"}>
+                        {item.label}
+                      </NavLabel>
                       <ChevronDown
                         size={13}
-                        className={cn("shrink-0 opacity-60 transition-transform duration-200", open && "rotate-180")}
+                        className={cn(
+                          "shrink-0 opacity-60 transition-[transform,width,opacity] duration-300",
+                          collapsed && "w-0 opacity-0",
+                          open && "rotate-180",
+                        )}
                       />
                     </button>
 
-                    {open && (
-                      <div className="ml-[22px] mt-[2px] flex flex-col gap-[1px] border-l border-[var(--border-color)] pl-3">
-                        {item.children.map((child) => {
-                          const ChildIcon = child.icon;
-                          const childActive =
-                            child.href === item.href
-                              ? pathname === child.href
-                              : pathname === child.href || pathname.startsWith(`${child.href}/`);
-                          return (
-                            <Link
-                              key={child.href}
-                              href={child.href}
-                              className={cn(
-                                "flex items-center gap-2 rounded-[9px] px-2 py-[6px] text-[13px] transition-colors duration-150",
-                                childActive
-                                  ? "text-[var(--brand-accent)] font-semibold"
-                                  : "text-[var(--text-sub)] hover:bg-[var(--surface2)] hover:text-[var(--text)]",
-                              )}
-                            >
-                              {ChildIcon && (
-                                <ChildIcon size={13} strokeWidth={1.75} className="shrink-0" />
-                              )}
-                              {child.label}
-                            </Link>
-                          );
-                        })}
+                    {/* Submenu — grid-rows trick so the height animates both ways. */}
+                    <div
+                      className="grid transition-[grid-template-rows,opacity] duration-[250ms] ease-out"
+                      style={{
+                        gridTemplateRows: open ? "1fr" : "0fr",
+                        opacity: open ? 1 : 0,
+                      }}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="ml-[22px] mt-[2px] flex flex-col gap-[1px] border-l border-[var(--border-color)] pl-3">
+                          {item.children.map((child) => {
+                            const ChildIcon = child.icon;
+                            const childActive =
+                              child.href === item.href
+                                ? pathname === child.href
+                                : pathname === child.href || pathname.startsWith(`${child.href}/`);
+                            return (
+                              <Link
+                                key={child.href}
+                                href={child.href}
+                                tabIndex={open ? undefined : -1}
+                                className={cn(
+                                  "flex items-center gap-2 rounded-[9px] px-2 py-[6px] text-[13px] transition-colors duration-150",
+                                  childActive
+                                    ? "text-[var(--brand-accent)] font-semibold"
+                                    : "text-[var(--text-sub)] hover:bg-[var(--surface2)] hover:text-[var(--text)]",
+                                )}
+                              >
+                                {ChildIcon && (
+                                  <ChildIcon size={13} strokeWidth={1.75} className="shrink-0" />
+                                )}
+                                {child.label}
+                              </Link>
+                            );
+                          })}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               }
@@ -249,24 +344,31 @@ export const Sidebar = () => {
                 <Link
                   key={item.href}
                   href={item.href}
+                  title={collapsed ? item.label : undefined}
                   className={cn(
-                    "relative flex items-center gap-[11px] rounded-[13px] px-3 py-[9px] text-[14px] font-medium transition-colors duration-150",
+                    "relative flex items-center rounded-[13px] py-[9px] text-[14px] font-medium transition-[background-color,color,gap,padding] duration-300",
+                    collapsed ? "justify-center gap-0 px-0" : "gap-[11px] px-3",
                     active
                       ? "bg-[var(--text)] text-[var(--bg)]"
                       : "text-[var(--text)] hover:bg-[var(--surface2)]",
                   )}
                 >
                   {active && (
-                    <span className="absolute -left-[18px] top-1/2 -translate-y-1/2 w-1 h-[22px] rounded-r-[4px] bg-[var(--brand-accent)]" />
+                    <span
+                      className={cn(
+                        "absolute top-1/2 -translate-y-1/2 w-1 h-[22px] rounded-r-[4px] bg-[var(--brand-accent)]",
+                        collapsed ? "-left-[14px]" : "-left-[18px]",
+                      )}
+                    />
                   )}
                   <Icon
                     size={18}
                     strokeWidth={1.7}
                     className={cn("shrink-0", active ? "opacity-100" : "opacity-70")}
                   />
-                  <span>{item.label}</span>
-                  {active && (
-                    <span className="ml-auto h-[7px] w-[7px] rounded-full bg-[var(--clay)]" />
+                  <NavLabel collapsed={collapsed}>{item.label}</NavLabel>
+                  {active && !collapsed && (
+                    <span className="anim-fade ml-auto h-[7px] w-[7px] rounded-full bg-[var(--clay)]" />
                   )}
                 </Link>
               );
@@ -276,24 +378,41 @@ export const Sidebar = () => {
       </nav>
 
       {/* User chip */}
-      <div className="px-[18px] pb-5">
-        <div className="flex items-center gap-[11px] rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] p-[10px]">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-[var(--brand-cobalt)] to-[#0c1f9c] font-display text-[15px] font-bold text-white">
-            {initials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[13.5px] font-semibold text-[var(--text)] leading-[1.2] truncate">
-              {user?.name ?? "Usuário"}
-            </div>
-            <div className="font-mono text-[10.5px] text-[var(--text-sub)] truncate">plano pessoal</div>
-          </div>
-          <Link
-            href="/profile"
-            className="opacity-55 hover:opacity-100 transition-opacity"
-            aria-label="Perfil"
-          >
-            <Settings size={18} strokeWidth={1.7} className="text-[var(--text)]" />
-          </Link>
+      <div className={cn("pb-5", collapsed ? "px-[14px]" : "px-[18px]")}>
+        <div
+          className={cn(
+            "flex items-center gap-[11px] rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] p-[10px] transition-all duration-300",
+            collapsed && "justify-center px-0",
+          )}
+        >
+          {collapsed ? (
+            <Link
+              href="/profile"
+              title={user?.name ?? "Perfil"}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-[var(--brand-cobalt)] to-[#0c1f9c] font-display text-[15px] font-bold text-white transition-transform duration-200 hover:scale-105"
+            >
+              {initials}
+            </Link>
+          ) : (
+            <>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-[var(--brand-cobalt)] to-[#0c1f9c] font-display text-[15px] font-bold text-white">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1 anim-fade">
+                <div className="text-[13.5px] font-semibold text-[var(--text)] leading-[1.2] truncate">
+                  {user?.name ?? "Usuário"}
+                </div>
+                <div className="font-mono text-[10.5px] text-[var(--text-sub)] truncate">plano pessoal</div>
+              </div>
+              <Link
+                href="/profile"
+                className="opacity-55 hover:opacity-100 transition-opacity"
+                aria-label="Perfil"
+              >
+                <Settings size={18} strokeWidth={1.7} className="text-[var(--text)]" />
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </aside>

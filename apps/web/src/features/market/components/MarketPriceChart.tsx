@@ -11,6 +11,7 @@ import { Money } from "@/components/shared/Money";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { cn } from "@/lib/utils";
 import type { PricePoint } from "@/lib/types/market.types";
+import { chartAnim } from "@/lib/config/chartAnimation";
 
 type PresetPeriod = "1D" | "7D" | "15D" | "1M" | "3M" | "6M" | "1A" | "5A" | "10A" | "15A";
 type Period = PresetPeriod | "custom";
@@ -233,6 +234,7 @@ export const MarketPriceChart = ({ ticker, history }: Props) => {
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border-color)", strokeWidth: 1 }} />
             <ReferenceLine y={first} stroke="var(--border-color)" strokeDasharray="4 3" />
             <Area
+              {...chartAnim(0)}
               type="monotone"
               dataKey="price"
               stroke={color}

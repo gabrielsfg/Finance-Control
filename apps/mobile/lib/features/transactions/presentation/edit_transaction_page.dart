@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -91,9 +89,9 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
     String? subcategoryError;
 
     final valueInCents = CentsInputFormatter.parseCents(_amountController.text);
-    if (valueInCents <= 0) valueError = 'Enter a valid amount';
-    if (_accountId == null) accountError = 'Select an account';
-    if (_subcategoryId == null) subcategoryError = 'Select a subcategory';
+    if (valueInCents <= 0) valueError = 'Informe um valor válido';
+    if (_accountId == null) accountError = 'Selecione uma conta';
+    if (_subcategoryId == null) subcategoryError = 'Selecione uma subcategoria';
 
     setState(() {
       _accountError = accountError;
@@ -212,9 +210,8 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                         height: 36,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: t.isDark
-                              ? Colors.white.withValues(alpha: 0.08)
-                              : t.primary.withValues(alpha: 0.08),
+                          color: t.surfaceEl,
+                          border: Border.all(color: t.mist),
                         ),
                         child: Icon(Icons.arrow_back,
                             size: 18, color: t.txtPrimary),
@@ -223,13 +220,10 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                     Expanded(
                       child: Text(
                         _isRecurring
-                            ? 'Edit Recurring'
-                            : 'Edit Transaction',
+                            ? 'Editar recorrência'
+                            : 'Editar transação',
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.body(t.txtPrimary).copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 17,
-                        ),
+                        style: AppTextStyles.h3(t.txtPrimary),
                       ),
                     ),
                     const SizedBox(width: 36),
@@ -249,7 +243,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                           children: [
                             // Amount
                             _FieldRow(
-                              label: 'Amount',
+                              label: 'Valor',
                               error: _valueError,
                               child: TextField(
                                 controller: _amountController,
@@ -274,7 +268,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
 
                             // Subcategory
                             _FieldRow(
-                              label: 'Subcategory',
+                              label: 'Subcategoria',
                               error: _subcategoryError,
                               child: GestureDetector(
                                 onTap: () async {
@@ -295,7 +289,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                                   }
                                 },
                                 child: Text(
-                                  _subcategoryName ?? 'Select',
+                                  _subcategoryName ?? 'Selecionar',
                                   style: AppTextStyles.body(
                                     _subcategoryName != null
                                         ? t.txtPrimary
@@ -308,7 +302,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
 
                             // Account
                             _FieldRow(
-                              label: 'Account',
+                              label: 'Conta',
                               error: _accountError,
                               child: GestureDetector(
                                 onTap: () async {
@@ -331,7 +325,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                                   }
                                 },
                                 child: Text(
-                                  _accountName ?? 'Select',
+                                  _accountName ?? 'Selecionar',
                                   style: AppTextStyles.body(
                                     _accountName != null
                                         ? t.txtPrimary
@@ -345,7 +339,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                             // Date (not shown for recurring — backend ignores it)
                             if (!_isRecurring)
                               _FieldRow(
-                                label: 'Date',
+                                label: 'Data',
                                 child: GestureDetector(
                                   onTap: _pickDate,
                                   child: Text(
@@ -360,13 +354,13 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                             // End date (recurring only)
                             if (_isRecurring)
                               _FieldRow(
-                                label: 'End date',
+                                label: 'Data final',
                                 child: GestureDetector(
                                   onTap: _pickEndDate,
                                   child: Text(
                                     _recurringEndDate != null
                                         ? fmt.formatDate(_recurringEndDate!)
-                                        : 'No end date',
+                                        : 'Sem data final',
                                     style: AppTextStyles.body(
                                       _recurringEndDate != null
                                           ? t.txtPrimary
@@ -379,12 +373,12 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
 
                             // Payment method
                             _FieldRow(
-                              label: 'Method',
+                              label: 'Forma',
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   _MethodChip(
-                                    label: 'Debit',
+                                    label: 'Débito',
                                     active: !_isCredit,
                                     onTap: isLoading
                                         ? null
@@ -392,7 +386,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                                   ),
                                   const SizedBox(width: 8),
                                   _MethodChip(
-                                    label: 'Credit',
+                                    label: 'Crédito',
                                     active: _isCredit,
                                     onTap: isLoading
                                         ? null
@@ -404,7 +398,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
 
                             // Description
                             _FieldRow(
-                              label: 'Description',
+                              label: 'Descrição',
                               showDivider: false,
                               child: TextField(
                                 controller: _descriptionController,
@@ -412,7 +406,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                                     .copyWith(fontSize: 14),
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
-                                  hintText: 'Optional',
+                                  hintText: 'Opcional',
                                   hintStyle: AppTextStyles.body(t.txtTertiary)
                                       .copyWith(fontSize: 14),
                                 ),
@@ -435,7 +429,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Editing a recurring transaction updates the template and all future occurrences.',
+                                  'Editar uma transação recorrente atualiza o modelo e todas as ocorrências futuras.',
                                   style: AppTextStyles.caption(t.txtTertiary)
                                       .copyWith(fontSize: 12),
                                 ),
@@ -458,7 +452,7 @@ class _EditTransactionPageState extends ConsumerState<EditTransactionPage> {
                   MediaQuery.viewPaddingOf(context).bottom + 16,
                 ),
                 child: PrimaryButton(
-                  label: isLoading ? 'Saving...' : 'Save changes',
+                  label: isLoading ? 'Salvando...' : 'Salvar alterações',
                   onPressed: isLoading ? null : _submit,
                 ),
               ),
@@ -478,27 +472,9 @@ class _FormCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppThemeTokens.of(context);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: t.isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: t.isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.white.withValues(alpha: 0.9),
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: child,
-        ),
-      ),
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: child,
     );
   }
 }
@@ -552,7 +528,7 @@ class _FieldRow extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: t.divider.withValues(alpha: t.isDark ? 0.35 : 0.6),
+            color: t.mist,
           ),
       ],
     );
@@ -587,9 +563,8 @@ class _SubcategoryPickerPage extends ConsumerWidget {
                         height: 36,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: t.isDark
-                              ? Colors.white.withValues(alpha: 0.08)
-                              : t.primary.withValues(alpha: 0.08),
+                          color: t.surfaceEl,
+                          border: Border.all(color: t.mist),
                         ),
                         child: Icon(Icons.close,
                             size: 18, color: t.txtPrimary),
@@ -597,12 +572,9 @@ class _SubcategoryPickerPage extends ConsumerWidget {
                     ),
                     Expanded(
                       child: Text(
-                        'Select subcategory',
+                        'Selecionar subcategoria',
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.body(t.txtPrimary).copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 17,
-                        ),
+                        style: AppTextStyles.h3(t.txtPrimary),
                       ),
                     ),
                     const SizedBox(width: 36),
@@ -613,7 +585,7 @@ class _SubcategoryPickerPage extends ConsumerWidget {
                 child: categoriesAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Error: $e')),
+                  error: (e, _) => Center(child: Text('Erro: $e')),
                   data: (categories) => ListView.builder(
                     padding: AppSpacing.screenPadding.copyWith(top: 16),
                     itemCount: categories.length,
@@ -652,11 +624,7 @@ class _CategorySection extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 8, top: 16),
           child: Text(
             category.name.toUpperCase(),
-            style: AppTextStyles.caption(t.txtTertiary).copyWith(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-            ),
+            style: AppTextStyles.eyebrow(t.accent),
           ),
         ),
         GlassCard(
@@ -690,8 +658,7 @@ class _CategorySection extends StatelessWidget {
                     Divider(
                       height: 1,
                       thickness: 1,
-                      color: t.divider
-                          .withValues(alpha: t.isDark ? 0.35 : 0.6),
+                      color: t.mist,
                     ),
                 ],
               );
@@ -728,23 +695,21 @@ class _MethodChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: active
-              ? t.primary.withValues(alpha: t.isDark ? 0.20 : 0.10)
+              ? t.accent.withValues(alpha: t.isDark ? 0.20 : 0.10)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.smAll,
           border: Border.all(
             width: active ? 1.5 : 1,
             color: active
-                ? t.primary.withValues(alpha: t.isDark ? 0.55 : 0.45)
-                : t.isDark
-                    ? Colors.white.withValues(alpha: 0.12)
-                    : const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                ? t.accent.withValues(alpha: t.isDark ? 0.55 : 0.45)
+                : t.mist,
           ),
         ),
         child: Center(
           child: Text(
             label,
             style: AppTextStyles.caption(
-              active ? t.primary : t.txtTertiary,
+              active ? t.accent : t.txtTertiary,
             ).copyWith(
               fontSize: 12,
               fontWeight: active ? FontWeight.w600 : FontWeight.w400,
@@ -765,11 +730,11 @@ class _AccountPickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
-    final fmt = AppLocaleScope.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: t.isDark ? const Color(0xFF1C1C2E) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: t.surface,
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(AppRadius.xl3)),
       ),
       padding: EdgeInsets.fromLTRB(
           24, 16, 24, MediaQuery.viewPaddingOf(context).bottom + 24),
@@ -782,18 +747,15 @@ class _AccountPickerSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: t.divider,
+                color: t.mist,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            'Select account',
-            style: AppTextStyles.body(t.txtPrimary).copyWith(
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-            ),
+            'Selecionar conta',
+            style: AppTextStyles.h3(t.txtPrimary),
           ),
           const SizedBox(height: 12),
           ...accounts.map((acc) => ListTile(
@@ -801,9 +763,10 @@ class _AccountPickerSheet extends StatelessWidget {
                 title: Text(acc.name,
                     style: AppTextStyles.body(t.txtPrimary)
                         .copyWith(fontSize: 14)),
-                subtitle: Text(
-                  fmt.formatCurrency(acc.balanceCents),
-                  style: AppTextStyles.mono(t.txtSecondary, fontSize: 12),
+                subtitle: Money(
+                  acc.balanceCents,
+                  size: 12,
+                  color: t.txtSecondary,
                 ),
                 onTap: () => Navigator.of(context).pop(acc),
               )),

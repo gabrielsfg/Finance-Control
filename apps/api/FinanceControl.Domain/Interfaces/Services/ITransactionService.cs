@@ -14,6 +14,10 @@ namespace FinanceControl.Domain.Interfaces.Services
         Task<Result<CreateTransactionResponseDto>> CreateTransactionAsync(CreateTransactionRequestDto requestDto, int userId);
         Task<IEnumerable<GetTransactionResponseDto>> GetAllTransactionsAsync(int userId);
         Task<GetTransactionsFilteredResponseDto> GetAllTransactionsFilteredAsync(GetTransactionsFilterRequestDto requestDto, int userId);
+
+        // Same filters as the list, without the paging — the export is of what the
+        // filters select, not of the page the user stopped on.
+        Task<List<GetTransactionResponseDto>> ExportFilteredTransactionsAsync(GetTransactionsFilterRequestDto requestDto, int userId);
         Task<GetTransactionByIdResponseDto?> GetTransactionByIdAsync(int id, int userId);
         Task<Result<CreateTransactionResponseDto>> UpdateTransactionAsync(UpdateTransactionRequestDto requestDto, int id, int userId);
         Task<Result<IEnumerable<GetTransactionResponseDto>>> DeleteTransactionAsync(int id, int userId);
