@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Services.Extensions;
+using FinanceControl.Services.Seeds;
 using FinanceControl.Services.Services;
 using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
@@ -199,6 +200,14 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+
+// Publishes any legal document version that is not in the database yet. Runs before the
+// first request on purpose: registration records consent against these rows, so an app
+// that starts without them would create accounts with no proof of what was accepted.
+using (var scope = app.Services.CreateScope())
+{
+    await scope.ServiceProvider.GetRequiredService<LegalDocumentSeeder>().SeedAsync();
+}
 
 // ForwardedHeaders must run before anything that reads scheme/IP (HTTPS redirect, cookie policy).
 app.UseForwardedHeaders();

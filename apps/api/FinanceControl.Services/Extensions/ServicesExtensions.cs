@@ -3,6 +3,7 @@ using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Brapi;
 using FinanceControl.Services.Email;
+using FinanceControl.Services.Seeds;
 using FinanceControl.Services.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +31,9 @@ namespace FinanceControl.Services.Extensions
             services.AddScoped<IRecurrencePageService, RecurrencePageService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IAlertRuleService, AlertRuleService>();
+            services.AddScoped<ILegalService, LegalService>();
+            services.AddScoped<IDataExportService, DataExportService>();
+            services.AddScoped<LegalDocumentSeeder>();
             services.AddHttpClient();
 
             services.AddSingleton<RecurringTransactionJobService>();

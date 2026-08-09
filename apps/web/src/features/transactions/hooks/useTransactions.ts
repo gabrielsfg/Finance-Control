@@ -32,6 +32,10 @@ export const useCreateTransaction = () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      // Saving can create tags inline. Without this the picker keeps offering a list
+      // that no longer has them, and the next transaction retypes the same name into a
+      // second tag — the exact split the picker exists to prevent.
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
     },
   });
 };
@@ -47,6 +51,8 @@ export const useUpdateTransaction = () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      // Editing can create a tag inline too — same reason as on create.
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
     },
   });
 };

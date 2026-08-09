@@ -21,5 +21,10 @@ public class CreateUserValidator : AbstractValidator<CreateUserRequestDto>
 
         RuleFor(u => u.Name)
             .NotEmpty().WithMessage("Name is required.");
+
+        // Enforced here and not only in the UI: the account must not be able to exist
+        // without a consent row, whichever client created it.
+        RuleFor(u => u.AcceptedTerms)
+            .Equal(true).WithMessage("You must accept the Terms of Use and the Privacy Policy.");
     }
 }

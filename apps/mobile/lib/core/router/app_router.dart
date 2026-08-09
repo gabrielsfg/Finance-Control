@@ -37,6 +37,8 @@ import '../../features/investments/presentation/register_investment_page.dart';
 import '../../features/market/presentation/market_asset_page.dart';
 import '../../features/market/presentation/market_page.dart';
 import '../../features/menu/presentation/menu_page.dart';
+import '../../features/legal/data/legal_repository.dart';
+import '../../features/legal/presentation/legal_document_page.dart';
 import '../../features/recurrences/presentation/recurrences_page.dart';
 import '../../features/transactions/data/models/transaction_item.dart';
 import '../../features/transactions/presentation/add_transaction_page.dart';
@@ -61,6 +63,14 @@ const _publicRoutes = {
   '/reset-password',
 };
 
+/// Reachable in both states, so neither redirect rule may claim them: the legal
+/// documents are linked from the signup form and have to stay readable after the
+/// account exists.
+const _openRoutes = {
+  '/legal/privacy',
+  '/legal/terms',
+};
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = _RouterListenable(ref);
 
@@ -73,6 +83,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Do not redirect while auth state is loading
       if (authState.isLoading) return null;
+
+      if (_openRoutes.contains(state.matchedLocation)) return null;
 
       final isAuthenticated = authState.valueOrNull?.isAuthenticated ?? false;
       final isOnAuthRoute = _publicRoutes.contains(state.matchedLocation);
@@ -110,6 +122,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/two-factor',
         builder: (_, state) =>
             TwoFactorPage(challengeToken: state.extra as String),
+      ),
+      GoRoute(
+        path: '/legal/privacy',
+        builder: (_, _) => const LegalDocumentPage(
+          type: LegalDocumentTypes.privacyPolicy,
+          title: 'Política de Privacidade',
+        ),
+      ),
+      GoRoute(
+        path: '/legal/terms',
+        builder: (_, _) => const LegalDocumentPage(
+          type: LegalDocumentTypes.termsOfUse,
+          title: 'Termos de Uso',
+        ),
       ),
       GoRoute(
         path: '/analytics',

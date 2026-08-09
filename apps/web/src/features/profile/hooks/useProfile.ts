@@ -39,6 +39,25 @@ export const useResetData = () =>
     mutationFn: (data: ResetDataRequest) => profileApi.resetData(data),
   });
 
+/**
+ * Downloads the export. The object URL is revoked right after the click because
+ * it pins the whole file in memory until it is.
+ */
+export const useExportData = () =>
+  useMutation({
+    mutationFn: profileApi.exportData,
+    onSuccess: ({ blob, fileName }) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    },
+  });
+
 export const useUpdateTwoFactor = () => {
   const queryClient = useQueryClient();
   return useMutation({

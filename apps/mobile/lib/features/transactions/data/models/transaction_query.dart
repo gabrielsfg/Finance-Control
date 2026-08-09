@@ -13,6 +13,7 @@ class TransactionQuery {
     this.accountIds,
     this.subCategoryIds,
     this.areaIds,
+    this.tagIds,
     this.search,
     this.type,
     this.paymentType,
@@ -25,6 +26,7 @@ class TransactionQuery {
   final List<int>? accountIds;
   final List<int>? subCategoryIds;
   final List<int>? areaIds;
+  final List<int>? tagIds;
   final String? search;
 
   /// "Expense" | "Income" | "Transfer"
@@ -87,6 +89,7 @@ class TransactionQuery {
       subCategoryIds:
           filter.subCategoryId == null ? null : [filter.subCategoryId!],
       areaIds: filter.areaId == null ? null : [filter.areaId!],
+      tagIds: filter.tagId == null ? null : [filter.tagId!],
       search: filter.search,
       type: isRecurring ? null : filter.typeFilter,
       paymentType: isRecurring ? 'Recurring' : null,

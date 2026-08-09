@@ -14,11 +14,25 @@ namespace FinanceControl.Tests.Unit.Validators
             Email = "user@example.com",
             Password = "Password@1",
             Name = "Test User",
+            AcceptedTerms = true,
         };
 
         [Fact]
         public void Create_ValidUser_Passes()
             => Assert.True(_createValidator.Validate(ValidCreate()).IsValid);
+
+        /// <summary>
+        /// The UI checkbox is a convenience; this is the rule. An account that exists
+        /// without a consent record is the failure this whole feature exists to prevent,
+        /// so it has to be impossible from any client.
+        /// </summary>
+        [Fact]
+        public void Create_WithoutAcceptingTerms_Fails()
+        {
+            var dto = ValidCreate();
+            dto.AcceptedTerms = false;
+            Assert.False(_createValidator.Validate(dto).IsValid);
+        }
 
         [Fact]
         public void Create_InvalidEmail_Fails()

@@ -10,7 +10,11 @@ namespace FinanceControl.Domain.Interfaces.Service
     {
         // Registration no longer issues tokens: the account is unusable until the emailed
         // code is confirmed through VerifyEmailAsync, which is what returns them.
-        Task<Result> RegisterUserAsync(CreateUserRequestDto requestDto);
+        //
+        // ipAddress and userAgent are read by the controller and stored with the consent
+        // record — they are the circumstances of the signature, so they cannot come from
+        // the request body.
+        Task<Result> RegisterUserAsync(CreateUserRequestDto requestDto, string? ipAddress, string? userAgent);
 
         // trustedDeviceToken comes from an HttpOnly cookie on web and from the request
         // body on mobile, so the controller reads it and hands it over.

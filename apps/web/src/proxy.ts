@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const publicRoutes = ["/", "/login"];
+// The legal pages are linked from the registration form and from the profile, so
+// they have to open in both states — bouncing a visitor to /login for reading the
+// terms would defeat the point of asking them to read the terms.
+const publicRoutes = ["/", "/login", "/privacy", "/terms"];
 
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

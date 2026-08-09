@@ -21,6 +21,9 @@ export type TransactionsFilter = {
   categoryIds: number[];
   subCategoryIds: number[];
   typeFilter: "All" | "Income" | "Expense" | "Transfer";
+  /** Inclusive bounds on the transaction magnitude, in cents. Null means open-ended. */
+  minValue: number | null;
+  maxValue: number | null;
   sortField: TxSortField;
   sortOrder: TxSortOrder;
 };

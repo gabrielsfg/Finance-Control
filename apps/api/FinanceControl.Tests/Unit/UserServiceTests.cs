@@ -44,7 +44,36 @@ namespace FinanceControl.Tests.Unit
                 })
                 .Build();
 
-            return new UserService(context, config, emailService ?? new FakeEmailService());
+            // Mirrors production, where the startup seeder has always run by the time a
+            // registration arrives — without a published document there is nothing to sign.
+            SeedLegalDocuments(context);
+
+            return new UserService(context, config, emailService ?? new FakeEmailService(), new LegalService(context));
+        }
+
+        private static void SeedLegalDocuments(FinanceControl.Data.Data.ApplicationDbContext context)
+        {
+            if (context.LegalDocuments.Any())
+                return;
+
+            context.LegalDocuments.AddRange(
+                new LegalDocument
+                {
+                    Type = EnumLegalDocumentType.PrivacyPolicy,
+                    Version = 1,
+                    Content = "privacy v1",
+                    ContentHash = "hash-privacy-v1",
+                    PublishedAt = DateTime.UtcNow
+                },
+                new LegalDocument
+                {
+                    Type = EnumLegalDocumentType.TermsOfUse,
+                    Version = 1,
+                    Content = "terms v1",
+                    ContentHash = "hash-terms-v1",
+                    PublishedAt = DateTime.UtcNow
+                });
+            context.SaveChanges();
         }
 
         private static User SeedUserWithPassword(
@@ -287,8 +316,9 @@ namespace FinanceControl.Tests.Unit
             {
                 Name = "Test",
                 Email = "u@test.com",
-                Password = "Correct@1"
-            });
+                Password = "Correct@1",
+                AcceptedTerms = true
+            }, "203.0.113.7", "test-agent");
 
             Assert.True(result.IsSuccess);
             Assert.Single(context.Users);
@@ -299,6 +329,63 @@ namespace FinanceControl.Tests.Unit
             Assert.Empty(context.Categories);
             Assert.Empty(context.SubCategories);
             Assert.Empty(context.Accounts);
+        }
+
+        [Fact]
+        public async Task Register_RecordsConsentForEveryCurrentDocument()
+        {
+            using var context = DbContextHelper.CreateInMemory();
+            var service = CreateService(context);
+
+            await service.RegisterUserAsync(new CreateUserRequestDto
+            {
+                Name = "Test",
+                Email = "u@test.com",
+                Password = "Correct@1",
+                AcceptedTerms = true
+            }, "203.0.113.7", "test-agent");
+
+            var consents = context.UserConsents.ToList();
+
+            Assert.Equal(2, consents.Count);
+            Assert.All(consents, c => Assert.Equal("203.0.113.7", c.IpAddress));
+            Assert.All(consents, c => Assert.Equal("test-agent", c.UserAgent));
+            Assert.All(consents, c => Assert.NotEqual(default, c.AcceptedAt));
+        }
+
+        /// <summary>
+        /// A second version supersedes the first: the signature has to land on what the
+        /// user was actually shown, not on whatever was published first.
+        /// </summary>
+        [Fact]
+        public async Task Register_SignsTheCurrentVersionOfEachDocument()
+        {
+            using var context = DbContextHelper.CreateInMemory();
+            var service = CreateService(context);
+
+            context.LegalDocuments.Add(new LegalDocument
+            {
+                Type = EnumLegalDocumentType.TermsOfUse,
+                Version = 2,
+                Content = "terms v2",
+                ContentHash = "hash-terms-v2",
+                PublishedAt = DateTime.UtcNow
+            });
+            context.SaveChanges();
+
+            await service.RegisterUserAsync(new CreateUserRequestDto
+            {
+                Name = "Test",
+                Email = "u@test.com",
+                Password = "Correct@1",
+                AcceptedTerms = true
+            }, null, null);
+
+            var signedTerms = context.UserConsents
+                .Join(context.LegalDocuments, c => c.LegalDocumentId, d => d.Id, (_, d) => d)
+                .Single(d => d.Type == EnumLegalDocumentType.TermsOfUse);
+
+            Assert.Equal(2, signedTerms.Version);
         }
 
         [Fact]

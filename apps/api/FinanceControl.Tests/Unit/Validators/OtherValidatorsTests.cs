@@ -84,35 +84,56 @@ namespace FinanceControl.Tests.Unit.Validators
 
         // --- GoalValidators ---
 
+        // Every case starts from a valid goal and breaks one thing, so a failing
+        // assertion can only be about the field the test names.
+        private static CreateGoalRequestDto ValidCreateGoal() => new()
+        {
+            Name = "PS5",
+            Type = EnumGoalType.Item,
+            TargetAmount = 500000,
+            TargetDate = new DateOnly(2027, 12, 31),
+        };
+
         [Fact]
         public void CreateGoal_Valid_Passes()
-        {
-            var v = new CreateGoalValidator();
-            var dto = new CreateGoalRequestDto { Name = "PS5", Type = EnumGoalType.Item, TargetAmount = 500000 };
-            Assert.True(v.Validate(dto).IsValid);
-        }
+            => Assert.True(new CreateGoalValidator().Validate(ValidCreateGoal()).IsValid);
 
         [Fact]
         public void CreateGoal_EmptyName_Fails()
         {
-            var v = new CreateGoalValidator();
-            Assert.False(v.Validate(new CreateGoalRequestDto { Name = "", Type = EnumGoalType.Item, TargetAmount = 100 }).IsValid);
+            var dto = ValidCreateGoal();
+            dto.Name = "";
+            Assert.False(new CreateGoalValidator().Validate(dto).IsValid);
         }
 
         [Fact]
         public void CreateGoal_NameTooLong_Fails()
         {
-            var v = new CreateGoalValidator();
-            var dto = new CreateGoalRequestDto { Name = new string('x', 201), Type = EnumGoalType.Item, TargetAmount = 100 };
-            Assert.False(v.Validate(dto).IsValid);
+            var dto = ValidCreateGoal();
+            dto.Name = new string('x', 201);
+            Assert.False(new CreateGoalValidator().Validate(dto).IsValid);
         }
 
         [Fact]
         public void CreateGoal_ZeroTargetAmount_Fails()
         {
-            var v = new CreateGoalValidator();
-            var dto = new CreateGoalRequestDto { Name = "Goal", Type = EnumGoalType.Investment, TargetAmount = 0 };
-            Assert.False(v.Validate(dto).IsValid);
+            var dto = ValidCreateGoal();
+            dto.TargetAmount = 0;
+            Assert.False(new CreateGoalValidator().Validate(dto).IsValid);
+        }
+
+        /// <summary>
+        /// A goal without a deadline has no progress to measure: the whole card is built
+        /// around "how long is left", and both clients already refuse to create one
+        /// without a date. The rule is what keeps a goal from reaching the database as
+        /// 01/01/0001.
+        /// </summary>
+        [Fact]
+        public void CreateGoal_WithoutTargetDate_Fails()
+        {
+            var dto = ValidCreateGoal();
+            dto.TargetDate = default;
+            Assert.False(new CreateGoalValidator().Validate(dto).IsValid);
         }
 
     }
