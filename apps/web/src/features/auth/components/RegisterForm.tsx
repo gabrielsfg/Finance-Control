@@ -28,7 +28,10 @@ export const RegisterForm = ({
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData>({ resolver: zodResolver(registerSchema) });
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { acceptedTerms: false },
+  });
 
   const passwordStrength = getPasswordStrength(passwordValue);
 
@@ -159,6 +162,41 @@ export const RegisterForm = ({
         )}
       </div>
 
+      {/* Consent */}
+      <div className="mt-5 mb-4">
+        <label className="flex cursor-pointer items-start gap-2.5">
+          <input
+            type="checkbox"
+            {...register("acceptedTerms")}
+            className="accent-green border-border mt-0.5 size-[15px] shrink-0 cursor-pointer rounded-[4px]"
+          />
+          <span className="text-text-sub text-[12.5px] leading-relaxed">
+            Li e aceito os{" "}
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green hover:underline"
+            >
+              Termos de Uso
+            </a>{" "}
+            e a{" "}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green hover:underline"
+            >
+              Política de Privacidade
+            </a>
+            .
+          </span>
+        </label>
+        {errors.acceptedTerms && (
+          <p className="text-red mt-1.5 text-[13px]">{errors.acceptedTerms.message}</p>
+        )}
+      </div>
+
       {serverError && (
         <div className="border-red/30 bg-red/10 text-red mb-4 rounded-[8px] border px-4 py-3 text-[13px]">
           {serverError}
@@ -173,18 +211,6 @@ export const RegisterForm = ({
         {isSubmitting && <Loader2 size={15} className="animate-spin" />}
         Criar conta grátis
       </button>
-
-      <p className="text-text-muted mt-4 text-center text-[12px] leading-relaxed">
-        Ao criar uma conta, você concorda com os{" "}
-        <a href="#" className="text-text-sub hover:text-green">
-          Termos de Uso
-        </a>{" "}
-        e a{" "}
-        <a href="#" className="text-text-sub hover:text-green">
-          Política de Privacidade
-        </a>
-        .
-      </p>
 
       <p className="text-text-muted mt-4 text-center text-[14px]">
         Já tem uma conta?{" "}

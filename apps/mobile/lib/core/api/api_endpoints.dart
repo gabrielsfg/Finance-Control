@@ -18,6 +18,9 @@ abstract class ApiEndpoints {
   static const String twoFactor = '/api/user/two-factor';
   static const String forgotPassword = '/api/user/forgot-password';
   static const String resetPassword = '/api/user/reset-password';
+
+  // Anonymous — the registration screen links to these before an account exists.
+  static String legalDocument(String type) => '/api/legal/$type';
   static const String userProfile = '/api/user/profile';
   static const String deleteAccount = '/api/user/me';
   static const String resetData = '/api/user/me/reset-data';

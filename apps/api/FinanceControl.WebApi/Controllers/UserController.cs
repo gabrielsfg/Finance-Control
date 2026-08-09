@@ -1,4 +1,8 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using FinanceControl.Domain.Interfaces.Service;
+using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Extensions;
 using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
@@ -19,7 +23,16 @@ namespace FinanceControl.WebApi.Controllers
         private const string RefreshTokenCookieName = "refreshToken";
         private const string TrustedDeviceCookieName = "trustedDevice";
 
+        private static readonly JsonSerializerOptions ExportJsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            Converters = { new JsonStringEnumConverter() }
+        };
+
         private readonly IUserService _userService;
+        private readonly IDataExportService _dataExportService;
         private readonly IValidator<CreateUserRequestDto> _createUserValidator;
         private readonly IValidator<UserLoginRequestDto> _userLoginValidator;
         private readonly IValidator<UpdateUserPreferencesRequestDto> _updatePreferencesValidator;
@@ -29,6 +42,7 @@ namespace FinanceControl.WebApi.Controllers
 
         public UserController(
             IUserService userService,
+            IDataExportService dataExportService,
             IValidator<CreateUserRequestDto> createUserValidator,
             IValidator<UserLoginRequestDto> userLoginValidator,
             IValidator<UpdateUserPreferencesRequestDto> updatePreferencesValidator,
@@ -37,6 +51,7 @@ namespace FinanceControl.WebApi.Controllers
             IValidator<ResetPasswordRequestDto> resetPasswordValidator)
         {
             _userService = userService;
+            _dataExportService = dataExportService;
             _createUserValidator = createUserValidator;
             _userLoginValidator = userLoginValidator;
             _updatePreferencesValidator = updatePreferencesValidator;
@@ -53,7 +68,7 @@ namespace FinanceControl.WebApi.Controllers
             if (validatonResult.ToActionResult() is { } errorResult)
                 return errorResult;
 
-            var result = await _userService.RegisterUserAsync(requestDto);
+            var result = await _userService.RegisterUserAsync(requestDto, GetClientIpAddress(), GetUserAgent());
             if (result.IsFailure)
                 return BadRequest(new { error = result.Error });
 
@@ -210,7 +225,7 @@ namespace FinanceControl.WebApi.Controllers
             if (validationResult.ToActionResult() is { } errorResult)
                 return errorResult;
 
-            var result = await _userService.RegisterUserAsync(requestDto);
+            var result = await _userService.RegisterUserAsync(requestDto, GetClientIpAddress(), GetUserAgent());
             if (result.IsFailure)
                 return BadRequest(new { error = result.Error });
 
@@ -380,6 +395,26 @@ namespace FinanceControl.WebApi.Controllers
                 return BadRequest("Invalid password.");
 
             return NoContent();
+        }
+
+        /// <summary>
+        /// Data portability (LGPD art. 18, V): everything the account holds, as a JSON
+        /// file the user can download and read.
+        /// </summary>
+        [HttpGet("me/export")]
+        [Authorize]
+        public async Task<IActionResult> ExportDataAsync()
+        {
+            var export = await _dataExportService.ExportUserDataAsync(GetUserId());
+            if (export is null)
+                return NotFound();
+
+            // Serialised here rather than returned as an object so the browser receives a
+            // named file: indented and with accents left alone, because a human opens it.
+            var json = JsonSerializer.SerializeToUtf8Bytes(export, ExportJsonOptions);
+            var fileName = $"meus-dados-{DateTime.UtcNow:yyyy-MM-dd}.json";
+
+            return File(json, "application/json", fileName);
         }
 
         [HttpPost("forgot-password")]

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,10 +28,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _acceptedTerms = false;
   String? _nameError;
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
+  String? _termsError;
   String? _globalError;
   String _passwordValue = '';
 
@@ -86,17 +89,25 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       confirmErr = 'As senhas não coincidem';
     }
 
+    // The backend refuses the registration without it either way; checking here
+    // just turns a rejected request into an unticked box the user can see.
+    final termsErr = _acceptedTerms
+        ? null
+        : 'Você precisa aceitar os Termos de Uso e a Política de Privacidade';
+
     setState(() {
       _nameError = nameErr;
       _emailError = emailErr;
       _passwordError = passErr;
       _confirmPasswordError = confirmErr;
+      _termsError = termsErr;
     });
 
     return nameErr == null &&
         emailErr == null &&
         passErr == null &&
-        confirmErr == null;
+        confirmErr == null &&
+        termsErr == null;
   }
 
   Future<void> _submit() async {
@@ -117,6 +128,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         name: _nameController.text.trim(),
         email: email,
         password: _passwordController.text,
+        acceptedTerms: _acceptedTerms,
       ));
 
       if (!mounted) return;
@@ -280,7 +292,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
+
+                // ── Consent ────────────────────────────────────────────────
+                _ConsentCheckbox(
+                  accepted: _acceptedTerms,
+                  errorText: _termsError,
+                  onChanged: (value) => setState(() {
+                    _acceptedTerms = value;
+                    _termsError = null;
+                  }),
+                ),
+                const SizedBox(height: 24),
 
                 // ── Submit button ──────────────────────────────────────────
                 _isLoading
@@ -329,6 +352,92 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Consent Checkbox ──────────────────────────────────────────────────────────
+
+class _ConsentCheckbox extends StatelessWidget {
+  const _ConsentCheckbox({
+    required this.accepted,
+    required this.errorText,
+    required this.onChanged,
+  });
+
+  final bool accepted;
+  final String? errorText;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+    final linkStyle = AppTextStyles.bodySm(t.accent).copyWith(
+      fontWeight: FontWeight.w600,
+      decoration: TextDecoration.underline,
+      decorationColor: t.accent,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GestureDetector(
+              onTap: () => onChanged(!accepted),
+              child: Container(
+                width: 20,
+                height: 20,
+                margin: const EdgeInsets.only(top: 2),
+                decoration: BoxDecoration(
+                  color: accepted ? t.primary : Colors.transparent,
+                  border: Border.all(
+                    color: accepted
+                        ? t.primary
+                        : (errorText != null ? t.clay : t.divider),
+                    width: 1.5,
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: accepted
+                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  style: AppTextStyles.bodySm(t.txtSecondary)
+                      .copyWith(height: 1.45),
+                  children: [
+                    const TextSpan(text: 'Li e aceito os '),
+                    TextSpan(
+                      text: 'Termos de Uso',
+                      style: linkStyle,
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () => context.push('/legal/terms'),
+                    ),
+                    const TextSpan(text: ' e a '),
+                    TextSpan(
+                      text: 'Política de Privacidade',
+                      style: linkStyle,
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () => context.push('/legal/privacy'),
+                    ),
+                    const TextSpan(text: '.'),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (errorText != null) ...[
+          const SizedBox(height: 8),
+          Text(errorText!, style: AppTextStyles.caption(t.clay)),
+        ],
+      ],
     );
   }
 }

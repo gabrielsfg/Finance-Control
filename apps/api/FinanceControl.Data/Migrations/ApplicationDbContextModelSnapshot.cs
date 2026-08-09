@@ -538,6 +538,41 @@ namespace FinanceControl.Data.Migrations
                     b.ToTable("InvestmentTransactions", (string)null);
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.LegalDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Type", "Version")
+                        .IsUnique();
+
+                    b.ToTable("LegalDocuments", (string)null);
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.MarketAsset", b =>
                 {
                     b.Property<int>("Id")
@@ -1268,6 +1303,40 @@ namespace FinanceControl.Data.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.UserConsent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<int>("LegalDocumentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LegalDocumentId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserConsents", (string)null);
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.UserPreferences", b =>
                 {
                     b.Property<int>("Id")
@@ -1686,6 +1755,25 @@ namespace FinanceControl.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FinanceControl.Domain.Entities.UserConsent", b =>
+                {
+                    b.HasOne("FinanceControl.Domain.Entities.LegalDocument", "LegalDocument")
+                        .WithMany("Consents")
+                        .HasForeignKey("LegalDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FinanceControl.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LegalDocument");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FinanceControl.Domain.Entities.UserPreferences", b =>
                 {
                     b.HasOne("FinanceControl.Domain.Entities.User", "User")
@@ -1745,6 +1833,11 @@ namespace FinanceControl.Data.Migrations
                     b.Navigation("Dividends");
 
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.LegalDocument", b =>
+                {
+                    b.Navigation("Consents");
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.MarketAsset", b =>

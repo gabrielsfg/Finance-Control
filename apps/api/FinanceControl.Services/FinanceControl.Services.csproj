@@ -23,4 +23,11 @@
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 	</ItemGroup>
 
+	<!-- Legal texts ship inside the assembly rather than as loose files: the seeder can
+	     then read them the same way in a container, in a test host and on a dev machine,
+	     with no path to get wrong. -->
+	<ItemGroup>
+		<EmbeddedResource Include="Legal\Content\*.md" />
+	</ItemGroup>
+
 </Project>

@@ -31,4 +31,20 @@ export const profileApi = {
   resetData: async (data: ResetDataRequest): Promise<void> => {
     await api.post("/user/me/reset-data", data);
   },
+
+  /**
+   * Data portability. Comes back as a file, so the response is a blob and the
+   * filename is read from Content-Disposition rather than invented here.
+   */
+  exportData: async (): Promise<{ blob: Blob; fileName: string }> => {
+    const response = await api.get("/user/me/export", { responseType: "blob" });
+
+    const disposition = response.headers["content-disposition"] as string | undefined;
+    const match = disposition?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+
+    return {
+      blob: response.data as Blob,
+      fileName: match ? decodeURIComponent(match[1]) : "meus-dados.json",
+    };
+  },
 };

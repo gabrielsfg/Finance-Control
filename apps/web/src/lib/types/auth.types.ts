@@ -8,6 +8,8 @@ export type RegisterRequest = {
   email: string;
   password: string;
   confirmPassword: string;
+  /** Which version was accepted, and when, is decided server-side — this is only the tick. */
+  acceptedTerms: boolean;
 };
 
 export type AuthResponse = {

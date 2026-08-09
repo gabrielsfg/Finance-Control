@@ -1,6 +1,7 @@
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Service;
+using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Email;
 using FinanceControl.Services.Seeds;
 using FinanceControl.Shared.Dtos;
@@ -42,18 +43,21 @@ namespace FinanceControl.Services.Services
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
+        private readonly ILegalService _legalService;
 
         public UserService(
             ApplicationDbContext context,
             IConfiguration configuration,
-            IEmailService emailService)
+            IEmailService emailService,
+            ILegalService legalService)
         {
             _context = context;
             _configuration = configuration;
             _emailService = emailService;
+            _legalService = legalService;
         }
 
-        public async Task<Result> RegisterUserAsync(CreateUserRequestDto requestDto)
+        public async Task<Result> RegisterUserAsync(CreateUserRequestDto requestDto, string? ipAddress, string? userAgent)
         {
             requestDto.Email = requestDto.Email.ToLower();
 
@@ -73,11 +77,17 @@ namespace FinanceControl.Services.Services
             _context.UserPreferences.Add(new UserPreferences { UserId = user.Id });
             await _context.SaveChangesAsync();
 
+            // Recorded before the address is even confirmed, and kept even if the signup is
+            // abandoned: the consent happened at this moment, and a record written later
+            // would be a record of a different moment.
+            await _legalService.RecordConsentAsync(user.Id, ipAddress, userAgent);
+
             // The seed does NOT run here. Registering is free and unproven — anyone can
             // burn an address they do not own — and each seed writes ~15 categories, ~60
             // subcategories and an account. Abandoned signups would fill the database with
             // data belonging to nobody, so it waits for VerifyEmailAsync. What is left
-            // behind by an abandoned signup is two rows.
+            // behind by an abandoned signup is four rows: the user, its preferences and
+            // one consent per legal document.
             //
             // No tokens either: the account exists but cannot be used until the address is
             // confirmed. The email is the only route back into an account, so it is proven

@@ -19,6 +19,11 @@ export const registerSchema = z
     email: z.string().min(1, "E-mail obrigatório").email("E-mail inválido"),
     password: passwordSchema,
     confirmPassword: z.string().min(1, "Confirme sua senha"),
+    // The backend refuses a registration without it either way; blocking here just
+    // turns a rejected request into an unchecked box the user can see.
+    acceptedTerms: z.boolean().refine((accepted) => accepted, {
+      message: "Você precisa aceitar os Termos de Uso e a Política de Privacidade",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "As senhas não conferem",
