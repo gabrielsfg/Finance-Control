@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { siteDescription, siteName, siteTagline, siteUrl } from "@/lib/config/site";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
 import "./globals.css";
 
@@ -26,8 +27,37 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Quantia — Seu dinheiro, organizado",
-  description: "Gerencie suas finanças pessoais com inteligência.",
+  // Required for Open Graph: the crawlers reject relative image URLs, and
+  // without a base Next has nothing to resolve the generated card against.
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: `${siteName} — ${siteTagline}`,
+    template: `%s · ${siteName}`,
+  },
+  description: siteDescription,
+  applicationName: siteName,
+  keywords: [
+    "controle financeiro",
+    "finanças pessoais",
+    "orçamento pessoal",
+    "controle de gastos",
+    "metas financeiras",
+    "carteira de investimentos",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "/",
+    siteName,
+    title: `${siteName} — ${siteTagline}`,
+    description: siteDescription,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${siteName} — ${siteTagline}`,
+    description: siteDescription,
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

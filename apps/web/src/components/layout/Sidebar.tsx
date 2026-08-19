@@ -34,6 +34,7 @@ import {
   PieChart,
   type LucideIcon,
 } from "lucide-react";
+import { BrandGlyph } from "@/components/shared/BrandMark";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { useAuthStore } from "@/lib/stores/authStore";
@@ -119,17 +120,6 @@ const navGroups: NavGroup[] = [
 ];
 
 /* Glyph — geometric azulejo seal */
-function BrandGlyph() {
-  return (
-    <svg width="38" height="38" viewBox="0 0 36 36" fill="none" aria-hidden="true" className="shrink-0 drop-shadow-[0_6px_14px_rgba(31,60,224,0.28)]">
-      <rect width="36" height="36" rx="9" fill="#1F3CE0" />
-      <path d="M0 9C0 4 4 0 9 0H18A18 18 0 0 1 0 18Z" fill="#EFEBE1" />
-      <path d="M36 27c0 5-4 9-9 9H18A18 18 0 0 1 36 18Z" fill="#EFEBE1" />
-      <circle cx="18" cy="18" r="3.4" fill="#2C6B57" />
-    </svg>
-  );
-}
-
 /**
  * Labels stay mounted and squeeze to nothing as the rail narrows, so they
  * travel with the sidebar width instead of vanishing on the first frame.

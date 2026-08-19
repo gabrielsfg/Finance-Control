@@ -27,5 +27,8 @@ export default function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // robots.txt, sitemap.xml and the generated OG card are metadata routes: they
+  // are not in `publicRoutes`, so without this exclusion the middleware would
+  // bounce every crawler to /login and the site would index as nothing.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|opengraph-image).*)"],
 };
