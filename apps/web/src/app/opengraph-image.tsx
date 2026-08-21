@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { siteName, siteTagline } from "@/lib/config/site";
 
-export const alt = `${siteName} — ${siteTagline}`;
+export const alt = `${siteName}: ${siteTagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -51,7 +51,7 @@ export default function OpengraphImage() {
             maxWidth: 900,
           }}
         >
-          Cada real que entra, sai e rende — em um lugar só.
+          Cada real que entra, sai e rende em um lugar só.
         </div>
         <div style={{ display: "flex", marginTop: 28, fontSize: 28, color: "#8FA39A" }}>
           Contas, orçamento, metas e investimentos na mesma tela.

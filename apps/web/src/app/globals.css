@@ -171,6 +171,54 @@
   --shadow-md: 0 1px 0 rgba(255, 255, 255, 0.03), 0 34px 60px -36px rgba(0, 0, 0, 0.85);
 }
 
+/* ── Escopo público — claro por padrão ─────────────────────────────
+   As rotas públicas (landing, login, termos, privacidade) têm um único
+   visual, claro e branco, qualquer que seja o tema que o visitante tenha
+   salvo no app: os tokens são redeclarados no wrapper do layout público,
+   então valem para toda a subárvore mesmo com `.dark` no <html>. O verde
+   (moss) fica só nos detalhes — barras, ícones, filetes — nunca como cor
+   de fundo dominante.
+
+   Os tokens também vão para o <body> via :has(), e não só para o wrapper,
+   para o fundo do viewport (barras de overscroll incluídas) acompanhar. */
+html:has(.public-scope) body,
+.public-scope {
+  color-scheme: light;
+  background: #ffffff;
+
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface2: #f7f7f5;
+  --surface3: #efefec;
+  --border-color: #e6e5e0;
+  --border-light: #f0efec;
+
+  --text: #17211d;
+  --text-sub: #5f6b66;
+  --text-muted: #5f6b66;
+
+  --brand-cobalt: #1f3ce0;
+  --brand-accent: #1f3ce0;
+  --cobalt-lift: #8197ff;
+  --moss: #2c6b57;
+  --moss-lift: #5fc6a0;
+  --clay: #b0451f;
+  --clay-lift: #ff8a5b;
+  --gold: #c8932b;
+
+  /* O painel-hero (o cartão de totalizadores) é o verde do tema claro do app,
+     fixo aqui para não virar o petróleo do dark quando o visitante tem o tema
+     escuro salvo. É o único bloco verde da página. */
+  --panel: #17211d;
+  --panel-2: #1e2b26;
+  --panel-foreground: #efebe1;
+  --panel-fg: #efebe1;
+  --panel-muted: #a7a293;
+
+  --shadow-sm: 0 1px 0 rgba(23, 33, 29, 0.03), 0 10px 24px -20px rgba(23, 33, 29, 0.35);
+  --shadow-md: 0 1px 0 rgba(23, 33, 29, 0.03), 0 26px 50px -34px rgba(23, 33, 29, 0.4);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

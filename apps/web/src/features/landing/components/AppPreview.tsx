@@ -18,8 +18,9 @@ const budgetRows = [
 export function AppPreview() {
   return (
     <div className="relative">
-      {/* tailwind-merge drops the panel's own p-[30px] in favour of this one. */}
-      <HeroPanel className="p-[26px]">
+      {/* tailwind-merge drops the panel's own p-[30px] and dark-mode border in
+          favour of these — sobre a landing branca, o painel não leva borda. */}
+      <HeroPanel className="p-[26px] dark:border-transparent">
         <div className="relative z-10">
           <p className="font-mono text-[10px] tracking-[0.22em] text-[var(--panel-muted)] uppercase">
             Patrimônio

@@ -5,14 +5,14 @@ import { AppPreview } from "@/features/landing/components/AppPreview";
 export function LandingHero() {
   return (
     <section className="relative overflow-hidden">
-      {/* Ambient wash — cobalt above, moss below, both faint enough to survive
-          the light theme without muddying the osso background. */}
+      {/* Lavagem de fundo bem discreta — cobalto em cima, moss à direita, os
+          dois fracos o bastante para o hero continuar lendo como branco. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 70% 50% at 20% -10%, color-mix(in oklab, var(--brand-cobalt) 14%, transparent), transparent), radial-gradient(ellipse 50% 40% at 95% 15%, color-mix(in oklab, var(--moss) 12%, transparent), transparent)",
+            "radial-gradient(ellipse 70% 50% at 18% -12%, color-mix(in oklab, var(--brand-cobalt) 7%, transparent), transparent), radial-gradient(ellipse 46% 38% at 96% 12%, color-mix(in oklab, var(--moss) 6%, transparent), transparent)",
         }}
       />
 
@@ -23,13 +23,13 @@ export function LandingHero() {
           </span>
 
           <h1 className="font-display mt-5 text-[42px] leading-[1.06] font-extrabold tracking-[-0.035em] text-[var(--text)] sm:text-[54px]">
-            Cada real que entra, <span className="text-[var(--brand-accent)]">sai e rende</span> —
-            em um lugar só.
+            Cada real que entra, <span className="text-[var(--brand-accent)]">sai e rende</span> em
+            um lugar só.
           </h1>
 
           <p className="mt-5 max-w-[520px] text-[16.5px] leading-relaxed text-[var(--text-sub)]">
             O Quantia junta contas, cartões, orçamento, metas e investimentos na mesma tela. Você
-            lança uma vez e enxerga o mês inteiro — sem planilha, sem quebra-cabeça no fim do mês.
+            lança uma vez e enxerga o mês inteiro, sem planilha e sem quebra-cabeça no fim do mês.
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">

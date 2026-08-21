@@ -9,6 +9,9 @@ import { LandingCta } from "@/features/landing/components/LandingCta";
  * Deliberately a server component — the one route in the app whose whole job is
  * to be crawled and shared. It holds no state and calls no hook, so shipping it
  * as static HTML costs nothing and gets the copy into the page source.
+ *
+ * A paleta clara vem do `public-scope` no layout público (ver globals.css),
+ * que fixa a página no branco mesmo para quem tem o tema escuro salvo.
  */
 export function LandingPage() {
   return (

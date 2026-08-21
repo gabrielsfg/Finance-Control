@@ -17,7 +17,7 @@ export function LandingHowItWorks() {
   return (
     <section
       id="como-funciona"
-      className="border-t border-[var(--border-color)] bg-[var(--surface)]"
+      className="border-t border-[var(--border-color)] bg-[var(--surface2)]"
     >
       <div className="mx-auto w-full max-w-[1140px] px-6 py-16 lg:py-20">
         <p className="font-mono text-[10.5px] tracking-[0.22em] text-[var(--text-sub)] uppercase">
@@ -29,7 +29,7 @@ export function LandingHowItWorks() {
 
         <ol className="stagger mt-11 grid gap-8 md:grid-cols-3">
           {steps.map((step, index) => (
-            <li key={step.title} className="border-t-2 border-[var(--brand-cobalt)]/35 pt-5">
+            <li key={step.title} className="border-t-2 border-[var(--moss)]/40 pt-5">
               <span className="font-money text-[13px] font-semibold text-[var(--brand-accent)]">
                 {String(index + 1).padStart(2, "0")}
               </span>

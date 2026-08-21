@@ -51,7 +51,7 @@ function LoginPageContent() {
   return (
     <div className="flex flex-1">
       {/* Left panel — branding */}
-      <div className="relative hidden min-h-screen w-[55%] flex-col overflow-hidden border-r border-[var(--border-color)] bg-[var(--surface)] p-10 lg:flex">
+      <div className="relative hidden min-h-screen w-[55%] flex-col overflow-hidden border-r border-[var(--border-color)] bg-[var(--surface2)] p-10 lg:flex">
         {/* Ambient gradient */}
         <div
           aria-hidden="true"
@@ -71,7 +71,7 @@ function LoginPageContent() {
           </h2>
           <p className="text-[15px] leading-relaxed text-[var(--text-sub)]">
             Contas, cartões, orçamento, metas e investimentos na mesma tela. Você lança uma vez e
-            enxerga o mês inteiro — sem planilha, sem complexidade.
+            enxerga o mês inteiro, sem planilha e sem complexidade.
           </p>
 
           {/* What you get, stated plainly. No metrics here: the honest ones

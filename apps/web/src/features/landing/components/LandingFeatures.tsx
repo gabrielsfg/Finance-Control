@@ -19,7 +19,7 @@ const features: Feature[] = [
   {
     icon: Wallet,
     title: "Contas e cartões",
-    body: "Corrente, poupança, crédito e dinheiro. O saldo é calculado a partir das transações — nunca digitado à mão, nunca desatualizado.",
+    body: "Corrente, poupança, crédito e dinheiro. O saldo é calculado a partir das transações, nunca digitado à mão e nunca desatualizado.",
   },
   {
     icon: ArrowLeftRight,
@@ -39,7 +39,7 @@ const features: Feature[] = [
   {
     icon: TrendingUp,
     title: "Investimentos e mercado",
-    body: "Posições, alocação e rentabilidade da carteira — com cotações de ações, FIIs, ETFs, BDRs, Tesouro, cripto e moedas.",
+    body: "Posições, alocação e rentabilidade da carteira, com cotações de ações, FIIs, ETFs, BDRs, Tesouro, cripto e moedas.",
   },
   {
     icon: BarChart3,
@@ -73,14 +73,14 @@ export function LandingFeatures() {
           {features.map((feature) => (
             <article
               key={feature.title}
-              className="rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)] p-[22px] transition-colors hover:border-[var(--brand-cobalt)]/45"
+              className="rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)] p-[22px] transition-colors hover:border-[var(--moss)]/45"
               style={{ boxShadow: "var(--shadow-sm)" }}
             >
               <div
                 className="flex h-[38px] w-[38px] items-center justify-center rounded-[11px]"
                 style={{
-                  background: "color-mix(in oklab, var(--brand-cobalt) 12%, transparent)",
-                  color: "var(--brand-accent)",
+                  background: "color-mix(in oklab, var(--moss) 12%, transparent)",
+                  color: "var(--moss)",
                 }}
               >
                 <feature.icon size={18} strokeWidth={2} />

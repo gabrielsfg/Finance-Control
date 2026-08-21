@@ -25,7 +25,7 @@ const guarantees: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: Trash2,
     title: "Excluir é excluir",
-    body: "Apagar a conta remove seus dados junto — de imediato, sem cópia guardada para depois.",
+    body: "Apagar a conta remove seus dados junto. De imediato, sem cópia guardada para depois.",
   },
 ];
 
@@ -43,7 +43,7 @@ export function LandingSecurity() {
             </h2>
             <p className="mt-4 text-[15px] leading-relaxed text-[var(--text-sub)]">
               O que você aceita no cadastro fica registrado com a versão exata do documento que
-              estava no ar naquele dia — e você pode reler essa versão quando quiser.
+              estava no ar naquele dia, e você pode reler essa versão quando quiser.
             </p>
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
               <Link

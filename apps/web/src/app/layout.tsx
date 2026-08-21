@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   // without a base Next has nothing to resolve the generated card against.
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${siteName} — ${siteTagline}`,
+    default: `${siteName} · ${siteTagline}`,
     template: `%s · ${siteName}`,
   },
   description: siteDescription,
@@ -49,12 +49,12 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     url: "/",
     siteName,
-    title: `${siteName} — ${siteTagline}`,
+    title: `${siteName} · ${siteTagline}`,
     description: siteDescription,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteName} — ${siteTagline}`,
+    title: `${siteName} · ${siteTagline}`,
     description: siteDescription,
   },
   robots: { index: true, follow: true },

@@ -16,7 +16,7 @@ export const siteName = "Quantia";
 export const siteTagline = "Seu dinheiro, organizado";
 
 export const siteDescription =
-  "Contas, cartões, orçamento, metas e investimentos na mesma tela. Lance uma vez e enxergue o mês inteiro — com parcelamento, recorrências e análises sobre o seu próprio histórico.";
+  "Contas, cartões, orçamento, metas e investimentos na mesma tela. Lance uma vez e enxergue o mês inteiro, com parcelamento, recorrências e análises sobre o seu próprio histórico.";
 
 /** Routes crawlers may index. Everything else in the app sits behind auth. */
 export const publicPaths = ["/", "/login", "/privacy", "/terms"] as const;
