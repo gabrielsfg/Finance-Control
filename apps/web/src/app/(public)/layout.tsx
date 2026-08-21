@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-background flex min-h-screen flex-col">
+    <div className="public-scope bg-background flex min-h-screen flex-col text-[var(--text)]">
       <div className="flex-1">{children}</div>
 
       {/* The legal pages have to be reachable from anywhere public, not only from the

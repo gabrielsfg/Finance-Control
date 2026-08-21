@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Check } from "lucide-react";
+import { BrandMark } from "@/components/shared/BrandMark";
 import { LoginForm } from "@/features/auth/components/LoginForm";
 import { RegisterForm } from "@/features/auth/components/RegisterForm";
 import { ForgotPasswordForm } from "@/features/auth/components/ForgotPasswordForm";
@@ -21,8 +23,14 @@ type ChallengeView =
   | { kind: "forgot"; email: string }
   | { kind: "reset"; email: string };
 
-export function LoginPage() {
-  const [tab, setTab] = useState<"login" | "register">("login");
+function LoginPageContent() {
+  const searchParams = useSearchParams();
+
+  // The landing's "Criar conta" buttons deep-link straight into the register
+  // tab. Read once as the initial value — after mount the tab is the user's.
+  const [tab, setTab] = useState<"login" | "register">(
+    searchParams.get("mode") === "register" ? "register" : "login",
+  );
   const [view, setView] = useState<ChallengeView | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -43,89 +51,64 @@ export function LoginPage() {
   return (
     <div className="flex flex-1">
       {/* Left panel — branding */}
-      <div className="border-border bg-surface relative hidden min-h-screen w-[55%] flex-col overflow-hidden border-r p-10 lg:flex">
+      <div className="relative hidden min-h-screen w-[55%] flex-col overflow-hidden border-r border-[var(--border-color)] bg-[var(--surface2)] p-10 lg:flex">
         {/* Ambient gradient */}
         <div
+          aria-hidden="true"
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 80% 60% at 50% 110%, rgba(0,201,141,0.07), transparent), radial-gradient(ellipse 60% 40% at 80% 20%, rgba(124,111,224,0.07), transparent)",
+              "radial-gradient(ellipse 80% 60% at 50% 110%, color-mix(in oklab, var(--moss) 12%, transparent), transparent), radial-gradient(ellipse 60% 40% at 80% 20%, color-mix(in oklab, var(--brand-cobalt) 12%, transparent), transparent)",
           }}
         />
 
-        {/* Logo */}
-        <Link href="/" className="relative z-10 flex items-center gap-2.5">
-          <div className="from-green to-purple flex h-9 w-9 items-center justify-center rounded-[10px] bg-gradient-to-br">
-            <span className="font-display font-800 text-base text-black dark:text-white">C</span>
-          </div>
-          <span className="font-display font-700 text-text text-lg">Controle</span>
-        </Link>
+        <BrandMark className="relative z-10" glyphSize={34} textSize={21} />
 
         {/* Content */}
         <div className="relative z-10 flex max-w-[440px] flex-1 flex-col justify-center pb-4">
-          <h2 className="font-display font-800 text-text mb-4 text-[38px] leading-[1.1] tracking-[-0.03em]">
-            Dinheiro sob controle,{" "}
-            <em
-              className="not-italic"
-              style={{
-                background: "linear-gradient(90deg, #00C98D, #4A9EFF)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              de verdade
-            </em>
+          <h2 className="font-display mb-4 text-[38px] leading-[1.1] font-extrabold tracking-[-0.03em] text-[var(--text)]">
+            Dinheiro sob controle, <span className="text-[var(--brand-accent)]">de verdade</span>
           </h2>
-          <p className="text-text-sub mb-10 text-[15px] leading-relaxed">
-            Conecte seus bancos, acompanhe investimentos e entenda seus gastos — tudo em um lugar.
-            Sem planilha, sem complexidade.
+          <p className="text-[15px] leading-relaxed text-[var(--text-sub)]">
+            Contas, cartões, orçamento, metas e investimentos na mesma tela. Você lança uma vez e
+            enxerga o mês inteiro, sem planilha e sem complexidade.
           </p>
 
-          {/* Testimonial */}
-          <div className="border-border bg-surface2 rounded-[14px] border p-5">
-            <p className="text-text-sub mb-3.5 text-[14px] leading-relaxed italic">
-              "Em 3 meses usando o Controle, reduzi meus gastos com delivery em 60% e aumentei minha
-              taxa de poupança para 40%. Finalmente sei para onde meu dinheiro vai."
-            </p>
-            <div className="flex items-center gap-2.5">
-              <div className="from-purple to-blue flex h-8 w-8 items-center justify-center rounded-[8px] bg-gradient-to-br">
-                <span className="font-display font-700 text-[12px] text-white">MS</span>
-              </div>
-              <div>
-                <p className="font-600 text-text text-[13px]">Mariana Souza</p>
-                <p className="text-text-muted text-[11px]">Designer, São Paulo</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-8 flex gap-7">
-            <div>
-              <p className="font-600 text-green font-mono text-[22px]">50k+</p>
-              <p className="text-text-muted mt-0.5 text-[12px]">usuários ativos</p>
-            </div>
-            <div>
-              <p className="font-600 text-green font-mono text-[22px]">R$ 2,1B</p>
-              <p className="text-text-muted mt-0.5 text-[12px]">em transações geridas</p>
-            </div>
-            <div>
-              <p className="font-600 text-green font-mono text-[22px]">4,9★</p>
-              <p className="text-text-muted mt-0.5 text-[12px]">avaliação média</p>
-            </div>
-          </div>
+          {/* What you get, stated plainly. No metrics here: the honest ones
+              would be the app's own, and the app's numbers are the user's. */}
+          <ul className="mt-10 flex flex-col gap-4">
+            {[
+              {
+                title: "Pronto para usar no primeiro acesso",
+                body: "A conta já nasce com categorias e uma carteira configuradas.",
+              },
+              {
+                title: "Parcelas e recorrências no automático",
+                body: "Lance uma vez; o app repete e divide nas datas certas.",
+              },
+              {
+                title: "Seus dados saem quando você quiser",
+                body: "Exportação completa da conta e CSV das transações.",
+              },
+            ].map((item) => (
+              <li key={item.title} className="flex gap-3">
+                <Check size={16} className="mt-[3px] shrink-0 text-[var(--moss)]" />
+                <div>
+                  <p className="text-[14px] font-semibold text-[var(--text)]">{item.title}</p>
+                  <p className="mt-0.5 text-[13.5px] leading-relaxed text-[var(--text-sub)]">
+                    {item.body}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
       {/* Right panel — form */}
       <div className="flex min-h-screen flex-1 flex-col items-center justify-center px-6 py-10 lg:px-12">
         {/* Mobile logo */}
-        <Link href="/" className="mb-8 flex items-center gap-2.5 lg:hidden">
-          <div className="from-green to-purple flex h-8 w-8 items-center justify-center rounded-[10px] bg-gradient-to-br">
-            <span className="font-display font-800 text-sm text-black dark:text-white">C</span>
-          </div>
-          <span className="font-display font-700 text-text text-base">Controle</span>
-        </Link>
+        <BrandMark className="mb-8 lg:hidden" glyphSize={30} textSize={18} />
 
         <div className="w-full max-w-[400px]">
           {/* Tabs — hidden mid-flow, where switching would drop the pending challenge. */}
@@ -198,3 +181,11 @@ export function LoginPage() {
     </div>
   );
 }
+
+export const LoginPage = () => (
+  // useSearchParams forces client rendering up to the nearest boundary; the
+  // fallback matches the page's background so the swap doesn't flash.
+  <Suspense fallback={<div className="flex flex-1" />}>
+    <LoginPageContent />
+  </Suspense>
+);
