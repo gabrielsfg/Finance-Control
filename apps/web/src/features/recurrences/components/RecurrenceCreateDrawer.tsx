@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { cn } from "@/lib/utils";
-import { CategorySelectContent } from "@/components/shared/CategorySelectContent";
+import { CategoryPickerField } from "@/components/shared/CategoryPickerField";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useCreateRecurring } from "../hooks/useRecurrences";
@@ -187,8 +187,6 @@ function RecurringCreateForm({ onClose }: { onClose: () => void }) {
   const startDate = watch("startDate") ?? "";
   const endDate = watch("endDate") ?? "";
 
-  const subSelected = subcategories.find(s => String(s.id) === subCategoryId);
-  const subLabel = subSelected ? (subSelected.emoji ? `${subSelected.emoji} ${subSelected.name}` : subSelected.name) : undefined;
   const accLabel = accounts.find(a => String(a.id) === accountId)?.name;
   const recLabel = recurrence ? RECURRENCE_LABELS[recurrence as RecurrenceType] : undefined;
 
@@ -304,17 +302,16 @@ function RecurringCreateForm({ onClose }: { onClose: () => void }) {
         </FormField>
 
         <FormField label="Categoria" error={errors.subCategoryId?.message}>
-          <Select
-            value={subCategoryId ?? ""}
-            onValueChange={v => setValue("subCategoryId", v as string, { shouldValidate: true })}
-          >
-            <SelectTrigger className={cn(TRIGGER_CLASS, errors.subCategoryId && "border-red/60")}>
-              <SelectValue>
-                {subLabel ?? <span className="text-text-muted">Selecionar categoria</span>}
-              </SelectValue>
-            </SelectTrigger>
-            <CategorySelectContent subcategories={subcategories} />
-          </Select>
+          {/* Searchable, same control as the transaction form — the full tree runs to a
+              few dozen rows and scrolling it beats nothing. */}
+          <CategoryPickerField
+            value={subCategoryId ? Number(subCategoryId) : null}
+            onChange={(id) =>
+              setValue("subCategoryId", id === null ? "" : String(id), { shouldValidate: true })
+            }
+            subcategories={subcategories}
+            hasError={!!errors.subCategoryId}
+          />
         </FormField>
 
         {serverError && <p className="text-red text-[13px]">{serverError}</p>}
@@ -369,8 +366,6 @@ function InstallmentCreateForm({ onClose }: { onClose: () => void }) {
   const paymentMethod = watch("paymentMethod");
   const transactionDate = watch("transactionDate") ?? "";
 
-  const subSelected = subcategories.find(s => String(s.id) === subCategoryId);
-  const subLabel = subSelected ? (subSelected.emoji ? `${subSelected.emoji} ${subSelected.name}` : subSelected.name) : undefined;
   const accLabel = accounts.find(a => String(a.id) === accountId)?.name;
   const pmLabel = paymentMethod === "Debit" ? "Débito" : paymentMethod === "Credit" ? "Crédito" : undefined;
 
@@ -476,17 +471,16 @@ function InstallmentCreateForm({ onClose }: { onClose: () => void }) {
         </FormField>
 
         <FormField label="Categoria" error={errors.subCategoryId?.message}>
-          <Select
-            value={subCategoryId ?? ""}
-            onValueChange={v => setValue("subCategoryId", v as string, { shouldValidate: true })}
-          >
-            <SelectTrigger className={cn(TRIGGER_CLASS, errors.subCategoryId && "border-red/60")}>
-              <SelectValue>
-                {subLabel ?? <span className="text-text-muted">Selecionar categoria</span>}
-              </SelectValue>
-            </SelectTrigger>
-            <CategorySelectContent subcategories={subcategories} />
-          </Select>
+          {/* Searchable, same control as the transaction form — the full tree runs to a
+              few dozen rows and scrolling it beats nothing. */}
+          <CategoryPickerField
+            value={subCategoryId ? Number(subCategoryId) : null}
+            onChange={(id) =>
+              setValue("subCategoryId", id === null ? "" : String(id), { shouldValidate: true })
+            }
+            subcategories={subcategories}
+            hasError={!!errors.subCategoryId}
+          />
         </FormField>
 
         <FormField label="Forma de pagamento">

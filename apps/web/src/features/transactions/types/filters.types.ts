@@ -1,11 +1,15 @@
-export type TxDatePreset =
-  | "current-month"
-  | "last-3-months"
-  | "last-6-months"
-  | "last-12-months"
-  | "current-year"
-  | "custom-year"
-  | "custom-range";
+import type { PeriodPreset } from "@/lib/utils/periodPresets";
+
+/**
+ * The shared presets plus `custom-year`, which only this page offers. Everything else
+ * resolves through `buildPeriodRange`, so "últimos 6 meses" cannot come to mean one thing
+ * here and another on the overview.
+ *
+ * The default is `budget-cycle`: a budget that runs the 5th to the 5th makes "September"
+ * the wrong window to open on — it hides five days the user is still spending against and
+ * shows twenty-five they are not.
+ */
+export type TxDatePreset = PeriodPreset | "custom-year";
 
 export type TxSortField = "date" | "value";
 export type TxSortOrder = "desc" | "asc";

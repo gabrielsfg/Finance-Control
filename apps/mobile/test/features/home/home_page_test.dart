@@ -4,11 +4,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:finance_control_front/core/utils/app_locale.dart';
+import 'package:finance_control_front/features/accounts/data/models/account.dart';
+import 'package:finance_control_front/features/accounts/providers/accounts_provider.dart';
+import 'package:finance_control_front/features/goals/data/goal_models.dart';
+import 'package:finance_control_front/features/goals/providers/goal_provider.dart';
 import 'package:finance_control_front/features/home/data/models/home_summary.dart';
 import 'package:finance_control_front/features/home/presentation/home_page.dart';
 import 'package:finance_control_front/features/home/providers/home_provider.dart';
+import 'package:finance_control_front/features/notifications/providers/notification_provider.dart';
+import 'package:finance_control_front/features/recurrences/data/recurrence_models.dart';
+import 'package:finance_control_front/features/recurrences/providers/recurrence_provider.dart';
 
 // ── Fakes ──────────────────────────────────────────────────────────────────
+
+// Everything the home screen reads besides the summary itself. Without these the
+// real notifiers reach for Dio, and the test ends with a pending timer instead of
+// an assertion.
+class _FakeAccountsNotifier extends AccountsNotifier {
+  @override
+  Future<List<Account>> build() async => const [];
+}
+
+class _FakeGoalsNotifier extends GoalsNotifier {
+  @override
+  Future<List<Goal>> build() async => const [];
+}
+
+class _FakeRecurrenceNotifier extends RecurrenceNotifier {
+  @override
+  Future<RecurrencePageData> build() async => RecurrencePageData.empty;
+}
+
+class _FakeUnreadNotificationCountNotifier
+    extends UnreadNotificationCountNotifier {
+  @override
+  Future<int> build() async => 0;
+}
 
 class _FakeHomeNotifier extends HomeNotifier {
   _FakeHomeNotifier(this._state);
@@ -69,6 +100,11 @@ Widget _buildSubject(AsyncValue<HomeState> asyncState) {
   return ProviderScope(
     overrides: [
       homeNotifierProvider.overrideWith(() => _FakeHomeNotifier(asyncState)),
+      accountsNotifierProvider.overrideWith(_FakeAccountsNotifier.new),
+      goalsProvider.overrideWith(_FakeGoalsNotifier.new),
+      recurrenceProvider.overrideWith(_FakeRecurrenceNotifier.new),
+      unreadNotificationCountProvider
+          .overrideWith(_FakeUnreadNotificationCountNotifier.new),
     ],
     child: const MaterialApp(
       home: AppLocaleScope(
@@ -102,14 +138,14 @@ void main() {
 
     testWidgets('shows hero panel when summary is null', (tester) async {
       await tester.pumpWidget(_buildSubject(AsyncData(_emptyState())));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Saldo do período'), findsOneWidget);
     });
 
     testWidgets('shows hero and flow bar when summary is present', (tester) async {
       await tester.pumpWidget(_buildSubject(AsyncData(_stateWithSummary())));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Saldo do período'), findsOneWidget);
       expect(find.text('Entradas e saídas'), findsOneWidget);
@@ -119,7 +155,7 @@ void main() {
 
     testWidgets('shows budget section with percentage', (tester) async {
       await tester.pumpWidget(_buildSubject(AsyncData(_stateWithSummary())));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('ORÇAMENTO'), findsOneWidget);
       expect(find.text('50%'), findsOneWidget);
@@ -127,13 +163,17 @@ void main() {
 
     testWidgets('shows top category tile when categories exist', (tester) async {
       await tester.pumpWidget(_buildSubject(AsyncData(_stateWithSummary())));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Principais categorias'), findsOneWidget);
-      expect(find.text('Food'), findsOneWidget);
+      // The same category name also labels the recent-transaction card, so the
+      // finder matches more than once by design.
+      expect(find.text('Food'), findsWidgets);
     });
 
-    testWidgets('hides top categories section when list is empty', (tester) async {
+    // The cards stay put when there is nothing to show and carry a hint instead —
+    // a section that disappears makes the home feel broken on a quiet month.
+    testWidgets('keeps the categories card with a hint when there is no spending', (tester) async {
       final state = HomeState(
         startDate: _now,
         finishDate: DateTime(2026, 4, 30),
@@ -150,20 +190,21 @@ void main() {
       );
 
       await tester.pumpWidget(_buildSubject(AsyncData(state)));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.text('Principais categorias'), findsNothing);
+      expect(find.text('Principais categorias'), findsOneWidget);
+      expect(find.text('Nenhum gasto por categoria neste período.'), findsOneWidget);
     });
 
     testWidgets('shows recent transaction row with description', (tester) async {
       await tester.pumpWidget(_buildSubject(AsyncData(_stateWithSummary())));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Transações recentes'), findsOneWidget);
       expect(find.text('Supermarket'), findsOneWidget);
     });
 
-    testWidgets('hides recent transactions section when list is empty', (tester) async {
+    testWidgets('keeps the recent transactions card with a hint when empty', (tester) async {
       final state = HomeState(
         startDate: _now,
         finishDate: DateTime(2026, 4, 30),
@@ -180,9 +221,10 @@ void main() {
       );
 
       await tester.pumpWidget(_buildSubject(AsyncData(state)));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.text('Recent Transactions'), findsNothing);
+      expect(find.text('Transações recentes'), findsOneWidget);
+      expect(find.text('Nenhuma transação registrada ainda.'), findsOneWidget);
     });
   });
 }

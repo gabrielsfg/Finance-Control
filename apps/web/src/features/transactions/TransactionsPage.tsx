@@ -22,6 +22,7 @@ import { PageTopbar } from "@/components/layout/PageTopbar";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
+import { useActiveBudget } from "@/features/budgets/hooks/useActiveBudget";
 import { useTags } from "@/features/transactions/hooks/useTags";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import { parseLocalDate } from "@/lib/utils/budgetPeriod";
@@ -130,7 +131,12 @@ function TransactionsContent() {
     "Buscar por descrição, tag, categoria ou conta...",
   );
 
-  const { start, finish } = buildTxDateRange(filter);
+  // The default period follows the budget, not the calendar. Resolved here rather than
+  // baked into the filter state because the budgets load after the first render, and a
+  // filter that rewrote itself once they arrived would fight anything the user had
+  // already changed.
+  const { data: activeBudgetPeriod } = useActiveBudget();
+  const { start, finish } = buildTxDateRange(filter, activeBudgetPeriod);
 
   /**
    * Every filter goes to the server, none of them to the loaded page. The list is
@@ -169,6 +175,21 @@ function TransactionsContent() {
       setExportState("error");
     }
   }
+
+  // Day subtotals only mean "the day" while the date range is the sole filter. Search,
+  // type, category, account, budget, tag and value bounds all narrow what lands in a day,
+  // and a subtotal over a narrowed day is a number the user cannot reconcile against
+  // anything.
+  const onlyDateFilter =
+    !searchQuery.trim() &&
+    filter.typeFilter === "All" &&
+    filter.categoryIds.length === 0 &&
+    filter.subCategoryIds.length === 0 &&
+    filter.accountIds.length === 0 &&
+    filter.budgetIds.length === 0 &&
+    filter.tagIds.length === 0 &&
+    filter.minValue === null &&
+    filter.maxValue === null;
 
   usePageFilter(
     <div className="flex items-center gap-2">
@@ -367,6 +388,7 @@ function TransactionsContent() {
         <TransactionsList
           transactions={items}
           subcategoryMeta={metaSubcategories}
+          grouped={onlyDateFilter}
           onView={(t) => {
             setDrawerTransaction(t);
             setDrawerMode("detail");

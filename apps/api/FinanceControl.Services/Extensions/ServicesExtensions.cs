@@ -33,6 +33,7 @@ namespace FinanceControl.Services.Extensions
             services.AddScoped<IAlertRuleService, AlertRuleService>();
             services.AddScoped<ILegalService, LegalService>();
             services.AddScoped<IDataExportService, DataExportService>();
+            services.AddScoped<IFeedbackService, FeedbackService>();
             services.AddScoped<LegalDocumentSeeder>();
             services.AddHttpClient();
 

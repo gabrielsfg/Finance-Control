@@ -23,11 +23,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return (
     <div className="border-border bg-surface rounded-lg border px-3 py-2 shadow-md">
       <p className="text-text-muted mb-1.5 text-[11px]">{label}</p>
-      {payload.map((entry: any) => (
-        <p key={entry.dataKey} className="font-money text-[13px]" style={{ color: entry.color ?? entry.fill }}>
-          {entry.name}: {entry.value < 0 ? "-" : ""}{formatCurrency(Math.abs(entry.value))}
-        </p>
-      ))}
+      {payload.map((entry: any) => {
+        // The executado bar is plotted mirrored so it hangs below the axis; its plotted
+        // value is a position, not an amount. The real figure rides along on the datum
+        // and is what the reader must see — a saved R$ 300 must never read as -R$ 300.
+        const real = entry.dataKey === "executado" ? entry.payload.executadoReal : entry.value;
+        return (
+          <p key={entry.dataKey} className="font-money text-[13px]" style={{ color: entry.color ?? entry.fill }}>
+            {entry.name}: {real < 0 ? "-" : ""}{formatCurrency(Math.abs(real))}
+          </p>
+        );
+      })}
     </div>
   );
 };
@@ -38,10 +44,22 @@ type Props = {
 };
 
 export function SavingsPlannedVsActualChart({ periods, plannedSavings }: Props) {
+  /**
+   * Planned and executed share an x position and diverge from zero: planned up, executed
+   * down. Side by side they read as two unrelated series, when in fact they are two
+   * measurements of the SAME period and the only thing worth seeing is which is longer.
+   *
+   * `executado` is negated because Recharts derives the bar's direction from the sign of
+   * its value — the mirrored number is a coordinate, so the real one travels beside it
+   * for the tooltip and the colour. Magnitude is used rather than the raw figure so a
+   * period that lost money still hangs below the line instead of flipping up into the
+   * planned half; the red fill is what says it went negative.
+   */
   const chartData = periods.map((p) => ({
     label: periodShortLabel(p.periodStart),
     planejado: plannedSavings / 100,
-    executado: p.savings / 100,
+    executado: -Math.abs(p.savings / 100),
+    executadoReal: p.savings / 100,
   }));
 
   return (
@@ -69,15 +87,46 @@ export function SavingsPlannedVsActualChart({ periods, plannedSavings }: Props) 
                   tick={{ fill: "var(--text-sub)", fontSize: 10, fontFamily: "IBM Plex Mono" }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(v) => formatCurrencyCompact(v)}
+                  // Both halves measure an amount; the sign here is direction, so the
+                  // axis would otherwise label the executado side as negative money.
+                  tickFormatter={(v) => formatCurrencyCompact(Math.abs(v))}
                   width={72}
                 />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--surface2)", opacity: 0.5 }} />
-                <ReferenceLine y={0} stroke="var(--border-color)" />
-                <Bar {...chartAnim(0)} dataKey="planejado" name="Planejado" fill="var(--chart-2)" fillOpacity={0.45} radius={[4, 4, 0, 0]} maxBarSize={28} />
-                <Bar {...chartAnim(1)} dataKey="executado" name="Executado" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                {/* The axis the two series diverge from, so it carries more weight than
+                    a grid line. */}
+                <ReferenceLine y={0} stroke="var(--text-muted)" strokeWidth={1.5} />
+                {/* One stackId puts both in the same x slot. Recharts stacks positives up
+                    from zero and negatives down from it, so the shared stack is what
+                    produces the split rather than any manual offset that would drift as
+                    the container resizes. */}
+                {/* Solid, not the 45% ghost it was. Both halves are measurements being
+                    compared by length, so they need equal visual weight — a translucent
+                    planned bar reads as a backdrop and the eye stops measuring it. The
+                    2px surface stroke keeps the two from smearing together at zero. */}
+                <Bar
+                  {...chartAnim(0)}
+                  stackId="period"
+                  dataKey="planejado"
+                  name="Planejado"
+                  fill="var(--chart-2)"
+                  stroke="var(--surface)"
+                  strokeWidth={2}
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={28}
+                />
+                <Bar
+                  {...chartAnim(1)}
+                  stackId="period"
+                  dataKey="executado"
+                  name="Executado"
+                  stroke="var(--surface)"
+                  strokeWidth={2}
+                  radius={[0, 0, 4, 4]}
+                  maxBarSize={28}
+                >
                   {chartData.map((entry, i) => (
-                    <Cell key={i} fill={entry.executado < 0 ? "var(--chart-3)" : "var(--chart-1)"} />
+                    <Cell key={i} fill={entry.executadoReal < 0 ? "var(--chart-3)" : "var(--chart-1)"} />
                   ))}
                 </Bar>
               </BarChart>
@@ -86,12 +135,12 @@ export function SavingsPlannedVsActualChart({ periods, plannedSavings }: Props) 
 
           <div className="mt-3 flex flex-wrap gap-5">
             {[
-              ["var(--chart-2)", "Planejado"],
-              ["var(--chart-1)", "Executado (positivo)"],
-              ["var(--chart-3)", "Executado (negativo)"],
+              ["var(--chart-2)", "Planejado (acima)"],
+              ["var(--chart-1)", "Executado (abaixo)"],
+              ["var(--chart-3)", "Executado negativo"],
             ].map(([color, label]) => (
               <div key={label} className="flex items-center gap-1.5">
-                <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: color, opacity: label === "Planejado" ? 0.45 : 1 }} />
+                <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: color }} />
                 <span className="text-text-muted text-[13px]">{label}</span>
               </div>
             ))}

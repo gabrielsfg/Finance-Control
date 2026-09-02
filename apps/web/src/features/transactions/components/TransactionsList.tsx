@@ -44,12 +44,21 @@ type Props = {
   transactions: TransactionItem[];
   subcategoryMeta?: SubcategoryMeta[];
   search?: string;
+  /**
+   * Group by day with a per-day income/expense subtotal.
+   *
+   * Only true when the date range is the only thing narrowing the list. Under any other
+   * filter those subtotals stop describing the day and start describing the slice that
+   * survived the filter — a value filter would print a "total do dia" that is not the
+   * day's total, which reads as a wrong number rather than a filtered one.
+   */
+  grouped?: boolean;
   onView: (t: TransactionItem) => void;
   onEdit: (t: TransactionItem) => void;
   onDelete: (t: TransactionItem) => void;
 };
 
-export const TransactionsList = ({ transactions, subcategoryMeta = [], search, onView, onEdit, onDelete }: Props) => {
+export const TransactionsList = ({ transactions, subcategoryMeta = [], search, grouped = true, onView, onEdit, onDelete }: Props) => {
   const subColorMap = useMemo(() => {
     const m = new Map<number, string>();
     for (const s of subcategoryMeta) m.set(s.id, s.color);
@@ -63,6 +72,9 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
   }, [subcategoryMeta]);
 
   const groups = useMemo<DayGroup[]>(() => {
+    // One synthetic group carrying every row, so the render path below stays single.
+    if (!grouped) return [{ date: "", transactions, dayIncome: 0, dayExpense: 0 }];
+
     const map = new Map<string, TransactionItem[]>();
     for (const t of transactions) {
       if (!map.has(t.transactionDate)) map.set(t.transactionDate, []);
@@ -76,7 +88,7 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
         dayIncome:  txs.filter((t) => t.type === "Income").reduce((s, t) => s + t.value, 0),
         dayExpense: txs.filter((t) => t.type === "Expense").reduce((s, t) => s + t.value, 0),
       }));
-  }, [transactions]);
+  }, [transactions, grouped]);
 
   if (transactions.length === 0) {
     return (
@@ -96,24 +108,25 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, o
     <div className="overflow-hidden rounded-[20px] border" style={{ borderColor: "var(--border-color)" }}>
       {groups.map(({ date, transactions: txs, dayIncome, dayExpense }) => (
         <div key={date}>
-          {/* Day header */}
-          <div className="border-border bg-surface2 flex items-center justify-between border-b px-4 py-2.5">
-            <span className="text-text-sub font-semibold text-[12px] capitalize">
-              {formatDayHeader(date)}
-            </span>
-            <div className="flex items-center gap-3">
-              {dayIncome > 0 && (
-                <span className="font-mono text-green text-[12px]">
-                  +{formatCurrency(dayIncome / 100)}
-                </span>
-              )}
-              {dayExpense > 0 && (
-                <span className="font-mono text-red text-[12px]">
-                  -{formatCurrency(dayExpense / 100)}
-                </span>
-              )}
+          {grouped && (
+            <div className="border-border bg-surface2 flex items-center justify-between border-b px-4 py-2.5">
+              <span className="text-text-sub font-semibold text-[12px] capitalize">
+                {formatDayHeader(date)}
+              </span>
+              <div className="flex items-center gap-3">
+                {dayIncome > 0 && (
+                  <span className="font-mono text-green text-[12px]">
+                    +{formatCurrency(dayIncome / 100)}
+                  </span>
+                )}
+                {dayExpense > 0 && (
+                  <span className="font-mono text-red text-[12px]">
+                    -{formatCurrency(dayExpense / 100)}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Transactions for the day */}
           {txs.map((t, i) => {

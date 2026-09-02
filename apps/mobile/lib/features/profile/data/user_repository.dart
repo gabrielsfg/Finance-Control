@@ -33,4 +33,45 @@ class UserRepository {
       response.data as Map<String, dynamic>,
     );
   }
+
+  /// Downloads everything the account holds (LGPD art. 18, V).
+  ///
+  /// The endpoint answers with a file rather than a JSON body, so the bytes are
+  /// taken raw and the name comes from `content-disposition` — the server picks
+  /// it, and it already carries the export date.
+  Future<ExportedFile> exportData() async {
+    final response = await _dio.get<List<int>>(
+      ApiEndpoints.exportData,
+      options: Options(responseType: ResponseType.bytes),
+    );
+
+    final disposition =
+        response.headers.value('content-disposition') ?? '';
+    return ExportedFile(
+      bytes: response.data ?? const <int>[],
+      fileName: _fileNameFrom(disposition),
+    );
+  }
+
+  /// Reads `filename="..."` out of a content-disposition header, falling back to
+  /// a dated name so the user never ends up with an unnamed download.
+  static String _fileNameFrom(String contentDisposition) {
+    final match =
+        RegExp(r'filename="?([^";]+)"?').firstMatch(contentDisposition);
+    final name = match?.group(1)?.trim();
+    if (name != null && name.isNotEmpty) return name;
+
+    final today = DateTime.now();
+    final month = today.month.toString().padLeft(2, '0');
+    final day = today.day.toString().padLeft(2, '0');
+    return 'meus-dados-${today.year}-$month-$day.json';
+  }
+}
+
+/// The export payload plus the name the file should keep once saved.
+class ExportedFile {
+  const ExportedFile({required this.bytes, required this.fileName});
+
+  final List<int> bytes;
+  final String fileName;
 }

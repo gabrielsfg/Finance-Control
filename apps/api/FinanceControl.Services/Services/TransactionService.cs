@@ -813,22 +813,28 @@ namespace FinanceControl.Services.Services
 
             if (!string.IsNullOrWhiteSpace(requestDto.Search))
             {
-                var search = requestDto.Search.Trim();
+                var pattern = $"%{requestDto.Search.Trim()}%";
 
-                // Tags are part of what the search box promises, and the web page used to
-                // deliver it by filtering the rows it had in hand. Resolved to ids first
-                // for the same reason as the branches above: the query is already
-                // projected, so its Tags list is not a navigation any more.
-                var tagMatchIds = await _context.Transactions
-                    .Where(t => t.UserId == userId && t.Tags.Any(tag => EF.Functions.ILike(tag.Name, $"%{search}%")))
+                // Matched against the ENTITY, then narrowed by id.
+                //
+                // The previous version filtered the projection, where SubCategoryName and
+                // AccountName are computed columns and AreaName is a correlated
+                // FirstOrDefault subquery — asking EF to translate a predicate over that
+                // is the one thing the category and tag branches above already go out of
+                // their way to avoid, and search was the last filter still doing it. On
+                // the entity it is plainly translatable, and it is also where the indexes
+                // live. Category name is included because the box promises it.
+                var matchIds = await _context.Transactions
+                    .Where(t => t.UserId == userId && (
+                        EF.Functions.ILike(t.Description, pattern) ||
+                        EF.Functions.ILike(t.SubCategory.Name, pattern) ||
+                        EF.Functions.ILike(t.SubCategory.Category.Name, pattern) ||
+                        EF.Functions.ILike(t.Account.Name, pattern) ||
+                        t.Tags.Any(tag => EF.Functions.ILike(tag.Name, pattern))))
                     .Select(t => t.Id)
                     .ToListAsync();
 
-                query = query.Where(t =>
-                    (t.Description != null && EF.Functions.ILike(t.Description, $"%{search}%")) ||
-                    EF.Functions.ILike(t.SubCategoryName, $"%{search}%") ||
-                    EF.Functions.ILike(t.AccountName, $"%{search}%") ||
-                    tagMatchIds.Contains(t.Id));
+                query = query.Where(t => matchIds.Contains(t.Id));
             }
 
             return query;

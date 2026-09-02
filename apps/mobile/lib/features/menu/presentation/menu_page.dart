@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../notifications/providers/notification_provider.dart';
 
 // ── Page ───────────────────────────────────────────────────────────────────
 //
@@ -117,6 +118,13 @@ class MenuPage extends ConsumerWidget {
                 title: 'Conta',
                 items: [
                   _MenuEntry(
+                    icon: LucideIcons.bell,
+                    label: 'Notificações',
+                    subtitle: 'Avisos de faturas, orçamento e recorrências',
+                    route: '/notifications',
+                    showsUnreadBadge: true,
+                  ),
+                  _MenuEntry(
                     icon: LucideIcons.tag,
                     label: 'Categorias',
                     subtitle: 'Categorias e subcategorias',
@@ -133,6 +141,12 @@ class MenuPage extends ConsumerWidget {
                     label: 'Preferências',
                     subtitle: 'Moeda, idioma e fuso horário',
                     route: '/profile/preferences',
+                  ),
+                  _MenuEntry(
+                    icon: LucideIcons.messageSquarePlus,
+                    label: 'Fale com a gente',
+                    subtitle: 'Relate um problema ou mande uma ideia',
+                    route: '/feedback',
                   ),
                 ],
               ),
@@ -201,6 +215,7 @@ class _MenuEntry {
     required this.subtitle,
     required this.route,
     this.switchTab = false,
+    this.showsUnreadBadge = false,
   });
 
   final IconData icon;
@@ -211,16 +226,22 @@ class _MenuEntry {
   /// When true the destination is a bottom-nav tab, so switch to it with
   /// `context.go` (replacing the stack) instead of pushing on top.
   final bool switchTab;
+
+  /// Shows the unread-notification count next to the chevron.
+  final bool showsUnreadBadge;
 }
 
-class _MenuTile extends StatelessWidget {
+class _MenuTile extends ConsumerWidget {
   const _MenuTile({required this.entry});
 
   final _MenuEntry entry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = AppThemeTokens.of(context);
+    final unread = entry.showsUnreadBadge
+        ? ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0
+        : 0;
 
     return GestureDetector(
       onTap: () {
@@ -262,6 +283,25 @@ class _MenuTile extends StatelessWidget {
                 ],
               ),
             ),
+            if (unread > 0) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: t.clay,
+                  borderRadius: AppRadius.pillAll,
+                ),
+                child: Text(
+                  unread > 9 ? '9+' : '$unread',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    height: 1.1,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
             Icon(LucideIcons.chevronRight, size: 18, color: t.txtTertiary),
           ],
         ),

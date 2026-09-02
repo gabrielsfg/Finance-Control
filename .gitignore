@@ -62,3 +62,6 @@ implementation-plans/
 # Design reference (local only, not merged to main)
 design/
 design.zip
+
+# Rider/ReSharper scratch files left next to the source (MarketService.cs~RF….TMP)
+*~RF*.TMP

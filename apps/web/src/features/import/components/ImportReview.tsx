@@ -5,12 +5,16 @@ import {
   CheckCircle2, AlertTriangle, Loader2, X,
   TrendingDown, TrendingUp, ArrowLeftRight, ChevronDown, Check,
 } from "lucide-react";
+import { PageTopbar } from "@/components/layout/PageTopbar";
+import { DatePickerField } from "@/components/shared/DatePickerField";
+import { CategoryPickerField } from "@/components/shared/CategoryPickerField";
+import { TagInput } from "@/features/transactions/components/TagInput";
+import { CreateSubCategoryModal } from "@/features/categories/components/CreateSubCategoryModal";
+import { useCategories } from "@/features/categories/hooks/useCategories";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { getCategoryColor } from "@/lib/config/categoryColors";
 import { cn } from "@/lib/utils";
 import type { useImportFlow } from "@/features/import/hooks/useImportFlow";
 import type { TransactionType } from "@/lib/types/transactions.types";
-import type { SubCategoryItem } from "@/lib/types/transactions.types";
 
 type Flow = ReturnType<typeof useImportFlow>;
 
@@ -82,134 +86,84 @@ function TypeDropdown({ value, onChange }: { value: TransactionType; onChange: (
   );
 }
 
-function SubcatDropdown({
-  value, onChange, subcats, subcatGroups, subcatMap,
-}: {
-  value: number | null;
-  onChange: (v: number | null) => void;
-  subcats: SubCategoryItem[];
-  subcatGroups: Flow["subcatGroups"];
-  subcatMap: Flow["subcatMap"];
-}) {
-  const { open, setOpen, ref } = useDropdown();
-
-  const selected = value ? subcatMap.get(value) : null;
-  const selectedColor = selected
-    ? getCategoryColor(selected.categoryColor, selected.categoryName)
-    : null;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="border-border bg-surface2 flex h-7 max-w-[200px] items-center gap-1.5 rounded-md border px-2.5 text-[12px] transition-colors hover:bg-surface2/80"
-      >
-        {selected ? (
-          <>
-            {selected.emoji
-              ? <span className="shrink-0 text-[13px] leading-none">{selected.emoji}</span>
-              : selectedColor && <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: selectedColor }} />
-            }
-            <span className="text-text truncate">{selected.name}</span>
-          </>
-        ) : (
-          <span className="text-text-muted">Sem categoria</span>
-        )}
-        <ChevronDown size={11} className="text-text-muted ml-auto shrink-0" />
-      </button>
-
-      {open && (
-        <div
-          className="border-border bg-surface absolute left-0 top-8 z-50 w-[240px] overflow-y-auto rounded-xl border py-1 shadow-xl"
-          style={{ maxHeight: 300 }}
-        >
-          <button
-            onClick={() => { onChange(null); setOpen(false); }}
-            className={cn(
-              "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] transition-colors",
-              value === null ? "bg-surface2 text-text font-medium" : "text-text-sub hover:bg-surface2 hover:text-text",
-            )}
-          >
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full border border-border" />
-            <span>Sem categoria</span>
-            {value === null && <Check size={11} className="text-text-muted ml-auto" />}
-          </button>
-
-          {subcatGroups.map(([catName, { color, items }]) => (
-            <div key={catName}>
-              <div className="flex items-center gap-1.5 px-3 pb-0.5 pt-2">
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-                <span className="text-text-muted text-[11px] font-semibold uppercase tracking-wide">{catName}</span>
-              </div>
-              {items.map((s) => {
-                const active = s.id === value;
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => { onChange(s.id); setOpen(false); }}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 px-3 py-1.5 pl-6 text-left text-[13px] transition-colors",
-                      active ? "bg-surface2 font-medium" : "text-text-sub hover:bg-surface2 hover:text-text",
-                    )}
-                  >
-                    {s.emoji
-                      ? <span className="shrink-0 text-[13px] leading-none">{s.emoji}</span>
-                      : <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-                    }
-                    <span className={cn(active && "text-text")}>{s.name}</span>
-                    {active && <Check size={11} className="ml-auto shrink-0" style={{ color }} />}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function ImportReview({ flow }: { flow: Flow }) {
   const allSelected = flow.rows.length > 0 && flow.rows.every((r) => r.selected);
+  const { data: categories = [] } = useCategories();
+
+  // Which row opened the create drawer, so the new subcategory lands on it. One drawer
+  // for the whole table rather than one per row.
+  const [createSubcatForRow, setCreateSubcatForRow] = useState<number | null>(null);
+
+  const busy = flow.selectedCount === 0 || flow.confirmMutation.isPending;
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Sub-header */}
-      <div className="mb-5 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-text text-[22px] font-semibold tracking-tight">Revisar Transações</h1>
-          <p className="text-text-muted mt-0.5 text-[13px]">
-            {flow.rows.length} encontradas · {flow.duplicateCount} duplicatas ·{" "}
-            <span className="text-green font-medium">{flow.selectedCount} selecionadas</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={flow.reset}
-            className="border-border bg-surface2 text-text-sub hover:text-text flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors"
-          >
-            <X size={13} /> Cancelar
-          </button>
-          <button
-            onClick={flow.handleConfirm}
-            disabled={flow.selectedCount === 0 || flow.confirmMutation.isPending}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-[13px] font-medium transition-all",
-              flow.selectedCount === 0 || flow.confirmMutation.isPending
-                ? "bg-surface2 text-text-muted cursor-not-allowed"
-                : "bg-brand text-white hover:bg-brand/90"
-            )}
-          >
-            {flow.confirmMutation.isPending
-              ? <><Loader2 size={13} className="animate-spin" /> Importando…</>
-              : <><CheckCircle2 size={13} /> Importar {flow.selectedCount}</>}
-          </button>
-        </div>
+    <div className="flex h-full flex-col px-[clamp(20px,3.4vw,46px)] pb-[30px]">
+      {/* Title and actions ride the shared topbar, so this screen lines up with every
+          other page instead of starting flush against the top of the viewport. The
+          buttons take the primary-action slot on the right — where "Nova transacao"
+          sits — and match its metrics, or the row reads as subtly misaligned. */}
+      <div className="shrink-0">
+        <PageTopbar
+          title="Revisar Transações"
+          subtitle={
+            <>
+              {flow.rows.length} encontradas · {flow.duplicateCount} duplicatas ·{" "}
+              <span className="text-green font-medium">{flow.selectedCount} selecionadas</span>
+            </>
+          }
+          actions={
+            <>
+              <button
+                onClick={flow.reset}
+                className="flex h-[42px] items-center gap-2 rounded-[13px] border px-4 text-[13px] font-medium transition-all hover:-translate-y-[1px]"
+                style={{ background: "var(--surface)", borderColor: "var(--border-color)", color: "var(--text-sub)" }}
+              >
+                <X size={15} strokeWidth={1.75} /> Cancelar
+              </button>
+              <button
+                onClick={flow.handleConfirm}
+                disabled={busy}
+                className={cn(
+                  "inline-flex h-[42px] items-center gap-2 rounded-[13px] px-[18px] text-[14px] font-semibold transition-transform",
+                  busy
+                    ? "bg-surface2 text-text-muted cursor-not-allowed"
+                    : "text-white hover:-translate-y-[1px]",
+                )}
+                style={
+                  busy
+                    ? undefined
+                    : { background: "var(--brand-cobalt)", boxShadow: "0 12px 24px -12px rgba(31,60,224,0.7)" }
+                }
+              >
+                {flow.confirmMutation.isPending
+                  ? <><Loader2 size={16} className="animate-spin" /> Importando…</>
+                  : <><CheckCircle2 size={16} strokeWidth={2} /> Importar {flow.selectedCount}</>}
+              </button>
+            </>
+          }
+        />
       </div>
+
+      {/* The same choice the upload step offers, repeated here because this is the screen
+          where it is actually decided — by now the rows are on screen and the reviewer can
+          see what they are about to charge against the budget. Bound to the same state, so
+          the two controls can never disagree. */}
+      <label className="mb-3 flex w-fit shrink-0 cursor-pointer items-center gap-2.5">
+        <input
+          type="checkbox"
+          checked={flow.countForBudget}
+          onChange={(e) => flow.setCountForBudget(e.target.checked)}
+          className="accent-green h-4 w-4 cursor-pointer rounded"
+        />
+        <span className="text-text text-[13px] font-medium">Contar no orçamento ativo</span>
+        <span className="text-text-muted text-[12px]">
+          — as transações importadas serão associadas ao orçamento ativo atual.
+        </span>
+      </label>
 
       {/* Table */}
       <div className="border-border bg-surface flex-1 overflow-auto rounded-xl border">
-        <table className="w-full min-w-[860px] text-[13px]">
+        <table className="w-full min-w-[1180px] text-[13px]">
           <thead className="sticky top-0 z-10">
             <tr className="border-border bg-surface border-b">
               <th className="px-4 py-3 text-left">
@@ -220,6 +174,7 @@ export function ImportReview({ flow }: { flow: Flow }) {
               <th className="text-text-muted px-3 py-3 text-left text-[11px] font-medium uppercase tracking-wide">Descrição</th>
               <th className="text-text-muted px-3 py-3 text-left text-[11px] font-medium uppercase tracking-wide">Tipo</th>
               <th className="text-text-muted px-3 py-3 text-left text-[11px] font-medium uppercase tracking-wide">Categoria</th>
+              <th className="text-text-muted px-3 py-3 text-left text-[11px] font-medium uppercase tracking-wide">Tags</th>
               <th className="text-text-muted px-3 py-3 text-right text-[11px] font-medium uppercase tracking-wide">Valor</th>
             </tr>
           </thead>
@@ -239,12 +194,30 @@ export function ImportReview({ flow }: { flow: Flow }) {
                     <input type="checkbox" checked={row.selected} onChange={() => flow.toggleRow(idx)}
                       className="accent-green h-3.5 w-3.5 cursor-pointer" />
                   </td>
-                  <td className="text-text-sub whitespace-nowrap px-3 py-2.5 font-mono text-[12px]">
-                    {row.date.slice(0, 10).split("-").reverse().join("/")}
+                  <td className="px-3 py-2.5">
+                    {/* The statement's date is a suggestion, not a fact — a card purchase
+                        posts days after it happened, and the reviewer is often the only
+                        one who knows which date the transaction belongs to. */}
+                    <div className="w-[122px]">
+                      <DatePickerField
+                        size="sm"
+                        value={row.date.slice(0, 10)}
+                        onChange={(next) => flow.setRowDate(idx, next)}
+                      />
+                    </div>
                   </td>
-                  <td className="max-w-[300px] px-3 py-2.5">
+                  <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-text block truncate">{row.description}</span>
+                      {/* Editable in place. Bank descriptions arrive as things like
+                          "PIX ENVIADO 41.2 CP" — the border only shows on hover so the
+                          column still reads as text until someone wants to fix one. */}
+                      <input
+                        value={row.description}
+                        onChange={(e) => flow.setRowDescription(idx, e.target.value)}
+                        placeholder="Sem descrição"
+                        title="Editar descrição"
+                        className="text-text placeholder:text-text-muted hover:border-border hover:bg-surface2 w-[236px] min-w-0 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-[13px] outline-none transition-colors focus:border-[var(--brand-cobalt)] focus:bg-[var(--surface2)]"
+                      />
                       {row.isDuplicate && (
                         <span title={row.duplicateReason ?? "Possível duplicata"}
                           className="text-yellow flex shrink-0 items-center gap-0.5 text-[11px]">
@@ -262,13 +235,27 @@ export function ImportReview({ flow }: { flow: Flow }) {
                     <TypeDropdown value={row.type} onChange={(v) => flow.setRowType(idx, v)} />
                   </td>
                   <td className="px-3 py-2.5">
-                    <SubcatDropdown
+                    <CategoryPickerField
+                      size="sm"
+                      allowEmpty
+                      placeholder="Sem categoria"
                       value={row.subCategoryId}
-                      onChange={(v) => flow.setRowSubcat(idx, v)}
-                      subcats={flow.subcats}
-                      subcatGroups={flow.subcatGroups}
-                      subcatMap={flow.subcatMap}
+                      onChange={(id) => flow.setRowSubcat(idx, id)}
+                      subcategories={flow.subcats}
+                      onCreateNew={() => setCreateSubcatForRow(idx)}
                     />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {/* The transaction form's own control, shrunk to the cell, so an
+                        imported row can be tagged without a second pass through edit. */}
+                    <div className="w-[200px]">
+                      <TagInput
+                        size="sm"
+                        value={row.tags}
+                        onChange={(tags) => flow.setRowTags(idx, tags)}
+                        extraOptions={flow.pendingTagNames}
+                      />
+                    </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono font-medium"
                     style={{ color: typeCfg.color }}>
@@ -286,6 +273,20 @@ export function ImportReview({ flow }: { flow: Flow }) {
           {(flow.confirmMutation.error as Error)?.message ?? "Erro ao confirmar importação."}
         </p>
       )}
+
+      {/* Rendered here rather than inside the dropdown: the menu unmounts the instant it
+          loses focus, and a drawer nested in it would be torn down on the first click
+          inside itself. Creating a category here saves re-importing the file, which is
+          what a second parse actually costs — another pass of AI categorisation. */}
+      <CreateSubCategoryModal
+        open={createSubcatForRow !== null}
+        onClose={() => setCreateSubcatForRow(null)}
+        categories={categories}
+        zIndex={80}
+        onCreated={(created) => {
+          if (createSubcatForRow !== null) flow.setRowSubcat(createSubcatForRow, created.id);
+        }}
+      />
     </div>
   );
 }

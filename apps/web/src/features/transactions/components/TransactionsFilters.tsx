@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  SlidersHorizontal, Check,
+  SlidersHorizontal, Check, Search,
   CalendarDays, Tag, Hash, Wallet, BookOpen, ListFilter, ArrowUpDown, DollarSign,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalizeSearch } from "@/lib/utils";
 import { parseLocalDate } from "@/lib/utils/budgetPeriod";
 import { centsToInput, inputToCents } from "@/lib/utils/currencyInput";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
@@ -21,6 +21,7 @@ import { activeTxDateLabel, availableTxYears, defaultTxFilter } from "../utils/f
 type Section = "date" | "categories" | "type" | "accounts" | "budgets" | "tags" | "value" | "sort";
 
 const DATE_PRESETS: { id: TxDatePreset; label: string }[] = [
+  { id: "budget-cycle",   label: "Ciclo do orçamento" },
   { id: "current-month",  label: "Mês atual" },
   { id: "last-3-months",  label: "Últimos 3 meses" },
   { id: "last-6-months",  label: "Últimos 6 meses" },
@@ -52,7 +53,9 @@ export function getActiveFilterTags(
 ): FilterTag[] {
   const tags: FilterTag[] = [];
 
-  if (filter.preset !== "current-month") {
+  // budget-cycle is the default, so it is not something the user "set" — showing a chip
+  // for it would put a removable badge on the state you get by doing nothing.
+  if (filter.preset !== "budget-cycle") {
     tags.push({ id: "preset", label: activeTxDateLabel(filter) });
   }
 
@@ -147,6 +150,85 @@ const SORT_OPTIONS: { field: TxSortField; order: TxSortOrder; label: string; ico
   { field: "value", order: "desc", label: "Maior valor primeiro",  icon: DollarSign },
   { field: "value", order: "asc",  label: "Menor valor primeiro",  icon: DollarSign },
 ];
+
+/**
+ * Category + subcategory checkboxes, with type-to-search.
+ *
+ * Its own component so it mounts and unmounts with the section: the query then lives and
+ * dies with the panel, instead of persisting after the user has gone to Contas and come
+ * back to find the list still narrowed by something they typed a minute ago.
+ */
+function CategoriesSection({
+  draft, categories, subcategories, toggleCategory, toggleSubCategory,
+}: {
+  draft: TransactionsFilter;
+  categories: { id: number; name: string; color: string }[];
+  subcategories: { id: number; name: string; categoryId: number; color: string; emoji?: string | null }[];
+  toggleCategory: (catId: number) => void;
+  toggleSubCategory: (subId: number, catId: number) => void;
+}) {
+  const [query, setQuery] = useState("");
+
+  const groups = useMemo(() => {
+    const key = normalizeSearch(query);
+
+    const all = categories.map(cat => {
+      const subs = subcategories.filter(s => s.categoryId === cat.id);
+      // Matching the category name keeps its whole group: narrowing to "Moradia" means
+      // everything under it, not only the subcategories that repeat the word.
+      if (!key || normalizeSearch(cat.name).includes(key)) return { cat, subs };
+      return { cat, subs: subs.filter(s => normalizeSearch(s.name).includes(key)) };
+    });
+
+    if (!key) return all;
+    return all.filter(g => g.subs.length > 0 || normalizeSearch(g.cat.name).includes(key));
+  }, [categories, subcategories, query]);
+
+  if (categories.length === 0) {
+    return <p className="text-text-muted py-4 text-center text-[14px]">Nenhuma categoria</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="border-border bg-surface2 flex items-center gap-2 rounded-lg border px-2.5 py-2 focus-within:border-green/60">
+        <Search size={13} className="text-text-muted shrink-0" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar categoria ou subcategoria..."
+          className="text-text placeholder:text-text-muted w-full bg-transparent text-[13px] outline-none"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 300 }}>
+        {groups.length === 0
+          ? <p className="text-text-muted py-4 text-center text-[13px]">Nenhuma categoria encontrada.</p>
+          : groups.map(({ cat, subs }) => (
+            <div key={cat.id}>
+              <CheckRow
+                checked={draft.categoryIds.includes(cat.id)}
+                onClick={() => toggleCategory(cat.id)}
+                label={cat.name}
+                color={cat.color}
+              />
+              {subs.map(sub => (
+                <CheckRow
+                  key={sub.id}
+                  checked={draft.subCategoryIds.includes(sub.id)}
+                  onClick={() => toggleSubCategory(sub.id, cat.id)}
+                  label={sub.name}
+                  color={sub.color}
+                  emoji={sub.emoji}
+                  indent
+                />
+              ))}
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  );
+}
 
 function SectionContent({
   section, draft, setDraft, accounts, categories, subcategories, budgets, tags,
@@ -267,35 +349,13 @@ function SectionContent({
 
   if (section === "categories") {
     return (
-      <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 340 }}>
-        {categories.length === 0
-          ? <p className="text-text-muted py-4 text-center text-[14px]">Nenhuma categoria</p>
-          : categories.map(cat => {
-            const catSubs = subcategories.filter(s => s.categoryId === cat.id);
-            return (
-              <div key={cat.id}>
-                <CheckRow
-                  checked={draft.categoryIds.includes(cat.id)}
-                  onClick={() => toggleCategory(cat.id)}
-                  label={cat.name}
-                  color={cat.color}
-                />
-                {catSubs.map(sub => (
-                  <CheckRow
-                    key={sub.id}
-                    checked={draft.subCategoryIds.includes(sub.id)}
-                    onClick={() => toggleSubCategory(sub.id, cat.id)}
-                    label={sub.name}
-                    color={sub.color}
-                    emoji={sub.emoji}
-                    indent
-                  />
-                ))}
-              </div>
-            );
-          })
-        }
-      </div>
+      <CategoriesSection
+        draft={draft}
+        categories={categories}
+        subcategories={subcategories}
+        toggleCategory={toggleCategory}
+        toggleSubCategory={toggleSubCategory}
+      />
     );
   }
 
@@ -463,7 +523,7 @@ const SORT_SECTIONS: { id: Section; label: string; icon: React.ElementType }[] =
 
 function countActive(filter: TransactionsFilter): number {
   let n = 0;
-  if (filter.preset !== "current-month") n++;
+  if (filter.preset !== "budget-cycle") n++;
   if (filter.typeFilter !== "All") n++;
   if (filter.categoryIds.length > 0) n++;
   if (filter.subCategoryIds.length > 0) n++;

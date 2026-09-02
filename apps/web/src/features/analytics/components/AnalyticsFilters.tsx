@@ -18,6 +18,7 @@ import { availableYears, defaultFilter } from "../utils/filterDates";
 type Section = "date" | "type" | "categories" | "accounts" | "assetclass" | "tags";
 
 const DATE_PRESETS: { id: DatePreset; label: string }[] = [
+  { id: "budget-cycle",   label: "Ciclo do orçamento" },
   { id: "current-month",  label: "Mês atual" },
   { id: "last-3-months",  label: "Últimos 3 meses" },
   { id: "last-6-months",  label: "Últimos 6 meses" },

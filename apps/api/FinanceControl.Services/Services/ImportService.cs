@@ -12,6 +12,7 @@ using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response.Import;
 using FinanceControl.Shared.Enums;
+using FinanceControl.Shared.Helpers;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -142,6 +143,34 @@ public class ImportService : IImportService
             .Select(s => s.Id)
             .ToHashSetAsync();
 
+        // CountForBudget was accepted and then dropped: nothing here ever read it, so
+        // every imported transaction landed with BudgetId null and sat outside the budget
+        // it was meant to count against. The active budget is resolved the same way
+        // TransactionService does it for a manual entry.
+        int? budgetId = null;
+        if (requestDto.CountForBudget)
+        {
+            var activeBudget = await _context.Budgets
+                .FirstOrDefaultAsync(b => b.IsActive && b.UserId == userId);
+            if (activeBudget is null)
+                return Result<int>.Failure("No active budget found.");
+            budgetId = activeBudget.Id;
+        }
+
+        var tagsByKey = await ResolveBatchTagsAsync(requestDto.Transactions, userId);
+
+        // Names are matched through the same comparison key the transaction form uses.
+        // Skipping that would let an import of "viagem" create a second tag beside the
+        // existing "Viagem", and from there the two drift apart for good.
+        List<Tag> TagsFor(ImportTransactionItemRequestDto item) =>
+            (item.Tags ?? [])
+                .Select(name => TextNormalization.ToComparisonKey(name.Trim()))
+                .Where(key => key.Length > 0)
+                .Distinct()
+                .Select(key => tagsByKey.GetValueOrDefault(key))
+                .OfType<Tag>()
+                .ToList();
+
         int savedCount = 0;
 
         foreach (var item in requestDto.Transactions)
@@ -156,6 +185,7 @@ public class ImportService : IImportService
                 {
                     UserId = userId,
                     AccountId = requestDto.AccountId,
+                    BudgetId = budgetId,
                     SubCategoryId = item.SubCategoryId ?? 0,
                     Value = item.Value,
                     Type = item.Type,
@@ -164,6 +194,7 @@ public class ImportService : IImportService
                     PaymentType = EnumPaymentType.Installment,
                     InstallmentNumber = 1,
                     TotalInstallments = item.TotalInstallments,
+                    Tags = TagsFor(item),
                 };
                 _context.Transactions.Add(parent);
                 await _context.SaveChangesAsync();
@@ -174,6 +205,7 @@ public class ImportService : IImportService
                     {
                         UserId = userId,
                         AccountId = requestDto.AccountId,
+                        BudgetId = budgetId,
                         SubCategoryId = item.SubCategoryId ?? 0,
                         ParentTransactionId = parent.Id,
                         Value = item.Value,
@@ -183,6 +215,9 @@ public class ImportService : IImportService
                         PaymentType = EnumPaymentType.Installment,
                         InstallmentNumber = i,
                         TotalInstallments = item.TotalInstallments,
+                        // Every instalment carries the tags, matching what the transaction
+                        // form does — a tag filter has to find the whole series, not row 1.
+                        Tags = TagsFor(item),
                     };
                     _context.Transactions.Add(installment);
                 }
@@ -196,6 +231,7 @@ public class ImportService : IImportService
                 {
                     UserId = userId,
                     AccountId = requestDto.AccountId,
+                    BudgetId = budgetId,
                     DestinationAccountId = item.DestinationAccountId,
                     SubCategoryId = item.SubCategoryId ?? 0,
                     Value = item.Value,
@@ -203,6 +239,7 @@ public class ImportService : IImportService
                     Description = item.Description,
                     TransactionDate = item.Date,
                     PaymentType = item.PaymentType,
+                    Tags = TagsFor(item),
                 };
                 _context.Transactions.Add(transaction);
                 savedCount++;
@@ -211,6 +248,55 @@ public class ImportService : IImportService
 
         await _context.SaveChangesAsync();
         return Result<int>.Success(savedCount);
+    }
+
+    /// <summary>
+    /// Resolves every tag name in the batch to a <see cref="Tag"/> row, creating the ones
+    /// that do not exist yet, and returns them keyed by comparison key.
+    /// </summary>
+    /// <remarks>
+    /// One pass for the whole batch rather than per row: an import is routinely hundreds
+    /// of rows sharing a handful of tags, and resolving per row would reload the tag table
+    /// each time. An existing tag keeps its own spelling — the first one created is
+    /// canonical, and later rows attach to it instead of renaming it.
+    /// </remarks>
+    private async Task<Dictionary<string, Tag>> ResolveBatchTagsAsync(
+        List<ImportTransactionItemRequestDto> items, int userId)
+    {
+        var requestedNames = items
+            .SelectMany(item => item.Tags ?? [])
+            .Select(name => name.Trim())
+            .Where(name => name.Length > 0)
+            .ToList();
+
+        var tagsByKey = new Dictionary<string, Tag>();
+        if (requestedNames.Count == 0)
+            return tagsByKey;
+
+        // Loaded whole and matched in memory: Postgres compares case-sensitively, so an
+        // IN clause on the names would miss "Viagem" when the row says "viagem". A user
+        // has a handful of tags, so this is cheaper than being wrong.
+        var userTags = await _context.Tags.Where(t => t.UserId == userId).ToListAsync();
+        foreach (var tag in userTags)
+            tagsByKey.TryAdd(TextNormalization.ToComparisonKey(tag.Name), tag);
+
+        var created = false;
+        foreach (var name in requestedNames)
+        {
+            var key = TextNormalization.ToComparisonKey(name);
+            if (key.Length == 0 || tagsByKey.ContainsKey(key))
+                continue;
+
+            var tag = new Tag { UserId = userId, Name = name };
+            _context.Tags.Add(tag);
+            tagsByKey[key] = tag;
+            created = true;
+        }
+
+        if (created)
+            await _context.SaveChangesAsync();
+
+        return tagsByKey;
     }
 
     // ── OFX Parser ───────────────────────────────────────────────────────────

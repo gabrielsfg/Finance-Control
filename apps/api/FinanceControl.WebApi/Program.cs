@@ -17,6 +17,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Serilog;
+using Serilog.Formatting.Compact;
 
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
@@ -26,15 +28,65 @@ var builder = WebApplication.CreateBuilder(args);
 // Copy appsettings.Local.json.example → appsettings.Local.json and fill in your values.
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 
+// Structured logging. Development gets the readable console; anything else emits
+// one JSON object per line, which is what a log platform can actually query.
+builder.Host.UseSerilog((context, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext();
+
+    if (context.HostingEnvironment.IsDevelopment())
+        configuration.WriteTo.Console();
+    else
+        configuration.WriteTo.Console(new RenderedCompactJsonFormatter());
+});
+
+// Error tracking is opt-in through configuration, the same way the email service
+// is: a missing DSN is a supported state (local dev), not a failure.
+var sentryDsn = builder.Configuration["Sentry:Dsn"];
+if (!string.IsNullOrWhiteSpace(sentryDsn))
+{
+    builder.WebHost.UseSentry(options =>
+    {
+        options.Dsn = sentryDsn;
+        options.Environment = builder.Environment.EnvironmentName;
+        // Enough to spot a slow endpoint without paying for every request.
+        options.TracesSampleRate = 0.1;
+        // The bodies carry passwords and financial data — never ship them.
+        options.MaxRequestBodySize = Sentry.Extensibility.RequestSize.None;
+        options.SendDefaultPii = false;
+    });
+}
+
 // Validate JWT token key length at startup
 var jwtToken = builder.Configuration["AppSettings:Token"];
 if (string.IsNullOrWhiteSpace(jwtToken) || jwtToken.Length < 32)
     throw new InvalidOperationException("AppSettings:Token must be at least 32 characters long.");
 
+// Issuer and audience are checked on every request (ValidateIssuer / ValidateAudience
+// below), and a null expected value fails that check rather than skipping it. Leaving
+// them unset therefore does not weaken auth — it breaks it outright, and silently:
+// tokens go out with no iss/aud claim and are then rejected, so every authenticated
+// request answers 401 with nothing in the logs pointing back at configuration.
+var jwtIssuer = builder.Configuration["AppSettings:Issuer"];
+var jwtAudience = builder.Configuration["AppSettings:Audience"];
+if (string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
+    throw new InvalidOperationException(
+        "AppSettings:Issuer and AppSettings:Audience must be configured. In development they "
+        + "belong in appsettings.Development.json — see apps/api/README.md.");
+
 // Validate CORS config at startup (required in non-development environments)
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
-if (!builder.Environment.IsDevelopment() && allowedOrigins.Length == 0)
-    throw new InvalidOperationException("Cors:AllowedOrigins must be configured in production.");
+if (allowedOrigins.Length == 0)
+{
+    // An empty list is not "CORS off": WithOrigins() then matches no origin at all, so
+    // the browser blocks every call and the only symptom is an opaque network error.
+    if (!builder.Environment.IsDevelopment())
+        throw new InvalidOperationException("Cors:AllowedOrigins must be configured in production.");
+
+    allowedOrigins = ["http://localhost:3000"];
+}
 
 //DI Services
 builder.Services.AddHealthChecks();
@@ -104,8 +156,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
-            ValidIssuer = builder.Configuration["AppSettings:Issuer"],
-            ValidAudience = builder.Configuration["AppSettings:Audience"],
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["AppSettings:Token"]!)),
             ValidateIssuerSigningKey = true,
@@ -208,6 +260,10 @@ using (var scope = app.Services.CreateScope())
 {
     await scope.ServiceProvider.GetRequiredService<LegalDocumentSeeder>().SeedAsync();
 }
+
+// One log line per request (method, path, status, duration) instead of the four
+// the default provider writes.
+app.UseSerilogRequestLogging();
 
 // ForwardedHeaders must run before anything that reads scheme/IP (HTTPS redirect, cookie policy).
 app.UseForwardedHeaders();

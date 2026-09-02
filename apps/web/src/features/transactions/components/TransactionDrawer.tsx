@@ -44,7 +44,7 @@ import { useSubCategories } from "@/features/transactions/hooks/useSubCategories
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { TagInput } from "@/features/transactions/components/TagInput";
 import { DatePickerField } from "@/components/shared/DatePickerField";
-import { CategorySelectContent } from "@/components/shared/CategorySelectContent";
+import { CategoryPickerField } from "@/components/shared/CategoryPickerField";
 import type {
   TransactionItem,
   TransactionType,
@@ -543,10 +543,6 @@ function CreateForm({
 
   const createAccountSelected = accounts.find((a) => String(a.id) === accountIdValue);
   const createDestAccountSelected = accounts.find((a) => String(a.id) === destinationAccountIdValue);
-  const createSubCategorySelected = subcategories.find((s) => String(s.id) === subCategoryIdValue);
-  const createSubCategoryLabel = createSubCategorySelected
-    ? (createSubCategorySelected.emoji ? `${createSubCategorySelected.emoji} ${createSubCategorySelected.name}` : createSubCategorySelected.name)
-    : undefined;
 
   // Pre-select the default account once accounts load
   useEffect(() => {
@@ -701,14 +697,16 @@ function CreateForm({
 
       {!isTransfer && (
         <FormField label="Categoria" error={errors.subCategoryId?.message}>
-          <Select onValueChange={(v) => setValue("subCategoryId", v as string, { shouldValidate: true })}>
-            <SelectTrigger className={cn(TRIGGER_CLASS, errors.subCategoryId && "border-red/60")}>
-              <SelectValue>
-                {createSubCategoryLabel ?? <span className="text-text-muted">Selecionar categoria</span>}
-              </SelectValue>
-            </SelectTrigger>
-            <CategorySelectContent subcategories={subcategories} />
-          </Select>
+          {/* Searchable: the full tree runs to a few dozen rows, and scrolling a grouped
+              list to find one subcategory is slower than typing four letters. */}
+          <CategoryPickerField
+            value={subCategoryIdValue ? Number(subCategoryIdValue) : null}
+            onChange={(id) =>
+              setValue("subCategoryId", id === null ? "" : String(id), { shouldValidate: true })
+            }
+            subcategories={subcategories}
+            hasError={!!errors.subCategoryId}
+          />
         </FormField>
       )}
 
@@ -869,10 +867,6 @@ function EditForm({
       }
     }
   }, [accountSelected?.type]); // eslint-disable-line react-hooks/exhaustive-deps
-  const subCategorySelected = subcategories.find((s) => String(s.id) === subCategoryValue);
-  const subCategoryLabel = subCategorySelected
-    ? (subCategorySelected.emoji ? `${subCategorySelected.emoji} ${subCategorySelected.name}` : subCategorySelected.name)
-    : undefined;
   const paymentMethodLabel = paymentMethodValue === "Debit" ? "Débito" : paymentMethodValue === "Credit" ? "Crédito" : undefined;
 
   const onSubmit = async (values: EditValues) => {
@@ -1024,17 +1018,13 @@ function EditForm({
 
       {!isTransfer && (
         <FormField label="Categoria">
-          <Select
-            value={subCategoryValue ?? ""}
-            onValueChange={(v) => setValue("subCategoryId", v as string, { shouldValidate: true })}
-          >
-            <SelectTrigger className={TRIGGER_CLASS}>
-              <SelectValue>
-                {subCategoryLabel ?? <span className="text-text-muted">Selecionar categoria</span>}
-              </SelectValue>
-            </SelectTrigger>
-            <CategorySelectContent subcategories={subcategories} />
-          </Select>
+          <CategoryPickerField
+            value={subCategoryValue ? Number(subCategoryValue) : null}
+            onChange={(id) =>
+              setValue("subCategoryId", id === null ? "" : String(id), { shouldValidate: true })
+            }
+            subcategories={subcategories}
+          />
         </FormField>
       )}
 

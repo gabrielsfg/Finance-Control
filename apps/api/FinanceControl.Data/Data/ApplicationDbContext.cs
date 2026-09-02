@@ -37,6 +37,7 @@ namespace FinanceControl.Data.Data
         public DbSet<AlertRule> AlertRules { get; set; }
         public DbSet<LegalDocument> LegalDocuments { get; set; }
         public DbSet<UserConsent> UserConsents { get; set; }
+        public DbSet<UserFeedback> UserFeedbacks { get; set; }
 
         public override int SaveChanges()
         {
