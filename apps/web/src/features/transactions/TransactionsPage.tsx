@@ -151,6 +151,7 @@ function TransactionsContent() {
     startDate: filterDay ?? start,
     finishDate: filterDay ?? finish,
     budgetIds: filter.budgetIds.length > 0 ? filter.budgetIds : undefined,
+    hasBudget: filter.budgetInclusion === "all" ? undefined : filter.budgetInclusion === "in",
     accountIds: filter.accountIds.length > 0 ? filter.accountIds : undefined,
     categoryIds: filter.categoryIds.length > 0 ? filter.categoryIds : undefined,
     subCategoryIds: filter.subCategoryIds.length > 0 ? filter.subCategoryIds : undefined,

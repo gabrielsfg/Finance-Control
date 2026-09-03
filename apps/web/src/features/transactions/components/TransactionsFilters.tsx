@@ -14,7 +14,7 @@ import { useSubCategories } from "@/features/transactions/hooks/useSubCategories
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
 import { useTags } from "@/features/transactions/hooks/useTags";
 import { getCategoryColor } from "@/lib/config/categoryColors";
-import type { TransactionsFilter, TxDatePreset, TxSortField, TxSortOrder } from "../types/filters.types";
+import type { TransactionsFilter, TxBudgetInclusion, TxDatePreset, TxSortField, TxSortOrder } from "../types/filters.types";
 import { activeTxDateLabel, availableTxYears, defaultTxFilter } from "../utils/filterDates";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -27,6 +27,13 @@ const DATE_PRESETS: { id: TxDatePreset; label: string }[] = [
   { id: "last-6-months",  label: "Últimos 6 meses" },
   { id: "last-12-months", label: "Últimos 12 meses" },
   { id: "current-year",   label: "Este ano" },
+  { id: "all-time",       label: "Todo o período" },
+];
+
+const BUDGET_INCLUSION_OPTIONS: { id: TxBudgetInclusion; label: string }[] = [
+  { id: "all", label: "Tanto faz" },
+  { id: "in",  label: "No orçamento" },
+  { id: "out", label: "Fora do orçamento" },
 ];
 
 const TYPE_OPTIONS: { id: TransactionsFilter["typeFilter"]; label: string }[] = [
@@ -87,6 +94,13 @@ export function getActiveFilterTags(
   for (const id of filter.tagIds) {
     const tag = meta.tags.find(t => t.id === id);
     if (tag) tags.push({ id: `tag-${id}`, label: `#${tag.name}` });
+  }
+
+  if (filter.budgetInclusion !== "all") {
+    tags.push({
+      id: "budgetInclusion",
+      label: filter.budgetInclusion === "in" ? "No orçamento" : "Fora do orçamento",
+    });
   }
 
   if (meta.filterDay) {
@@ -150,6 +164,61 @@ const SORT_OPTIONS: { field: TxSortField; order: TxSortOrder; label: string; ico
   { field: "value", order: "desc", label: "Maior valor primeiro",  icon: DollarSign },
   { field: "value", order: "asc",  label: "Menor valor primeiro",  icon: DollarSign },
 ];
+
+/**
+ * Tag checkboxes, with type-to-search.
+ *
+ * Same shape as CategoriesSection, and for the same reason: mounting with the section
+ * means the query dies when the panel is left, instead of silently narrowing the list
+ * next time it is opened. A long tag list is unusable without it.
+ */
+function TagsSection({
+  draft, tags, toggleTag,
+}: {
+  draft: TransactionsFilter;
+  tags: { id: number; name: string }[];
+  toggleTag: (tagId: number) => void;
+}) {
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const key = normalizeSearch(query);
+    if (!key) return tags;
+    return tags.filter(t => normalizeSearch(t.name).includes(key));
+  }, [tags, query]);
+
+  if (tags.length === 0) {
+    return <p className="text-text-muted py-4 text-center text-[14px]">Nenhuma tag criada</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="border-border bg-surface2 focus-within:border-green/60 flex items-center gap-2 rounded-lg border px-2.5 py-2">
+        <Search size={13} className="text-text-muted shrink-0" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar tag..."
+          className="text-text placeholder:text-text-muted w-full bg-transparent text-[13px] outline-none"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 300 }}>
+        {filtered.length === 0
+          ? <p className="text-text-muted py-4 text-center text-[13px]">Nenhuma tag encontrada.</p>
+          : filtered.map(tag => (
+            <CheckRow
+              key={tag.id}
+              checked={draft.tagIds.includes(tag.id)}
+              onClick={() => toggleTag(tag.id)}
+              label={`#${tag.name}`}
+            />
+          ))
+        }
+      </div>
+    </div>
+  );
+}
 
 /**
  * Category + subcategory checkboxes, with type-to-search.
@@ -379,37 +448,51 @@ function SectionContent({
 
   if (section === "budgets") {
     return (
-      <div className="flex flex-col gap-1">
-        {budgets.length === 0
-          ? <p className="text-text-muted py-4 text-center text-[14px]">Nenhum orçamento</p>
-          : budgets.map(b => (
-            <CheckRow
-              key={b.id}
-              checked={draft.budgetIds.includes(b.id)}
-              onClick={() => toggleId("budgetIds", b.id)}
-              label={b.name}
-            />
-          ))
-        }
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <p className="text-text-sub text-[13px] font-medium">Conta para o orçamento?</p>
+          <div className="flex gap-2">
+            {BUDGET_INCLUSION_OPTIONS.map(opt => (
+              <PresetPill
+                key={opt.id}
+                active={draft.budgetInclusion === opt.id}
+                onClick={() => setDraft(d => ({ ...d, budgetInclusion: opt.id }))}
+              >
+                {opt.label}
+              </PresetPill>
+            ))}
+          </div>
+          <p className="text-text-muted text-[12px] leading-relaxed">
+            &quot;Fora&quot; mostra o que foi lançado sem marcar &quot;incluir no orçamento&quot; —
+            útil para achar o que ficou de fora do controle do mês sem querer.
+          </p>
+        </div>
+
+        <div className="border-border flex flex-col gap-1 border-t pt-3">
+          <p className="text-text-sub mb-1 text-[13px] font-medium">Orçamento específico</p>
+          {budgets.length === 0
+            ? <p className="text-text-muted py-4 text-center text-[14px]">Nenhum orçamento</p>
+            : budgets.map(b => (
+              <CheckRow
+                key={b.id}
+                checked={draft.budgetIds.includes(b.id)}
+                onClick={() => toggleId("budgetIds", b.id)}
+                label={b.name}
+              />
+            ))
+          }
+        </div>
       </div>
     );
   }
 
   if (section === "tags") {
     return (
-      <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 340 }}>
-        {tags.length === 0
-          ? <p className="text-text-muted py-4 text-center text-[14px]">Nenhuma tag criada</p>
-          : tags.map(tag => (
-            <CheckRow
-              key={tag.id}
-              checked={draft.tagIds.includes(tag.id)}
-              onClick={() => toggleId("tagIds", tag.id)}
-              label={`#${tag.name}`}
-            />
-          ))
-        }
-      </div>
+      <TagsSection
+        draft={draft}
+        tags={tags}
+        toggleTag={(id) => toggleId("tagIds", id)}
+      />
     );
   }
 
@@ -529,6 +612,7 @@ function countActive(filter: TransactionsFilter): number {
   if (filter.subCategoryIds.length > 0) n++;
   if (filter.accountIds.length > 0) n++;
   if (filter.budgetIds.length > 0) n++;
+  if (filter.budgetInclusion !== "all") n++;
   if (filter.tagIds.length > 0) n++;
   if (filter.minValue !== null || filter.maxValue !== null) n++;
   return n;

@@ -4,6 +4,7 @@ using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Ai;
 using FinanceControl.Services.Brapi;
 using FinanceControl.Services.Email;
+using FinanceControl.Services.Investments;
 using FinanceControl.Services.Seeds;
 using FinanceControl.Services.Services;
 using Microsoft.Extensions.Configuration;
@@ -38,6 +39,7 @@ namespace FinanceControl.Services.Extensions
             services.AddScoped<IRiskProfileService, RiskProfileService>();
             services.AddScoped<IAiInsightService, AiInsightService>();
             services.AddScoped<InsightSnapshotBuilder>();
+            services.AddScoped<FixedIncomeAccrual>();
             services.AddScoped<LegalDocumentSeeder>();
             services.AddHttpClient();
 

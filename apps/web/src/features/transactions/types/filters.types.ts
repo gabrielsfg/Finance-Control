@@ -9,7 +9,13 @@ import type { PeriodPreset } from "@/lib/utils/periodPresets";
  * the wrong window to open on — it hides five days the user is still spending against and
  * shows twenty-five they are not.
  */
-export type TxDatePreset = PeriodPreset | "custom-year";
+export type TxDatePreset = PeriodPreset | "custom-year" | "all-time";
+
+/**
+ * Whether a transaction counts against a budget. Distinct from `budgetIds`, which
+ * narrows to specific budgets and so can never show the ones attached to none.
+ */
+export type TxBudgetInclusion = "all" | "in" | "out";
 
 export type TxSortField = "date" | "value";
 export type TxSortOrder = "desc" | "asc";
@@ -21,6 +27,7 @@ export type TransactionsFilter = {
   finishDate: string;
   tagIds: number[];
   budgetIds: number[];
+  budgetInclusion: TxBudgetInclusion;
   accountIds: number[];
   categoryIds: number[];
   subCategoryIds: number[];

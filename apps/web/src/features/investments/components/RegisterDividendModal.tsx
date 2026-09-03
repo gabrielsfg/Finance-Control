@@ -32,11 +32,12 @@ const DIVIDEND_TYPE_LABELS: Record<DividendType, string> = {
 };
 
 const schema = z.object({
-  investmentId: z.number().min(1),
-  date:         z.string().min(1, "Data é obrigatória"),
+  investmentId: z.number().min(1, "Escolha o ativo"),
+  paymentDate:  z.string().min(1, "Data é obrigatória"),
   amount:       z.string().min(1, "Valor é obrigatório"),
   type:         z.enum(["Dividend","JurosCapitalProprio","RendimentoFII","Cupom","Rendimento"]),
   accountId:    z.string().min(1, "Conta é obrigatória"),
+  createLinkedTransaction: z.boolean(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -46,6 +47,8 @@ type Props = {
   onClose: () => void;
   investmentId: number;
   ticker: string;
+  /** Every open position, for when the drawer is opened without a target asset. */
+  investments?: { id: number; ticker: string; name: string }[];
   accountOptions: { id: number; name: string }[];
 };
 
@@ -175,7 +178,31 @@ function FormField({ label, error, children }: { label: string; error?: string; 
 
 // ── Drawer ─────────────────────────────────────────────────────────────────────
 
-export const RegisterDividendModal = ({ open, onClose, investmentId, ticker, accountOptions }: Props) => {
+/**
+ * Mounts the form only while open.
+ *
+ * It used to stay mounted, so `defaultValues` captured `investmentId` at first render —
+ * which is 0, because no asset is targeted yet. Zod then rejected the submit on a field
+ * with no input bound to it, and the button did nothing at all, silently.
+ */
+export const RegisterDividendModal = (props: Props) => {
+  const { open, onClose } = props;
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        className={cn(
+          "fixed inset-0 z-40 transition-all duration-300",
+          open ? "pointer-events-auto backdrop-blur-sm bg-black/40" : "pointer-events-none opacity-0",
+        )}
+      />
+      {open && <DividendForm {...props} />}
+    </>
+  );
+};
+
+const DividendForm = ({ onClose, investmentId, ticker, investments = [], accountOptions }: Props) => {
   const { mutateAsync, isPending } = useRegisterDividend();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -190,24 +217,28 @@ export const RegisterDividendModal = ({ open, onClose, investmentId, ticker, acc
     resolver: zodResolver(schema),
     defaultValues: {
       investmentId,
-      date:      new Date().toISOString().slice(0, 10),
+      paymentDate: new Date().toISOString().slice(0, 10),
       amount:    "",
       type:      "Dividend",
       accountId: accountOptions[0]?.id.toString() ?? "",
+      createLinkedTransaction: true,
     },
   });
 
   const dividendType = watch("type") as DividendType;
   const accountId    = watch("accountId");
-  const date         = watch("date") ?? "";
+  const date         = watch("paymentDate") ?? "";
+  const selectedInvestmentId = watch("investmentId");
+  const createsTransaction   = watch("createLinkedTransaction");
 
+  // Mounted only while open, so the listener's lifetime is the drawer's lifetime.
   useEffect(() => {
     function handler(e: KeyboardEvent) {
-      if (e.key === "Escape") handleClose();
+      if (e.key === "Escape") onClose();
     }
-    if (open) document.addEventListener("keydown", handler);
+    document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open]);
+  }, [onClose]);
 
   const handleClose = () => {
     reset();
@@ -220,10 +251,11 @@ export const RegisterDividendModal = ({ open, onClose, investmentId, ticker, acc
     try {
       await mutateAsync({
         investmentId: values.investmentId,
-        date:         values.date,
+        paymentDate:  values.paymentDate,
         amount:       Math.round(parseFloat(values.amount) * 100),
         type:         values.type as DividendType,
         accountId:    parseInt(values.accountId),
+        createLinkedTransaction: values.createLinkedTransaction,
       });
       handleClose();
     } catch {
@@ -235,20 +267,7 @@ export const RegisterDividendModal = ({ open, onClose, investmentId, ticker, acc
 
   return (
     <>
-      <div
-        onClick={handleClose}
-        className={cn(
-          "fixed inset-0 z-40 transition-all duration-300",
-          open ? "pointer-events-auto backdrop-blur-sm bg-black/40" : "pointer-events-none opacity-0",
-        )}
-      />
-
-      <div
-        className={cn(
-          "bg-surface border-border fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l shadow-2xl transition-transform duration-300 ease-out",
-          open ? "translate-x-0" : "translate-x-full",
-        )}
-      >
+      <div className="anim-drawer bg-surface border-border fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l shadow-2xl">
         {/* Header */}
         <div className="border-border flex items-center justify-between border-b px-6 py-5">
           <div>
@@ -268,6 +287,36 @@ export const RegisterDividendModal = ({ open, onClose, investmentId, ticker, acc
         <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
           <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
 
+            {/* Asset — only when the drawer was opened from the generic button */}
+            {!ticker && (
+              <FormField label="Ativo" error={errors.investmentId?.message}>
+                <Select
+                  value={selectedInvestmentId ? String(selectedInvestmentId) : ""}
+                  onValueChange={(v) =>
+                    setValue("investmentId", Number(v), { shouldValidate: true })
+                  }
+                >
+                  <SelectTrigger className={cn(TRIGGER_CLASS, errors.investmentId && "border-red/60")}>
+                    <SelectValue>
+                      {investments.find((i) => i.id === selectedInvestmentId)?.ticker ?? (
+                        <span className="text-text-muted">Selecionar ativo</span>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {investments.map((inv) => (
+                      <SelectItem key={inv.id} value={String(inv.id)}>
+                        <div className="flex flex-col">
+                          <span className="text-[14px] font-medium leading-tight">{inv.ticker}</span>
+                          <span className="text-text-muted text-[11px] leading-tight">{inv.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            )}
+
             {/* Type */}
             <FormField label="Tipo de rendimento">
               <Select
@@ -286,10 +335,10 @@ export const RegisterDividendModal = ({ open, onClose, investmentId, ticker, acc
             </FormField>
 
             {/* Date */}
-            <FormField label="Data do pagamento" error={errors.date?.message}>
+            <FormField label="Data do pagamento" error={errors.paymentDate?.message}>
               <DatePickerField
                 value={date}
-                onChange={(v) => setValue("date", v, { shouldValidate: true })}
+                onChange={(v) => setValue("paymentDate", v, { shouldValidate: true })}
               />
             </FormField>
 
@@ -304,6 +353,23 @@ export const RegisterDividendModal = ({ open, onClose, investmentId, ticker, acc
                 />
               </div>
             </FormField>
+
+            {/* Money movement — off when the payout is already in the ledger */}
+            <label className="border-border bg-surface2 flex cursor-pointer items-start gap-3 rounded-[13px] border p-3.5">
+              <input
+                type="checkbox"
+                checked={!createsTransaction}
+                onChange={(e) => setValue("createLinkedTransaction", !e.target.checked)}
+                className="accent-green mt-0.5 h-4 w-4 shrink-0"
+              />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-text text-[14px] font-medium">Já recebi esse valor</span>
+                <span className="text-text-sub text-[12.5px] leading-relaxed">
+                  Marque para registrar um provento antigo. Ele entra no histórico do ativo sem
+                  criar entrada na conta — o dinheiro já caiu e contaria em dobro.
+                </span>
+              </span>
+            </label>
 
             {/* Account */}
             <FormField label="Conta de destino" error={errors.accountId?.message}>

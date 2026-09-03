@@ -18,6 +18,7 @@ namespace FinanceControl.Shared.Dtos.Response.Export
         public long AveragePrice { get; set; }
         public DateOnly? MaturityDate { get; set; }
         public decimal? ExpectedYieldPct { get; set; }
+        public EnumYieldIndex? YieldIndex { get; set; }
         public int AccountId { get; set; }
         public List<ExportInvestmentTransactionDto> Transactions { get; set; } = [];
         public List<ExportInvestmentDividendDto> Dividends { get; set; } = [];

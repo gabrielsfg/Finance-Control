@@ -167,6 +167,7 @@ export function InvestmentsPage() {
         onClose={() => { setShowDividendModal(false); setDividendTarget(null); }}
         investmentId={dividendTarget?.id ?? 0}
         ticker={dividendTarget?.ticker ?? ""}
+        investments={data.investments.map((i) => ({ id: i.id, ticker: i.ticker, name: i.name }))}
         accountOptions={accounts}
       />
     </>

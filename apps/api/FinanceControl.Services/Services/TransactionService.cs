@@ -769,6 +769,11 @@ namespace FinanceControl.Services.Services
             if (requestDto.BudgetIds is { Count: > 0 })
                 query = query.Where(t => t.BudgetId != null && requestDto.BudgetIds.Contains(t.BudgetId.Value));
 
+            if (requestDto.HasBudget.HasValue)
+                query = requestDto.HasBudget.Value
+                    ? query.Where(t => t.BudgetId != null)
+                    : query.Where(t => t.BudgetId == null);
+
             if (requestDto.AccountIds is { Count: > 0 })
                 query = query.Where(t => requestDto.AccountIds.Contains(t.AccountId));
 

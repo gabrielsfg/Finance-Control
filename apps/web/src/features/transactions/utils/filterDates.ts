@@ -7,7 +7,13 @@ export function buildTxDateRange(
   filter: TransactionsFilter,
   cycle?: BudgetCycle | null,
 ): { start: string; finish: string } {
-  // The one preset this page owns; everything else is the shared definition.
+  // The two presets this page owns; everything else is the shared definition.
+  if (filter.preset === "all-time") {
+    // Far enough back to predate any ledger somebody imports, so nothing is
+    // unreachable from the UI without hand-typing a range.
+    return { start: "1900-01-01", finish: isoDate(new Date()) };
+  }
+
   if (filter.preset === "custom-year") {
     const today = new Date();
     const y = filter.customYear;
@@ -32,6 +38,7 @@ export function defaultTxFilter(): TransactionsFilter {
     finishDate: isoDate(today),
     tagIds: [],
     budgetIds: [],
+    budgetInclusion: "all",
     accountIds: [],
     categoryIds: [],
     subCategoryIds: [],
@@ -52,6 +59,7 @@ export function activeTxDateLabel(filter: TransactionsFilter): string {
     "last-12-months": "12 meses",
     "current-year":   "Este ano",
     "custom-year":    String(filter.customYear),
+    "all-time":       "Todo o período",
     "custom-range":   `${filter.startDate} → ${filter.finishDate}`,
   };
   return PRESET_LABELS[filter.preset];

@@ -22,6 +22,7 @@ import {
   LayoutGrid,
   BookOpen,
   Check,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +43,7 @@ import {
 } from "@/features/transactions/hooks/useTransactions";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { AccountDrawer } from "@/features/accounts/components/AccountDrawer";
 import { TagInput } from "@/features/transactions/components/TagInput";
 import { DatePickerField } from "@/components/shared/DatePickerField";
 import { CategoryPickerField } from "@/components/shared/CategoryPickerField";
@@ -510,6 +512,20 @@ function CreateForm({
   const [transactionType, setTransactionType] = useState<TransactionType>(defaultType);
   const [createTags, setCreateTags] = useState<string[]>([]);
 
+  /**
+   * Creating an account without losing the half-filled transaction. The ids present when
+   * the account drawer opens are remembered so whatever appears afterwards can be
+   * selected automatically — otherwise the user creates the account and still has to go
+   * find it in the list.
+   */
+  const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
+  const knownAccountIds = useRef<number[]>([]);
+
+  function openNewAccount() {
+    knownAccountIds.current = accounts.map((a) => a.id);
+    setAccountDrawerOpen(true);
+  }
+
   const {
     register,
     handleSubmit,
@@ -531,7 +547,10 @@ function CreateForm({
       paymentMethod: "",
       totalInstallments: "",
       recurrence: "",
-      includeInBudget: false,
+      // Counting against the budget is what almost every entry is for. Starting
+      // unchecked meant the budget quietly under-reported whenever someone forgot
+      // to tick it — the import flow already defaults it on for the same reason.
+      includeInBudget: true,
     },
   });
 
@@ -552,6 +571,17 @@ function CreateForm({
       setValue("accountId", String(defaultAccount.id));
     }
   }, [accounts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // An account created from inside this form is what the user wants selected — leaving
+  // them to hunt for it in the list is the whole reason the shortcut exists.
+  useEffect(() => {
+    if (accountDrawerOpen || knownAccountIds.current.length === 0) return;
+    const created = accounts.find((a) => !knownAccountIds.current.includes(a.id));
+    if (created) {
+      setValue("accountId", String(created.id), { shouldValidate: true });
+      knownAccountIds.current = [];
+    }
+  }, [accounts, accountDrawerOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When account changes to a type that doesn't support installment/recurring, reset paymentType
   useEffect(() => {
@@ -653,7 +683,20 @@ function CreateForm({
         />
       </FormField>
 
-      <FormField label={isTransfer ? "Conta de origem" : "Conta"} error={errors.accountId?.message}>
+      <FormField
+        label={isTransfer ? "Conta de origem" : "Conta"}
+        error={errors.accountId?.message}
+        action={
+          <button
+            type="button"
+            onClick={openNewAccount}
+            className="text-green flex items-center gap-1 text-[12.5px] font-medium transition-opacity hover:opacity-80"
+          >
+            <Plus size={12} />
+            Nova conta
+          </button>
+        }
+      >
         <Select value={accountIdValue ?? ""} onValueChange={(v) => setValue("accountId", v as string, { shouldValidate: true })}>
           <SelectTrigger className={cn(TRIGGER_CLASS, errors.accountId && "border-red/60")}>
             <SelectValue>
@@ -798,6 +841,13 @@ function CreateForm({
           </Button>
         </div>
       </div>
+
+      <AccountDrawer
+        open={accountDrawerOpen}
+        mode="create"
+        onClose={() => setAccountDrawerOpen(false)}
+        onDeleteRequest={() => {}}
+      />
     </form>
   );
 }
@@ -1134,15 +1184,21 @@ function EditForm({
 function FormField({
   label,
   error,
+  action,
   children,
 }: {
   label: string;
   error?: string;
+  /** Optional control on the label row — used for the inline "new account" shortcut. */
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-text-sub text-[14px]">{label}</label>
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-text-sub text-[14px]">{label}</label>
+        {action}
+      </div>
       {children}
       {error && <p className="text-red text-[12px]">{error}</p>}
     </div>

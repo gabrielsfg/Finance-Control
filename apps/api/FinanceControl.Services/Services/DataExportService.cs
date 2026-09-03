@@ -256,6 +256,7 @@ namespace FinanceControl.Services.Services
                     AveragePrice = i.AveragePrice,
                     MaturityDate = i.MaturityDate,
                     ExpectedYieldPct = i.ExpectedYieldPct,
+                    YieldIndex = i.YieldIndex,
                     AccountId = i.AccountId,
                     CreatedAt = i.CreatedAt,
                     Transactions = i.Transactions

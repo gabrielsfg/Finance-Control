@@ -3,6 +3,7 @@ using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response.Investment;
+using FinanceControl.Services.Investments;
 using FinanceControl.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +12,7 @@ namespace FinanceControl.Services.Services
     public class InvestmentService : IInvestmentService
     {
         private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
+        private readonly FixedIncomeAccrual _accrual;
 
         // Colors assigned per asset type for allocation charts
         private static readonly Dictionary<EnumAssetType, string> AssetTypeColors = new()
@@ -45,9 +47,12 @@ namespace FinanceControl.Services.Services
             { EnumAssetType.Outro,             "Outro" },
         };
 
-        public InvestmentService(IDbContextFactory<ApplicationDbContext> contextFactory)
+        public InvestmentService(
+            IDbContextFactory<ApplicationDbContext> contextFactory,
+            FixedIncomeAccrual accrual)
         {
             _contextFactory = contextFactory;
+            _accrual = accrual;
         }
 
         public async Task<InvestmentPortfolioDto> GetPortfolioAsync(int userId)
@@ -217,29 +222,48 @@ namespace FinanceControl.Services.Services
                     AveragePrice    = 0,
                     AccountId       = dto.AccountId,
                     MarketAsset     = asset,
+                    YieldIndex      = dto.YieldIndex,
+                    ExpectedYieldPct = dto.YieldRatePct,
+                    MaturityDate    = dto.MaturityDate,
                 };
                 context.Investments.Add(investment);
                 await context.SaveChangesAsync();
             }
-
-            // Create the linked financial transaction (money leaving/entering the account)
-            var linkedTransaction = new Transaction
+            else if (dto.YieldIndex.HasValue && investment.YieldIndex is null)
             {
-                UserId        = userId,
-                AccountId     = dto.AccountId,
-                Value         = (int)Math.Min(totalValue, int.MaxValue),
-                Type          = dto.Operation == EnumInvestmentOperation.Buy
-                                    ? EnumTransactionType.Expense
-                                    : EnumTransactionType.Income,
-                Description   = dto.Operation == EnumInvestmentOperation.Buy
-                                    ? $"Compra: {asset.Ticker}"
-                                    : $"Venda: {asset.Ticker}",
-                TransactionDate = dto.Date,
-                PaymentType   = EnumPaymentType.OneTime,
-                SubCategoryId = await GetInvestmentSubCategoryIdAsync(context, userId),
-            };
-            context.Transactions.Add(linkedTransaction);
-            await context.SaveChangesAsync();
+                // The rate may arrive on a later contribution to a position registered
+                // before this field existed; taking it then beats leaving it unvalued.
+                investment.YieldIndex = dto.YieldIndex;
+                investment.ExpectedYieldPct = dto.YieldRatePct;
+                investment.MaturityDate ??= dto.MaturityDate;
+            }
+
+            // The financial side of the operation — money leaving or entering the account.
+            // Skipped when the user is registering a position they already held: that
+            // purchase's cash movement happened long ago, and inventing one now puts an
+            // expense on a date the account balance never saw.
+            Transaction? linkedTransaction = null;
+
+            if (dto.CreateLinkedTransaction)
+            {
+                linkedTransaction = new Transaction
+                {
+                    UserId        = userId,
+                    AccountId     = dto.AccountId,
+                    Value         = (int)Math.Min(totalValue, int.MaxValue),
+                    Type          = dto.Operation == EnumInvestmentOperation.Buy
+                                        ? EnumTransactionType.Expense
+                                        : EnumTransactionType.Income,
+                    Description   = dto.Operation == EnumInvestmentOperation.Buy
+                                        ? $"Compra: {asset.Ticker}"
+                                        : $"Venda: {asset.Ticker}",
+                    TransactionDate = dto.Date,
+                    PaymentType   = EnumPaymentType.OneTime,
+                    SubCategoryId = await GetInvestmentSubCategoryIdAsync(context, userId),
+                };
+                context.Transactions.Add(linkedTransaction);
+                await context.SaveChangesAsync();
+            }
 
             // Create the investment transaction record
             var investmentTransaction = new InvestmentTransaction
@@ -252,7 +276,7 @@ namespace FinanceControl.Services.Services
                 UnitPrice         = dto.UnitPrice,
                 OtherCosts        = dto.OtherCosts,
                 TotalValue        = totalValue,
-                LinkedTransactionId = linkedTransaction.Id,
+                LinkedTransactionId = linkedTransaction?.Id,
             };
             context.InvestmentTransactions.Add(investmentTransaction);
 
@@ -355,20 +379,26 @@ namespace FinanceControl.Services.Services
 
             var transactionDate = dto.PaymentDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
 
-            // Create the linked income transaction (dividend entering the account)
-            var linkedTransaction = new Transaction
+            // The money entering the account. Skipped when the payout was already
+            // received: it is in the ledger already, and a second entry double-counts it.
+            Transaction? linkedTransaction = null;
+
+            if (dto.CreateLinkedTransaction)
             {
-                UserId          = userId,
-                AccountId       = dto.AccountId,
-                Value           = (int)Math.Min(dto.Amount, int.MaxValue),
-                Type            = EnumTransactionType.Income,
-                Description     = $"Dividendo: {investment.MarketAsset.Ticker}",
-                TransactionDate = transactionDate,
-                PaymentType     = EnumPaymentType.OneTime,
-                SubCategoryId   = await GetDividendSubCategoryIdAsync(context, userId),
-            };
-            context.Transactions.Add(linkedTransaction);
-            await context.SaveChangesAsync();
+                linkedTransaction = new Transaction
+                {
+                    UserId          = userId,
+                    AccountId       = dto.AccountId,
+                    Value           = (int)Math.Min(dto.Amount, int.MaxValue),
+                    Type            = EnumTransactionType.Income,
+                    Description     = $"Dividendo: {investment.MarketAsset.Ticker}",
+                    TransactionDate = transactionDate,
+                    PaymentType     = EnumPaymentType.OneTime,
+                    SubCategoryId   = await GetDividendSubCategoryIdAsync(context, userId),
+                };
+                context.Transactions.Add(linkedTransaction);
+                await context.SaveChangesAsync();
+            }
 
             var dividend = new InvestmentDividend
             {
@@ -378,7 +408,7 @@ namespace FinanceControl.Services.Services
                 LastDatePrior       = dto.LastDatePrior,
                 Amount              = dto.Amount,
                 Type                = dto.Type,
-                LinkedTransactionId = linkedTransaction.Id,
+                LinkedTransactionId = linkedTransaction?.Id,
             };
             context.InvestmentDividends.Add(dividend);
             await context.SaveChangesAsync();
@@ -413,10 +443,15 @@ namespace FinanceControl.Services.Services
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
-        private static InvestmentDto MapToDto(Investment i, long? previousClose)
+        /// <param name="accruedUnitPrice">
+        /// For fixed income, what one unit is worth today after the yield the position
+        /// earned. Null for anything the market quotes, which uses the asset's own price.
+        /// </param>
+        private static InvestmentDto MapToDto(Investment i, long? previousClose, long? accruedUnitPrice = null)
         {
             var asset         = i.MarketAsset;
-            var currentValue  = (long)Math.Round(i.CurrentQuantity * asset.CurrentPrice);
+            var unitPrice     = accruedUnitPrice ?? asset.CurrentPrice;
+            var currentValue  = (long)Math.Round(i.CurrentQuantity * unitPrice);
             var totalInvested = (long)Math.Round(i.CurrentQuantity * i.AveragePrice);
             var totalReturn   = currentValue - totalInvested;
             var returnPct     = totalInvested > 0
@@ -425,7 +460,9 @@ namespace FinanceControl.Services.Services
 
             long dayChangeAbs = 0;
             decimal dayChangePct = 0m;
-            if (previousClose is { } prevClose && prevClose > 0)
+            // Fixed income has no previous close to compare against, and comparing an
+            // accrued price to a stale market one would invent a daily swing.
+            if (accruedUnitPrice is null && previousClose is { } prevClose && prevClose > 0)
             {
                 var unitChange = asset.CurrentPrice - prevClose;
                 dayChangeAbs = (long)Math.Round(i.CurrentQuantity * unitChange);
@@ -442,7 +479,7 @@ namespace FinanceControl.Services.Services
                 Broker             = i.Broker,
                 CurrentQuantity    = i.CurrentQuantity,
                 AveragePrice       = i.AveragePrice,
-                CurrentPrice       = asset.CurrentPrice,
+                CurrentPrice       = unitPrice,
                 CurrentValue       = currentValue,
                 TotalInvested      = totalInvested,
                 TotalReturn        = totalReturn,
@@ -453,15 +490,24 @@ namespace FinanceControl.Services.Services
                 LastPriceUpdate    = asset.LastPriceUpdate,
                 MaturityDate       = i.MaturityDate,
                 ExpectedYieldPct   = i.ExpectedYieldPct,
+                YieldIndex         = i.YieldIndex,
                 AccountId          = i.AccountId,
                 LogoUrl            = asset.LogoUrl,
                 Currency           = asset.Currency,
             };
         }
 
-        private static InvestmentPortfolioDto BuildPortfolio(List<Investment> investments, Dictionary<int, long?> prevCloseMap)
+        private static InvestmentPortfolioDto BuildPortfolio(
+            List<Investment> investments,
+            Dictionary<int, long?> prevCloseMap,
+            Dictionary<int, long>? accruedMap = null)
         {
-            var dtos = investments.Select(i => MapToDto(i, prevCloseMap.GetValueOrDefault(i.MarketAssetId))).ToList();
+            var dtos = investments
+                .Select(i => MapToDto(
+                    i,
+                    prevCloseMap.GetValueOrDefault(i.MarketAssetId),
+                    accruedMap is not null && accruedMap.TryGetValue(i.Id, out var accrued) ? accrued : null))
+                .ToList();
 
             var totalCurrentValue  = dtos.Sum(d => d.CurrentValue);
             var totalInvested      = dtos.Sum(d => d.TotalInvested);
@@ -500,7 +546,7 @@ namespace FinanceControl.Services.Services
             };
         }
 
-        private static async Task<InvestmentPortfolioDto> BuildPortfolioFromDbAsync(ApplicationDbContext context, int userId)
+        private async Task<InvestmentPortfolioDto> BuildPortfolioFromDbAsync(ApplicationDbContext context, int userId)
         {
             var investments = await context.Investments
                 .Include(i => i.MarketAsset)
@@ -510,8 +556,49 @@ namespace FinanceControl.Services.Services
 
             var assetIds = investments.Select(i => i.MarketAssetId).ToList();
             var prevCloseMap = await LoadPrevCloseMapAsync(context, assetIds);
+            var accruedMap = await BuildAccruedPriceMapAsync(context, investments);
 
-            return BuildPortfolio(investments, prevCloseMap);
+            return BuildPortfolio(investments, prevCloseMap, accruedMap);
+        }
+
+        /// <summary>
+        /// Today's unit price for every position whose yield is configured, keyed by
+        /// investment id. A CDB has no quote to fetch, so its worth is derived from the
+        /// rate the user agreed to and the index it follows.
+        /// </summary>
+        private async Task<Dictionary<int, long>> BuildAccruedPriceMapAsync(
+            ApplicationDbContext context, List<Investment> investments)
+        {
+            var configured = investments
+                .Where(i => i.YieldIndex.HasValue && i.ExpectedYieldPct is > 0)
+                .ToList();
+
+            if (configured.Count == 0)
+                return [];
+
+            // The first purchase is when the money started earning.
+            var firstBuys = await context.InvestmentTransactions
+                .Where(t => configured.Select(c => c.Id).Contains(t.InvestmentId)
+                            && t.Operation == EnumInvestmentOperation.Buy)
+                .GroupBy(t => t.InvestmentId)
+                .Select(g => new { InvestmentId = g.Key, Start = g.Min(t => t.Date) })
+                .ToDictionaryAsync(x => x.InvestmentId, x => x.Start);
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var result = new Dictionary<int, long>();
+
+            foreach (var investment in configured)
+            {
+                if (!firstBuys.TryGetValue(investment.Id, out var start))
+                    continue;
+
+                var factor = await _accrual.GetFactorAsync(
+                    investment.YieldIndex!.Value, investment.ExpectedYieldPct!.Value, start, today);
+
+                result[investment.Id] = (long)Math.Round(investment.AveragePrice * factor);
+            }
+
+            return result;
         }
 
         private static async Task<Dictionary<int, long?>> LoadPrevCloseMapAsync(ApplicationDbContext context, List<int> assetIds)

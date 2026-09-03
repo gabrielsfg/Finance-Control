@@ -7,6 +7,13 @@ namespace FinanceControl.Shared.Dtos.Request
         public DateOnly StartDate { get; set; }
         public DateOnly FinishDate { get; set; }
         public List<int>? BudgetIds { get; set; }
+
+        /// <summary>
+        /// True returns only transactions counting against a budget, false only those
+        /// outside every budget, null both. Distinct from BudgetIds, which narrows to
+        /// specific budgets and therefore can never surface the ones with none.
+        /// </summary>
+        public bool? HasBudget { get; set; }
         public List<int>? AccountIds { get; set; }
         public List<int>? CategoryIds { get; set; }
         public List<int>? SubCategoryIds { get; set; }

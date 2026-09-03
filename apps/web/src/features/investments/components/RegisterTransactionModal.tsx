@@ -25,7 +25,7 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { ASSET_TYPE_LABELS } from "@/features/investments/utils/assetLabels";
 import { useRegisterTransaction } from "@/features/investments/hooks/useInvestments";
 import { useMarketSearch } from "@/features/market/hooks/useMarket";
-import type { AssetType, InvestmentOperation } from "@/lib/types/investments.types";
+import type { AssetType, InvestmentOperation, YieldIndex } from "@/lib/types/investments.types";
 import type { MarketAsset } from "@/lib/types/market.types";
 
 const ASSET_TYPE_QUANTITY_DECIMALS: Record<AssetType, number> = {
@@ -56,6 +56,9 @@ const schema = z.object({
   unitPrice:  z.string().min(1, "Preço é obrigatório"),
   otherCosts: z.string().optional(),
   accountId:  z.string().min(1, "Conta é obrigatória"),
+  createLinkedTransaction: z.boolean(),
+  yieldIndex:   z.enum(["Cdi", "Ipca", "Prefixed"]),
+  yieldRatePct: z.string(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -70,6 +73,24 @@ type Props = {
 
 const INPUT_CLASS =
   "w-full h-11 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 text-[15px] text-[var(--text)] outline-none transition-colors placeholder:text-[var(--text-sub)] focus:border-[var(--brand-cobalt)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-cobalt)_12%,transparent)]";
+
+const YIELD_INDEX_OPTIONS: { id: "Cdi" | "Ipca" | "Prefixed"; label: string }[] = [
+  { id: "Cdi",      label: "% do CDI" },
+  { id: "Ipca",     label: "IPCA +" },
+  { id: "Prefixed", label: "Prefixado" },
+];
+
+const YIELD_PLACEHOLDER: Record<string, string> = {
+  Cdi:      "110",
+  Ipca:     "6",
+  Prefixed: "12",
+};
+
+const YIELD_SUFFIX: Record<string, string> = {
+  Cdi:      "% do CDI",
+  Ipca:     "% ao ano + IPCA",
+  Prefixed: "% ao ano",
+};
 
 const TRIGGER_CLASS =
   "w-full !h-11 rounded-[13px] border border-[var(--border-color)] bg-[var(--surface)] px-3.5 text-[15px] text-[var(--text)]";
@@ -319,6 +340,9 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
       unitPrice:  "",
       otherCosts: "",
       accountId:  accountOptions[0]?.id.toString() ?? "",
+      createLinkedTransaction: true,
+      yieldIndex:   "Cdi",
+      yieldRatePct: "",
     },
   });
 
@@ -326,6 +350,15 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
   const assetType = watch("assetType") as AssetType;
   const date       = watch("date") ?? "";
   const accountId  = watch("accountId");
+  const createsTransaction = watch("createLinkedTransaction");
+  const yieldIndex         = watch("yieldIndex");
+  const yieldRatePct       = watch("yieldRatePct");
+
+  /**
+   * Fixed income has no quote to fetch — a CDB is not listed anywhere. Without a rate the
+   * position would sit frozen at its purchase price forever, which reads as a bug.
+   */
+  const isFixedIncome = assetType === "RendaFixa" || assetType === "TesouroDireto";
   const ticker     = watch("ticker");
   const name       = watch("name");
   const quantity   = watch("quantity");
@@ -451,6 +484,13 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
         unitPrice:  unitPriceCents,
         otherCosts: otherCostsCents,
         accountId:  parseInt(values.accountId),
+        createLinkedTransaction: values.createLinkedTransaction,
+        ...(isFixedIncome && values.yieldRatePct
+          ? {
+              yieldIndex: values.yieldIndex as YieldIndex,
+              yieldRatePct: parseFloat(values.yieldRatePct.replace(",", ".")),
+            }
+          : {}),
       });
       handleClose();
     } catch {
@@ -633,8 +673,78 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
                   />
                 </FormField>
 
+                {/* Yield — the only way a fixed-income position can ever be worth more */}
+                {isFixedIncome && (
+                  <div className="border-border bg-surface2 flex flex-col gap-3 rounded-[13px] border p-3.5">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-text text-[14px] font-medium">Rendimento</span>
+                      <span className="text-text-sub text-[12.5px] leading-relaxed">
+                        CDBs e títulos não têm cotação em lugar nenhum. Sem a taxa, a posição
+                        fica parada no preço de compra para sempre.
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      {YIELD_INDEX_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setValue("yieldIndex", opt.id)}
+                          aria-pressed={yieldIndex === opt.id}
+                          className={cn(
+                            "flex-1 rounded-[10px] border px-2 py-2 text-[12.5px] font-medium transition-colors",
+                            yieldIndex === opt.id
+                              ? "border-green text-green bg-green/10"
+                              : "border-border text-text-sub hover:text-text",
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="border-border bg-surface2 flex h-11 w-full items-center rounded-[13px] border">
+                      <input
+                        value={yieldRatePct ?? ""}
+                        onChange={(e) => setValue("yieldRatePct", e.target.value)}
+                        inputMode="decimal"
+                        placeholder={YIELD_PLACEHOLDER[yieldIndex]}
+                        className="text-text placeholder:text-text-muted h-full w-full bg-transparent px-3.5 text-[15px] outline-none"
+                      />
+                      <span className="text-text-muted select-none pr-3.5 text-[14px]">
+                        {YIELD_SUFFIX[yieldIndex]}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Money movement — off when registering a position already held */}
+                <label className="border-border bg-surface2 flex cursor-pointer items-start gap-3 rounded-[13px] border p-3.5">
+                  <input
+                    type="checkbox"
+                    checked={!createsTransaction}
+                    onChange={(e) => setValue("createLinkedTransaction", !e.target.checked)}
+                    className="accent-green mt-0.5 h-4 w-4 shrink-0"
+                  />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-text text-[14px] font-medium">Já tenho esse ativo</span>
+                    <span className="text-text-sub text-[12.5px] leading-relaxed">
+                      Marque para registrar uma posição antiga. O ativo entra na carteira sem
+                      criar lançamento na conta — a compra já aconteceu e não deve mexer no
+                      saldo de hoje.
+                    </span>
+                  </span>
+                </label>
+
                 {/* Account */}
-                <FormField label={operation === "Buy" ? "Débito da conta" : "Crédito na conta"} error={errors.accountId?.message}>
+                <FormField
+                  label={
+                    createsTransaction
+                      ? (operation === "Buy" ? "Débito da conta" : "Crédito na conta")
+                      : "Conta da posição"
+                  }
+                  error={errors.accountId?.message}
+                >
                   <Select
                     value={accountId ?? ""}
                     onValueChange={(v) => setValue("accountId", v ?? "", { shouldValidate: true })}

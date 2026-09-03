@@ -2,6 +2,7 @@
 
 import type React from "react";
 import EmojiPickerLib, { type EmojiClickData, Theme, EmojiStyle } from "emoji-picker-react";
+import { useUIStore } from "@/lib/stores/uiStore";
 
 type Props = {
   value: string;
@@ -9,6 +10,8 @@ type Props = {
 };
 
 export function EmojiPicker({ onChange }: Props) {
+  const theme = useUIStore((s) => s.theme);
+
   const handleClick = (data: EmojiClickData) => {
     onChange(data.emoji);
   };
@@ -16,7 +19,10 @@ export function EmojiPicker({ onChange }: Props) {
   return (
     <EmojiPickerLib
       onEmojiClick={handleClick}
-      theme={Theme.DARK}
+      // The library ships its own stylesheet per theme, and its dark rules beat the
+      // variables set below. Pinned to DARK, the search field rendered dark-on-dark in
+      // the light theme — unreadable exactly while you type into it.
+      theme={theme === "light" ? Theme.LIGHT : Theme.DARK}
       emojiStyle={EmojiStyle.NATIVE}
       skinTonesDisabled
       searchPlaceholder="Buscar emoji..."
