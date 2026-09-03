@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Domain.Interfaces.Services;
+using FinanceControl.Services.Ai;
 using FinanceControl.Services.Brapi;
 using FinanceControl.Services.Email;
 using FinanceControl.Services.Seeds;
@@ -34,6 +35,9 @@ namespace FinanceControl.Services.Extensions
             services.AddScoped<ILegalService, LegalService>();
             services.AddScoped<IDataExportService, DataExportService>();
             services.AddScoped<IFeedbackService, FeedbackService>();
+            services.AddScoped<IRiskProfileService, RiskProfileService>();
+            services.AddScoped<IAiInsightService, AiInsightService>();
+            services.AddScoped<InsightSnapshotBuilder>();
             services.AddScoped<LegalDocumentSeeder>();
             services.AddHttpClient();
 
@@ -58,6 +62,13 @@ namespace FinanceControl.Services.Extensions
                 // a second, so anything near this ceiling is already a failure.
                 client.Timeout = TimeSpan.FromSeconds(10);
             });
+
+            // The AI analyses ship dark: AnthropicSettings.Enabled defaults to false and the
+            // client refuses without a key, so a deployment that has not been configured
+            // simply renders no card.
+            services.Configure<AnthropicSettings>(configuration.GetSection("AnthropicSettings"));
+            services.Configure<AdminSettings>(configuration.GetSection("AdminSettings"));
+            services.AddSingleton<AnthropicInsightClient>();
 
             services.Configure<BrapiSettings>(configuration.GetSection("BrapiSettings"));
             services.AddSingleton<BrapiPriceUpdateJobService>();

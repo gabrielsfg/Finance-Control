@@ -38,6 +38,10 @@ namespace FinanceControl.Data.Data
         public DbSet<LegalDocument> LegalDocuments { get; set; }
         public DbSet<UserConsent> UserConsents { get; set; }
         public DbSet<UserFeedback> UserFeedbacks { get; set; }
+        public DbSet<UserRiskProfile> UserRiskProfiles { get; set; }
+        public DbSet<UserInsight> UserInsights { get; set; }
+        public DbSet<UserAiContext> UserAiContexts { get; set; }
+        public DbSet<AiGenerationLog> AiGenerationLogs { get; set; }
 
         public override int SaveChanges()
         {

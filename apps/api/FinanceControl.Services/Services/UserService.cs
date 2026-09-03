@@ -342,7 +342,8 @@ namespace FinanceControl.Services.Services
                 Name = user.Name,
                 Email = user.Email,
                 TwoFactorEnabled = user.TwoFactorEnabled,
-                EmailVerified = user.EmailVerifiedAt is not null
+                EmailVerified = user.EmailVerifiedAt is not null,
+                Plan = user.Plan
             };
         }
 
@@ -386,7 +387,8 @@ namespace FinanceControl.Services.Services
                 Name = user.Name,
                 Email = user.Email,
                 TwoFactorEnabled = user.TwoFactorEnabled,
-                EmailVerified = user.EmailVerifiedAt is not null
+                EmailVerified = user.EmailVerifiedAt is not null,
+                Plan = user.Plan
             };
         }
 

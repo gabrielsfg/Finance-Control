@@ -4,6 +4,8 @@ export type UserProfile = {
   email: string;
   twoFactorEnabled: boolean;
   emailVerified: boolean;
+  /** Which features the account is entitled to. */
+  plan: "Free" | "Premium";
 };
 
 export type UpdateProfileRequest = {

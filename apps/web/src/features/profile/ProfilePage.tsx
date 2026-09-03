@@ -11,6 +11,7 @@ import { ProfilePreferencesCard } from "@/features/profile/components/ProfilePre
 import { ProfileNotificationsCard } from "@/features/profile/components/ProfileNotificationsCard";
 import { ProfileDefaultAccountCard } from "@/features/profile/components/ProfileDefaultAccountCard";
 import { ProfileFeedbackCard } from "@/features/profile/components/ProfileFeedbackCard";
+import { ProfileRiskProfileCard } from "@/features/profile/components/ProfileRiskProfileCard";
 import { useProfile } from "@/features/profile/hooks/useProfile";
 import { useAuthStore } from "@/lib/stores/authStore";
 
@@ -54,6 +55,7 @@ export function ProfilePage() {
           <ProfilePreferencesCard />
           <ProfileNotificationsCard />
           <ProfileDefaultAccountCard />
+          <ProfileRiskProfileCard />
         </div>
 
         {/* Side column — plan + security */}

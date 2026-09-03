@@ -1,3 +1,5 @@
+using FinanceControl.Shared.Enums;
+
 namespace FinanceControl.Shared.Dtos.Response
 {
     public class UserProfileResponseDto
@@ -10,5 +12,8 @@ namespace FinanceControl.Shared.Dtos.Response
         public bool TwoFactorEnabled { get; set; }
 
         public bool EmailVerified { get; set; }
+
+        /// <summary>Which features the account is entitled to. The web client already declared this field; it now has a source.</summary>
+        public EnumUserPlan Plan { get; set; }
     }
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, TrendingUp, Gift, Plus } from "lucide-react";
+import { PortfolioInsightCard } from "@/features/insights/components/PortfolioInsightCard";
 import { PageTopbar } from "@/components/layout/PageTopbar";
 import { ExportCsvButton } from "@/components/shared/ExportCsvButton";
 import { filterInvestments } from "@/features/investments/utils/filterInvestments";
@@ -91,6 +92,8 @@ export function InvestmentsPage() {
           {hasInvestments ? (
             <>
               <InvestmentsSummaryHero summary={data} />
+
+              <PortfolioInsightCard />
 
               {/* Evolução + alocação */}
               <div className="grid grid-cols-1 gap-[22px] lg:grid-cols-12">
