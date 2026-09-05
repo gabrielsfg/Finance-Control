@@ -7,41 +7,40 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercentNeutral } from "@/lib/utils/formatNumber";
 import { cn } from "@/lib/utils";
 import { filterInvestments } from "@/features/investments/utils/filterInvestments";
+import { ASSET_CLASSES, ASSET_TYPE_COLORS } from "@/lib/config/assetColors";
 import type { AssetType, Investment, InvestmentPortfolio } from "@/lib/types/investments.types";
 
-const ASSET_CLASSES: { assetClass: string; types: AssetType[] }[] = [
-  { assetClass: "Ações",               types: ["Acao"] },
-  { assetClass: "FIIs",                types: ["FII"] },
-  { assetClass: "ETFs",                types: ["ETF"] },
-  { assetClass: "ETFs Internacionais", types: ["ETFInternacional"] },
-  { assetClass: "Stocks",              types: ["Stock"] },
-  { assetClass: "REITs",               types: ["Reit"] },
-  { assetClass: "BDRs",                types: ["BDR"] },
-  { assetClass: "Fundos",              types: ["FundoInvestimento"] },
-  { assetClass: "Criptomoedas",        types: ["Cripto"] },
-  { assetClass: "Tesouro Direto",      types: ["TesouroDireto"] },
-  { assetClass: "Renda Fixa",          types: ["RendaFixa"] },
-  { assetClass: "Moedas",              types: ["Moeda"] },
-  { assetClass: "Índices",             types: ["Index"] },
-  { assetClass: "Outros",              types: ["Outro"] },
-];
 
-const ASSET_TYPE_COLORS: Record<AssetType, string> = {
-  Acao:              "#00C98D",
-  FundoInvestimento: "#4A9EFF",
-  FII:               "#F5A623",
-  Cripto:            "#F25F5C",
-  Stock:             "#00D4A0",
-  Reit:              "#7C6FE0",
-  BDR:               "#F5CE42",
-  ETF:               "#4A9EFF",
-  ETFInternacional:  "#7C6FE0",
-  TesouroDireto:     "#00C98D",
-  RendaFixa:         "#4A9EFF",
-  Moeda:             "#14B8A6",
-  Index:             "#8A95A3",
-  Outro:             "#8A95A3",
-};
+/**
+ * Signed figures sit on a tinted chip instead of relying on text colour alone.
+ * At a glance the row's gains and losses separate before any number is read — the
+ * difference between scanning a portfolio and reading it line by line.
+ */
+function SignedChip({
+  positive,
+  children,
+  className,
+}: {
+  positive: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const tone = positive ? "var(--moss)" : "var(--clay)";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center justify-end rounded-[7px] px-2 py-[3px] font-mono text-[14px] font-bold tabular-nums",
+        className,
+      )}
+      style={{
+        color: tone,
+        backgroundColor: `color-mix(in srgb, ${tone} 13%, transparent)`,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
 
 const W = {
   chevronName: "w-[220px] min-w-[220px]",
@@ -63,10 +62,13 @@ type Props = {
 
 function InvestmentRow({
   inv,
+  index,
   portfolioValue,
   onSelectInvestment,
 }: {
   inv: Investment;
+  /** Drives the zebra striping — the eye needs the band to track a row across eight columns. */
+  index: number;
   portfolioValue: number;
   onSelectInvestment: (inv: Investment) => void;
 }) {
@@ -79,53 +81,58 @@ function InvestmentRow({
   return (
     <tr
       onClick={() => onSelectInvestment(inv)}
-      className="group cursor-pointer border-b border-[var(--border-color)] transition-colors last:border-0 hover:bg-[var(--surface2)]"
+      className={cn(
+        "group cursor-pointer transition-colors hover:bg-[var(--surface2)]",
+        index % 2 === 1 && "bg-[color-mix(in_srgb,var(--text)_3%,transparent)]",
+      )}
     >
       <td className={cn("px-[14px] py-[13px]", W.chevronName)}>
         <div className="flex items-center gap-2.5">
           <span className="h-[9px] w-[9px] shrink-0 rounded-full" style={{ background: color }} />
           <div className="min-w-0">
-            <p className="truncate font-mono text-[13px] font-semibold tracking-[-0.01em] text-[var(--text)]">{inv.ticker}</p>
+            <p className="truncate font-mono text-[14.5px] font-bold tracking-[-0.01em] text-[var(--text)]">{inv.ticker}</p>
             <p className="truncate text-[12px] text-[var(--text-sub)]">{inv.name}</p>
           </div>
         </div>
       </td>
       <td className={cn("px-[14px] py-[13px] text-right", W.qty)}>
-        <span className="font-mono text-[13px] tabular-nums text-[var(--text-sub)]">
+        <span className="font-mono text-[14px] font-bold tabular-nums text-[var(--text)]">
           {inv.currentQuantity % 1 === 0
             ? inv.currentQuantity.toLocaleString("pt-BR")
             : inv.currentQuantity.toFixed(4)}
         </span>
       </td>
       <td className={cn("px-[14px] py-[13px] text-right", W.price)}>
-        <Money cents={inv.currentPrice} className="text-[13px] text-[var(--text-sub)]" />
+        <Money cents={inv.currentPrice} className="!font-bold text-[14px] text-[var(--text)]" />
       </td>
       <td className={cn("px-[14px] py-[13px] text-right", W.changePct)}>
         {hasDayChange ? (
-          <span className={cn("font-mono text-[13px] font-medium tabular-nums", isDayPositive ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
+          <SignedChip positive={isDayPositive}>
             {formatPercentNeutral(Math.abs(inv.dayChangePct))}
-          </span>
+          </SignedChip>
         ) : (
-          <span className="font-mono text-[13px] text-[var(--text-muted)]">—</span>
+          <span className="font-mono text-[14px] text-[var(--text-muted)]">—</span>
         )}
       </td>
       <td className={cn("px-[14px] py-[13px] text-right", W.changeR)}>
         {hasDayChange ? (
-          <Money cents={inv.dayChangeAbs} sign className="text-[13px]" />
+          <SignedChip positive={isDayPositive}>
+            <Money cents={inv.dayChangeAbs} sign className="!text-[14px] !font-bold !text-inherit" />
+          </SignedChip>
         ) : (
-          <span className="font-mono text-[13px] text-[var(--text-muted)]">—</span>
+          <span className="font-mono text-[14px] text-[var(--text-muted)]">—</span>
         )}
       </td>
       <td className={cn("px-[14px] py-[13px] text-right", W.rentab)}>
-        <span className={cn("font-mono text-[13px] font-medium tabular-nums", isRentabPositive ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
+        <SignedChip positive={isRentabPositive}>
           {formatPercentNeutral(Math.abs(inv.totalReturnPercent))}
-        </span>
+        </SignedChip>
       </td>
       <td className={cn("px-[14px] py-[13px] text-right", W.balance)}>
-        <Money cents={inv.currentValue} className="text-[13px]" />
+        <Money cents={inv.currentValue} className="!font-bold text-[15px]" />
       </td>
       <td className={cn("px-[14px] py-[13px] text-right", W.pct)}>
-        <span className="font-mono text-[12px] tabular-nums text-[var(--text-sub)]">{pct.toFixed(1)}%</span>
+        <span className="font-mono text-[13.5px] font-bold tabular-nums text-[var(--text-sub)]">{pct.toFixed(1)}%</span>
       </td>
     </tr>
   );
@@ -193,54 +200,56 @@ function ClassCard({
               </td>
 
               <td className={cn("px-[14px] py-[18px] text-right", W.qty)}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Ativos</p>
-                <p className="mt-1 font-mono text-[13px] font-medium tabular-nums text-[var(--text)]">{investments.length}</p>
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-sub)]">Ativos</p>
+                <p className="mt-1 font-mono text-[15px] font-bold tabular-nums text-[var(--text)]">{investments.length}</p>
               </td>
 
               <td className={cn("px-[14px] py-[18px] text-right", W.price)}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Valor total</p>
-                {isEmpty ? <p className="mt-1 font-mono text-[13px] text-[var(--text-muted)]">—</p> : <Money cents={groupValue} className="mt-1 text-[13px]" />}
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-sub)]">Valor total</p>
+                {isEmpty ? <p className="mt-1 font-mono text-[13px] text-[var(--text-muted)]">—</p> : <Money cents={groupValue} className="mt-1 !font-bold text-[15px]" />}
               </td>
 
               <td className={cn("px-[14px] py-[18px] text-right", W.changePct)}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Variação</p>
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-sub)]">Variação</p>
                 {isEmpty || !hasDayChange ? (
                   <p className="mt-1 font-mono text-[13px] font-medium text-[var(--text-muted)]">—</p>
                 ) : (
-                  <p className={cn("mt-1 font-mono text-[13px] font-medium tabular-nums", isDayPositive ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
+                  <SignedChip positive={isDayPositive} className="mt-1">
                     {formatPercentNeutral(Math.abs(groupDayChangePct))}
-                  </p>
+                  </SignedChip>
                 )}
               </td>
 
               <td className={cn("px-[14px] py-[18px] text-right", W.changeR)}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Variação (R$)</p>
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-sub)]">Variação (R$)</p>
                 {isEmpty || !hasDayChange ? (
                   <p className="mt-1 font-mono text-[13px] font-medium text-[var(--text-muted)]">—</p>
                 ) : (
-                  <Money cents={groupDayChangeAbs} sign className="mt-1 text-[13px]" />
+                  <SignedChip positive={isDayPositive} className="mt-1">
+                    <Money cents={groupDayChangeAbs} sign className="!text-[14px] !font-bold !text-inherit" />
+                  </SignedChip>
                 )}
               </td>
 
               <td className={cn("px-[14px] py-[18px] text-right", W.rentab)}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Rentab.</p>
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-sub)]">Rentab.</p>
                 {isEmpty ? (
                   <p className="mt-1 font-mono text-[13px] font-medium text-[var(--text-muted)]">—</p>
                 ) : (
-                  <p className={cn("mt-1 font-mono text-[13px] font-medium tabular-nums", isRentabPositive ? "text-[var(--moss)]" : "text-[var(--clay)]")}>
+                  <SignedChip positive={isRentabPositive} className="mt-1">
                     {formatPercentNeutral(Math.abs(groupYield))}
-                  </p>
+                  </SignedChip>
                 )}
               </td>
 
               <td className={cn("px-[14px] py-[18px] text-right", W.balance)}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">Saldo</p>
-                {isEmpty ? <p className="mt-1 font-mono text-[13px] text-[var(--text-muted)]">—</p> : <Money cents={groupValue} className="mt-1 text-[13px]" />}
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-sub)]">Saldo</p>
+                {isEmpty ? <p className="mt-1 font-mono text-[13px] text-[var(--text-muted)]">—</p> : <Money cents={groupValue} className="mt-1 !font-bold text-[15px]" />}
               </td>
 
               <td className={cn("px-[14px] py-[18px] text-right", W.pct)}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-sub)]">% Cart.</p>
-                <p className="mt-1 font-mono text-[13px] tabular-nums text-[var(--text-sub)]">
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-sub)]">% Cart.</p>
+                <p className="mt-1 font-mono text-[15px] font-bold tabular-nums text-[var(--text-sub)]">
                   {isEmpty ? "—" : `${groupPct.toFixed(1)}%`}
                 </p>
               </td>
@@ -252,22 +261,23 @@ function ClassCard({
       {open && !isEmpty && (
         <table className="w-full table-fixed">
           <thead>
-            <tr className="border-b border-[var(--border-color)]">
-              <th className={cn("px-[14px] py-[11px] text-left font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.chevronName)}>Ativo</th>
-              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.qty)}>Qtd.</th>
-              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.price)}>Preço atual</th>
-              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.changePct)}>Variação</th>
-              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.changeR)}>Variação (R$)</th>
-              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.rentab)}>Rentab.</th>
-              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.balance)}>Saldo</th>
-              <th className={cn("px-[14px] py-[11px] text-right font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-[var(--text-sub)]", W.pct)}>% Cart.</th>
+            <tr className="border-b border-[var(--border-color)] bg-[color-mix(in_srgb,var(--text)_6%,transparent)]">
+              <th className={cn("px-[14px] py-[10px] text-left font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--text-sub)]", W.chevronName)}>Ativo</th>
+              <th className={cn("px-[14px] py-[10px] text-right font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--text-sub)]", W.qty)}>Qtd.</th>
+              <th className={cn("px-[14px] py-[10px] text-right font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--text-sub)]", W.price)}>Preço atual</th>
+              <th className={cn("px-[14px] py-[10px] text-right font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--text-sub)]", W.changePct)}>Variação</th>
+              <th className={cn("px-[14px] py-[10px] text-right font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--text-sub)]", W.changeR)}>Variação (R$)</th>
+              <th className={cn("px-[14px] py-[10px] text-right font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--text-sub)]", W.rentab)}>Rentab.</th>
+              <th className={cn("px-[14px] py-[10px] text-right font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--text-sub)]", W.balance)}>Saldo</th>
+              <th className={cn("px-[14px] py-[10px] text-right font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--text-sub)]", W.pct)}>% Cart.</th>
             </tr>
           </thead>
           <tbody>
-            {investments.map((inv) => (
+            {investments.map((inv, index) => (
               <InvestmentRow
                 key={inv.id}
                 inv={inv}
+                index={index}
                 portfolioValue={portfolioValue}
                 onSelectInvestment={onSelectInvestment}
               />

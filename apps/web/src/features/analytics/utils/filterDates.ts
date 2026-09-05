@@ -4,10 +4,33 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function buildDateRange(filter: AnalyticsFilter): { start: string; finish: string } {
+/**
+ * The active budget's cycle, as `useActiveBudget` reports it: `endDate` is EXCLUSIVE,
+ * because a transaction dated on it belongs to the next cycle, which starts that day.
+ */
+export type BudgetCycle = { startDate: string; endDate: string };
+
+function toInclusiveEnd(exclusiveEndIso: string): string {
+  const d = new Date(exclusiveEndIso + "T00:00:00");
+  d.setDate(d.getDate() - 1);
+  return isoDate(d);
+}
+
+export function buildDateRange(
+  filter: AnalyticsFilter,
+  cycle?: BudgetCycle | null,
+): { start: string; finish: string } {
   const today = new Date();
 
   switch (filter.preset) {
+    case "budget-cycle": {
+      // No active budget, or budgets not loaded yet: fall back to the calendar month.
+      if (!cycle) {
+        const start = new Date(today.getFullYear(), today.getMonth(), 1);
+        return { start: isoDate(start), finish: isoDate(today) };
+      }
+      return { start: cycle.startDate, finish: toInclusiveEnd(cycle.endDate) };
+    }
     case "current-month": {
       const start = new Date(today.getFullYear(), today.getMonth(), 1);
       return { start: isoDate(start), finish: isoDate(today) };
@@ -59,6 +82,7 @@ export function defaultFilter(): AnalyticsFilter {
 
 export function presetLabel(preset: DatePreset, customYear?: number): string {
   switch (preset) {
+    case "budget-cycle":    return "Ciclo do orçamento";
     case "current-month":   return "Mês atual";
     case "last-3-months":   return "3 meses";
     case "last-6-months":   return "6 meses";

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, TrendingUp, Gift, Plus } from "lucide-react";
+import { PortfolioInsightCard } from "@/features/insights/components/PortfolioInsightCard";
 import { PageTopbar } from "@/components/layout/PageTopbar";
 import { ExportCsvButton } from "@/components/shared/ExportCsvButton";
 import { filterInvestments } from "@/features/investments/utils/filterInvestments";
@@ -92,6 +93,8 @@ export function InvestmentsPage() {
             <>
               <InvestmentsSummaryHero summary={data} />
 
+              <PortfolioInsightCard />
+
               {/* Evolução + alocação */}
               <div className="grid grid-cols-1 gap-[22px] lg:grid-cols-12">
                 <div className="lg:col-span-7">
@@ -164,6 +167,7 @@ export function InvestmentsPage() {
         onClose={() => { setShowDividendModal(false); setDividendTarget(null); }}
         investmentId={dividendTarget?.id ?? 0}
         ticker={dividendTarget?.ticker ?? ""}
+        investments={data.investments.map((i) => ({ id: i.id, ticker: i.ticker, name: i.name }))}
         accountOptions={accounts}
       />
     </>

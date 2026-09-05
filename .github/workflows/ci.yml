@@ -1,0 +1,101 @@
+name: CI
+
+# Every push to main and every PR into it. The three apps are independent, so
+# each gets its own job: a broken web build should not hide the API's test
+# results, and the jobs run in parallel.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push to the same branch makes the previous run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (.NET)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          # apps/api/global.json pins the SDK; this only has to satisfy it.
+          dotnet-version: "9.0.x"
+
+      - name: Restore
+        run: dotnet restore FinanceControl.sln
+
+      - name: Build
+        run: dotnet build FinanceControl.sln --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test FinanceControl.sln --no-build --configuration Release --verbosity normal
+
+  web:
+    name: Web (Next.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # Reports but does not block: the repo carries ~136 pre-existing eslint errors
+      # (mostly `no-explicit-any` and unused imports) that predate this pipeline.
+      # Flip to blocking once that backlog is cleared.
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # No env vars on purpose: NEXT_PUBLIC_API_URL and NEXT_PUBLIC_SITE_URL both
+      # fall back to localhost, so a build that needs them to compile is a bug.
+      - name: Build
+        run: npm run build
+
+  mobile:
+    name: Mobile (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.6"
+          channel: stable
+          cache: true
+
+      - name: Install
+        run: flutter pub get
+
+      # Warnings and infos are tolerated (the generated .g.dart files carry a few);
+      # this fails on errors only.
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Test
+        run: flutter test

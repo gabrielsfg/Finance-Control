@@ -14,6 +14,7 @@ import '../../../shared/widgets/app_widgets.dart';
 import '../../accounts/data/models/account.dart';
 import '../../accounts/providers/accounts_provider.dart';
 import '../../goals/data/goal_models.dart';
+import '../../notifications/presentation/notification_bell.dart';
 import '../../goals/providers/goal_provider.dart';
 import '../../recurrences/data/recurrence_models.dart';
 import '../../recurrences/providers/recurrence_provider.dart';
@@ -189,6 +190,8 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
+        const NotificationBell(),
+        const SizedBox(width: 10),
         _IconButton(
           icon: isDark ? LucideIcons.sun : LucideIcons.moon,
           onTap: onThemeToggle,

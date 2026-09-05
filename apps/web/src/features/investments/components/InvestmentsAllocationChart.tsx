@@ -8,14 +8,7 @@ import { PillSelect } from "@/components/shared/PillSelect";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { InvestmentPortfolio } from "@/lib/types/investments.types";
 import { pieAnim } from "@/lib/config/chartAnimation";
-
-// Token-driven palette (1=moss, 2=cobalt, 3=clay, 4=gold, 5=muted, then repeat).
-const SLICE_COLORS = [
-  "var(--chart-1)", "var(--chart-2)", "var(--chart-4)", "var(--brand-accent)",
-  "var(--chart-3)", "var(--chart-5)", "var(--moss-lift)", "var(--cobalt-lift)",
-];
-
-const sliceColor = (i: number) => SLICE_COLORS[i % SLICE_COLORS.length];
+import { assetClassColor, distinctColorsFor } from "@/lib/config/assetColors";
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
@@ -50,20 +43,25 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
     });
 
     const totalClassValue = classInvestments.reduce((s, i) => s + i.currentValue, 0);
+    // Drilled into one class, every holding shares that class's colour — so the slices
+    // get their own palette here, keyed by ticker so it survives a re-sort.
+    const colors = distinctColorsFor(classInvestments.map((inv) => inv.ticker));
 
     return classInvestments.map((inv, idx) => ({
       name:    inv.ticker,
       value:   inv.currentValue,
       percent: totalClassValue > 0 ? (inv.currentValue / totalClassValue) * 100 : 0,
-      color:   sliceColor(idx),
+      color:   colors[idx],
     }));
   }, [selectedClass, summary]);
 
-  const chartData = tickerData ?? summary.allocations.map((a, idx) => ({
+  // At the class level the colours are the fixed ones — the same green for Ações and blue
+  // for ETFs the badges and the table already use.
+  const chartData = tickerData ?? summary.allocations.map((a) => ({
     name: a.assetClass,
     value: a.value,
     percent: a.percent,
-    color: sliceColor(idx),
+    color: assetClassColor(a.assetClass),
   }));
   const centerValue = tickerData
     ? formatCurrency(tickerData.reduce((s, t) => s + t.value, 0) / 100)

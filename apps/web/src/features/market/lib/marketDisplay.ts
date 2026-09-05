@@ -2,26 +2,9 @@
 // and big-number formatting (market cap / revenue). Kept in one place so the dashboard,
 // ranking page, asset page and search rows render assets consistently.
 
-export const ASSET_TYPE_COLORS: Record<string, string> = {
-  Acao: "#00C98D",
-  FundoInvestimento: "#4A9EFF",
-  FII: "#F5A623",
-  Cripto: "#F25F5C",
-  Stock: "#00D4A0",
-  Reit: "#7C6FE0",
-  BDR: "#F5CE42",
-  ETF: "#4A9EFF",
-  ETFInternacional: "#7C6FE0",
-  TesouroDireto: "#00C98D",
-  RendaFixa: "#4A9EFF",
-  Index: "#8A95A3",
-  Moeda: "#14B8A6",
-  Outro: "#8A95A3",
-};
-
-export function assetColor(assetType: string): string {
-  return ASSET_TYPE_COLORS[assetType] ?? "#8A95A3";
-}
+// One source of truth for asset colours — see `lib/config/assetColors`. Re-exported so
+// the market feature's own imports keep working.
+export { ASSET_TYPE_COLORS, assetTypeColor as assetColor } from "@/lib/config/assetColors";
 
 // "+1,23%" / "-0,45%" (always signed — this is a neutral context, not a colored KPI cell).
 export function formatChangePct(pct: number | null | undefined): string {

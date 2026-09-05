@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -14,6 +18,7 @@ import '../../budgets/providers/budget_provider.dart';
 import '../../home/providers/home_provider.dart';
 import '../../transactions/providers/picker_providers.dart';
 import '../../transactions/providers/transaction_feed_provider.dart';
+import '../data/user_repository.dart';
 import '../providers/user_preferences_provider.dart';
 import '../providers/user_provider.dart';
 
@@ -43,6 +48,8 @@ class ProfilePage extends ConsumerWidget {
               const _PlanningSection(),
               const SizedBox(height: 16),
               const _PreferencesSection(),
+              const SizedBox(height: 16),
+              const _PrivacySection(),
               const SizedBox(height: 16),
               const _AccountSection(),
               const SizedBox(height: 24),
@@ -337,6 +344,134 @@ class _PreferencesSection extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+// ── Privacy Section ────────────────────────────────────────────────────────
+//
+// The LGPD surface: the right to portability (art. 18, V) and the documents the
+// user consented to at signup. Deletion and reset live in the account section
+// below, next to the other destructive actions.
+
+class _PrivacySection extends ConsumerWidget {
+  const _PrivacySection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppThemeTokens.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Privacidade'),
+        _SettingsCard(
+          items: [
+            _SettingRow(
+              icon: LucideIcons.download,
+              iconColor: t.accent,
+              label: 'Baixar meus dados',
+              subtitle: 'Exporta tudo em um arquivo JSON',
+              onTap: () => _exportData(context, ref),
+            ),
+            _SettingRow(
+              icon: LucideIcons.shield,
+              iconColor: t.txtTertiary,
+              label: 'Política de Privacidade',
+              onTap: () => context.push('/legal/privacy'),
+            ),
+            _SettingRow(
+              icon: LucideIcons.fileText,
+              iconColor: t.txtTertiary,
+              label: 'Termos de Uso',
+              onTap: () => context.push('/legal/terms'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Downloads the export and hands it to the system share sheet, so the user
+  /// decides where it lands (Arquivos, Drive, e-mail). Writing it straight to
+  /// storage would need a permission prompt on Android and still leave the file
+  /// hard to find on iOS.
+  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _ExportProgressDialog(),
+    );
+
+    try {
+      final export = await ref.read(userRepositoryProvider).exportData();
+      final directory = await getTemporaryDirectory();
+      final file = File('${directory.path}/${export.fileName}');
+      await file.writeAsBytes(export.bytes, flush: true);
+
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'application/json')],
+          fileNameOverrides: [export.fileName],
+          subject: 'Meus dados — Quantia',
+          // iPad anchors the share popover to a rect; without one the sheet
+          // has nowhere to point and the call throws.
+          sharePositionOrigin: _shareOrigin(context),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível gerar o arquivo. Tente novamente.'),
+        ),
+      );
+    }
+  }
+}
+
+/// Centre of the screen: the row that started the export is inside a scroll
+/// view, so its own position is not a reliable anchor by the time the file is
+/// ready.
+Rect _shareOrigin(BuildContext context) {
+  final size = MediaQuery.sizeOf(context);
+  return Rect.fromCenter(
+    center: Offset(size.width / 2, size.height / 2),
+    width: 1,
+    height: 1,
+  );
+}
+
+class _ExportProgressDialog extends StatelessWidget {
+  const _ExportProgressDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppThemeTokens.of(context);
+
+    return AlertDialog(
+      content: Row(
+        children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, color: t.primary),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              'Preparando seus dados…',
+              style: AppTextStyles.body(t.txtPrimary),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

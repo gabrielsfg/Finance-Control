@@ -30,13 +30,17 @@ import '../../features/budgets/presentation/create_budget_step2_page.dart';
 import '../../features/budgets/presentation/create_budget_step3_page.dart';
 import '../../features/budgets/presentation/create_budget_step4_page.dart';
 import '../../features/analytics/presentation/analytics_page.dart';
+import '../../features/feedback/presentation/feedback_page.dart';
 import '../../features/goals/presentation/goals_page.dart';
+import '../../features/import/presentation/import_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/investments/presentation/investments_page.dart';
 import '../../features/investments/presentation/register_investment_page.dart';
 import '../../features/market/presentation/market_asset_page.dart';
 import '../../features/market/presentation/market_page.dart';
 import '../../features/menu/presentation/menu_page.dart';
+import '../../features/notifications/presentation/notification_preferences_page.dart';
+import '../../features/notifications/presentation/notifications_page.dart';
 import '../../features/legal/data/legal_repository.dart';
 import '../../features/legal/presentation/legal_document_page.dart';
 import '../../features/recurrences/presentation/recurrences_page.dart';
@@ -146,6 +150,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const RecurrencesPage(),
       ),
       GoRoute(
+        path: '/feedback',
+        builder: (_, _) => const FeedbackPage(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (_, _) => const NotificationsPage(),
+        routes: [
+          GoRoute(
+            path: 'preferences',
+            builder: (_, _) => const NotificationPreferencesPage(),
+          ),
+        ],
+      ),
+      GoRoute(
         path: '/goals',
         builder: (_, _) => const GoalsPage(),
       ),
@@ -173,6 +191,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/transactions/add',
         builder: (_, _) => const AddTransactionPage(),
+      ),
+      GoRoute(
+        path: '/transactions/import',
+        builder: (_, _) => const ImportPage(),
       ),
       GoRoute(
         path: '/transactions/edit',

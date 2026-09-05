@@ -22,6 +22,8 @@ import { useUIStore } from "@/lib/stores/uiStore";
 import { Money, BigMoney } from "@/components/shared/Money";
 import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
+import { PeriodFilter } from "@/components/shared/PeriodFilter";
+import { buildPeriodRange, defaultPeriod, type PeriodValue } from "@/lib/utils/periodPresets";
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { TransactionDrawer } from "@/features/transactions/components/TransactionDrawer";
 import { parseLocalDate } from "@/lib/utils/budgetPeriod";
@@ -35,13 +37,6 @@ import type { InvestmentPortfolio } from "@/lib/types/investments.types";
 
 function isoDate(d: Date): string {
   return d.toISOString().split("T")[0];
-}
-
-function getCurrentMonthRange() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return { startDate: isoDate(start), finishDate: isoDate(end) };
 }
 
 function toInclusiveEnd(exclusiveEndIso: string): string {
@@ -442,13 +437,18 @@ export function DashboardPage() {
   const { theme, toggleTheme } = useUIStore();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const range = activeBudget
-    ? { startDate: activeBudget.startDate, finishDate: toInclusiveEnd(activeBudget.endDate) }
-    : getCurrentMonthRange();
+  // Defaults to the active budget's cycle, but the whole page is now filterable: every
+  // summary below reads from this one range, so changing it moves the balance, the flow
+  // panel, the categories and the prediction together.
+  const [period, setPeriod] = useState<PeriodValue>(defaultPeriod());
 
-  const periodLabel = activeBudget
-    ? `${format(parseLocalDate(activeBudget.startDate), "d MMM", { locale: ptBR })} – ${format(parseLocalDate(activeBudget.endDate), "d MMM yyyy", { locale: ptBR })}`
-    : format(new Date(), "MMMM yyyy", { locale: ptBR });
+  const { start, finish } = buildPeriodRange(period, activeBudget);
+  const range = { startDate: start, finishDate: finish };
+
+  const periodLabel =
+    period.preset === "budget-cycle" && activeBudget
+      ? `${format(parseLocalDate(activeBudget.startDate), "d MMM", { locale: ptBR })} – ${format(parseLocalDate(toInclusiveEnd(activeBudget.endDate)), "d MMM yyyy", { locale: ptBR })}`
+      : `${format(parseLocalDate(start), "d MMM", { locale: ptBR })} – ${format(parseLocalDate(finish), "d MMM yyyy", { locale: ptBR })}`;
 
   const { data, isLoading } = useDashboard({ ...range, budgetId: activeBudget?.budget.id });
   const { data: accounts = [] } = useAccounts();
@@ -523,6 +523,8 @@ export function DashboardPage() {
 
         <div className="ml-auto flex items-center gap-3">
           <GlobalSearch />
+
+          <PeriodFilter value={period} onChange={setPeriod} />
 
           <button
             onClick={toggleTheme}

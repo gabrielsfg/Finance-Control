@@ -21,7 +21,9 @@ namespace FinanceControl.Services.Services
             "irrecuperável por definição), tokens de sessão, códigos de verificação, dispositivos " +
             "confiáveis e o histórico de notificações — todos são artefatos de segurança ou de " +
             "funcionamento interno, não dados fornecidos por você. O texto integral dos documentos " +
-            "aceitos está em /api/legal/{type}?version={version}.";
+            "aceitos está em /api/legal/{type}?version={version}. As análises geradas por " +
+            "inteligência artificial acompanham o campo \"snapshot\", que contém exatamente os " +
+            "dados enviados ao modelo para produzir cada uma delas.";
 
         private readonly ApplicationDbContext _context;
 
@@ -254,6 +256,7 @@ namespace FinanceControl.Services.Services
                     AveragePrice = i.AveragePrice,
                     MaturityDate = i.MaturityDate,
                     ExpectedYieldPct = i.ExpectedYieldPct,
+                    YieldIndex = i.YieldIndex,
                     AccountId = i.AccountId,
                     CreatedAt = i.CreatedAt,
                     Transactions = i.Transactions
@@ -317,6 +320,49 @@ namespace FinanceControl.Services.Services
                 })
                 .FirstOrDefaultAsync();
 
+            var riskProfile = await _context.UserRiskProfiles
+                .AsNoTracking()
+                .Where(p => p.UserId == userId)
+                .Select(p => new ExportRiskProfileDto
+                {
+                    InvestmentHorizon = p.InvestmentHorizon,
+                    LossTolerance = p.LossTolerance,
+                    ReserveMonthsTarget = p.ReserveMonthsTarget,
+                    ExperienceLevel = p.ExperienceLevel,
+                    Classification = p.Classification,
+                    AnsweredAt = p.AnsweredAt
+                })
+                .FirstOrDefaultAsync();
+
+            // Snapshot travels with each analysis: an automated text written about someone,
+            // with no record of what it was based on, cannot be reviewed by them.
+            var insights = await _context.UserInsights
+                .AsNoTracking()
+                .Where(i => i.UserId == userId)
+                .OrderBy(i => i.PeriodStart)
+                .Select(i => new ExportInsightDto
+                {
+                    Kind = i.Kind,
+                    PeriodStart = i.PeriodStart,
+                    Content = i.Content,
+                    Snapshot = i.Snapshot,
+                    Model = i.Model,
+                    GeneratedAt = i.GeneratedAt
+                })
+                .ToListAsync();
+
+            var aiContexts = await _context.UserAiContexts
+                .AsNoTracking()
+                .Where(c => c.UserId == userId)
+                .OrderBy(c => c.PeriodStart)
+                .Select(c => new ExportAiContextDto
+                {
+                    PeriodStart = c.PeriodStart,
+                    Text = c.Text,
+                    CreatedAt = c.CreatedAt
+                })
+                .ToListAsync();
+
             return new UserDataExportResponseDto
             {
                 ExportedAt = DateTime.UtcNow,
@@ -333,7 +379,10 @@ namespace FinanceControl.Services.Services
                 Goals = goals,
                 Investments = investments,
                 AlertRules = alertRules,
-                NotificationPreferences = notificationPreferences
+                NotificationPreferences = notificationPreferences,
+                RiskProfile = riskProfile,
+                Insights = insights,
+                AiContexts = aiContexts
             };
         }
     }

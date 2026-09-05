@@ -144,6 +144,18 @@ String formatMonthYear(DateTime date) =>
 /// Prefer [AppLocale.formatDate] in widgets.
 String formatDate(DateTime date) => AppLocale.defaultLocale.formatDate(date);
 
+/// Relative timestamp for feeds: "agora", "há 12 min", "há 3 h", "há 2 d" and,
+/// past a week, the plain date. Anything older stops being useful as an
+/// interval and reads better as a date.
+String relativeTimeLabel(DateTime moment, {DateTime? now}) {
+  final diff = (now ?? DateTime.now()).difference(moment);
+  if (diff.inMinutes < 1) return 'agora';
+  if (diff.inMinutes < 60) return 'há ${diff.inMinutes} min';
+  if (diff.inHours < 24) return 'há ${diff.inHours} h';
+  if (diff.inDays < 7) return 'há ${diff.inDays} d';
+  return formatDate(moment);
+}
+
 /// Maps a backend RecurrenceType wire value (e.g. "Monthly") to its pt-BR
 /// display label. The wire value is still what gets sent to / stored by the
 /// API — this is display-only. Unknown values fall back to the input.

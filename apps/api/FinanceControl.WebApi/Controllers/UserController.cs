@@ -193,8 +193,14 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(new AuthResponseDto { AccessToken = tokens.AccessToken });
         }
 
+        // Deliberately anonymous. Requiring a valid access token made logout impossible
+        // in the one state where it matters: once the refresh token is dead every access
+        // token is too, so the user was left holding a session the API rejects and no way
+        // to shed it. Nothing here needs the caller's identity — the cookie names the
+        // token to revoke, and clearing a cookie for an anonymous caller costs nothing.
+        // Cross-site forced logout is not a concern: the cookie is SameSite=Strict.
         [HttpPost("logout")]
-        [Authorize]
+        [AllowAnonymous]
         public async Task<IActionResult> LogoutAsync()
         {
             var refreshToken = Request.Cookies[RefreshTokenCookieName];

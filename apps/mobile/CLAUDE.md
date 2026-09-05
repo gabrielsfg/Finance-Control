@@ -14,13 +14,14 @@ Personal finance tracking app for 18–30 year-olds. All data entry is **manual 
 
 | Concern | Package |
 |---|---|
-| State management | `flutter_riverpod` + `riverpod_annotation` |
+| State management | `flutter_riverpod` (hand-written providers) |
 | Navigation | `go_router` |
 | HTTP client | `dio` |
 | Token storage | `flutter_secure_storage` |
 | Immutable models | `freezed` + `json_serializable` |
-| Code generation | `build_runner` + `riverpod_generator` + `freezed` |
-| Linting | `flutter_lints` + `custom_lint` + `riverpod_lint` |
+| Code generation | `build_runner` + `json_serializable` (only where a `.g.dart` already exists) |
+| Linting | `flutter_lints` |
+| Files & sharing | `file_picker`, `share_plus`, `path_provider` |
 
 ---
 
@@ -309,26 +310,31 @@ Before implementing any API call, check the .NET controllers in `apps/api/` to g
 - HTTP verb semantics (PATCH for partial updates, not PUT)
 - Route parameters vs body parameters
 
-### Updating the theme
+### The theme
 
-`lib/core/theme/app_theme.dart` currently uses a placeholder green seed color. When implementing screens from Figma, update `AppTheme.light` and `AppTheme.dark` with the actual color tokens, typography, and shape values from the design.
+The app runs the **Quantia** design system (`core/theme/app_colors.dart`, `app_text_styles.dart`, `app_spacing.dart`), read through `AppThemeTokens.of(context)`. Design reference: `design/DESIGN-SYSTEM.md`. Never hardcode a colour — take it from the tokens.
 
 ### API connectivity
 
-| Environment | Base URL |
-|---|---|
-| Android emulator | `http://10.0.2.2:5000` (current default) |
-| iOS simulator | `http://localhost:5000` |
-| Physical device | Machine's LAN IP, e.g. `http://192.168.x.x:5000` |
+Configured in `core/config/app_config.dart` and driven by `--dart-define`:
 
-Change `ApiEndpoints.baseUrl` in `lib/core/api/api_endpoints.dart`.
+| Build | Command |
+|---|---|
+| Local (default) | `flutter run` — Android emulator uses `10.0.2.2:5112`, iOS simulator `localhost:5112` |
+| Physical device | `flutter run --dart-define=API_BASE_URL=http://192.168.x.x:5112` |
+| Staging / production | `--dart-define=APP_ENV=production --dart-define=API_BASE_URL=https://api.seudominio.com.br` |
+
+A staging or production build without `API_BASE_URL` throws on the first request, on purpose — better than silently pointing nowhere.
 
 ---
 
-## What is NOT implemented yet
+## Current state (2026-08)
 
-- **All feature screens** — pages are empty `Scaffold` placeholders. Replace from Figma.
-- **Theme** — placeholder green color; replace with Figma design tokens.
-- **`features/<name>/data/` layer** — no repositories, DTOs, or models exist yet.
-- **JWT refresh logic** — `_AuthInterceptor` passes 401 through without retrying. Implement refresh-token interceptor before production.
-- **Auth screens** — no form, validation, or API call wired up yet.
+The app is **fully built and wired to the API** — no mock data anywhere. Screens: home, statement, budgets, accounts (+ detail), categories/subcategories, goals, recurrences, investments, market, analytics, notifications, statement import, feedback, profile/preferences and the menu. Auth covers signup with consent, email verification, two-factor and password recovery. The Dio interceptor already refreshes the token on a 401 and tears the session down when the refresh fails.
+
+### What is NOT implemented
+
+- **i18n** — every UI string is pt-BR, written inline. `flutter_localizations` is wired only so native widgets (date pickers) render in pt-BR. Multi-language was deferred on purpose.
+- **Simulations** — they exist on the web client and were not ported.
+- **Push notifications** — notifications are in-app only; there is no push or email channel in the client.
+- **Tests** — widget tests cover login, home and the add-transaction screen, plus unit tests on the models; the rest of the screens are thin on coverage.

@@ -10,11 +10,23 @@ import { NotificationBell } from "@/features/notifications/components/Notificati
 type Props = {
   title: ReactNode;
   subtitle?: ReactNode;
+  /**
+   * Controls belonging to a flow that has taken over the page — import review, say —
+   * rendered in the primary-action slot on the far right so the title and the buttons
+   * land exactly where every other page puts them.
+   *
+   * They REPLACE the store-driven controls rather than stacking with them: the header
+   * store still holds the underlying page's verbs, and a review screen offering "Nova
+   * transação" and the transaction filters would be offering dead ends. Theme and
+   * notifications stay — those belong to the shell, not to the page.
+   */
+  actions?: ReactNode;
 };
 
-export function PageTopbar({ title, subtitle }: Props) {
+export function PageTopbar({ title, subtitle, actions }: Props) {
   const { theme, toggleTheme } = useUIStore();
   const { novaLabel, onNovaClick, filterNode, showSearch, onImportClick } = useHeaderStore();
+  const showStoreActions = !actions;
 
   return (
     <header className="flex items-end gap-5 pt-[26px] pb-[30px]">
@@ -30,9 +42,9 @@ export function PageTopbar({ title, subtitle }: Props) {
       </div>
 
       <div className="ml-auto flex items-center gap-3">
-        {showSearch && <GlobalSearch />}
+        {showStoreActions && showSearch && <GlobalSearch />}
 
-        {onImportClick && (
+        {showStoreActions && onImportClick && (
           <button
             onClick={onImportClick}
             title="Importar extrato"
@@ -44,7 +56,7 @@ export function PageTopbar({ title, subtitle }: Props) {
           </button>
         )}
 
-        {filterNode}
+        {showStoreActions && filterNode}
 
         <button
           onClick={toggleTheme}
@@ -62,7 +74,9 @@ export function PageTopbar({ title, subtitle }: Props) {
 
         <NotificationBell />
 
-        {onNovaClick && (
+        {actions}
+
+        {showStoreActions && onNovaClick && (
           <button
             onClick={onNovaClick}
             className="inline-flex h-[42px] items-center gap-2 rounded-[13px] px-[18px] text-[14px] font-semibold text-white transition-transform hover:-translate-y-[1px]"

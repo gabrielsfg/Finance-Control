@@ -19,7 +19,14 @@ export default function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (pathname === "/login" && hasSession) {
+  // `?expired=1` is the client reporting that it has just torn its session down.
+  // The cookie can survive that — the logout request may never have landed, or the
+  // API may be down — and bouncing back to /dashboard on a session the API rejects
+  // is a trap: every request 401s and the user cannot reach the login screen to
+  // start over. The flag lets /login win over a cookie that is no longer usable.
+  const isReturningFromLogout = request.nextUrl.searchParams.get("expired") === "1";
+
+  if (pathname === "/login" && hasSession && !isReturningFromLogout) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

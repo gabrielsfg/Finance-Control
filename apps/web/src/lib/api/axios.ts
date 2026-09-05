@@ -3,12 +3,41 @@ import { clearPersistedQueryCache } from "@/lib/queryClient";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api";
 
+/**
+ * Query-string builder for array parameters.
+ *
+ * Axios emits `tagIds[]=1&tagIds[]=2`. ASP.NET Core's model binder looks for the key
+ * `tagIds` (repeated) or `tagIds[0]`, finds neither, and binds an EMPTY list — so the
+ * filter is dropped with no error anywhere: the request succeeds, the response is just
+ * unfiltered. Every multi-select filter in the app went out this way, which is why they
+ * appeared to do nothing individually and nothing when combined.
+ *
+ * Repeated bare keys are what the binder wants, and they are equivalent for scalars, so
+ * this is safe for every call site.
+ */
+function serializeParams(params: Record<string, unknown>): string {
+  const search = new URLSearchParams();
+
+  const append = (key: string, value: unknown) => {
+    if (value === undefined || value === null) return;
+    search.append(key, value instanceof Date ? value.toISOString() : String(value));
+  };
+
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (Array.isArray(value)) value.forEach((item) => append(key, item));
+    else append(key, value);
+  }
+
+  return search.toString();
+}
+
 export const api = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
   // Required so the browser sends the HttpOnly refresh-token cookie
   // on cross-origin requests to the API domain.
   withCredentials: true,
+  paramsSerializer: { serialize: serializeParams },
 });
 
 // Singleton refresh promise — deduplicates concurrent refreshes so a burst of
@@ -86,7 +115,21 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config;
 
-    if (error.response?.status === 401 && !original._retry) {
+    // Auth routes are excluded from the recovery below, and not merely because
+    // refreshing before /user/refresh would be circular: `logout()` itself issues a
+    // request, so a 401 on that request re-enters this handler, which calls
+    // `logout()` again, which requests again — forever. Every level sits awaiting
+    // the next, so the redirect at the end of `logout()` is never reached and the
+    // user is left on a dead session that never resolves into the login screen.
+    const isRecoverable =
+      error.response?.status === 401 &&
+      // Absent on errors raised before a request was built; the retry below writes
+      // to it, so it has to be present rather than merely optional-chained.
+      original &&
+      !original._retry &&
+      !isAuthEndpoint(original.url ?? "");
+
+    if (isRecoverable) {
       original._retry = true;
 
       try {

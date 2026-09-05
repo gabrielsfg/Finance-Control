@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Suspense } from "react";
+import { useState, useMemo, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 import { ExportCsvButton, type ExportState } from "@/components/shared/ExportCsvButton";
@@ -22,6 +22,7 @@ import { PageTopbar } from "@/components/layout/PageTopbar";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
+import { useActiveBudget } from "@/features/budgets/hooks/useActiveBudget";
 import { useTags } from "@/features/transactions/hooks/useTags";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import { parseLocalDate } from "@/lib/utils/budgetPeriod";
@@ -29,10 +30,21 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { TransactionsFilter } from "@/features/transactions/types/filters.types";
 import type { TransactionItem } from "@/lib/types/transactions.types";
 
-function initFilterFromParam(dateParam: string | null): TransactionsFilter {
-  const base = defaultTxFilter();
-  if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return base;
-  return { ...base, preset: "custom-range", startDate: dateParam, finishDate: dateParam };
+function initFilterFromParams(dateParam: string | null, accountParam: string | null): TransactionsFilter {
+  let filter = defaultTxFilter();
+
+  // Arriving from an account card means "everything on this account", so the budget
+  // cycle the page normally opens on would hide most of what was asked for.
+  const accountId = Number(accountParam);
+  if (accountParam && Number.isInteger(accountId) && accountId > 0) {
+    filter = { ...filter, accountIds: [accountId], preset: "all-time" };
+  }
+
+  if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+    filter = { ...filter, preset: "custom-range", startDate: dateParam, finishDate: dateParam };
+  }
+
+  return filter;
 }
 
 const TYPE_FILTER_LABELS: Record<TransactionsFilter["typeFilter"], string> = {
@@ -65,8 +77,9 @@ export function TransactionsPage() {
 function TransactionsContent() {
   const searchParams = useSearchParams();
   const dateParam = searchParams.get("date");
+  const accountParam = searchParams.get("accountId");
 
-  const [filter, setFilter] = useState<TransactionsFilter>(() => initFilterFromParam(dateParam));
+  const [filter, setFilter] = useState<TransactionsFilter>(() => initFilterFromParams(dateParam, accountParam));
   const [filterDay, setFilterDay] = useState<string | null>(dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : null);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -113,6 +126,21 @@ function TransactionsContent() {
   const metaTags = useMemo(() =>
     tagsRaw.map(t => ({ id: t.id, name: t.name })), [tagsRaw]);
 
+  // Landing here from an account card while the page is already mounted only changes the
+  // query string — Next keeps the component — so the initial state above never re-runs.
+  // The ref makes this apply the param once per change instead of stomping on whatever
+  // the user adjusts afterwards.
+  const appliedAccountParam = useRef(accountParam);
+  useEffect(() => {
+    if (accountParam === appliedAccountParam.current) return;
+    appliedAccountParam.current = accountParam;
+    const accountId = Number(accountParam);
+    if (!accountParam || !Number.isInteger(accountId) || accountId <= 0) return;
+    setFilter((f) => ({ ...f, accountIds: [accountId], preset: "all-time" }));
+    setFilterDay(null);
+    setPage(1);
+  }, [accountParam]);
+
   function handleFilterChange(f: TransactionsFilter) {
     setFilter(f);
     setFilterDay(null);
@@ -130,7 +158,12 @@ function TransactionsContent() {
     "Buscar por descrição, tag, categoria ou conta...",
   );
 
-  const { start, finish } = buildTxDateRange(filter);
+  // The default period follows the budget, not the calendar. Resolved here rather than
+  // baked into the filter state because the budgets load after the first render, and a
+  // filter that rewrote itself once they arrived would fight anything the user had
+  // already changed.
+  const { data: activeBudgetPeriod } = useActiveBudget();
+  const { start, finish } = buildTxDateRange(filter, activeBudgetPeriod);
 
   /**
    * Every filter goes to the server, none of them to the loaded page. The list is
@@ -145,6 +178,7 @@ function TransactionsContent() {
     startDate: filterDay ?? start,
     finishDate: filterDay ?? finish,
     budgetIds: filter.budgetIds.length > 0 ? filter.budgetIds : undefined,
+    hasBudget: filter.budgetInclusion === "all" ? undefined : filter.budgetInclusion === "in",
     accountIds: filter.accountIds.length > 0 ? filter.accountIds : undefined,
     categoryIds: filter.categoryIds.length > 0 ? filter.categoryIds : undefined,
     subCategoryIds: filter.subCategoryIds.length > 0 ? filter.subCategoryIds : undefined,
@@ -169,6 +203,22 @@ function TransactionsContent() {
       setExportState("error");
     }
   }
+
+  // Day subtotals only mean "the day" while the date range is the sole filter. Search,
+  // type, category, account, budget, tag and value bounds all narrow what lands in a day,
+  // and a subtotal over a narrowed day is a number the user cannot reconcile against
+  // anything. The day headers themselves survive any filter — only the ordering decides
+  // whether grouping by day still describes the list.
+  const onlyDateFilter =
+    !searchQuery.trim() &&
+    filter.typeFilter === "All" &&
+    filter.categoryIds.length === 0 &&
+    filter.subCategoryIds.length === 0 &&
+    filter.accountIds.length === 0 &&
+    filter.budgetIds.length === 0 &&
+    filter.tagIds.length === 0 &&
+    filter.minValue === null &&
+    filter.maxValue === null;
 
   usePageFilter(
     <div className="flex items-center gap-2">
@@ -367,6 +417,9 @@ function TransactionsContent() {
         <TransactionsList
           transactions={items}
           subcategoryMeta={metaSubcategories}
+          grouped={filter.sortField === "date"}
+          showDaySubtotals={onlyDateFilter}
+          sortOrder={filter.sortOrder}
           onView={(t) => {
             setDrawerTransaction(t);
             setDrawerMode("detail");

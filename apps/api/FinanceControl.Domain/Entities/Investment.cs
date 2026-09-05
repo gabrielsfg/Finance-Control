@@ -1,4 +1,5 @@
 using FinanceControl.Domain.Common;
+using FinanceControl.Shared.Enums;
 
 namespace FinanceControl.Domain.Entities
 {
@@ -11,6 +12,16 @@ namespace FinanceControl.Domain.Entities
         public decimal CurrentQuantity { get; set; }
         public long AveragePrice { get; set; }
         public DateOnly? MaturityDate { get; set; }
+        /// <summary>
+        /// What the position earns against, for fixed income the market does not quote.
+        /// Null for anything with a real price feed.
+        /// </summary>
+        public EnumYieldIndex? YieldIndex { get; set; }
+
+        /// <summary>
+        /// The rate paired with <see cref="YieldIndex"/>: 110 for "110% do CDI", 6 for
+        /// "IPCA + 6%", 12 for a flat "12% ao ano".
+        /// </summary>
         public decimal? ExpectedYieldPct { get; set; }
         public int AccountId { get; set; }
 

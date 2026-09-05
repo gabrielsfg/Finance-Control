@@ -7,7 +7,7 @@ import { EmojiPicker } from "@/components/shared/EmojiPicker";
 import { useCreateSubCategory } from "@/features/categories/hooks/useCategories";
 import { CreateCategoryModal } from "./CreateCategoryModal";
 import { getCategoryColor } from "@/lib/config/categoryColors";
-import type { Category } from "@/lib/types/categories.types";
+import type { Category, SubCategory } from "@/lib/types/categories.types";
 import { cn, includesNormalized } from "@/lib/utils";
 
 const labelCls = "font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-sub)]";
@@ -20,9 +20,15 @@ type Props = {
   categories: Category[];
   defaultCategoryId?: number;
   zIndex?: number;
+  /**
+   * Hands back the subcategory that was just created, so a caller can act on it. The
+   * import review selects it on the row that asked — creating a category mid-import
+   * should not then mean hunting for it in the list.
+   */
+  onCreated?: (created: SubCategory) => void;
 };
 
-export function CreateSubCategoryModal({ open, onClose, categories, defaultCategoryId, zIndex }: Props) {
+export function CreateSubCategoryModal({ open, onClose, categories, defaultCategoryId, zIndex, onCreated }: Props) {
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("");
   const [categoryId, setCategoryId] = useState<number>(defaultCategoryId ?? 0);
@@ -76,10 +82,21 @@ export function CreateSubCategoryModal({ open, onClose, categories, defaultCateg
   };
 
   const handleSubmit = () => {
-    if (!name.trim() || !categoryId) return;
+    const trimmed = name.trim();
+    if (!trimmed || !categoryId) return;
     create(
-      { name: name.trim(), emoji: emoji || undefined, categoryId },
-      { onSuccess: handleClose },
+      { name: trimmed, emoji: emoji || undefined, categoryId },
+      {
+        onSuccess: (updatedSubs) => {
+          // The API answers with the whole list rather than the new row, so it is
+          // identified by what was sent.
+          const created = updatedSubs.find(
+            (sub) => sub.categoryId === categoryId && sub.name === trimmed,
+          );
+          if (created) onCreated?.(created);
+          handleClose();
+        },
+      },
     );
   };
 

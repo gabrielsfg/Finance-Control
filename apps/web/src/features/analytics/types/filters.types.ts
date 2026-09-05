@@ -1,4 +1,9 @@
 export type DatePreset =
+  /**
+   * The active budget's current cycle. Offered but NOT the default here: these pages are
+   * trend views, and a single cycle collapses a monthly evolution chart to one point.
+   */
+  | "budget-cycle"
   | "current-month"
   | "last-3-months"
   | "last-6-months"

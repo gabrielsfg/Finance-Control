@@ -3,9 +3,9 @@
 import { useState, useCallback, useMemo } from "react";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useParseImportFile, useConfirmImport } from "./useImport";
-import { getCategoryColor } from "@/lib/config/categoryColors";
+import { normalizeSearch } from "@/lib/utils";
 import type { ParsedTransactionItem } from "@/lib/types/import.types";
-import type { TransactionType, SubCategoryItem } from "@/lib/types/transactions.types";
+import type { TransactionType } from "@/lib/types/transactions.types";
 
 export type ImportStep = "closed" | "upload" | "review" | "done";
 
@@ -13,16 +13,9 @@ export type RowState = ParsedTransactionItem & {
   selected: boolean;
   subCategoryId: number | null;
   type: TransactionType;
+  /** Tag names, per row. Names rather than ids because the reviewer can invent one. */
+  tags: string[];
 };
-
-export type SubcatMeta = {
-  name: string;
-  emoji: string | null;
-  categoryName: string;
-  categoryColor: string | null;
-};
-
-export type SubcatGroup = [string, { color: string; items: SubCategoryItem[] }];
 
 export function useImportFlow() {
   const [step, setStep] = useState<ImportStep>("closed");
@@ -36,31 +29,23 @@ export function useImportFlow() {
   const parseMutation = useParseImportFile();
   const confirmMutation = useConfirmImport();
 
-  const subcatMap = useMemo(() => {
-    const m = new Map<number, SubcatMeta>();
-    for (const s of subcats)
-      m.set(s.id, {
-        name: s.name,
-        emoji: s.emoji ?? null,
-        categoryName: s.categoryName,
-        categoryColor: s.categoryColor ?? null,
-      });
-    return m;
-  }, [subcats]);
-
-  const subcatGroups = useMemo((): SubcatGroup[] => {
-    const map = new Map<string, { color: string; items: SubCategoryItem[] }>();
-    for (const s of subcats) {
-      if (!map.has(s.categoryName)) {
-        map.set(s.categoryName, {
-          color: getCategoryColor(s.categoryColor, s.categoryName),
-          items: [],
-        });
+  /**
+   * Every tag name used anywhere in the batch, deduplicated by comparison key.
+   *
+   * Feeds each row's picker so a tag invented on one row becomes a suggestion on all the
+   * others. Without it the reviewer retypes the same name per row from memory, and the
+   * first typo is a tag that drifts from the one they meant. First spelling wins, which
+   * is also what the server does when it resolves the batch.
+   */
+  const pendingTagNames = useMemo(() => {
+    const byKey = new Map<string, string>();
+    for (const row of rows)
+      for (const tag of row.tags) {
+        const key = normalizeSearch(tag);
+        if (key && !byKey.has(key)) byKey.set(key, tag);
       }
-      map.get(s.categoryName)!.items.push(s);
-    }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [subcats]);
+    return [...byKey.values()];
+  }, [rows]);
 
   const _reset = useCallback((keepOpen: boolean) => {
     setStep(keepOpen ? "upload" : "closed");
@@ -94,6 +79,7 @@ export function useImportFlow() {
         selected: !t.isDuplicate,
         subCategoryId: t.suggestedSubCategoryId,
         type: t.type,
+        tags: [],
       }))
     );
     setStep("review");
@@ -115,6 +101,7 @@ export function useImportFlow() {
         paymentType: r.paymentType,
         totalInstallments: r.totalInstallments,
         installmentNumber: r.installmentNumber,
+        tags: r.tags,
       })),
     });
     setImportedCount(res.importedCount);
@@ -142,6 +129,26 @@ export function useImportFlow() {
     []
   );
 
+  const setRowDescription = useCallback(
+    (idx: number, val: string) =>
+      setRows((p) => p.map((r, i) => (i === idx ? { ...r, description: val } : r))),
+    []
+  );
+
+  // Stored as YYYY-MM-DD, which is what the API sends (DateOnly) and what the picker
+  // speaks — so an edited row and an untouched one look the same on the wire.
+  const setRowDate = useCallback(
+    (idx: number, val: string) =>
+      setRows((p) => p.map((r, i) => (i === idx ? { ...r, date: val } : r))),
+    []
+  );
+
+  const setRowTags = useCallback(
+    (idx: number, val: string[]) =>
+      setRows((p) => p.map((r, i) => (i === idx ? { ...r, tags: val } : r))),
+    []
+  );
+
   const setRowType = useCallback(
     (idx: number, val: TransactionType) =>
       setRows((p) => p.map((r, i) => (i === idx ? { ...r, type: val } : r))),
@@ -155,11 +162,13 @@ export function useImportFlow() {
     file, handleFile, setFile,
     rows,
     importedCount,
-    subcats, subcatMap, subcatGroups,
+    subcats,
+    pendingTagNames,
     parseMutation, confirmMutation,
     open, close, reset,
     handleParse, handleConfirm,
-    toggleRow, toggleAll, setRowSubcat, setRowType,
+    toggleRow, toggleAll, setRowSubcat, setRowType, setRowTags,
+    setRowDescription, setRowDate,
     selectedCount: rows.filter((r) => r.selected).length,
     duplicateCount: rows.filter((r) => r.isDuplicate).length,
   };

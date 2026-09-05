@@ -31,6 +31,8 @@ export type ImportTransactionItem = {
   paymentType: PaymentType;
   totalInstallments: number | null;
   installmentNumber: number | null;
+  /** Tag names, as typed on the review screen — the server resolves or creates them. */
+  tags: string[];
 };
 
 export type ImportTransactionsRequest = {

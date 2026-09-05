@@ -342,7 +342,8 @@ namespace FinanceControl.Services.Services
                 Name = user.Name,
                 Email = user.Email,
                 TwoFactorEnabled = user.TwoFactorEnabled,
-                EmailVerified = user.EmailVerifiedAt is not null
+                EmailVerified = user.EmailVerifiedAt is not null,
+                Plan = user.Plan
             };
         }
 
@@ -386,7 +387,8 @@ namespace FinanceControl.Services.Services
                 Name = user.Name,
                 Email = user.Email,
                 TwoFactorEnabled = user.TwoFactorEnabled,
-                EmailVerified = user.EmailVerifiedAt is not null
+                EmailVerified = user.EmailVerifiedAt is not null,
+                Plan = user.Plan
             };
         }
 
@@ -518,8 +520,24 @@ namespace FinanceControl.Services.Services
             return true;
         }
 
+        /// <summary>
+        /// Creates the default categories, subcategories and wallet for a new account.
+        /// </summary>
+        /// <remarks>
+        /// Idempotent by design, because three separate paths call it and they are not
+        /// mutually exclusive over an account's lifetime: verifying an email, resetting the
+        /// password of an account that was never verified, and wiping the data. An account
+        /// created before email verification existed was already seeded at registration, so
+        /// verifying it later ran this a second time and the user ended up with two of
+        /// every category. Presence of any category is the signal: seeding always creates
+        /// at least one, and nothing else does before the user is inside the app.
+        /// </remarks>
         private async Task SeedUserDataAsync(int userId, string? preferredLanguage)
         {
+            var alreadySeeded = await _context.Categories.AnyAsync(c => c.UserId == userId);
+            if (alreadySeeded)
+                return;
+
             // System category (internal use — balance adjustments)
             var systemCategory = new Category { UserId = userId, Name = "BalanceUpdate", IsSystem = true };
             _context.Categories.Add(systemCategory);

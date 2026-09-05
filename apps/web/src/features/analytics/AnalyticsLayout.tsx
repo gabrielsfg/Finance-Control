@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { usePageFilter } from "@/lib/hooks/usePageHeader";
 import { PageTopbar } from "@/components/layout/PageTopbar";
 import { AnalyticsFilters } from "./components/AnalyticsFilters";
+import { useActiveBudget } from "@/features/budgets/hooks/useActiveBudget";
 import { AnalyticsFilterProvider, type AnalyticsFilterMode } from "./AnalyticsFilterContext";
 import type { AnalyticsFilter } from "./types/filters.types";
 import { defaultFilter, buildDateRange } from "./utils/filterDates";
@@ -37,7 +38,10 @@ export function AnalyticsLayout({ children }: { children: ReactNode }) {
   const [filter, setFilter] = useState<AnalyticsFilter>(defaultFilter());
 
   const mode = modeForPath(pathname);
-  const { start, finish } = buildDateRange(filter);
+  // The budget cycle is a selectable preset here rather than the default: these pages
+  // plot trends, and one cycle turns a monthly evolution chart into a single point.
+  const { data: activeBudgetPeriod } = useActiveBudget();
+  const { start, finish } = buildDateRange(filter, activeBudgetPeriod);
   const activeTagIds = filter.tagIds.length > 0 ? filter.tagIds : undefined;
 
   const segment = pathname.split("/")[2] ?? "";

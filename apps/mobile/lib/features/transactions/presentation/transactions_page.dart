@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -363,7 +364,13 @@ class _SummaryHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const PageHeader(title: 'Extrato'),
+        PageHeader(
+          title: 'Extrato',
+          trailing: HeaderActionButton(
+            icon: LucideIcons.upload,
+            onTap: () => context.push('/transactions/import'),
+          ),
+        ),
         const SizedBox(height: 16),
         SummaryPanel(
           eyebrow: 'SALDO DO PERÍODO',

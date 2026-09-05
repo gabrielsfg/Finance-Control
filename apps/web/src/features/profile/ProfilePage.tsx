@@ -10,10 +10,15 @@ import { ProfileTwoFactorCard } from "@/features/profile/components/ProfileTwoFa
 import { ProfilePreferencesCard } from "@/features/profile/components/ProfilePreferencesCard";
 import { ProfileNotificationsCard } from "@/features/profile/components/ProfileNotificationsCard";
 import { ProfileDefaultAccountCard } from "@/features/profile/components/ProfileDefaultAccountCard";
+import { ProfileFeedbackCard } from "@/features/profile/components/ProfileFeedbackCard";
+import { ProfileRiskProfileCard } from "@/features/profile/components/ProfileRiskProfileCard";
+import { ProfileAiContextCard } from "@/features/profile/components/ProfileAiContextCard";
 import { useProfile } from "@/features/profile/hooks/useProfile";
+import { useAuthStore } from "@/lib/stores/authStore";
 
 export function ProfilePage() {
   const { data: profile, isLoading } = useProfile();
+  const logout = useAuthStore((s) => s.logout);
 
   if (isLoading) {
     return (
@@ -25,8 +30,17 @@ export function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full flex-col items-center justify-center gap-4">
         <p className="text-[14px] text-[var(--text-sub)]">Erro ao carregar perfil. Tente novamente.</p>
+        {/* The app's only logout button lives further down this page, inside a card that
+            never renders when the profile request fails — which is exactly what a dead
+            session does. Repeat it here so the way out survives the failure. */}
+        <button
+          onClick={logout}
+          className="inline-flex items-center justify-center rounded-[13px] border border-[var(--text)] px-[18px] py-2.5 text-[14px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--text)] hover:text-[var(--bg)]"
+        >
+          Sair da conta
+        </button>
       </div>
     );
   }
@@ -42,6 +56,8 @@ export function ProfilePage() {
           <ProfilePreferencesCard />
           <ProfileNotificationsCard />
           <ProfileDefaultAccountCard />
+          <ProfileRiskProfileCard />
+          <ProfileAiContextCard />
         </div>
 
         {/* Side column — plan + security */}
@@ -49,6 +65,7 @@ export function ProfilePage() {
           <ProfilePlanCard />
           <ProfileTwoFactorCard profile={profile} />
           <ProfileDataExportCard />
+          <ProfileFeedbackCard />
           <ProfileDangerZoneCard />
         </div>
       </div>

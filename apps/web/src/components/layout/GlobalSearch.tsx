@@ -10,11 +10,11 @@ import { transactionsApi } from "@/lib/api/transactions";
 import { useMarketSearch } from "@/features/market/hooks/useMarket";
 import {
   Search,
+  X,
   ArrowLeftRight,
   TrendingUp,
   Wallet,
   Tag,
-  FolderOpen,
   LayoutDashboard,
   Clock,
   BarChart3,
@@ -244,6 +244,9 @@ function KindIcon({ kind, color, emoji }: { kind: ResultKind; color?: string; em
 
 export const GlobalSearch = () => {
   const [query, setQuery] = useState("");
+  // What the page is actually filtered by, so the clear button knows whether there is
+  // anything to clear even while the field holds an uncommitted draft.
+  const [committedQuery, setCommittedQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const router = useRouter();
@@ -257,6 +260,7 @@ export const GlobalSearch = () => {
   // Reset query when switching between local and global search modes
   useEffect(() => {
     setQuery("");
+    setCommittedQuery("");
     setOpen(false);
   }, [isLocalSearch]);
 
@@ -339,7 +343,28 @@ export const GlobalSearch = () => {
     [router],
   );
 
+  function commitLocalSearch(value: string) {
+    setCommittedQuery(value);
+    onSearchChange?.(value);
+  }
+
+  function clearLocal() {
+    setQuery("");
+    commitLocalSearch("");
+    inputRef.current?.focus();
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (isLocalSearch) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commitLocalSearch(query.trim());
+      } else if (e.key === "Escape" && query) {
+        e.preventDefault();
+        clearLocal();
+      }
+      return;
+    }
     if (!open || allResults.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -383,7 +408,11 @@ export const GlobalSearch = () => {
             const v = e.target.value;
             setQuery(v);
             if (isLocalSearch) {
-              onSearchChange!(v);
+              // Local search is a server round-trip that repaints the page under the
+              // caret, so it commits on Enter, not per keystroke. Emptying the field is
+              // the one exception: that removes a filter rather than applying one, and
+              // waiting for an Enter to undo a search reads as the box being stuck.
+              if (v === "") commitLocalSearch("");
             } else {
               setOpen(true);
             }
@@ -398,9 +427,31 @@ export const GlobalSearch = () => {
           placeholder={isLocalSearch ? (searchPlaceholder ?? "Buscar...") : "Buscar páginas, transações, investimentos..."}
           className="text-[var(--text)] placeholder:text-[var(--text-sub)] flex-1 bg-transparent font-sans text-[13.5px] focus:outline-none"
         />
-        <kbd className="hidden rounded border px-1 py-0.5 font-mono text-[10px] text-[var(--text-sub)] sm:inline-flex items-center gap-0.5" style={{ borderColor: "var(--border-color)" }}>
-          <span>⌘</span>K
-        </kbd>
+        {isLocalSearch ? (
+          // The draft/committed gap is invisible otherwise: "↵ buscar" says the typing
+          // has not been applied yet, and the X is the way back to the unfiltered list.
+          <>
+            {query.trim() !== committedQuery && query.trim() !== "" && (
+              <kbd className="hidden shrink-0 rounded border px-1 py-0.5 font-mono text-[10px] text-[var(--text-sub)] sm:inline-flex items-center gap-1" style={{ borderColor: "var(--border-color)" }}>
+                ↵ buscar
+              </kbd>
+            )}
+            {(query !== "" || committedQuery !== "") && (
+              <button
+                type="button"
+                onClick={clearLocal}
+                title="Limpar busca"
+                className="shrink-0 text-[var(--text-sub)] transition-colors hover:text-[var(--text)]"
+              >
+                <X size={13} strokeWidth={2} />
+              </button>
+            )}
+          </>
+        ) : (
+          <kbd className="hidden rounded border px-1 py-0.5 font-mono text-[10px] text-[var(--text-sub)] sm:inline-flex items-center gap-0.5" style={{ borderColor: "var(--border-color)" }}>
+            <span>⌘</span>K
+          </kbd>
+        )}
       </div>
 
       {/* Dropdown */}

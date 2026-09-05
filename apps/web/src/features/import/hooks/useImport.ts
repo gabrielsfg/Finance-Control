@@ -16,6 +16,9 @@ export const useConfirmImport = () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      // The review screen can invent tags, and the server creates them on confirm — the
+      // cached list would otherwise not know about them until a reload.
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
     },
   });
 };

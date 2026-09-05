@@ -25,6 +25,8 @@ abstract class ApiEndpoints {
   static const String deleteAccount = '/api/user/me';
   static const String resetData = '/api/user/me/reset-data';
   static const String userPreferences = '/api/user/preferences';
+  // Data portability (LGPD art. 18, V) — answers with a named JSON file.
+  static const String exportData = '/api/user/me/export';
   static String banks(String country) => '/api/banks?country=$country';
 
   // Main page
@@ -130,6 +132,20 @@ abstract class ApiEndpoints {
   static String budgetAreasByBudget(int budgetId) => '/api/area?budgetId=$budgetId';
   static const String allAreas = '/api/area/all';
   static const String tags = '/api/tag';
+
+  // Notifications
+  static const String notifications = '/api/notification';
+  static const String notificationsUnreadCount = '/api/notification/unread-count';
+  static String notificationRead(int id) => '/api/notification/$id/read';
+  static const String notificationsReadAll = '/api/notification/read-all';
+  static const String notificationPreferences = '/api/notification/preferences';
+
+  // Feedback (write-only — reports are read from the database during triage)
+  static const String feedback = '/api/feedback';
+
+  // Statement import (OFX/CSV)
+  static const String importParse = '/api/import/parse';
+  static const String importConfirm = '/api/import/confirm';
 
   // Budget Allocations
   static String budgetAllocations(int budgetId) =>

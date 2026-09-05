@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
 import {
-  X, Loader2, Pencil, Trash2, Star, SlidersHorizontal, Check,
+  X, Loader2, Pencil, Trash2, Star, SlidersHorizontal, Check, ArrowLeftRight,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -445,6 +446,7 @@ function DetailView({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const router = useRouter();
   const { color, Icon } = ACCOUNT_TYPE_CONFIG[account.type];
   const isNegative = account.currentAmount < 0;
   const isCredit = account.type === "Credit";
@@ -515,6 +517,14 @@ function DetailView({
 
       {/* Actions */}
       <div className="flex flex-col gap-3">
+        <Button
+          className="w-full"
+          variant="outline"
+          onClick={() => router.push(`/transactions?accountId=${account.id}`)}
+        >
+          <ArrowLeftRight size={15} />
+          Ver transações
+        </Button>
         <Button className="w-full" onClick={onEdit}>
           <Pencil size={15} />
           Editar conta

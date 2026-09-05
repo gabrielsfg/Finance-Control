@@ -30,5 +30,14 @@ namespace FinanceControl.Shared.Dtos.Response.Export
         public List<ExportInvestmentDto> Investments { get; set; } = [];
         public List<ExportAlertRuleDto> AlertRules { get; set; } = [];
         public ExportNotificationPreferenceDto? NotificationPreferences { get; set; }
+
+        /// <summary>The declared investor profile, when the questionnaire was answered.</summary>
+        public ExportRiskProfileDto? RiskProfile { get; set; }
+
+        /// <summary>Every AI-generated analysis, each with the data it was generated from.</summary>
+        public List<ExportInsightDto> Insights { get; set; } = [];
+
+        /// <summary>The free-text context the user wrote for the analyses.</summary>
+        public List<ExportAiContextDto> AiContexts { get; set; } = [];
     }
 }

@@ -403,20 +403,50 @@ namespace FinanceControl.Services.Services
             return Result<IEnumerable<GetAllBudgetResponseDto>>.Success(budgets);
         }
 
+        /// <summary>
+        /// The budget cycle CONTAINING <paramref name="referenceDate"/> (today by default).
+        /// </summary>
+        /// <remarks>
+        /// The previous version always placed the start in the anchor's own month, which is
+        /// only right for the back half of a cycle. On 1 September, a budget that turns over
+        /// on the 5th is still running the cycle that began on 5 August — reporting
+        /// 5 Sep – 5 Oct named a period that had not started yet, and every screen keyed to
+        /// it (overview, budgets, recurrences, transactions) hid everything spent since the
+        /// 5th of the previous month. So the start is walked back until it is on or before
+        /// the anchor.
+        ///
+        /// The day is re-derived per month rather than carried through AddMonths, so a
+        /// budget anchored on the 31st lands on the 28th in February and back on the 31st in
+        /// March, instead of sticking to whatever the shortest month clamped it to.
+        /// </remarks>
         private static (DateOnly start, DateOnly finish) ComputePeriod(int startDay, EnumBudgetRecurrence recurrence, DateOnly? referenceDate = null)
         {
             var anchor = referenceDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
-            var clampedDay = Math.Min(startDay, DateTime.DaysInMonth(anchor.Year, anchor.Month));
-            var start = new DateOnly(anchor.Year, anchor.Month, clampedDay);
+
+            static DateOnly OnDay(DateOnly monthOf, int day) =>
+                new(monthOf.Year, monthOf.Month, Math.Min(day, DateTime.DaysInMonth(monthOf.Year, monthOf.Month)));
+
+            var start = OnDay(anchor, startDay);
+
+            while (start > anchor)
+            {
+                start = recurrence switch
+                {
+                    EnumBudgetRecurrence.Weekly => start.AddDays(-7),
+                    EnumBudgetRecurrence.Biweekly => start.AddDays(-14),
+                    EnumBudgetRecurrence.Semiannually => OnDay(start.AddMonths(-6), startDay),
+                    EnumBudgetRecurrence.Annually => OnDay(start.AddYears(-1), startDay),
+                    _ => OnDay(start.AddMonths(-1), startDay),
+                };
+            }
 
             var finish = recurrence switch
             {
                 EnumBudgetRecurrence.Weekly => start.AddDays(7),
                 EnumBudgetRecurrence.Biweekly => start.AddDays(14),
-                EnumBudgetRecurrence.Monthly => start.AddMonths(1),
-                EnumBudgetRecurrence.Semiannually => start.AddMonths(6),
-                EnumBudgetRecurrence.Annually => start.AddYears(1),
-                _ => start.AddMonths(1),
+                EnumBudgetRecurrence.Semiannually => OnDay(start.AddMonths(6), startDay),
+                EnumBudgetRecurrence.Annually => OnDay(start.AddYears(1), startDay),
+                _ => OnDay(start.AddMonths(1), startDay),
             };
 
             return (start, finish);

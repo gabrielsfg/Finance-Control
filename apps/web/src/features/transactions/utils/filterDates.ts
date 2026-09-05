@@ -1,52 +1,44 @@
 import type { TransactionsFilter, TxDatePreset } from "../types/filters.types";
+import { buildPeriodRange, isoDate, type BudgetCycle } from "@/lib/utils/periodPresets";
 
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
+export type { BudgetCycle };
 
-export function buildTxDateRange(filter: TransactionsFilter): { start: string; finish: string } {
-  const today = new Date();
-
-  switch (filter.preset) {
-    case "current-month": {
-      return { start: isoDate(new Date(today.getFullYear(), today.getMonth(), 1)), finish: isoDate(today) };
-    }
-    case "last-3-months": {
-      return { start: isoDate(new Date(today.getFullYear(), today.getMonth() - 2, 1)), finish: isoDate(today) };
-    }
-    case "last-6-months": {
-      return { start: isoDate(new Date(today.getFullYear(), today.getMonth() - 5, 1)), finish: isoDate(today) };
-    }
-    case "last-12-months": {
-      return { start: isoDate(new Date(today.getFullYear(), today.getMonth() - 11, 1)), finish: isoDate(today) };
-    }
-    case "current-year": {
-      return { start: isoDate(new Date(today.getFullYear(), 0, 1)), finish: isoDate(today) };
-    }
-    case "custom-year": {
-      const y = filter.customYear;
-      const isCurrentYear = y === today.getFullYear();
-      return {
-        start: isoDate(new Date(y, 0, 1)),
-        finish: isCurrentYear ? isoDate(today) : isoDate(new Date(y, 11, 31)),
-      };
-    }
-    case "custom-range":
-      return { start: filter.startDate, finish: filter.finishDate };
-    default:
-      return { start: isoDate(new Date(today.getFullYear(), today.getMonth(), 1)), finish: isoDate(today) };
+export function buildTxDateRange(
+  filter: TransactionsFilter,
+  cycle?: BudgetCycle | null,
+): { start: string; finish: string } {
+  // The two presets this page owns; everything else is the shared definition.
+  if (filter.preset === "all-time") {
+    // Far enough back to predate any ledger somebody imports, so nothing is
+    // unreachable from the UI without hand-typing a range.
+    return { start: "1900-01-01", finish: isoDate(new Date()) };
   }
+
+  if (filter.preset === "custom-year") {
+    const today = new Date();
+    const y = filter.customYear;
+    return {
+      start: isoDate(new Date(y, 0, 1)),
+      finish: y === today.getFullYear() ? isoDate(today) : isoDate(new Date(y, 11, 31)),
+    };
+  }
+
+  return buildPeriodRange(
+    { preset: filter.preset, startDate: filter.startDate, finishDate: filter.finishDate },
+    cycle,
+  );
 }
 
 export function defaultTxFilter(): TransactionsFilter {
   const today = new Date();
   return {
-    preset: "current-month",
+    preset: "budget-cycle",
     customYear: today.getFullYear(),
     startDate: isoDate(new Date(today.getFullYear(), today.getMonth(), 1)),
     finishDate: isoDate(today),
     tagIds: [],
     budgetIds: [],
+    budgetInclusion: "all",
     accountIds: [],
     categoryIds: [],
     subCategoryIds: [],
@@ -60,12 +52,14 @@ export function defaultTxFilter(): TransactionsFilter {
 
 export function activeTxDateLabel(filter: TransactionsFilter): string {
   const PRESET_LABELS: Record<TxDatePreset, string> = {
+    "budget-cycle":   "Ciclo do orçamento",
     "current-month":  "Mês atual",
     "last-3-months":  "3 meses",
     "last-6-months":  "6 meses",
     "last-12-months": "12 meses",
     "current-year":   "Este ano",
     "custom-year":    String(filter.customYear),
+    "all-time":       "Todo o período",
     "custom-range":   `${filter.startDate} → ${filter.finishDate}`,
   };
   return PRESET_LABELS[filter.preset];

@@ -22,14 +22,3 @@ export function shiftByRecurrence(date: Date, recurrence: BudgetRecurrence, dire
   }
   return d;
 }
-
-function isoDate(d: Date): string {
-  return d.toISOString().split("T")[0];
-}
-
-/** Returns the current active period dates for a budget (startDate, endDate as ISO strings). */
-export function computeActivePeriod(startDate: string, recurrence: BudgetRecurrence): { startDate: string; endDate: string } {
-  const start = parseLocalDate(startDate);
-  const end = shiftByRecurrence(new Date(start), recurrence, 1);
-  return { startDate: isoDate(start), endDate: isoDate(end) };
-}

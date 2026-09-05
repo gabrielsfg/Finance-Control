@@ -23,6 +23,7 @@ namespace FinanceControl.Shared.Dtos.Response.Investment
         public DateTime? LastPriceUpdate { get; set; }
         public DateOnly? MaturityDate { get; set; }
         public decimal? ExpectedYieldPct { get; set; }
+        public EnumYieldIndex? YieldIndex { get; set; }
         public int AccountId { get; set; }
         public string? LogoUrl { get; set; }
         public string Currency { get; set; } = "BRL";

@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:finance_control_front/core/utils/app_locale.dart';
 import 'package:finance_control_front/features/accounts/data/models/account.dart';
 import 'package:finance_control_front/features/transactions/data/dtos/category_response_dto.dart';
 import 'package:finance_control_front/features/transactions/presentation/add_transaction_page.dart';
 import 'package:finance_control_front/features/transactions/providers/picker_providers.dart';
 import 'package:finance_control_front/features/transactions/providers/transaction_provider.dart';
-
-// _stale note: the 4 interaction tests below (skip: true) were already failing
-// on `main` before the Quantia rebrand — their assertions/scroll steps are
-// stale against the current add-transaction screen (e.g. the save button reads
-// "Salvar transação" and the installment heading is "Nº de parcelas").
-// The behaviour itself works in the app; the tests need a rewrite.
 
 // ── Fakes ──────────────────────────────────────────────────────────────────
 
@@ -52,6 +47,14 @@ const _debitAccount = Account(
   isDefault: false,
 );
 
+const _savingsAccount = Account(
+  id: 4,
+  name: 'Poupança',
+  type: 'Savings',
+  balanceCents: 20000,
+  isDefault: false,
+);
+
 const _categories = [
   CategoryResponseDto(
     id: 1,
@@ -84,6 +87,16 @@ Widget _buildSubject({
       ),
     ),
   );
+}
+
+/// The form is a scrolling column taller than the default 800x600 test window,
+/// so the payment-type controls sit off-screen and cannot be tapped. Giving the
+/// test a tall surface keeps the whole form laid out at once — simpler and more
+/// stable than scrolling to each control before touching it.
+void _useTallSurface(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1200, 3000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────
@@ -174,71 +187,139 @@ void main() {
     });
 
     testWidgets('shows Debit/Credit toggle for Checking account', (tester) async {
+      _useTallSurface(tester);
+
       await tester.pumpWidget(
         _buildSubject(accounts: [_checkingAccount]),
       );
       await tester.pumpAndSettle();
 
-      // The form is the inner ListView (AppBackground adds an outer scroll view).
-      final form = find.byType(Scrollable).last;
-      await tester.scrollUntilVisible(find.text('Débito'), 120, scrollable: form);
       expect(find.text('Débito'), findsOneWidget);
       expect(find.text('Crédito'), findsOneWidget);
-    }, skip: true); // see _stale note above
+    });
+  });
+
+  group('AddTransactionPage — payment type availability', () {
+    // Cash, Debit and Savings accounts reject instalments and recurrences on the
+    // server, so the chips are not offered at all.
+    testWidgets('hides Parcelado and Recorrente for Cash account', (tester) async {
+      _useTallSurface(tester);
+
+      await tester.pumpWidget(_buildSubject(accounts: [_debitAccount]));
+      await tester.pumpAndSettle();
+
+      expect(find.text('À vista'), findsOneWidget);
+      expect(find.text('Parcelado'), findsNothing);
+      expect(find.text('Recorrente'), findsNothing);
+    });
+
+    testWidgets('hides Parcelado and Recorrente for Savings account', (tester) async {
+      _useTallSurface(tester);
+
+      await tester.pumpWidget(_buildSubject(accounts: [_savingsAccount]));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Parcelado'), findsNothing);
+      expect(find.text('Recorrente'), findsNothing);
+    });
+
+    testWidgets('offers Parcelado and Recorrente for Credit account', (tester) async {
+      _useTallSurface(tester);
+
+      await tester.pumpWidget(_buildSubject(accounts: [_creditAccount]));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Parcelado'), findsOneWidget);
+      expect(find.text('Recorrente'), findsOneWidget);
+    });
+
+    testWidgets('drops back to À vista when the account stops supporting it',
+        (tester) async {
+      _useTallSurface(tester);
+
+      await tester.pumpWidget(
+        _buildSubject(accounts: [_checkingAccount, _debitAccount]),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Parcelado'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nº de parcelas'), findsOneWidget);
+
+      // Switch to the Cash account through the account picker sheet.
+      await tester.tap(find.text('Nubank'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Carteira').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Parcelado'), findsNothing);
+      expect(find.text('Nº de parcelas'), findsNothing);
+    });
   });
 
   group('AddTransactionPage — payment type', () {
     testWidgets('shows installment stepper when Installment is selected', (tester) async {
+      _useTallSurface(tester);
+
       await tester.pumpWidget(_buildSubject(accounts: [_checkingAccount]));
       await tester.pumpAndSettle();
 
-      final form = find.byType(Scrollable).last;
-      await tester.scrollUntilVisible(find.text('Parcelado'), 120, scrollable: form);
       await tester.tap(find.text('Parcelado'));
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(
-        find.text('Nº de parcelas'),
-        120,
-        scrollable: form,
-      );
       expect(find.text('Nº de parcelas'), findsOneWidget);
-    }, skip: true); // see _stale note above
+    });
 
-    testWidgets('shows recurrence picker when Recurring is selected', (tester) async {
+    // The API rejects a single instalment (minimum is 2), so the stepper has to
+    // stop there instead of letting the request fail.
+    testWidgets('installment stepper never goes below 2', (tester) async {
+      _useTallSurface(tester);
+
       await tester.pumpWidget(_buildSubject(accounts: [_checkingAccount]));
       await tester.pumpAndSettle();
 
-      final form = find.byType(Scrollable).last;
-      await tester.scrollUntilVisible(find.text('Recorrente'), 120, scrollable: form);
+      await tester.tap(find.text('Parcelado'));
+      await tester.pumpAndSettle();
+      expect(find.text('2'), findsOneWidget);
+
+      await tester.tap(find.byIcon(LucideIcons.minus));
+      await tester.pumpAndSettle();
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('1'), findsNothing);
+
+      // And it still counts up from there.
+      await tester.tap(find.byIcon(LucideIcons.plus));
+      await tester.pumpAndSettle();
+      expect(find.text('3'), findsOneWidget);
+    });
+
+    testWidgets('shows recurrence picker when Recurring is selected', (tester) async {
+      _useTallSurface(tester);
+
+      await tester.pumpWidget(_buildSubject(accounts: [_checkingAccount]));
+      await tester.pumpAndSettle();
+
       await tester.tap(find.text('Recorrente'));
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text('Recorrência'), 120, scrollable: form);
       expect(find.text('Recorrência'), findsOneWidget);
-    }, skip: true); // see _stale note above
+    });
 
     testWidgets('shows recurrence error when Recurring selected but no recurrence chosen', (tester) async {
+      _useTallSurface(tester);
+
       await tester.pumpWidget(
         _buildSubject(accounts: [_checkingAccount], categories: _categories),
       );
       await tester.pumpAndSettle();
 
-      final form = find.byType(Scrollable).last;
-      await tester.scrollUntilVisible(find.text('Recorrente'), 120, scrollable: form);
       await tester.tap(find.text('Recorrente'));
       await tester.pumpAndSettle();
 
-      // Save button is a fixed footer, always visible.
       await tester.tap(find.text('Salvar transação'));
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(
-        find.text('Selecione a recorrência'),
-        120,
-        scrollable: form,
-      );
       expect(find.text('Selecione a recorrência'), findsOneWidget);
-    }, skip: true); // see _stale note above
+    });
   });
 }

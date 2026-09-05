@@ -1,9 +1,13 @@
 "use client";
 
-import { Pencil, Trash2, Star } from "lucide-react";
+import { useState } from "react";
+import Link from "next/link";
+import { ArrowRight, ChevronDown, Loader2, Pencil, Trash2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { parseLocalDate } from "@/lib/utils/budgetPeriod";
 import { ACCOUNT_TYPE_CONFIG } from "@/lib/config/accountTypes";
+import { useAccountRecentTransactions } from "@/features/accounts/hooks/useAccountTransactions";
 import type { AccountItem } from "@/lib/types/accounts.types";
 
 type AccountCardProps = {
@@ -32,6 +36,13 @@ export const AccountCard = ({
   const creditLimit = isCredit && account.creditLimit ? account.creditLimit : 0;
   const creditUsedPercent = creditLimit > 0 ? Math.min((creditUsed / creditLimit) * 100, 100) : 0;
   const creditBarColor = creditUsedPercent >= 90 ? "#F25F5C" : creditUsedPercent >= 70 ? "#F5A623" : "#7C6FE0";
+
+  // Fetched only once the panel is opened — a grid of accounts would otherwise fire one
+  // transactions query per card on every visit to the page.
+  const [expanded, setExpanded] = useState(false);
+  const { data, isLoading } = useAccountRecentTransactions(account.id, expanded);
+  const recent = data?.page.items ?? [];
+  const allHref = `/transactions?accountId=${account.id}`;
 
   return (
     <div
@@ -113,6 +124,64 @@ export const AccountCard = ({
           <p className="text-text-muted text-right text-[10px]">{creditUsedPercent.toFixed(0)}% usado</p>
         </div>
       )}
+
+      {/* Recent transactions */}
+      <div className="border-border -mx-5 border-t px-5 pt-3">
+        <button
+          onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+          className="text-text-sub hover:text-text flex w-full items-center gap-1.5 text-[12px] font-medium transition-colors"
+        >
+          <ChevronDown
+            size={13}
+            className={cn("shrink-0 transition-transform", expanded && "rotate-180")}
+          />
+          Transações recentes
+        </button>
+
+        {expanded && (
+          <div className="mt-2 flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {isLoading ? (
+              <div className="flex justify-center py-3">
+                <Loader2 size={14} className="text-text-muted animate-spin" />
+              </div>
+            ) : recent.length === 0 ? (
+              <p className="text-text-muted py-2 text-[12px]">Nenhuma transação nesta conta.</p>
+            ) : (
+              recent.map((t) => {
+                const isIncome = t.type === "Income";
+                const isTransfer = t.type === "Transfer";
+                return (
+                  <div key={t.id} className="flex items-center gap-2">
+                    <span className="text-text-muted w-[42px] shrink-0 font-mono text-[11px]">
+                      {parseLocalDate(t.transactionDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                    </span>
+                    <span className="text-text-sub min-w-0 flex-1 truncate text-[12px]">
+                      {t.description || t.subCategoryName}
+                    </span>
+                    <span
+                      className={cn(
+                        "font-money shrink-0 text-[12px] font-medium",
+                        isIncome ? "text-green" : isTransfer ? "text-text-sub" : "text-text",
+                      )}
+                    >
+                      {isTransfer ? "" : isIncome ? "+" : "-"}
+                      {formatCurrency(Math.abs(t.value) / 100)}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+
+            <Link
+              href={allHref}
+              className="text-text-sub hover:text-text mt-1 flex items-center justify-center gap-1.5 text-[12px] font-medium transition-colors"
+            >
+              Ver todas as transações
+              <ArrowRight size={12} />
+            </Link>
+          </div>
+        )}
+      </div>
 
       {/* Actions */}
       <div className="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">

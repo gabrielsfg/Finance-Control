@@ -90,6 +90,8 @@ export type GetTransactionsFilterParams = {
   startDate: string;
   finishDate: string;
   budgetIds?: number[];
+  /** True: only transactions counting against a budget. False: only those outside every budget. */
+  hasBudget?: boolean;
   accountIds?: number[];
   categoryIds?: number[];
   subCategoryIds?: number[];

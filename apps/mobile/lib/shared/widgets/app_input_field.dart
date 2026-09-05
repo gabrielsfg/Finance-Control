@@ -20,6 +20,12 @@ class AppInputField extends StatefulWidget {
   final VoidCallback? onSubmitted;
   final List<TextInputFormatter>? inputFormatters;
 
+  /// Anything other than 1 turns the field into a growing text area: the box
+  /// loses its fixed height and the icons align to the first line.
+  final int maxLines;
+  final int? minLines;
+  final int? maxLength;
+
   const AppInputField({
     super.key,
     this.placeholder,
@@ -35,6 +41,9 @@ class AppInputField extends StatefulWidget {
     this.onChanged,
     this.onSubmitted,
     this.inputFormatters,
+    this.maxLines = 1,
+    this.minLines,
+    this.maxLength,
   });
 
   @override
@@ -68,6 +77,7 @@ class _AppInputFieldState extends State<AppInputField> {
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
     final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
+    final isMultiline = widget.maxLines != 1;
     final borderColor = hasError
         ? t.error
         : _focused
@@ -87,7 +97,10 @@ class _AppInputFieldState extends State<AppInputField> {
         GestureDetector(
           onTap: () => _focusNode.requestFocus(),
           child: Container(
-            height: 48,
+            height: isMultiline ? null : 48,
+            padding: isMultiline
+                ? const EdgeInsets.symmetric(vertical: 12)
+                : EdgeInsets.zero,
             decoration: BoxDecoration(
               color: t.surfaceEl,
               borderRadius: AppRadius.baseAll,
@@ -106,6 +119,9 @@ class _AppInputFieldState extends State<AppInputField> {
                   : null,
             ),
             child: Row(
+              crossAxisAlignment: isMultiline
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.center,
               children: [
                 if (widget.leftIcon != null) ...[
                   const SizedBox(width: 10),
@@ -121,7 +137,11 @@ class _AppInputFieldState extends State<AppInputField> {
                     focusNode: _focusNode,
                     controller: widget.controller,
                     obscureText: widget.obscureText,
-                    keyboardType: widget.keyboardType,
+                    maxLines: widget.maxLines,
+                    minLines: widget.minLines,
+                    maxLength: widget.maxLength,
+                    keyboardType: widget.keyboardType ??
+                        (isMultiline ? TextInputType.multiline : null),
                     textInputAction: widget.textInputAction,
                     textCapitalization: widget.textCapitalization,
                     inputFormatters: widget.inputFormatters,
@@ -141,6 +161,7 @@ class _AppInputFieldState extends State<AppInputField> {
                       focusedErrorBorder: InputBorder.none,
                       filled: false,
                       isDense: true,
+                      counterText: '',
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),

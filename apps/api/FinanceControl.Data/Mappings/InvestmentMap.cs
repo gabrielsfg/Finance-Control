@@ -16,6 +16,7 @@ namespace FinanceControl.Data.Mappings
             builder.Property(i => i.AveragePrice).IsRequired();
             builder.Property(i => i.MaturityDate);
             builder.Property(i => i.ExpectedYieldPct);
+            builder.Property(i => i.YieldIndex).HasConversion<string>().HasMaxLength(20);
             builder.Property(i => i.CreatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("now()")

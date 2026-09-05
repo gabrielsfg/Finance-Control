@@ -43,6 +43,9 @@ dependencies:
   # Immutable models
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
+  share_plus: ^12.0.2
+  path_provider: ^2.1.6
+  file_picker: ^11.0.3
 
 dev_dependencies:
   flutter_test:

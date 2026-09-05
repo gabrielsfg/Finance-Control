@@ -38,6 +38,7 @@ import { BrandGlyph } from "@/components/shared/BrandMark";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { useAuthStore } from "@/lib/stores/authStore";
+import { useProfile } from "@/features/profile/hooks/useProfile";
 
 type NavChild = { href: string; label: string; icon?: LucideIcon };
 
@@ -150,6 +151,11 @@ export const Sidebar = () => {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar, setSidebarCollapsed } = useUIStore();
   const { user } = useAuthStore();
+  // The store only holds what login handed back; the profile query is the live record,
+  // so the chip follows a plan change without a re-login.
+  const { data: profile } = useProfile();
+  const displayName = profile?.name ?? user?.name ?? "Usuário";
+  const planLabel = profile?.plan === "Premium" ? "plano premium" : "plano pessoal";
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
     "/analytics":   pathname.startsWith("/analytics"),
@@ -173,9 +179,10 @@ export const Sidebar = () => {
     return pathname === item.href || pathname.startsWith(`${item.href}/`);
   }
 
-  const initials = user?.name
-    ? user.name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()
-    : "U";
+  const initials =
+    displayName === "Usuário"
+      ? "U"
+      : displayName.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
   const collapsed = sidebarCollapsed;
 
@@ -378,7 +385,7 @@ export const Sidebar = () => {
           {collapsed ? (
             <Link
               href="/profile"
-              title={user?.name ?? "Perfil"}
+              title={displayName}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-[var(--brand-cobalt)] to-[#0c1f9c] font-display text-[15px] font-bold text-white transition-transform duration-200 hover:scale-105"
             >
               {initials}
@@ -390,9 +397,9 @@ export const Sidebar = () => {
               </div>
               <div className="min-w-0 flex-1 anim-fade">
                 <div className="text-[13.5px] font-semibold text-[var(--text)] leading-[1.2] truncate">
-                  {user?.name ?? "Usuário"}
+                  {displayName}
                 </div>
-                <div className="font-mono text-[10.5px] text-[var(--text-sub)] truncate">plano pessoal</div>
+                <div className="font-mono text-[10.5px] text-[var(--text-sub)] truncate">{planLabel}</div>
               </div>
               <Link
                 href="/profile"

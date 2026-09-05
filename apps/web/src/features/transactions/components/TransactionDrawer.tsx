@@ -22,6 +22,7 @@ import {
   LayoutGrid,
   BookOpen,
   Check,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,9 +43,12 @@ import {
 } from "@/features/transactions/hooks/useTransactions";
 import { useSubCategories } from "@/features/transactions/hooks/useSubCategories";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { AccountDrawer } from "@/features/accounts/components/AccountDrawer";
 import { TagInput } from "@/features/transactions/components/TagInput";
 import { DatePickerField } from "@/components/shared/DatePickerField";
-import { CategorySelectContent } from "@/components/shared/CategorySelectContent";
+import { CategoryPickerField } from "@/components/shared/CategoryPickerField";
+import { CreateSubCategoryModal } from "@/features/categories/components/CreateSubCategoryModal";
+import { useCategories } from "@/features/categories/hooks/useCategories";
 import type {
   TransactionItem,
   TransactionType,
@@ -506,9 +510,25 @@ function CreateForm({
   const { mutateAsync, isPending } = useCreateTransaction();
   const { data: subcategories = [] } = useSubCategories();
   const { data: accounts = [] } = useAccounts();
+  const { data: categories = [] } = useCategories();
   const [serverError, setServerError] = useState<string | null>(null);
   const [transactionType, setTransactionType] = useState<TransactionType>(defaultType);
   const [createTags, setCreateTags] = useState<string[]>([]);
+  const [subcatModalOpen, setSubcatModalOpen] = useState(false);
+
+  /**
+   * Creating an account without losing the half-filled transaction. The ids present when
+   * the account drawer opens are remembered so whatever appears afterwards can be
+   * selected automatically — otherwise the user creates the account and still has to go
+   * find it in the list.
+   */
+  const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
+  const knownAccountIds = useRef<number[]>([]);
+
+  function openNewAccount() {
+    knownAccountIds.current = accounts.map((a) => a.id);
+    setAccountDrawerOpen(true);
+  }
 
   const {
     register,
@@ -531,7 +551,10 @@ function CreateForm({
       paymentMethod: "",
       totalInstallments: "",
       recurrence: "",
-      includeInBudget: false,
+      // Counting against the budget is what almost every entry is for. Starting
+      // unchecked meant the budget quietly under-reported whenever someone forgot
+      // to tick it — the import flow already defaults it on for the same reason.
+      includeInBudget: true,
     },
   });
 
@@ -543,10 +566,6 @@ function CreateForm({
 
   const createAccountSelected = accounts.find((a) => String(a.id) === accountIdValue);
   const createDestAccountSelected = accounts.find((a) => String(a.id) === destinationAccountIdValue);
-  const createSubCategorySelected = subcategories.find((s) => String(s.id) === subCategoryIdValue);
-  const createSubCategoryLabel = createSubCategorySelected
-    ? (createSubCategorySelected.emoji ? `${createSubCategorySelected.emoji} ${createSubCategorySelected.name}` : createSubCategorySelected.name)
-    : undefined;
 
   // Pre-select the default account once accounts load
   useEffect(() => {
@@ -556,6 +575,17 @@ function CreateForm({
       setValue("accountId", String(defaultAccount.id));
     }
   }, [accounts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // An account created from inside this form is what the user wants selected — leaving
+  // them to hunt for it in the list is the whole reason the shortcut exists.
+  useEffect(() => {
+    if (accountDrawerOpen || knownAccountIds.current.length === 0) return;
+    const created = accounts.find((a) => !knownAccountIds.current.includes(a.id));
+    if (created) {
+      setValue("accountId", String(created.id), { shouldValidate: true });
+      knownAccountIds.current = [];
+    }
+  }, [accounts, accountDrawerOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When account changes to a type that doesn't support installment/recurring, reset paymentType
   useEffect(() => {
@@ -657,7 +687,20 @@ function CreateForm({
         />
       </FormField>
 
-      <FormField label={isTransfer ? "Conta de origem" : "Conta"} error={errors.accountId?.message}>
+      <FormField
+        label={isTransfer ? "Conta de origem" : "Conta"}
+        error={errors.accountId?.message}
+        action={
+          <button
+            type="button"
+            onClick={openNewAccount}
+            className="text-green flex items-center gap-1 text-[12.5px] font-medium transition-opacity hover:opacity-80"
+          >
+            <Plus size={12} />
+            Nova conta
+          </button>
+        }
+      >
         <Select value={accountIdValue ?? ""} onValueChange={(v) => setValue("accountId", v as string, { shouldValidate: true })}>
           <SelectTrigger className={cn(TRIGGER_CLASS, errors.accountId && "border-red/60")}>
             <SelectValue>
@@ -701,14 +744,17 @@ function CreateForm({
 
       {!isTransfer && (
         <FormField label="Categoria" error={errors.subCategoryId?.message}>
-          <Select onValueChange={(v) => setValue("subCategoryId", v as string, { shouldValidate: true })}>
-            <SelectTrigger className={cn(TRIGGER_CLASS, errors.subCategoryId && "border-red/60")}>
-              <SelectValue>
-                {createSubCategoryLabel ?? <span className="text-text-muted">Selecionar categoria</span>}
-              </SelectValue>
-            </SelectTrigger>
-            <CategorySelectContent subcategories={subcategories} />
-          </Select>
+          {/* Searchable: the full tree runs to a few dozen rows, and scrolling a grouped
+              list to find one subcategory is slower than typing four letters. */}
+          <CategoryPickerField
+            value={subCategoryIdValue ? Number(subCategoryIdValue) : null}
+            onChange={(id) =>
+              setValue("subCategoryId", id === null ? "" : String(id), { shouldValidate: true })
+            }
+            subcategories={subcategories}
+            hasError={!!errors.subCategoryId}
+            onCreateNew={() => setSubcatModalOpen(true)}
+          />
         </FormField>
       )}
 
@@ -800,6 +846,26 @@ function CreateForm({
           </Button>
         </div>
       </div>
+
+      <AccountDrawer
+        open={accountDrawerOpen}
+        mode="create"
+        onClose={() => setAccountDrawerOpen(false)}
+        onDeleteRequest={() => {}}
+      />
+
+      {/* Above the transaction drawer (z-50), and it selects what it creates — the point
+          is to finish the transaction, not to be sent to the categories page and lose the
+          half-filled form. */}
+      <CreateSubCategoryModal
+        open={subcatModalOpen}
+        onClose={() => setSubcatModalOpen(false)}
+        categories={categories}
+        zIndex={80}
+        onCreated={(created) =>
+          setValue("subCategoryId", String(created.id), { shouldValidate: true })
+        }
+      />
     </form>
   );
 }
@@ -816,8 +882,10 @@ function EditForm({
   const { mutateAsync, isPending } = useUpdateTransaction();
   const { data: subcategories = [] } = useSubCategories();
   const { data: accounts = [] } = useAccounts();
+  const { data: categories = [] } = useCategories();
   const [serverError, setServerError] = useState<string | null>(null);
   const [editTags, setEditTags] = useState<string[]>(() => transaction.tags.map((t) => t.name));
+  const [subcatModalOpen, setSubcatModalOpen] = useState(false);
 
   const {
     register,
@@ -869,10 +937,6 @@ function EditForm({
       }
     }
   }, [accountSelected?.type]); // eslint-disable-line react-hooks/exhaustive-deps
-  const subCategorySelected = subcategories.find((s) => String(s.id) === subCategoryValue);
-  const subCategoryLabel = subCategorySelected
-    ? (subCategorySelected.emoji ? `${subCategorySelected.emoji} ${subCategorySelected.name}` : subCategorySelected.name)
-    : undefined;
   const paymentMethodLabel = paymentMethodValue === "Debit" ? "Débito" : paymentMethodValue === "Credit" ? "Crédito" : undefined;
 
   const onSubmit = async (values: EditValues) => {
@@ -1024,17 +1088,14 @@ function EditForm({
 
       {!isTransfer && (
         <FormField label="Categoria">
-          <Select
-            value={subCategoryValue ?? ""}
-            onValueChange={(v) => setValue("subCategoryId", v as string, { shouldValidate: true })}
-          >
-            <SelectTrigger className={TRIGGER_CLASS}>
-              <SelectValue>
-                {subCategoryLabel ?? <span className="text-text-muted">Selecionar categoria</span>}
-              </SelectValue>
-            </SelectTrigger>
-            <CategorySelectContent subcategories={subcategories} />
-          </Select>
+          <CategoryPickerField
+            value={subCategoryValue ? Number(subCategoryValue) : null}
+            onChange={(id) =>
+              setValue("subCategoryId", id === null ? "" : String(id), { shouldValidate: true })
+            }
+            subcategories={subcategories}
+            onCreateNew={() => setSubcatModalOpen(true)}
+          />
         </FormField>
       )}
 
@@ -1135,6 +1196,16 @@ function EditForm({
           </Button>
         </div>
       </div>
+
+      <CreateSubCategoryModal
+        open={subcatModalOpen}
+        onClose={() => setSubcatModalOpen(false)}
+        categories={categories}
+        zIndex={80}
+        onCreated={(created) =>
+          setValue("subCategoryId", String(created.id), { shouldValidate: true })
+        }
+      />
     </form>
   );
 }
@@ -1144,15 +1215,21 @@ function EditForm({
 function FormField({
   label,
   error,
+  action,
   children,
 }: {
   label: string;
   error?: string;
+  /** Optional control on the label row — used for the inline "new account" shortcut. */
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-text-sub text-[14px]">{label}</label>
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-text-sub text-[14px]">{label}</label>
+        {action}
+      </div>
       {children}
       {error && <p className="text-red text-[12px]">{error}</p>}
     </div>
