@@ -47,6 +47,8 @@ import { AccountDrawer } from "@/features/accounts/components/AccountDrawer";
 import { TagInput } from "@/features/transactions/components/TagInput";
 import { DatePickerField } from "@/components/shared/DatePickerField";
 import { CategoryPickerField } from "@/components/shared/CategoryPickerField";
+import { CreateSubCategoryModal } from "@/features/categories/components/CreateSubCategoryModal";
+import { useCategories } from "@/features/categories/hooks/useCategories";
 import type {
   TransactionItem,
   TransactionType,
@@ -508,9 +510,11 @@ function CreateForm({
   const { mutateAsync, isPending } = useCreateTransaction();
   const { data: subcategories = [] } = useSubCategories();
   const { data: accounts = [] } = useAccounts();
+  const { data: categories = [] } = useCategories();
   const [serverError, setServerError] = useState<string | null>(null);
   const [transactionType, setTransactionType] = useState<TransactionType>(defaultType);
   const [createTags, setCreateTags] = useState<string[]>([]);
+  const [subcatModalOpen, setSubcatModalOpen] = useState(false);
 
   /**
    * Creating an account without losing the half-filled transaction. The ids present when
@@ -749,6 +753,7 @@ function CreateForm({
             }
             subcategories={subcategories}
             hasError={!!errors.subCategoryId}
+            onCreateNew={() => setSubcatModalOpen(true)}
           />
         </FormField>
       )}
@@ -848,6 +853,19 @@ function CreateForm({
         onClose={() => setAccountDrawerOpen(false)}
         onDeleteRequest={() => {}}
       />
+
+      {/* Above the transaction drawer (z-50), and it selects what it creates — the point
+          is to finish the transaction, not to be sent to the categories page and lose the
+          half-filled form. */}
+      <CreateSubCategoryModal
+        open={subcatModalOpen}
+        onClose={() => setSubcatModalOpen(false)}
+        categories={categories}
+        zIndex={80}
+        onCreated={(created) =>
+          setValue("subCategoryId", String(created.id), { shouldValidate: true })
+        }
+      />
     </form>
   );
 }
@@ -864,8 +882,10 @@ function EditForm({
   const { mutateAsync, isPending } = useUpdateTransaction();
   const { data: subcategories = [] } = useSubCategories();
   const { data: accounts = [] } = useAccounts();
+  const { data: categories = [] } = useCategories();
   const [serverError, setServerError] = useState<string | null>(null);
   const [editTags, setEditTags] = useState<string[]>(() => transaction.tags.map((t) => t.name));
+  const [subcatModalOpen, setSubcatModalOpen] = useState(false);
 
   const {
     register,
@@ -1074,6 +1094,7 @@ function EditForm({
               setValue("subCategoryId", id === null ? "" : String(id), { shouldValidate: true })
             }
             subcategories={subcategories}
+            onCreateNew={() => setSubcatModalOpen(true)}
           />
         </FormField>
       )}
@@ -1175,6 +1196,16 @@ function EditForm({
           </Button>
         </div>
       </div>
+
+      <CreateSubCategoryModal
+        open={subcatModalOpen}
+        onClose={() => setSubcatModalOpen(false)}
+        categories={categories}
+        zIndex={80}
+        onCreated={(created) =>
+          setValue("subCategoryId", String(created.id), { shouldValidate: true })
+        }
+      />
     </form>
   );
 }

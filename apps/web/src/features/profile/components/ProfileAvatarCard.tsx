@@ -19,6 +19,7 @@ export const ProfileAvatarCard = ({ profile }: Props) => {
       .join("") || profile.email[0]?.toUpperCase();
 
   const isDirty = name.trim().length > 0 && name.trim() !== profile.name;
+  const isPremium = profile.plan === "Premium";
 
   const handleSave = () => {
     if (isDirty) updateProfile({ name: name.trim() });
@@ -41,9 +42,14 @@ export const ProfileAvatarCard = ({ profile }: Props) => {
             </span>
             <span
               className="rounded-full px-[11px] py-[5px] font-mono text-[11px] tracking-[0.06em]"
-              style={{ background: "color-mix(in srgb, var(--gold) 18%, transparent)", color: "var(--gold)" }}
+              style={{
+                background: isPremium
+                  ? "color-mix(in srgb, var(--gold) 18%, transparent)"
+                  : "color-mix(in srgb, var(--text-sub) 14%, transparent)",
+                color: isPremium ? "var(--gold)" : "var(--text-sub)",
+              }}
             >
-              Free
+              {isPremium ? "Premium" : "Free"}
             </span>
           </div>
           <div className="mt-[3px] font-mono text-[11px] text-[var(--text-sub)]">{profile.email}</div>

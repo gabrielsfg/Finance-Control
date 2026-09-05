@@ -2,18 +2,15 @@
 
 import { Check, Plus } from "lucide-react";
 import { Card, CardHead, LedgerRule } from "@/components/shared/Card";
+import { useProfile } from "@/features/profile/hooks/useProfile";
+import { PremiumUpgradeButton } from "@/components/shared/PremiumNotice";
+import { PREMIUM_FEATURES } from "@/lib/config/premium";
 
 const FREE_FEATURES = ["Contas e categorias ilimitadas", "Análises dos últimos 12 meses"];
 
-const PREMIUM_FEATURES = [
-  "Insights de IA ilimitados",
-  "Integração com B3 e corretoras",
-  "Histórico ilimitado",
-  "Simulações avançadas",
-];
-
 export const ProfilePlanCard = () => {
-  const isPremium = false;
+  const { data: profile } = useProfile();
+  const isPremium = profile?.plan === "Premium";
 
   if (isPremium) {
     return (
@@ -29,7 +26,7 @@ export const ProfilePlanCard = () => {
           </span>
         </div>
         <p className="m-0 mb-3.5 text-[13px] text-[var(--text-sub)]">
-          Renovação em 15/05/2026 · R$ 29,90/mês
+          Todos os recursos liberados nesta conta.
         </p>
         <LedgerRule />
         <div className="my-3.5 flex flex-col gap-2.5">
@@ -80,12 +77,7 @@ export const ProfilePlanCard = () => {
         </div>
       </div>
 
-      <button
-        className="mt-1 inline-flex w-full items-center justify-center rounded-[13px] px-[18px] py-2.5 text-[14px] font-semibold text-white transition-transform hover:-translate-y-[1px]"
-        style={{ background: "var(--brand-cobalt)", boxShadow: "0 12px 24px -12px rgba(31,60,224,0.7)" }}
-      >
-        Conhecer o Premium
-      </button>
+      <PremiumUpgradeButton className="mt-1" />
     </Card>
   );
 };

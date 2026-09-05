@@ -3,6 +3,8 @@
 import { Loader2, RefreshCw, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRefreshSpendingInsight, useSpendingInsight } from "@/features/insights/hooks/useInsight";
+import { PremiumNotice } from "@/components/shared/PremiumNotice";
+import { usePlan } from "@/lib/hooks/usePlan";
 
 const CARD_STYLE = {
   background:
@@ -13,13 +15,33 @@ const CARD_STYLE = {
 /**
  * The weekly spending analysis.
  *
- * Renders nothing at all when the API answers 204 — free plan, feature off, quota spent
- * or too little history. An empty card advertising a feature the account does not have
- * is worse than no card.
+ * A free account gets the card locked rather than absent: the feature is the reason to
+ * upgrade, and a card that never appears is a feature nobody discovers. The API is not
+ * asked at all in that case — it would answer 204 by plan anyway.
+ *
+ * A subscriber still gets nothing when the API answers 204 (quota spent, feature off,
+ * too little history). Those are not upsells, and dressing them as one would be a lie.
  */
 export const AiInsightCard = () => {
-  const { data: insight, isLoading } = useSpendingInsight();
+  const { isPremium, isLoading: planLoading } = usePlan();
+  const { data: insight, isLoading } = useSpendingInsight(isPremium);
   const refresh = useRefreshSpendingInsight();
+
+  // Nothing at all until the plan is known — a lock flashed at a subscriber reads as an
+  // expired subscription.
+  if (planLoading) return null;
+
+  if (!isPremium) {
+    return (
+      <div className="rounded-[20px] border p-[22px]" style={CARD_STYLE}>
+        <Header />
+        <p className="font-display mb-3 text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">
+          Sua semana, analisada por IA
+        </p>
+        <PremiumNotice description="Toda semana, uma leitura dos seus gastos: o que saiu do padrão, onde o dinheiro concentrou e o que mudou em relação às semanas anteriores." />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

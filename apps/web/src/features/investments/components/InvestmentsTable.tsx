@@ -7,41 +7,9 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatPercentNeutral } from "@/lib/utils/formatNumber";
 import { cn } from "@/lib/utils";
 import { filterInvestments } from "@/features/investments/utils/filterInvestments";
+import { ASSET_CLASSES, ASSET_TYPE_COLORS } from "@/lib/config/assetColors";
 import type { AssetType, Investment, InvestmentPortfolio } from "@/lib/types/investments.types";
 
-const ASSET_CLASSES: { assetClass: string; types: AssetType[] }[] = [
-  { assetClass: "Ações",               types: ["Acao"] },
-  { assetClass: "FIIs",                types: ["FII"] },
-  { assetClass: "ETFs",                types: ["ETF"] },
-  { assetClass: "ETFs Internacionais", types: ["ETFInternacional"] },
-  { assetClass: "Stocks",              types: ["Stock"] },
-  { assetClass: "REITs",               types: ["Reit"] },
-  { assetClass: "BDRs",                types: ["BDR"] },
-  { assetClass: "Fundos",              types: ["FundoInvestimento"] },
-  { assetClass: "Criptomoedas",        types: ["Cripto"] },
-  { assetClass: "Tesouro Direto",      types: ["TesouroDireto"] },
-  { assetClass: "Renda Fixa",          types: ["RendaFixa"] },
-  { assetClass: "Moedas",              types: ["Moeda"] },
-  { assetClass: "Índices",             types: ["Index"] },
-  { assetClass: "Outros",              types: ["Outro"] },
-];
-
-const ASSET_TYPE_COLORS: Record<AssetType, string> = {
-  Acao:              "#00C98D",
-  FundoInvestimento: "#4A9EFF",
-  FII:               "#F5A623",
-  Cripto:            "#F25F5C",
-  Stock:             "#00D4A0",
-  Reit:              "#7C6FE0",
-  BDR:               "#F5CE42",
-  ETF:               "#4A9EFF",
-  ETFInternacional:  "#7C6FE0",
-  TesouroDireto:     "#00C98D",
-  RendaFixa:         "#4A9EFF",
-  Moeda:             "#14B8A6",
-  Index:             "#8A95A3",
-  Outro:             "#8A95A3",
-};
 
 /**
  * Signed figures sit on a tinted chip instead of relying on text colour alone.

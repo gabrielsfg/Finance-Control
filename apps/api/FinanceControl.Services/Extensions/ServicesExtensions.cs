@@ -69,6 +69,18 @@ namespace FinanceControl.Services.Extensions
             // client refuses without a key, so a deployment that has not been configured
             // simply renders no card.
             services.Configure<AnthropicSettings>(configuration.GetSection("AnthropicSettings"));
+
+            // One Anthropic account, two consumers: the import categoriser reads
+            // "Claude:ApiKey" directly, and this section was added later with its own key.
+            // Falling back keeps a deployment from having to store the same secret twice —
+            // and from the failure that costs an afternoon, where the key is set under the
+            // older name and the analyses stay silently off. Enabled is deliberately not
+            // inferred: turning the spend on stays an explicit decision.
+            services.PostConfigure<AnthropicSettings>(settings =>
+            {
+                if (string.IsNullOrWhiteSpace(settings.ApiKey))
+                    settings.ApiKey = configuration["Claude:ApiKey"] ?? string.Empty;
+            });
             services.Configure<AdminSettings>(configuration.GetSection("AdminSettings"));
             services.AddSingleton<AnthropicInsightClient>();
 

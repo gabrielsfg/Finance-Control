@@ -31,6 +31,18 @@ function formatDayHeader(dateStr: string) {
   return date.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
 }
 
+// Inline date for the ungrouped list: short enough to sit beside account and method.
+function formatInlineDate(dateStr: string) {
+  const date = parseLocalDate(dateStr);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return "Hoje";
+  if (date.toDateString() === yesterday.toDateString()) return "Ontem";
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
 type SubcategoryMeta = { id: number; name: string; color: string; emoji?: string | null };
 
 type DayGroup = {
@@ -45,20 +57,28 @@ type Props = {
   subcategoryMeta?: SubcategoryMeta[];
   search?: string;
   /**
-   * Group by day with a per-day income/expense subtotal.
+   * Group by day. Only meaningful while the list is ordered by date — under a value
+   * ordering the rows jump between days, so the grouping is dropped and each row carries
+   * its own date instead.
+   */
+  grouped?: boolean;
+  /**
+   * Per-day income/expense subtotals inside the day header.
    *
    * Only true when the date range is the only thing narrowing the list. Under any other
    * filter those subtotals stop describing the day and start describing the slice that
    * survived the filter — a value filter would print a "total do dia" that is not the
    * day's total, which reads as a wrong number rather than a filtered one.
    */
-  grouped?: boolean;
+  showDaySubtotals?: boolean;
+  /** Ordering of the day groups, mirroring the list ordering. */
+  sortOrder?: "asc" | "desc";
   onView: (t: TransactionItem) => void;
   onEdit: (t: TransactionItem) => void;
   onDelete: (t: TransactionItem) => void;
 };
 
-export const TransactionsList = ({ transactions, subcategoryMeta = [], search, grouped = true, onView, onEdit, onDelete }: Props) => {
+export const TransactionsList = ({ transactions, subcategoryMeta = [], search, grouped = true, showDaySubtotals = true, sortOrder = "desc", onView, onEdit, onDelete }: Props) => {
   const subColorMap = useMemo(() => {
     const m = new Map<number, string>();
     for (const s of subcategoryMeta) m.set(s.id, s.color);
@@ -81,14 +101,14 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, g
       map.get(t.transactionDate)!.push(t);
     }
     return Array.from(map.entries())
-      .sort(([a], [b]) => b.localeCompare(a))
+      .sort(([a], [b]) => (sortOrder === "asc" ? a.localeCompare(b) : b.localeCompare(a)))
       .map(([date, txs]) => ({
         date,
         transactions: txs,
         dayIncome:  txs.filter((t) => t.type === "Income").reduce((s, t) => s + t.value, 0),
         dayExpense: txs.filter((t) => t.type === "Expense").reduce((s, t) => s + t.value, 0),
       }));
-  }, [transactions, grouped]);
+  }, [transactions, grouped, sortOrder]);
 
   if (transactions.length === 0) {
     return (
@@ -114,12 +134,12 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, g
                 {formatDayHeader(date)}
               </span>
               <div className="flex items-center gap-3">
-                {dayIncome > 0 && (
+                {showDaySubtotals && dayIncome > 0 && (
                   <span className="font-mono text-green text-[12px]">
                     +{formatCurrency(dayIncome / 100)}
                   </span>
                 )}
-                {dayExpense > 0 && (
+                {showDaySubtotals && dayExpense > 0 && (
                   <span className="font-mono text-red text-[12px]">
                     -{formatCurrency(dayExpense / 100)}
                   </span>
@@ -176,14 +196,20 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, g
                   <div className="mt-0.5 flex items-center gap-2">
                     {isTransfer ? (
                       <span className="text-text-muted flex items-center gap-1 text-[12px]">
+                        {!grouped && (
+                          <span className="text-text-sub font-medium">{formatInlineDate(t.transactionDate)} ·</span>
+                        )}
                         {t.accountName}
                         <ArrowLeftRight size={10} className="shrink-0" />
                         {t.destinationAccountName ?? "—"}
                       </span>
                     ) : (
                       <>
+                        {!grouped && (
+                          <span className="text-text-sub text-[12px] font-medium">{formatInlineDate(t.transactionDate)}</span>
+                        )}
                         {t.accountName && (
-                          <span className="text-text-muted text-[12px]">{t.accountName}</span>
+                          <span className="text-text-muted text-[12px]">{!grouped ? "· " : ""}{t.accountName}</span>
                         )}
                         {t.paymentMethod && (
                           <span className="text-text-muted text-[12px]">· {PAYMENT_METHOD_LABELS[t.paymentMethod]}</span>

@@ -2,6 +2,8 @@
 
 import { Loader2, Zap } from "lucide-react";
 import { usePortfolioInsight } from "../hooks/useInsight";
+import { PremiumNotice } from "@/components/shared/PremiumNotice";
+import { usePlan } from "@/lib/hooks/usePlan";
 
 const CARD_STYLE = {
   background:
@@ -18,7 +20,22 @@ const CARD_STYLE = {
  * no analysis, so the server refuses rather than dressing it up.
  */
 export const PortfolioInsightCard = () => {
-  const { data: insight, isLoading } = usePortfolioInsight();
+  const { isPremium, isLoading: planLoading } = usePlan();
+  const { data: insight, isLoading } = usePortfolioInsight(isPremium);
+
+  if (planLoading) return null;
+
+  if (!isPremium) {
+    return (
+      <div className="rounded-[20px] border p-[22px]" style={CARD_STYLE}>
+        <Eyebrow />
+        <p className="font-display mb-3 text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">
+          Um retrato da sua carteira
+        </p>
+        <PremiumNotice description="Pesos por classe, concentração, oscilação observada e como a composição conversa com o perfil de investidor que você declarou." />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -35,17 +52,7 @@ export const PortfolioInsightCard = () => {
 
   return (
     <div className="rounded-[20px] border p-[22px]" style={CARD_STYLE}>
-      <div className="mb-4 flex items-center gap-[10px]">
-        <div
-          className="flex h-7 w-7 items-center justify-center rounded-[8px]"
-          style={{ backgroundColor: "color-mix(in srgb, var(--brand-cobalt) 15%, transparent)" }}
-        >
-          <Zap size={14} style={{ color: "var(--brand-accent)" }} />
-        </div>
-        <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--brand-accent)]">
-          Retrato da carteira
-        </span>
-      </div>
+      <Eyebrow />
 
       <p className="font-display mb-2 text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">
         {insight.headline}
@@ -67,3 +74,17 @@ export const PortfolioInsightCard = () => {
     </div>
   );
 };
+
+const Eyebrow = () => (
+  <div className="mb-4 flex items-center gap-[10px]">
+    <div
+      className="flex h-7 w-7 items-center justify-center rounded-[8px]"
+      style={{ backgroundColor: "color-mix(in srgb, var(--brand-cobalt) 15%, transparent)" }}
+    >
+      <Zap size={14} style={{ color: "var(--brand-accent)" }} />
+    </div>
+    <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--brand-accent)]">
+      Retrato da carteira
+    </span>
+  </div>
+);

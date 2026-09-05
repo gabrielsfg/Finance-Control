@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { transactionsApi } from "@/lib/api/transactions";
 import type {
   TransactionItem,
@@ -20,6 +20,10 @@ export const useTransactionsFiltered = (params: GetTransactionsFilterParams) =>
   useQuery<TransactionsFilteredResponse>({
     queryKey: ["transactions", "filtered", params],
     queryFn: () => transactionsApi.getFiltered(params),
+    // Every filter, page and search term is part of the key, so without this each change
+    // is a cache miss and the page falls back to its full-screen spinner — which unmounts
+    // the header along with it and wipes whatever the user was typing in the search box.
+    placeholderData: keepPreviousData,
   });
 
 export const useCreateTransaction = () => {

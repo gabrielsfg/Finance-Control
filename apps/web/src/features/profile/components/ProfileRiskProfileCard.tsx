@@ -5,6 +5,8 @@ import { SlidersHorizontal } from "lucide-react";
 import { Card, CardHead } from "@/components/shared/Card";
 import { RiskProfileDrawer } from "@/features/insights/components/RiskProfileDrawer";
 import { useRiskProfile } from "@/features/insights/hooks/useRiskProfile";
+import { PremiumNotice } from "@/components/shared/PremiumNotice";
+import { usePlan } from "@/lib/hooks/usePlan";
 import type { RiskClassification } from "@/lib/types/insight.types";
 
 const LABELS: Record<RiskClassification, string> = {
@@ -16,6 +18,21 @@ const LABELS: Record<RiskClassification, string> = {
 export const ProfileRiskProfileCard = () => {
   const [open, setOpen] = useState(false);
   const { data: profile } = useRiskProfile();
+  const { isPremium, isLoading: planLoading } = usePlan();
+
+  if (planLoading) return null;
+
+  if (!isPremium) {
+    return (
+      <Card>
+        <CardHead title="Perfil de investidor" />
+        <PremiumNotice
+          preview={false}
+          description="Quatro perguntas sobre prazo, tolerância a queda e experiência. A classificação descreve a carteira que você já tem e alimenta a análise da carteira — o aplicativo não recomenda investimentos."
+        />
+      </Card>
+    );
+  }
 
   return (
     <>

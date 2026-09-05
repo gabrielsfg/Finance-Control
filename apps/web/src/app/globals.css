@@ -119,6 +119,15 @@
   --purple: #7c6fe0;
   --border-chart: var(--border-color);
 
+  /* Recharts takes plain CSS colours, not Tailwind utilities, so the chart ramp needs
+     raw vars too — `--color-chart-*` above only exists for `@theme`. Charts were reading
+     `var(--chart-N)`, finding nothing, and painting every series black. */
+  --chart-1: var(--moss);
+  --chart-2: var(--brand-cobalt);
+  --chart-3: var(--clay);
+  --chart-4: var(--gold);
+  --chart-5: var(--text-sub);
+
   /* Panel-hero — always dark, tokens own both themes */
   --panel: #17211d;
   --panel-2: #1e2b26;

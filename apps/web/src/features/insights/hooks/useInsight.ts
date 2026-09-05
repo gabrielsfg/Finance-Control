@@ -6,7 +6,7 @@ import type { Insight } from "@/lib/types/insight.types";
  * The weekly spending analysis. Generated on the first read of the week and cached
  * server-side for the rest of it, so refetching costs nothing.
  */
-export const useSpendingInsight = () =>
+export const useSpendingInsight = (enabled = true) =>
   useQuery<Insight | null>({
     queryKey: ["insight", "spending"],
     queryFn: insightApi.getSpending,
@@ -14,14 +14,18 @@ export const useSpendingInsight = () =>
     // would only spend a round trip.
     staleTime: 1000 * 60 * 30,
     retry: false,
+    // Off for a free account: the endpoint answers 204 by plan, so the call can only
+    // ever come back empty.
+    enabled,
   });
 
-export const usePortfolioInsight = () =>
+export const usePortfolioInsight = (enabled = true) =>
   useQuery<Insight | null>({
     queryKey: ["insight", "portfolio"],
     queryFn: insightApi.getPortfolio,
     staleTime: 1000 * 60 * 30,
     retry: false,
+    enabled,
   });
 
 /** Regenerates inside the same week. Still counted against the monthly quota. */
@@ -34,12 +38,13 @@ export const useRefreshSpendingInsight = () => {
   });
 };
 
-export const useAiContext = () =>
+export const useAiContext = (enabled = true) =>
   useQuery({
     queryKey: ["insight", "context"],
     queryFn: insightApi.getContext,
     staleTime: 1000 * 60 * 5,
     retry: false,
+    enabled,
   });
 
 export const useUpsertAiContext = () => {
