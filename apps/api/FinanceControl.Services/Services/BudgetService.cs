@@ -11,6 +11,13 @@ namespace FinanceControl.Services.Services
 {
     public class BudgetService : IBudgetService
     {
+        /// <summary>
+        /// Area that collects spend assigned to the budget whose subcategory was never
+        /// allocated. It is synthesised per response, never persisted, so it cannot be
+        /// edited or deleted like a real area.
+        /// </summary>
+        public const string UnbudgetedAreaName = "Não orçadas";
+
         private readonly ApplicationDbContext _context;
 
         public BudgetService(ApplicationDbContext context)
@@ -101,7 +108,7 @@ namespace FinanceControl.Services.Services
                     .Where(t => t.BudgetId == b.Id && t.UserId == userId
                         && t.TransactionDate >= startDate && t.TransactionDate < endDate)
                     .GroupBy(t => new { t.SubCategoryId, t.Type })
-                    .Select(g => new { g.Key.SubCategoryId, g.Key.Type, Total = g.Sum(t => t.Value) })
+                    .Select(g => new SubCategorySpend(g.Key.SubCategoryId, g.Key.Type, g.Sum(t => t.Value)))
                     .ToListAsync();
 
                 var flatAllocations = areas
@@ -132,9 +139,13 @@ namespace FinanceControl.Services.Services
                             Spent = spent,
                             SpentPercentage = pct,
                             AllocationType = al.AllocationType,
+                            IsUnbudgeted = false,
                         };
                     }))
                     .ToList();
+
+                flatAllocations.AddRange(
+                    await BuildUnbudgetedAllocationsAsync(areas, spentBySubCategory));
 
                 var expenseAllocations = flatAllocations.Where(al => al.AllocationType == EnumAllocationType.Expense).ToList();
                 var incomeAllocations  = flatAllocations.Where(al => al.AllocationType == EnumAllocationType.Income).ToList();
@@ -167,6 +178,84 @@ namespace FinanceControl.Services.Services
             }
 
             return result;
+        }
+
+        private sealed record SubCategorySpend(int SubCategoryId, EnumTransactionType Type, int Total);
+
+        /// <summary>
+        /// Spend that was explicitly assigned to the budget but whose subcategory has no
+        /// allocation in it.
+        ///
+        /// Without this the money simply vanished from the budget: the totals were built by
+        /// walking the planned allocations, so a transaction pointed at the budget under an
+        /// unplanned subcategory was fetched and then dropped. It is real spend and belongs
+        /// in the totals — that is the whole point of next period's plan being informed by
+        /// this one — so it comes back as rows with no target, under a synthetic area.
+        ///
+        /// Matching is on (subcategory, direction), the same pair the planned rows use: a
+        /// subcategory allocated as an expense still reports unbudgeted *income*, because
+        /// that income has no target either. Transfers are excluded — they move money
+        /// between the user's own accounts and were never spend.
+        /// </summary>
+        private async Task<List<BudgetAllocationFlatResponseDto>> BuildUnbudgetedAllocationsAsync(
+            List<Area> areas,
+            List<SubCategorySpend> spentBySubCategory)
+        {
+            var planned = areas
+                .SelectMany(a => a.BudgetSubcategoryAllocations)
+                .Select(al => (
+                    al.SubCategoryId,
+                    Type: al.AllocationType == EnumAllocationType.Income
+                        ? EnumTransactionType.Income
+                        : EnumTransactionType.Expense))
+                .ToHashSet();
+
+            var unplanned = spentBySubCategory
+                .Where(s => s.Type != EnumTransactionType.Transfer
+                            && s.Total != 0
+                            && !planned.Contains((s.SubCategoryId, s.Type)))
+                .ToList();
+
+            if (unplanned.Count == 0)
+                return [];
+
+            var subCategoryIds = unplanned.Select(s => s.SubCategoryId).Distinct().ToList();
+
+            var subCategories = await _context.SubCategories
+                .Include(sc => sc.Category)
+                .Where(sc => subCategoryIds.Contains(sc.Id))
+                .ToDictionaryAsync(sc => sc.Id);
+
+            return unplanned
+                .Where(s => subCategories.ContainsKey(s.SubCategoryId))
+                .Select(s =>
+                {
+                    var subCategory = subCategories[s.SubCategoryId];
+                    return new BudgetAllocationFlatResponseDto
+                    {
+                        // No allocation row exists, so there is no id to report. Callers key
+                        // these off (subcategory, type) instead.
+                        Id = 0,
+                        SubCategoryId = s.SubCategoryId,
+                        SubCategoryName = subCategory.Name,
+                        SubCategoryEmoji = subCategory.Emoji,
+                        CategoryName = subCategory.Category.Name,
+                        CategoryColor = subCategory.Category.Color,
+                        AreaName = UnbudgetedAreaName,
+                        Allocated = 0,
+                        Spent = s.Total,
+                        // Spent over a zero target has no percentage. Kept at 0 to match what
+                        // the planned rows report for a zero allocation; `IsUnbudgeted` is
+                        // what callers should branch on.
+                        SpentPercentage = 0,
+                        AllocationType = s.Type == EnumTransactionType.Income
+                            ? EnumAllocationType.Income
+                            : EnumAllocationType.Expense,
+                        IsUnbudgeted = true,
+                    };
+                })
+                .OrderByDescending(a => a.Spent)
+                .ToList();
         }
 
         public async Task<GetBudgetByIdResponseDto> GetBudgetByIdAsync(int id, int userId)

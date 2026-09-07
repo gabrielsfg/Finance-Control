@@ -32,5 +32,13 @@ namespace FinanceControl.Shared.Dtos.Response
         public int Spent { get; set; }
         public double SpentPercentage { get; set; }
         public EnumAllocationType AllocationType { get; set; }
+
+        /// <summary>
+        /// True for spend that was assigned to the budget but has no allocation planned for
+        /// its subcategory. These rows carry <see cref="Allocated"/> = 0 and are grouped
+        /// under the <c>UnbudgetedAreaName</c> area, so they count towards the budget's
+        /// totals without pretending to have a target.
+        /// </summary>
+        public bool IsUnbudgeted { get; set; }
     }
 }

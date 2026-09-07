@@ -53,14 +53,16 @@ export const ASSET_CLASSES: { assetClass: string; types: AssetType[] }[] = [
   { assetClass: "Outros",              types: ["Outro"] },
 ];
 
-const CLASS_COLORS: Record<string, string> = Object.fromEntries(
-  ASSET_CLASSES.map((g) => [g.assetClass, assetTypeColor(g.types[0])]),
-);
-
-/** Colour of an asset class, matching the colour of the type(s) it holds. */
-export function assetClassColor(assetClass: string): string {
-  return CLASS_COLORS[assetClass] ?? ASSET_FALLBACK_COLOR;
-}
+/**
+ * NOTE: there is deliberately no `assetClassColor(label)` here.
+ *
+ * The API groups allocations by asset TYPE and sends `assetClass` as that type's *label*
+ * — singular, and localised ("Ação", "ETF", "Fundo de Investimento"). Matching those
+ * strings against the plural `ASSET_CLASSES` labels above silently missed on almost every
+ * type and fell back to grey, which is how the pie ended up with several identical grey
+ * slices while the table showed the right colours. Colour a slice from its `assetType`
+ * via `assetTypeColor` instead — the same key the table's badge uses.
+ */
 
 /**
  * Palette for slices that have no fixed colour of their own — the individual tickers

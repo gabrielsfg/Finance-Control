@@ -13,12 +13,26 @@ import { BigMoney } from "@/components/shared/Money";
 import { FlowRow } from "@/components/shared/FlowBar";
 import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
 import { pieAnim } from "@/lib/config/chartAnimation";
+import { assetTypeColor } from "@/lib/config/assetColors";
 
-const ASSET_CLASS_ORDER = ["Renda Fixa", "Renda Variável", "FII", "Internacional", "Cripto"];
+/*
+ * There is deliberately no hardcoded class order here.
+ *
+ * This list used to be ["Renda Fixa", "Renda Variável", "FII", "Internacional", "Cripto"]
+ * and the legend was built by looking each one up in the response. That taxonomy is not
+ * the API's: allocations are grouped by asset TYPE and labelled with that type's own name
+ * ("Ação", "ETF", "Tesouro Direto"), so almost every lookup missed and `.filter(Boolean)`
+ * threw the whole legend away — leaving the pie with no legend and no numbers, which is
+ * exactly what it did. The API already orders allocations by value descending, so the
+ * response order is the order to render.
+ */
 
 const DonutTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
-  const { name, value, payload: { color } } = payload[0];
+  // Colour from the asset type, so the swatch matches its slice — `payload.color` is the
+  // API's own ramp, which reuses one hue across several types.
+  const { name, value, payload: { assetType } } = payload[0];
+  const color = assetTypeColor(assetType);
   return (
     <div className="border-border bg-surface rounded-lg border px-3 py-2 shadow-md">
       <div className="flex items-center gap-1.5">
@@ -151,7 +165,7 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
                     strokeWidth={0}
                   >
                     {data.allocations.map((alloc) => (
-                      <Cell key={alloc.assetClass} fill={alloc.color} />
+                      <Cell key={alloc.assetType} fill={assetTypeColor(alloc.assetType)} />
                     ))}
                   </Pie>
                   <Tooltip content={<DonutTooltip />} />
@@ -159,29 +173,29 @@ export function InvestmentOverviewTab({ startDate, finishDate }: { startDate: st
               </ResponsiveContainer>
             </div>
             <div className="flex flex-1 flex-col gap-3">
-              {ASSET_CLASS_ORDER
-                .map((cls) => data.allocations.find((a) => a.assetClass === cls))
-                .filter(Boolean)
-                .map((alloc) => (
-                  <div key={alloc!.assetClass}>
+              {data.allocations.map((alloc) => {
+                const color = assetTypeColor(alloc.assetType);
+                return (
+                  <div key={alloc.assetType}>
                     <div className="mb-1 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: alloc!.color }} />
-                        <span className="text-text text-[13px] font-medium">{alloc!.assetClass}</span>
+                        <div className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: color }} />
+                        <span className="text-text text-[13px] font-medium">{alloc.assetClass}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-money text-text-sub text-[12px]">{formatCurrency(alloc!.value / 100)}</span>
-                        <span className="font-mono text-text-muted w-10 text-right text-[12px]">{alloc!.percent.toFixed(1)}%</span>
+                        <span className="font-money text-text-sub text-[12px]">{formatCurrency(alloc.value / 100)}</span>
+                        <span className="font-mono text-text-muted w-10 text-right text-[12px]">{alloc.percent.toFixed(1)}%</span>
                       </div>
                     </div>
                     <div className="bg-surface2 h-1.5 w-full overflow-hidden rounded-full">
                       <div
                         className="h-full rounded-full transition-all"
-                        style={{ width: `${alloc!.percent}%`, backgroundColor: alloc!.color }}
+                        style={{ width: `${alloc.percent}%`, backgroundColor: color }}
                       />
                     </div>
                   </div>
-                ))}
+                );
+              })}
             </div>
           </div>
         )}

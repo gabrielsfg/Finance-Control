@@ -33,6 +33,12 @@ export type BudgetAllocation = {
   spent: number;
   spentPercentage: number;
   allocationType: AllocationType;
+  /**
+   * Spend assigned to the budget whose subcategory was never allocated in it. Synthesised
+   * by the API under the "Não orçadas" area, with `allocated` = 0 and no meaningful
+   * `spentPercentage` — branch on this flag, not on the area name or a zero allocation.
+   */
+  isUnbudgeted: boolean;
 };
 
 export type UpdateBudgetRequest = {

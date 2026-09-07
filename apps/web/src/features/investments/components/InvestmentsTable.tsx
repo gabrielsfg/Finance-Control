@@ -297,6 +297,21 @@ export const InvestmentsTable = ({ portfolio, search, visibleTypes, onSelectInve
   const isSearching = search.trim().length > 0;
   const visibleSet = new Set(visibleTypes);
 
+  // Reachable from "Desmarcar todos" in the type filter, and the natural first step when
+  // isolating a single class. Without this the page would just end in blank space.
+  if (visibleTypes.length === 0) {
+    return (
+      <div
+        className="rounded-[20px] border border-[var(--border-color)] bg-[var(--surface)] px-5 py-12 text-center"
+        style={{ boxShadow: "var(--shadow-sm)" }}
+      >
+        <p className="text-[13.5px] text-[var(--text-sub)]">
+          Nenhum tipo selecionado — escolha ao menos um em <span className="text-[var(--text)]">Tipos</span>.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {ASSET_CLASSES.map(({ assetClass, types }) => {

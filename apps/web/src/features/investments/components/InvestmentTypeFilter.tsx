@@ -22,6 +22,9 @@ const LABELS: Record<AssetType, string> = {
   Outro:             "Outros",
 };
 
+const FOOTER_ACTION =
+  "flex-1 rounded-[9px] px-2.5 py-1.5 text-left text-[12px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--text)] disabled:pointer-events-none disabled:opacity-40";
+
 type Props = {
   allTypes: AssetType[];
   visibleTypes: AssetType[];
@@ -40,13 +43,16 @@ export const InvestmentTypeFilter = ({ allTypes, visibleTypes, onChange }: Props
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Zero visible types is a legitimate state — it is the fast way to pick one class out
+  // of many (clear, then check the one you want), and the table renders an empty state
+  // for it. So no "keep at least one" guard here: it would only make the checkboxes
+  // disagree with the "Desmarcar todos" action below.
   const toggle = (type: AssetType) => {
-    if (visibleTypes.includes(type)) {
-      if (visibleTypes.length === 1) return; // keep at least one
-      onChange(visibleTypes.filter((t) => t !== type));
-    } else {
-      onChange([...visibleTypes, type]);
-    }
+    onChange(
+      visibleTypes.includes(type)
+        ? visibleTypes.filter((t) => t !== type)
+        : [...visibleTypes, type],
+    );
   };
 
   const hiddenCount = allTypes.length - visibleTypes.length;
@@ -89,12 +95,23 @@ export const InvestmentTypeFilter = ({ allTypes, visibleTypes, onChange }: Props
             );
           })}
           <div className="mx-1 my-1 border-t border-[var(--border-color)]" />
-          <button
-            onClick={() => onChange([...allTypes])}
-            className="rounded-[9px] px-2.5 py-1.5 text-left text-[12px] text-[var(--text-sub)] transition-colors hover:bg-[var(--surface2)] hover:text-[var(--text)]"
-          >
-            Mostrar todos
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onChange([...allTypes])}
+              disabled={visibleTypes.length === allTypes.length}
+              className={FOOTER_ACTION}
+            >
+              Mostrar todos
+            </button>
+            <span className="h-4 w-px shrink-0 bg-[var(--border-color)]" />
+            <button
+              onClick={() => onChange([])}
+              disabled={visibleTypes.length === 0}
+              className={FOOTER_ACTION}
+            >
+              Desmarcar todos
+            </button>
+          </div>
         </div>
       )}
     </div>

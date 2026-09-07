@@ -3,7 +3,7 @@
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
-import { FlowRow } from "@/components/shared/FlowBar";
+import { FlowLabelRow, FlowSplit } from "@/components/shared/FlowBar";
 import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
 
 type Props = {
@@ -40,6 +40,16 @@ function ChangeChip({ pct, lowerIsBetter = false }: { pct: number | undefined; l
   );
 }
 
+/** The side's share of the period volume — the number the flow bar draws. */
+function ShareChip({ pct }: { pct: number | undefined }) {
+  if (pct === undefined) return null;
+  return (
+    <span className="mr-[9px] font-mono text-[11px] font-normal text-[var(--panel-muted)]">
+      <AnimatedCount value={pct} decimals={1} suffix="%" />
+    </span>
+  );
+}
+
 export const TransactionsSummary = ({
   totalIncome,
   totalExpense,
@@ -52,7 +62,10 @@ export const TransactionsSummary = ({
   const expensePct = pctChange(totalExpense, previousTotalExpense);
   const balancePct = pctChange(balance, previousBalance);
 
-  const max = Math.max(totalIncome, totalExpense, 1);
+  // The flow bar is a composition: both segments share one track and sum to the
+  // volume moved in the period, so each side reads as its share of that volume.
+  const volume = totalIncome + totalExpense;
+  const share = (v: number) => (volume > 0 ? (v / volume) * 100 : undefined);
 
   return (
     <HeroPanel split>
@@ -100,32 +113,35 @@ export const TransactionsSummary = ({
           <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--panel-muted)]">Entradas vs. saídas</span>
         </div>
 
-        <FlowRow
+        <FlowLabelRow
           label="Entradas"
           dotColor="var(--moss-lift)"
           value={
             <>
+              <ShareChip pct={share(totalIncome)} />
               {"+ "}
               <AnimatedCurrency cents={totalIncome} />
             </>
           }
           valueColor="var(--moss-lift)"
-          pct={totalIncome / max}
-          variant="in"
         />
-        <FlowRow
+        <FlowLabelRow
           label="Saídas"
           dotColor="var(--clay-lift)"
           value={
             <>
-              {"− "}
+              <ShareChip pct={share(totalExpense)} />
+              {"\u2212 "}
               <AnimatedCurrency cents={totalExpense} />
             </>
           }
           valueColor="var(--clay-lift)"
-          pct={totalExpense / max}
-          variant="out"
         />
+
+        <FlowSplit inValue={totalIncome} outValue={totalExpense} />
+        <div className="mt-[6px] text-center font-mono text-[10px] tracking-[0.14em] uppercase text-[var(--panel-muted)]">
+          equilíbrio
+        </div>
 
         <div className="mt-5 flex items-center justify-between border-t pt-4" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
           <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">Saldo do mês</span>

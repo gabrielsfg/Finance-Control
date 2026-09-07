@@ -743,9 +743,24 @@ function CreateForm({
       )}
 
       {!isTransfer && (
-        <FormField label="Categoria" error={errors.subCategoryId?.message}>
+        <FormField
+          label="Categoria"
+          error={errors.subCategoryId?.message}
+          action={
+            <button
+              type="button"
+              onClick={() => setSubcatModalOpen(true)}
+              className="text-green flex items-center gap-1 text-[12.5px] font-medium transition-opacity hover:opacity-80"
+            >
+              <Plus size={12} />
+              Nova categoria
+            </button>
+          }
+        >
           {/* Searchable: the full tree runs to a few dozen rows, and scrolling a grouped
-              list to find one subcategory is slower than typing four letters. */}
+              list to find one subcategory is slower than typing four letters.
+              `onCreateNew` is deliberately omitted — the shortcut lives on the label row,
+              matching "Nova conta", instead of in the popover footer. */}
           <CategoryPickerField
             value={subCategoryIdValue ? Number(subCategoryIdValue) : null}
             onChange={(id) =>
@@ -753,7 +768,6 @@ function CreateForm({
             }
             subcategories={subcategories}
             hasError={!!errors.subCategoryId}
-            onCreateNew={() => setSubcatModalOpen(true)}
           />
         </FormField>
       )}
@@ -1087,14 +1101,25 @@ function EditForm({
       )}
 
       {!isTransfer && (
-        <FormField label="Categoria">
+        <FormField
+          label="Categoria"
+          action={
+            <button
+              type="button"
+              onClick={() => setSubcatModalOpen(true)}
+              className="text-green flex items-center gap-1 text-[12.5px] font-medium transition-opacity hover:opacity-80"
+            >
+              <Plus size={12} />
+              Nova categoria
+            </button>
+          }
+        >
           <CategoryPickerField
             value={subCategoryValue ? Number(subCategoryValue) : null}
             onChange={(id) =>
               setValue("subCategoryId", id === null ? "" : String(id), { shouldValidate: true })
             }
             subcategories={subcategories}
-            onCreateNew={() => setSubcatModalOpen(true)}
           />
         </FormField>
       )}

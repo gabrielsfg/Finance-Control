@@ -63,27 +63,55 @@ export const useAnalyticsHeatmap = (startDate: string, finishDate: string, tagId
     staleTime: rangeStaleTime(finishDate),
   });
 
-export const useAnalyticsCategoryEvolution = (startDate: string, finishDate: string, categoryIds: number[], tagIds?: number[]) =>
+/**
+ * One request per category, merged into a single timeline the chart can draw: each month
+ * becomes one point carrying every category as its own key, so a `<Line dataKey="Moradia">`
+ * finds a value at every month.
+ *
+ * `categories` must carry the name as well as the id — the endpoint answers with bare
+ * `{ month, year, total }` and never says which category it was for, so the name has to
+ * come from the caller to key the merged point.
+ */
+export const useAnalyticsCategoryEvolution = (
+  startDate: string,
+  finishDate: string,
+  categories: { categoryId: number; categoryName: string }[],
+  tagIds?: number[],
+) =>
   useQuery<CategoryMonthlyData[]>({
-    queryKey: ["analytics", "category-evolution", startDate, finishDate, categoryIds, tagIds],
+    queryKey: [
+      "analytics", "category-evolution", startDate, finishDate,
+      categories.map((c) => c.categoryId), tagIds,
+    ],
     queryFn: async () => {
-      if (categoryIds.length === 0) return [];
+      if (categories.length === 0) return [];
       const results = await Promise.all(
-        categoryIds.map((id) => analyticsApi.getCategoryEvolution(startDate, finishDate, id, tagIds))
+        categories.map((c) =>
+          analyticsApi.getCategoryEvolution(startDate, finishDate, c.categoryId, c.categoryName, tagIds),
+        ),
       );
-      // merge arrays: each call returns points per month with {label, [categoryName]: value}
-      // flatten into a unified timeline keyed by label
-      const merged: Record<string, CategoryMonthlyData> = {};
+
+      const merged = new Map<string, CategoryMonthlyData>();
       for (const points of results) {
         for (const point of points) {
-          if (!merged[point.label]) merged[point.label] = { label: point.label };
-          Object.assign(merged[point.label], point);
+          const existing = merged.get(point.label);
+          if (existing) Object.assign(existing, point);
+          else merged.set(point.label, { ...point });
         }
       }
-      return Object.values(merged);
+
+      // A category with no spend in a month simply has no point there. Recharts would
+      // break the line at the gap, so the missing keys are filled with zero.
+      const series = [...merged.values()];
+      for (const point of series) {
+        for (const { categoryName } of categories) {
+          point[categoryName] ??= 0;
+        }
+      }
+      return series;
     },
     staleTime: rangeStaleTime(finishDate),
-    enabled: categoryIds.length > 0,
+    enabled: categories.length > 0,
   });
 
 export const useAnalyticsNetWorth = (startDate: string, finishDate: string) =>

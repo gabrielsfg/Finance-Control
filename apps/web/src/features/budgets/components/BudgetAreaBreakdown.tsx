@@ -17,7 +17,13 @@ export type AreaGroup = {
   incomeAllocated: number;
   incomeSpent: number;
   allocations: BudgetAllocation[];
+  /** The synthetic area holding spend with no allocation. Never has a target. */
+  isUnbudgeted: boolean;
 };
+
+/** A row with no allocation has no id of its own — see `isUnbudgeted` on the type. */
+const allocationKey = (a: BudgetAllocation) =>
+  a.isUnbudgeted ? `u-${a.subCategoryId}-${a.allocationType}` : `a-${a.id}`;
 
 export function groupByArea(allocations: BudgetAllocation[]): AreaGroup[] {
   const map = new Map<string, AreaGroup>();
@@ -26,12 +32,17 @@ export function groupByArea(allocations: BudgetAllocation[]): AreaGroup[] {
     if (!map.has(key)) {
       map.set(key, {
         areaName: alloc.areaName,
-        areaColor: getCategoryColor(alloc.categoryColor, alloc.categoryName),
+        // The unbudgeted area holds unrelated categories, so the first one's colour would
+        // be arbitrary. It is overspend by definition, so it takes the overspend colour.
+        areaColor: alloc.isUnbudgeted
+          ? "var(--clay)"
+          : getCategoryColor(alloc.categoryColor, alloc.categoryName),
         expenseAllocated: 0,
         expenseSpent: 0,
         incomeAllocated: 0,
         incomeSpent: 0,
         allocations: [],
+        isUnbudgeted: alloc.isUnbudgeted,
       });
     }
     const g = map.get(key)!;
@@ -44,16 +55,24 @@ export function groupByArea(allocations: BudgetAllocation[]): AreaGroup[] {
     }
     g.allocations.push(alloc);
   }
-  return Array.from(map.values());
+  // Planned areas first: the unbudgeted one is a consequence of the period, not part of
+  // the plan being reviewed.
+  return Array.from(map.values()).sort(
+    (a, b) => Number(a.isUnbudgeted) - Number(b.isUnbudgeted),
+  );
 }
 
 function AreaRow({ group }: { group: AreaGroup }) {
   const [open, setOpen] = useState(false);
 
-  const hasExpense = group.expenseAllocated > 0;
-  const hasIncome  = group.incomeAllocated  > 0;
-  const expensePct  = hasExpense ? (group.expenseSpent / group.expenseAllocated) * 100 : 0;
-  const incomePct   = hasIncome  ? (group.incomeSpent  / group.incomeAllocated)  * 100 : 0;
+  // A target is not what makes a block worth showing — spend is. The unbudgeted area has
+  // no target at all, and gating on `allocated > 0` is what used to hide it entirely.
+  const hasExpense = group.expenseAllocated > 0 || group.expenseSpent > 0;
+  const hasIncome  = group.incomeAllocated  > 0 || group.incomeSpent  > 0;
+  const hasExpenseTarget = group.expenseAllocated > 0;
+  const hasIncomeTarget  = group.incomeAllocated  > 0;
+  const expensePct  = hasExpenseTarget ? (group.expenseSpent / group.expenseAllocated) * 100 : 0;
+  const incomePct   = hasIncomeTarget  ? (group.incomeSpent  / group.incomeAllocated)  * 100 : 0;
   const expenseOver = group.expenseSpent > group.expenseAllocated;
   const expenseRemaining = group.expenseAllocated - group.expenseSpent;
 
@@ -76,15 +95,27 @@ function AreaRow({ group }: { group: AreaGroup }) {
               <div className="flex items-center justify-between mb-1">
                 <span className="text-text-muted text-[11px]">
                   Despesas · {formatCurrency(group.expenseSpent / 100)}
-                  <span className="text-text-muted/60"> / {formatCurrency(group.expenseAllocated / 100)}</span>
+                  {hasExpenseTarget && (
+                    <span className="text-text-muted/60"> / {formatCurrency(group.expenseAllocated / 100)}</span>
+                  )}
                 </span>
                 <span className={cn("text-[11px]", expenseOver ? "text-red" : "text-text-muted")}>
-                  {expenseOver
-                    ? `+${formatCurrency(Math.abs(expenseRemaining) / 100)}`
-                    : `${formatPercentNeutral(expensePct)}%`}
+                  {!hasExpenseTarget
+                    ? "sem meta"
+                    : expenseOver
+                      ? `+${formatCurrency(Math.abs(expenseRemaining) / 100)}`
+                      : `${formatPercentNeutral(expensePct)}%`}
                 </span>
               </div>
-              <ProgressBar value={group.expenseSpent} max={group.expenseAllocated} height={6} color={group.areaColor} tinted />
+              {/* No target means nothing to be a fraction of, so the bar reads as fully
+                  consumed rather than as 0%. */}
+              <ProgressBar
+                value={group.expenseSpent}
+                max={hasExpenseTarget ? group.expenseAllocated : group.expenseSpent}
+                height={6}
+                color={hasExpenseTarget ? group.areaColor : "var(--clay)"}
+                tinted
+              />
             </div>
           )}
           {hasIncome && (
@@ -92,11 +123,22 @@ function AreaRow({ group }: { group: AreaGroup }) {
               <div className="flex items-center justify-between mb-1">
                 <span className="text-text-muted text-[11px]">
                   Receitas · {formatCurrency(group.incomeSpent / 100)}
-                  <span className="text-text-muted/60"> / {formatCurrency(group.incomeAllocated / 100)}</span>
+                  {hasIncomeTarget && (
+                    <span className="text-text-muted/60"> / {formatCurrency(group.incomeAllocated / 100)}</span>
+                  )}
                 </span>
-                <span className="text-green text-[11px]">{formatPercentNeutral(incomePct)}%</span>
+                <span className={cn("text-[11px]", hasIncomeTarget ? "text-green" : "text-text-muted")}>
+                  {hasIncomeTarget ? `${formatPercentNeutral(incomePct)}%` : "sem meta"}
+                </span>
               </div>
-              <ProgressBar value={group.incomeSpent} max={group.incomeAllocated} height={6} color={group.areaColor} tinted overflowColor={group.areaColor} />
+              <ProgressBar
+                value={group.incomeSpent}
+                max={hasIncomeTarget ? group.incomeAllocated : group.incomeSpent}
+                height={6}
+                color={hasIncomeTarget ? group.areaColor : "var(--moss)"}
+                tinted
+                overflowColor={group.areaColor}
+              />
             </div>
           )}
         </div>
@@ -109,9 +151,10 @@ function AreaRow({ group }: { group: AreaGroup }) {
         <div className="border-border flex flex-col gap-3 border-t px-4 pb-4 pt-3">
           {group.allocations.map((alloc) => {
             const color = getCategoryColor(alloc.categoryColor, alloc.categoryName);
-            const over = alloc.spentPercentage > 100;
+            const hasTarget = alloc.allocated > 0;
+            const over = hasTarget ? alloc.spentPercentage > 100 : alloc.allocationType === "Expense";
             return (
-              <div key={alloc.id} className="border-l-2 pl-4" style={{ borderColor: `${color}60` }}>
+              <div key={allocationKey(alloc)} className="border-l-2 pl-4" style={{ borderColor: `${color}60` }}>
                 <div className="mb-1.5 flex items-center justify-between">
                   <div className="flex min-w-0 items-center gap-2">
                     {alloc.subCategoryEmoji && (
@@ -122,15 +165,16 @@ function AreaRow({ group }: { group: AreaGroup }) {
                   </div>
                   <div className="ml-2 flex shrink-0 items-center gap-2">
                     <span className={cn("font-mono text-[12px]", over ? "text-red" : "text-text-muted")}>
-                      {formatCurrency(alloc.spent / 100)} / {formatCurrency(alloc.allocated / 100)}
+                      {formatCurrency(alloc.spent / 100)}
+                      {hasTarget && ` / ${formatCurrency(alloc.allocated / 100)}`}
                     </span>
                   </div>
                 </div>
                 <ProgressBar
                   value={alloc.spent}
-                  max={alloc.allocated}
+                  max={hasTarget ? alloc.allocated : alloc.spent}
                   height={5}
-                  color={color}
+                  color={hasTarget ? color : alloc.allocationType === "Income" ? "var(--moss)" : "var(--clay)"}
                   tinted
                   overflowColor={alloc.allocationType === "Income" ? color : "var(--clay)"}
                 />

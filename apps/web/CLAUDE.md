@@ -164,7 +164,7 @@ h-9 rounded-lg border px-3 text-[13px] outline-none focus:border-green/60
 | **Seletor de opção genérico** (pill dropdown) | `components/shared/PillSelect` | Seletor compacto não-categoria/não-data (ex.: período de gráfico, ordenação). Borda verde quando o valor não é o default. |
 | **Abas / chips** | `components/shared/TabChips` | Alternância entre modos/visões (sub-tabs). Suporta `size="sm" \| "md"`. |
 | **Filtro multi-seção (popover "Filtros")** | `features/recurrences/components/RecurrencesFilters.tsx` ou `features/transactions/components/TransactionsFilters.tsx` | Popover com nav lateral de seções (Tipo, Categoria, Contas…), badges de contagem, "Limpar tudo" / "Aplicar". Botão trigger com badge de filtros ativos. |
-| **Filtro multi-seleção simples** (lista com check) | `features/investments/components/InvestmentTypeFilter.tsx` | Dropdown de checkboxes para mostrar/ocultar itens, com contador no trigger e "Mostrar todos". |
+| **Filtro multi-seleção simples** (lista com check) | `features/investments/components/InvestmentTypeFilter.tsx` | Dropdown de checkboxes para mostrar/ocultar itens, com contador no trigger e o par "Mostrar todos" / "Desmarcar todos" no rodapé. Zero itens selecionados é estado válido — quem consome precisa de empty state. |
 | **Barra de busca** | `features/transactions/components/TransactionsFilterBar.tsx` | Input pill arredondado com ícone `Search`; `focus-within:border-green/60`. |
 | **Botão** | `components/ui/button` | Variantes shadcn. Não estilizar `<button>` cru para ações primárias. |
 | **Totalizador / resumo** | `components/shared/StatCard` | Toda linha de KPI/summary (ver `feedback_statcard_pattern`). |

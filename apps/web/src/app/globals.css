@@ -390,3 +390,11 @@ html:has(.public-scope) body,
     transform: scaleX(var(--to, 1));
   }
 }
+
+/* Segmented flow: two complementary shares on ONE track. Sized by `width` (not
+   scaleX) so the pair always fills the track exactly; the mount keyframe grows
+   from 0 and later filter changes transition to the new share. */
+.split-fill {
+  animation: growWidth 0.55s var(--ease-settle);
+  transition: width var(--dur-slow) var(--ease-settle);
+}

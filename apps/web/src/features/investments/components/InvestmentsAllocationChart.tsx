@@ -8,7 +8,7 @@ import { PillSelect } from "@/components/shared/PillSelect";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { InvestmentPortfolio } from "@/lib/types/investments.types";
 import { pieAnim } from "@/lib/config/chartAnimation";
-import { assetClassColor, distinctColorsFor } from "@/lib/config/assetColors";
+import { assetTypeColor, distinctColorsFor } from "@/lib/config/assetColors";
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
@@ -24,54 +24,72 @@ const CustomTooltip = ({ active, payload }: any) => {
   );
 };
 
+const ALL = "all";
+
 type Props = { summary: InvestmentPortfolio };
 
 export const InvestmentsAllocationChart = ({ summary }: Props) => {
-  const [activeIndex, setActiveIndex]      = useState<number | undefined>(undefined);
-  const [selectedClass, setSelectedClass]  = useState<string>("all");
+  const [activeIndex, setActiveIndex]    = useState<number | undefined>(undefined);
+  // Keyed by assetType, not by the class label: the label is localised display text and
+  // the type is what the allocation is actually grouped by.
+  const [selectedType, setSelectedType]  = useState<string>(ALL);
 
   const onMouseEnter = useCallback((_: any, i: number) => setActiveIndex(i), []);
   const onMouseLeave = useCallback(() => setActiveIndex(undefined), []);
 
-  // Build ticker-level data for a given asset class
-  const tickerData = useMemo(() => {
-    if (selectedClass === "all") return null;
+  // One slice per asset type, carrying the same colour its badge has in the table.
+  const classSlices = useMemo(
+    () =>
+      summary.allocations.map((a) => ({
+        key:     a.assetType as string,
+        name:    a.assetClass,
+        value:   a.value,
+        percent: a.percent,
+        color:   assetTypeColor(a.assetType),
+      })),
+    [summary.allocations],
+  );
 
-    const classInvestments = summary.investments.filter((inv) => {
-      const alloc = summary.allocations.find((a) => a.assetType === inv.assetType);
-      return alloc?.assetClass === selectedClass;
-    });
+  // Drilled into one type: every holding would share that type's single colour, so the
+  // slices get their own palette, keyed by ticker so it survives a re-sort.
+  const tickerSlices = useMemo(() => {
+    if (selectedType === ALL) return null;
 
-    const totalClassValue = classInvestments.reduce((s, i) => s + i.currentValue, 0);
-    // Drilled into one class, every holding shares that class's colour — so the slices
-    // get their own palette here, keyed by ticker so it survives a re-sort.
-    const colors = distinctColorsFor(classInvestments.map((inv) => inv.ticker));
+    const holdings = summary.investments.filter((inv) => inv.assetType === selectedType);
+    const total    = holdings.reduce((s, i) => s + i.currentValue, 0);
+    const colors   = distinctColorsFor(holdings.map((inv) => inv.ticker));
 
-    return classInvestments.map((inv, idx) => ({
+    return holdings.map((inv, idx) => ({
+      key:     inv.ticker,
       name:    inv.ticker,
       value:   inv.currentValue,
-      percent: totalClassValue > 0 ? (inv.currentValue / totalClassValue) * 100 : 0,
+      percent: total > 0 ? (inv.currentValue / total) * 100 : 0,
       color:   colors[idx],
     }));
-  }, [selectedClass, summary]);
+  }, [selectedType, summary.investments]);
 
-  // At the class level the colours are the fixed ones — the same green for Ações and blue
-  // for ETFs the badges and the table already use.
-  const chartData = tickerData ?? summary.allocations.map((a) => ({
-    name: a.assetClass,
-    value: a.value,
-    percent: a.percent,
-    color: assetClassColor(a.assetClass),
-  }));
-  const centerValue = tickerData
-    ? formatCurrency(tickerData.reduce((s, t) => s + t.value, 0) / 100)
-    : formatCurrency(summary.currentValue / 100);
-  const centerLabel = selectedClass === "all" ? "Investido" : selectedClass;
+  const chartData    = tickerSlices ?? classSlices;
+  const selectedName = classSlices.find((s) => s.key === selectedType)?.name;
+  const isDrilled    = tickerSlices !== null;
+
+  const centerValue = formatCurrency(
+    (isDrilled ? chartData.reduce((s, t) => s + t.value, 0) : summary.currentValue) / 100,
+  );
+  const centerLabel = isDrilled ? selectedName ?? "" : "Investido";
 
   const classOptions = [
-    { value: "all", label: "Todas as classes" },
-    ...summary.allocations.map((a) => ({ value: a.assetClass, label: a.assetClass })),
+    { value: ALL, label: "Todas as classes" },
+    ...classSlices.map((s) => ({ value: s.key, label: s.name })),
   ];
+
+  const select = useCallback((type: string) => {
+    setSelectedType(type);
+    setActiveIndex(undefined);
+  }, []);
+
+  // Only the class-level slices lead anywhere — a ticker slice has nothing left to drill
+  // into, so it stays inert rather than offering a click that does nothing.
+  const drillTo = isDrilled ? undefined : (i: number) => select(chartData[i].key);
 
   if (summary.allocations.length === 0) {
     return (
@@ -85,15 +103,9 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
   return (
     <Card className="flex flex-col">
       <CardHead
-        title={selectedClass === "all" ? "Alocação por classe" : `Alocação · ${selectedClass}`}
-        subtitle={selectedClass === "all" ? "Distribuição atual da carteira" : "Distribuição por ticker"}
-        right={
-          <PillSelect
-            options={classOptions}
-            value={selectedClass}
-            onChange={(v) => { setSelectedClass(v); setActiveIndex(undefined); }}
-          />
-        }
+        title={isDrilled ? `Alocação · ${selectedName}` : "Alocação por classe"}
+        subtitle={isDrilled ? "Distribuição por ticker" : "Clique em uma classe para detalhar"}
+        right={<PillSelect options={classOptions} value={selectedType} onChange={select} />}
       />
 
       <div className="relative mt-1 w-full" style={{ height: 200 }}>
@@ -112,10 +124,12 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
               strokeWidth={0}
               onMouseEnter={onMouseEnter}
               onMouseLeave={onMouseLeave}
+              onClick={drillTo && ((_: unknown, i: number) => drillTo(i))}
+              className={drillTo ? "cursor-pointer" : undefined}
             >
               {chartData.map((entry, idx) => (
                 <Cell
-                  key={idx}
+                  key={entry.key}
                   fill={entry.color}
                   fillOpacity={activeIndex === undefined || activeIndex === idx ? 1 : 0.32}
                 />
@@ -131,18 +145,35 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
-        {chartData.map((item, idx) => (
-          <div key={idx} className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 shrink-0 rounded-[3px]" style={{ background: item.color }} />
-              <span className="text-[13px] text-[var(--text-sub)]">{item.name}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-[13px] tabular-nums text-[var(--text)]">{formatCurrency(item.value / 100)}</span>
-              <span className="w-12 text-right font-mono text-[12px] tabular-nums text-[var(--text-sub)]">{item.percent.toFixed(1)}%</span>
-            </div>
-          </div>
-        ))}
+        {chartData.map((item, idx) => {
+          const Row = drillTo ? "button" : "div";
+          return (
+            <Row
+              key={item.key}
+              {...(drillTo
+                ? {
+                    type: "button" as const,
+                    onClick: () => drillTo(idx),
+                    onMouseEnter: () => setActiveIndex(idx),
+                    onMouseLeave: () => setActiveIndex(undefined),
+                  }
+                : {})}
+              className={[
+                "-mx-1 flex items-center justify-between rounded-[9px] px-1 py-0.5 text-left transition-colors",
+                drillTo ? "cursor-pointer hover:bg-[var(--surface2)]" : "",
+              ].join(" ")}
+            >
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 shrink-0 rounded-[3px]" style={{ background: item.color }} />
+                <span className="text-[13px] text-[var(--text-sub)]">{item.name}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-[13px] tabular-nums text-[var(--text)]">{formatCurrency(item.value / 100)}</span>
+                <span className="w-12 text-right font-mono text-[12px] tabular-nums text-[var(--text-sub)]">{item.percent.toFixed(1)}%</span>
+              </div>
+            </Row>
+          );
+        })}
       </div>
     </Card>
   );

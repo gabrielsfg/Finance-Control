@@ -56,7 +56,7 @@ export const AccountsNetWorthHero = ({ accounts }: { accounts: AccountItem[] }) 
       {/* Right — available vs. invoice */}
       <div className="self-center">
         <div className="mb-[18px] flex items-baseline justify-between">
-          <span className="font-display text-[16px] font-bold">Disponível vs. fatura</span>
+          <span className="font-display text-[16px] font-bold">Disponível vs. Fatura</span>
           <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--panel-muted)]">
             {accounts.length} conta{accounts.length !== 1 ? "s" : ""}
           </span>

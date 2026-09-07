@@ -3,9 +3,17 @@
 import { formatPercentNeutral } from "@/lib/utils/formatNumber";
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
-import { FlowRow } from "@/components/shared/FlowBar";
+import { FlowLabelRow, FlowSplit } from "@/components/shared/FlowBar";
 import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
 import type { InvestmentPortfolio } from "@/lib/types/investments.types";
+
+/**
+ * The principal gets a hue of its own. Sharing `--moss-lift` with a positive return was
+ * fine on two separate tracks, but on one segmented track it would draw as a single
+ * undivided bar — the return only ever reads as green or clay, so the principal moves off
+ * green entirely.
+ */
+const PRINCIPAL_COLOR = "var(--cobalt-lift)";
 
 type Props = { summary: InvestmentPortfolio };
 
@@ -20,10 +28,18 @@ export const InvestmentsSummaryHero = ({ summary }: Props) => {
   );
   const dayPositive = dayChange >= 0;
 
-  // Composition: invested principal vs. accumulated return, both relative to current value.
-  const total = summary.currentValue;
-  const investedPct = total > 0 ? Math.min(1, summary.totalInvested / total) : 0;
-  const returnPct = total > 0 ? Math.max(0, summary.totalReturn) / total : 0;
+  // Principal plus return compose the current patrimônio, on one track.
+  //
+  //   gain: aportado + rendimento = patrimônio   (the return extends the bar)
+  //   loss: aportado − prejuízo   = patrimônio   (the loss eats into the bar)
+  //
+  // A loss cannot be a segment *added* to a filled track, so on a loss the track is the
+  // aportado and the clay segment is the bite taken out of it — what is left is the
+  // patrimônio. Either way the cobalt side is the principal and the coloured side is the
+  // return, so the bar always answers the same question: how did my principal move?
+  const isLoss = summary.totalReturn < 0;
+  const returnAbs = Math.abs(summary.totalReturn);
+  const trackCaption = isLoss ? "= total aportado" : "= patrimônio atual";
 
   return (
     <HeroPanel split>
@@ -86,20 +102,18 @@ export const InvestmentsSummaryHero = ({ summary }: Props) => {
         <div className="mb-[18px] flex items-baseline justify-between">
           <span className="font-display text-[16px] font-bold">Composição</span>
           <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--panel-muted)]">
-            desde o 1º aporte
+            {trackCaption}
           </span>
         </div>
 
-        <FlowRow
+        <FlowLabelRow
           label="Total aportado"
-          dotColor="var(--moss-lift)"
+          dotColor={PRINCIPAL_COLOR}
           value={<AnimatedCurrency cents={summary.totalInvested} />}
-          valueColor="var(--moss-lift)"
-          pct={investedPct}
-          variant="in"
+          valueColor={PRINCIPAL_COLOR}
         />
-        <FlowRow
-          label="Rendimento"
+        <FlowLabelRow
+          label={isLoss ? "Prejuízo" : "Rendimento"}
           dotColor={returnColor}
           value={
             <>
@@ -108,8 +122,14 @@ export const InvestmentsSummaryHero = ({ summary }: Props) => {
             </>
           }
           valueColor={returnColor}
-          pct={returnPct}
-          variant={isPositive ? "in" : "out"}
+        />
+
+        <FlowSplit
+          inValue={isLoss ? summary.currentValue : summary.totalInvested}
+          outValue={returnAbs}
+          inColor={PRINCIPAL_COLOR}
+          outColor={returnColor}
+          tick={false}
         />
 
         <div

@@ -16,17 +16,8 @@ import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrenc
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { ChartEmptyState } from "@/components/shared/ChartEmptyState";
 import { analyticsApi } from "@/lib/api/analytics";
+import type { MonthlyData } from "@/lib/types/analytics.types";
 import { chartAnim } from "@/lib/config/chartAnimation";
-
-type IncomeExpenseItem = {
-  month: number;
-  year: number;
-  label?: string;
-  totalIncome: number;
-  totalExpense: number;
-};
-
-const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 function getLast12MonthsRange() {
   const now = new Date();
@@ -36,7 +27,7 @@ function getLast12MonthsRange() {
   return { startDate: fmt(start), finishDate: fmt(end) };
 }
 
-const fetchMonthlyEvolution = (): Promise<IncomeExpenseItem[]> => {
+const fetchMonthlyEvolution = (): Promise<MonthlyData[]> => {
   const { startDate, finishDate } = getLast12MonthsRange();
   return analyticsApi.getIncomeExpense(startDate, finishDate);
 };
@@ -63,7 +54,7 @@ export const MonthlyEvolutionChart = () => {
   });
 
   const chartData = data?.slice(-12).map((item) => ({
-    label: item.label ?? MONTH_LABELS[item.month - 1],
+    label: item.label,
     Receitas: item.totalIncome,
     Despesas: item.totalExpense,
   })) ?? [];

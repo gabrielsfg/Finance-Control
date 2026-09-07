@@ -85,14 +85,6 @@ export type InvestmentEvolutionResponse = {
   cumulativeDividends: number;
 };
 
-// ── /api/analytics/projection/net-worth ──────────────────────────────────────
-export type ProjectionPoint = {
-  label: string;
-  conservative: number;
-  moderate: number;
-  optimistic: number;
-};
-
 // ── Investment profitability ──────────────────────────────────────────────────
 export type ProfitabilityTotals = {
   allTime: { returnPct: number; vsCdiPct: number };

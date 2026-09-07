@@ -25,6 +25,34 @@ import type {
   SavingsDetailResponse,
 } from "@/lib/types/analytics.types";
 
+/**
+ * `/analytics/income-expense` and `/analytics/category-evolution` return a raw
+ * `{ month, year, ... }` point — no display label, and no derived balance.
+ *
+ * Both charts read `label` as their category axis. When it is missing, every point
+ * collapses onto the same undefined band and Recharts positions the marks at NaN: the
+ * axes still render from the numeric domain, so the card looks alive while the series
+ * is invisible. Building the label here keeps that failure impossible — the exported
+ * types describe what callers actually receive.
+ */
+const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+/** "Set/25" — short enough for a dense axis, unambiguous across a year boundary. */
+export function monthPointLabel(month: number, year: number): string {
+  return `${MONTH_LABELS[month - 1] ?? month}/${String(year).slice(-2)}`;
+}
+
+type RawMonthlyPoint = { month: number; year: number; totalIncome: number; totalExpense: number };
+type RawCategoryPoint = { month: number; year: number; total: number };
+
+/** Per-account balance at a point in time; negative for a liability (e.g. a card). */
+type RawNetWorthPoint = {
+  month: number;
+  year: number;
+  netWorth: number;
+  breakdown: { accountId: number; accountName: string; balance: number }[];
+};
+
 export const analyticsApi = {
   getSummary: async (startDate: string, finishDate: string, tagIds?: number[]): Promise<AnalyticsSummaryResponse> => {
     const response = await api.get<AnalyticsSummaryResponse>("/analytics/summary", {
@@ -34,10 +62,14 @@ export const analyticsApi = {
   },
 
   getIncomeExpense: async (startDate: string, finishDate: string, tagIds?: number[]): Promise<MonthlyData[]> => {
-    const response = await api.get<MonthlyData[]>("/analytics/income-expense", {
+    const response = await api.get<RawMonthlyPoint[]>("/analytics/income-expense", {
       params: { startDate, finishDate, ...(tagIds?.length ? { tagIds } : {}) },
     });
-    return response.data;
+    return response.data.map((point) => ({
+      ...point,
+      label: monthPointLabel(point.month, point.year),
+      balance: point.totalIncome - point.totalExpense,
+    }));
   },
 
   getSpendingHeatmap: async (startDate: string, finishDate: string, tagIds?: number[]): Promise<DaySpend[]> => {
@@ -47,23 +79,52 @@ export const analyticsApi = {
     return response.data;
   },
 
+  /**
+   * One category's monthly totals. The endpoint does not echo which category it answered
+   * for, so the caller names the series — that name becomes the point's key, which is
+   * what the chart's `dataKey` reads.
+   */
   getCategoryEvolution: async (
     startDate: string,
     finishDate: string,
     categoryId: number,
+    categoryName: string,
     tagIds?: number[],
   ): Promise<CategoryMonthlyData[]> => {
-    const response = await api.get<CategoryMonthlyData[]>("/analytics/category-evolution", {
+    const response = await api.get<RawCategoryPoint[]>("/analytics/category-evolution", {
       params: { startDate, finishDate, categoryId, ...(tagIds?.length ? { tagIds } : {}) },
     });
-    return response.data;
+    return response.data.map((point) => ({
+      label: monthPointLabel(point.month, point.year),
+      [categoryName]: point.total,
+    }));
   },
 
+  /**
+   * The endpoint reports `netWorth` plus a per-account breakdown; the split into assets
+   * and liabilities is the sign of each account's balance. Deriving it here is what makes
+   * the returned `NetWorthPoint` true — the chart's "Ativos"/"Passivos" series and the
+   * summary tiles read those two fields, and were silently getting `undefined` (the tiles'
+   * `?? 0` printed R$ 0,00, and the missing `label` left the whole chart blank).
+   */
   getNetWorthEvolution: async (startDate: string, finishDate: string): Promise<NetWorthPoint[]> => {
-    const response = await api.get<NetWorthPoint[]>("/analytics/net-worth-evolution", {
+    const response = await api.get<RawNetWorthPoint[]>("/analytics/net-worth-evolution", {
       params: { startDate, finishDate },
     });
-    return response.data;
+    return response.data.map((point) => {
+      let assets = 0;
+      let liabilities = 0;
+      for (const account of point.breakdown ?? []) {
+        if (account.balance >= 0) assets += account.balance;
+        else liabilities -= account.balance;
+      }
+      return {
+        label: monthPointLabel(point.month, point.year),
+        netWorth: point.netWorth,
+        assets,
+        liabilities,
+      };
+    });
   },
 
   getNetWorthProjection: async (projectionMonths = 24): Promise<NetWorthProjectionResponse> => {

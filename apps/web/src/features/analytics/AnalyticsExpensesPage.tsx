@@ -37,8 +37,10 @@ export function AnalyticsExpensesPage() {
   const summary = useAnalyticsSummary(start, finish, activeTagIds);
   const monthly = useAnalyticsMonthly(start, finish, activeTagIds);
   const heatmap = useAnalyticsHeatmap(calendarMonthStart, calendarEnd, activeTagIds);
-  const categoryIds = summary.data?.categoryBreakdown.items.map((c) => c.categoryId) ?? [];
-  const catEvol = useAnalyticsCategoryEvolution(start, finish, categoryIds, activeTagIds);
+  // The same items the chart draws its legend from, so the series keys and the legend
+  // cannot name different things.
+  const evolutionCategories = summary.data?.categoryBreakdown.items ?? [];
+  const catEvol = useAnalyticsCategoryEvolution(start, finish, evolutionCategories, activeTagIds);
 
   if (summary.isLoading || monthly.isLoading) {
     return (

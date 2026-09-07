@@ -15,6 +15,27 @@ const MONTH_NAMES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
+/**
+ * The month-over-month marker on a day cell.
+ *
+ * It sits on top of a heatmap tint that runs from near-transparent to fully saturated, in
+ * both themes — so no single ink colour works. It was hardcoded white, which vanished on
+ * the light tints in light mode. Giving it its own surface-coloured chip decouples it from
+ * whatever is underneath, and lets the arrow itself carry the meaning in colour: up (spent
+ * more than last month) reads red, down reads green.
+ */
+function VsLastMonthBadge({ direction }: { direction: "up" | "down" }) {
+  const Icon = direction === "up" ? ArrowUp : ArrowDown;
+  return (
+    <span
+      className="flex h-[15px] w-[15px] items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--surface)]"
+      style={{ color: direction === "up" ? "var(--red)" : "var(--green)" }}
+    >
+      <Icon size={9} strokeWidth={3.5} />
+    </span>
+  );
+}
+
 type Props = { data: DaySpend[]; month: string; onPrev: () => void; onNext: () => void };
 
 const BG: Record<DayHeatmapState, string> = {
@@ -131,16 +152,13 @@ export const AnalyticsSpendCalendar = ({ data, month, onPrev, onNext }: Props) =
                     : formatCurrency(expense / 100).replace("R$ ", "")}
                 </span>
               )}
-              {/* vs last month arrow */}
+              {/* vs last month — inset past the corner radius, which used to clip it */}
               {vsLast !== null && expense > 0 && (
                 <div
-                  className="absolute top-0.5 right-0.5 text-white"
+                  className="absolute top-1.5 right-1.5"
                   title={vsLast > 0 ? `+${formatCurrency(vsLast / 100)} vs mês anterior` : `${formatCurrency(vsLast / 100)} vs mês anterior`}
                 >
-                  {vsLast > 0
-                    ? <ArrowUp size={13} strokeWidth={3} />
-                    : <ArrowDown size={13} strokeWidth={3} />
-                  }
+                  <VsLastMonthBadge direction={vsLast > 0 ? "up" : "down"} />
                 </div>
               )}
               {/* neutral: no movement */}
@@ -173,9 +191,9 @@ export const AnalyticsSpendCalendar = ({ data, month, onPrev, onNext }: Props) =
           <span className="text-text-muted text-[11px]">Sem movimentação</span>
         </div>
         <div className="flex items-center gap-2">
-          <ArrowUp size={10} strokeWidth={2.5} className="text-text-muted" />
+          <VsLastMonthBadge direction="up" />
           <span className="text-text-muted text-[11px]">Mais que mês anterior</span>
-          <ArrowDown size={10} strokeWidth={2.5} className="text-text-muted ml-1" />
+          <VsLastMonthBadge direction="down" />
           <span className="text-text-muted text-[11px]">Menos que mês anterior</span>
         </div>
       </div>
