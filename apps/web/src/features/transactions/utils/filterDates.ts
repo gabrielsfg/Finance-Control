@@ -50,6 +50,13 @@ export function defaultTxFilter(): TransactionsFilter {
   };
 }
 
+/** A half-filled range is a single day — see the custom-range branch of buildPeriodRange. */
+function customRangeLabel(filter: TransactionsFilter): string {
+  const start = filter.startDate || filter.finishDate;
+  const finish = filter.finishDate || filter.startDate;
+  return start === finish ? start : `${start} → ${finish}`;
+}
+
 export function activeTxDateLabel(filter: TransactionsFilter): string {
   const PRESET_LABELS: Record<TxDatePreset, string> = {
     "budget-cycle":   "Ciclo do orçamento",
@@ -60,7 +67,7 @@ export function activeTxDateLabel(filter: TransactionsFilter): string {
     "current-year":   "Este ano",
     "custom-year":    String(filter.customYear),
     "all-time":       "Todo o período",
-    "custom-range":   `${filter.startDate} → ${filter.finishDate}`,
+    "custom-range":   customRangeLabel(filter),
   };
   return PRESET_LABELS[filter.preset];
 }

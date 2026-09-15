@@ -9,10 +9,18 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
 
         /// <summary>Income in the period, excluding proceeds from investment sells.</summary>
         public int Income { get; set; }
-        /// <summary>Expenses in the period, excluding investment buys.</summary>
+        /// <summary>
+        /// Expenses in the period, excluding investment buys and anything filed under a
+        /// subcategory the user marked as savings.
+        /// </summary>
         public int Expense { get; set; }
-        /// <summary>Net amount moved into investments (buys − sells).</summary>
+        /// <summary>
+        /// Money set aside: net investment buys (buys − sells) plus spending on
+        /// subcategories marked as savings.
+        /// </summary>
         public int Invested { get; set; }
+        /// <summary>The savings-subcategory share of <see cref="Invested"/>.</summary>
+        public int SavedInCategories { get; set; }
         /// <summary>Net transfers into goal (system) accounts.</summary>
         public int GoalContributions { get; set; }
         public int Savings { get; set; }
@@ -47,6 +55,12 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
         public string AreaName { get; set; } = string.Empty;
         public int Allocated { get; set; }
         public int Spent { get; set; }
+
+        /// <summary>
+        /// Spending here is money kept. Going over the plan on it is a win, so it is not a
+        /// leak and it does not count against adherence.
+        /// </summary>
+        public bool IsSavings { get; set; }
     }
 
     public class SavingsAreaImpactDto
@@ -55,5 +69,8 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
         public string Name { get; set; } = string.Empty;
         public int PlannedExpense { get; set; }
         public int ActualExpense { get; set; }
+
+        /// <summary>Every expense allocation in the area is a savings one.</summary>
+        public bool IsSavings { get; set; }
     }
 }

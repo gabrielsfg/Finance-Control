@@ -3,7 +3,7 @@
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
-import { FlowLabelRow, FlowSplit } from "@/components/shared/FlowBar";
+import { FlowLabelRow, FlowShareChip, FlowSplit, flowShares } from "@/components/shared/FlowBar";
 import { AnimatedCurrency, AnimatedCount } from "@/components/shared/AnimatedValue";
 
 type Props = {
@@ -15,7 +15,7 @@ type Props = {
   previousBalance?: number;
 };
 
-/** Month-over-month %. Returns undefined for any non-comparable input (no NaN/Infinity). */
+/** Change against the previous period. Undefined for non-comparable input (no NaN/Infinity). */
 function pctChange(current: number, previous: number | undefined | null): number | undefined {
   if (previous == null || !Number.isFinite(previous) || previous === 0) return undefined;
   if (!Number.isFinite(current)) return undefined;
@@ -40,16 +40,6 @@ function ChangeChip({ pct, lowerIsBetter = false }: { pct: number | undefined; l
   );
 }
 
-/** The side's share of the period volume — the number the flow bar draws. */
-function ShareChip({ pct }: { pct: number | undefined }) {
-  if (pct === undefined) return null;
-  return (
-    <span className="mr-[9px] font-mono text-[11px] font-normal text-[var(--panel-muted)]">
-      <AnimatedCount value={pct} decimals={1} suffix="%" />
-    </span>
-  );
-}
-
 export const TransactionsSummary = ({
   totalIncome,
   totalExpense,
@@ -64,14 +54,13 @@ export const TransactionsSummary = ({
 
   // The flow bar is a composition: both segments share one track and sum to the
   // volume moved in the period, so each side reads as its share of that volume.
-  const volume = totalIncome + totalExpense;
-  const share = (v: number) => (volume > 0 ? (v / volume) * 100 : undefined);
+  const { inPct, outPct } = flowShares(totalIncome, totalExpense);
 
   return (
     <HeroPanel split>
       {/* Left — balance + month-over-month */}
       <div>
-        <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Saldo do mês</div>
+        <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Saldo do período</div>
         <BigMoney
           cents={balance}
           className={`block mt-[10px] mb-[2px] font-semibold leading-[0.96] tracking-[-0.035em] ${
@@ -79,10 +68,12 @@ export const TransactionsSummary = ({
           }`}
           style={{ fontSize: "clamp(40px, 5.6vw, 70px)" } as React.CSSProperties}
         />
-        <div className="mt-2 inline-flex items-center gap-[7px] font-mono text-[13px] font-medium">
-          <ChangeChip pct={balancePct} />
-          <span className="text-[var(--panel-muted)]">vs. mês anterior</span>
-        </div>
+        {balancePct !== undefined && (
+          <div className="mt-2 inline-flex items-center gap-[7px] font-mono text-[13px] font-medium">
+            <ChangeChip pct={balancePct} />
+            <span className="text-[var(--panel-muted)]">vs. período anterior</span>
+          </div>
+        )}
 
         <div className="mt-6 flex flex-wrap gap-[26px]">
           <div>
@@ -118,7 +109,7 @@ export const TransactionsSummary = ({
           dotColor="var(--moss-lift)"
           value={
             <>
-              <ShareChip pct={share(totalIncome)} />
+              <FlowShareChip pct={inPct} />
               {"+ "}
               <AnimatedCurrency cents={totalIncome} />
             </>
@@ -130,7 +121,7 @@ export const TransactionsSummary = ({
           dotColor="var(--clay-lift)"
           value={
             <>
-              <ShareChip pct={share(totalExpense)} />
+              <FlowShareChip pct={outPct} />
               {"\u2212 "}
               <AnimatedCurrency cents={totalExpense} />
             </>
@@ -144,7 +135,7 @@ export const TransactionsSummary = ({
         </div>
 
         <div className="mt-5 flex items-center justify-between border-t pt-4" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
-          <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">Saldo do mês</span>
+          <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">Saldo do período</span>
           <span
             className="font-mono text-[22px] font-semibold"
             style={{ color: balance >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}

@@ -11,5 +11,6 @@ namespace FinanceControl.Shared.Dtos.Request
         public string Name { get; set; }
         public string? Emoji { get; set; }
         public int CategoryId { get; set; }
+        public bool IsSavings { get; set; }
     }
 }

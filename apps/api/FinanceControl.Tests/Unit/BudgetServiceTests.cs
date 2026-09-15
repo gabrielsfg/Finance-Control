@@ -316,7 +316,7 @@ namespace FinanceControl.Tests.Unit
         }
 
         [Fact]
-        public async Task GetAllBudgets_IncomeOnAnExpenseAllocatedSubCategory_IsUnbudgeted()
+        public async Task GetAllBudgets_IncomeOnAnExpenseAllocatedSubCategory_IsDiscountedFromIt()
         {
             using var context = DbContextHelper.CreateInMemory();
             var service = new BudgetService(context);
@@ -376,15 +376,17 @@ namespace FinanceControl.Tests.Unit
             var result = await service.GetAllBudgetAsync(user.Id);
             var dto = Assert.Single(result);
 
-            var unbudgeted = Assert.Single(dto.Allocations, a => a.IsUnbudgeted);
-            Assert.Equal(EnumAllocationType.Income, unbudgeted.AllocationType);
-            Assert.Equal(700, unbudgeted.Spent);
-            Assert.Equal(700, dto.TotalReceived);
-            Assert.Equal(0, dto.TotalSpent);
+            // The refund belongs to the allocation it undoes, not to a row of its own.
+            Assert.DoesNotContain(dto.Allocations, a => a.IsUnbudgeted);
+            var alloc = Assert.Single(dto.Allocations);
+            Assert.Equal(EnumAllocationType.Expense, alloc.AllocationType);
+            Assert.Equal(-700, alloc.Spent);
+            Assert.Equal(0, dto.TotalReceived);
+            Assert.Equal(-700, dto.TotalSpent);
         }
 
         [Fact]
-        public async Task GetBudgetWithAllocations_SpentValue_SeparatesIncomeFromExpense()
+        public async Task GetBudgetWithAllocations_SpentValue_NetsIncomeAgainstTheExpenseAllocation()
         {
             using var context = DbContextHelper.CreateInMemory();
             var service = new BudgetService(context);
@@ -440,7 +442,7 @@ namespace FinanceControl.Tests.Unit
                 PaymentType = EnumPaymentType.OneTime,
             });
 
-            // Income transaction — should NOT count towards expense allocation
+            // Income transaction — money that came back, discounted from the expense
             context.Transactions.Add(new Transaction
             {
                 UserId = user.Id,
@@ -459,7 +461,174 @@ namespace FinanceControl.Tests.Unit
             var result = await service.GetBudgetWithAllocationsAsync(budget.Id, user.Id);
 
             var alloc = result.Areas.First().Allocations.First();
-            Assert.Equal(150, alloc.SpentValue);
+            Assert.Equal(150 - 500, alloc.SpentValue);
+        }
+
+        [Fact]
+        public async Task GetAllBudgets_PartialRefund_CountsOnlyTheNetAgainstTheTarget()
+        {
+            using var context = DbContextHelper.CreateInMemory();
+            var service = new BudgetService(context);
+
+            var user = new User { Email = "net@test.com", Name = "Net", PasswordHash = "x" };
+            context.Users.Add(user);
+            var category = new Domain.Entities.Category { Name = "Cat", UserId = 1 };
+            context.Categories.Add(category);
+            await context.SaveChangesAsync();
+
+            var subCat = new SubCategory { Name = "Sub", CategoryId = category.Id, UserId = user.Id };
+            context.SubCategories.Add(subCat);
+            var account = new Account { Name = "Wallet", UserId = user.Id, Type = EnumAccountType.Checking };
+            context.Accounts.Add(account);
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var budget = new Budget
+            {
+                Name = "Budget",
+                UserId = user.Id,
+                IsActive = true,
+                StartDate = today.Day,
+                Recurrence = EnumBudgetRecurrence.Monthly,
+            };
+            context.Budgets.Add(budget);
+            await context.SaveChangesAsync();
+
+            var area = new Area { Name = "Area", BudgetId = budget.Id, UserId = user.Id };
+            context.Areas.Add(area);
+            await context.SaveChangesAsync();
+
+            context.BudgetSubcategoryAllocations.Add(new BudgetSubcategoryAllocation
+            {
+                BudgetId = budget.Id,
+                AreaId = area.Id,
+                SubCategoryId = subCat.Id,
+                ExpectedValue = 5000,
+                AllocationType = EnumAllocationType.Expense,
+            });
+
+            context.Transactions.Add(new Transaction
+            {
+                UserId = user.Id,
+                BudgetId = budget.Id,
+                SubCategoryId = subCat.Id,
+                AccountId = account.Id,
+                Value = 7000,
+                Type = EnumTransactionType.Expense,
+                Description = "Spend",
+                TransactionDate = today,
+                PaymentType = EnumPaymentType.OneTime,
+            });
+
+            context.Transactions.Add(new Transaction
+            {
+                UserId = user.Id,
+                BudgetId = budget.Id,
+                SubCategoryId = subCat.Id,
+                AccountId = account.Id,
+                Value = 4000,
+                Type = EnumTransactionType.Income,
+                Description = "Reimbursement",
+                TransactionDate = today,
+                PaymentType = EnumPaymentType.OneTime,
+            });
+
+            await context.SaveChangesAsync();
+
+            var result = await service.GetAllBudgetAsync(user.Id);
+            var dto = Assert.Single(result);
+
+            // 7.000 out, 4.000 back: 3.000 of the 5.000 target, still inside it.
+            var alloc = Assert.Single(dto.Allocations);
+            Assert.Equal(3000, alloc.Spent);
+            Assert.Equal(60, alloc.SpentPercentage);
+            Assert.Equal(3000, dto.TotalSpent);
+            Assert.Equal(2000, dto.Available);
+        }
+
+        [Fact]
+        public async Task GetAllBudgets_SubCategoryAllocatedBothWays_DoesNotNet()
+        {
+            using var context = DbContextHelper.CreateInMemory();
+            var service = new BudgetService(context);
+
+            var user = new User { Email = "two@test.com", Name = "Two", PasswordHash = "x" };
+            context.Users.Add(user);
+            var category = new Domain.Entities.Category { Name = "Cat", UserId = 1 };
+            context.Categories.Add(category);
+            await context.SaveChangesAsync();
+
+            var subCat = new SubCategory { Name = "Sub", CategoryId = category.Id, UserId = user.Id };
+            context.SubCategories.Add(subCat);
+            var account = new Account { Name = "Wallet", UserId = user.Id, Type = EnumAccountType.Checking };
+            context.Accounts.Add(account);
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var budget = new Budget
+            {
+                Name = "Budget",
+                UserId = user.Id,
+                IsActive = true,
+                StartDate = today.Day,
+                Recurrence = EnumBudgetRecurrence.Monthly,
+            };
+            context.Budgets.Add(budget);
+            await context.SaveChangesAsync();
+
+            var area = new Area { Name = "Area", BudgetId = budget.Id, UserId = user.Id };
+            context.Areas.Add(area);
+            await context.SaveChangesAsync();
+
+            // The plan already has a row for each direction, so neither may discount the other.
+            context.BudgetSubcategoryAllocations.Add(new BudgetSubcategoryAllocation
+            {
+                BudgetId = budget.Id,
+                AreaId = area.Id,
+                SubCategoryId = subCat.Id,
+                ExpectedValue = 5000,
+                AllocationType = EnumAllocationType.Expense,
+            });
+            context.BudgetSubcategoryAllocations.Add(new BudgetSubcategoryAllocation
+            {
+                BudgetId = budget.Id,
+                AreaId = area.Id,
+                SubCategoryId = subCat.Id,
+                ExpectedValue = 4000,
+                AllocationType = EnumAllocationType.Income,
+            });
+
+            context.Transactions.Add(new Transaction
+            {
+                UserId = user.Id,
+                BudgetId = budget.Id,
+                SubCategoryId = subCat.Id,
+                AccountId = account.Id,
+                Value = 7000,
+                Type = EnumTransactionType.Expense,
+                Description = "Spend",
+                TransactionDate = today,
+                PaymentType = EnumPaymentType.OneTime,
+            });
+
+            context.Transactions.Add(new Transaction
+            {
+                UserId = user.Id,
+                BudgetId = budget.Id,
+                SubCategoryId = subCat.Id,
+                AccountId = account.Id,
+                Value = 4000,
+                Type = EnumTransactionType.Income,
+                Description = "Planned income",
+                TransactionDate = today,
+                PaymentType = EnumPaymentType.OneTime,
+            });
+
+            await context.SaveChangesAsync();
+
+            var result = await service.GetAllBudgetAsync(user.Id);
+            var dto = Assert.Single(result);
+
+            Assert.Equal(7000, dto.TotalSpent);
+            Assert.Equal(4000, dto.TotalReceived);
         }
     }
 }

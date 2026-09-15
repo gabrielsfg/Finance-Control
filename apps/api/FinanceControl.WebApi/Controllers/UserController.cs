@@ -457,55 +457,55 @@ namespace FinanceControl.WebApi.Controllers
 
         // ── Cookie helpers ────────────────────────────────────────────────────
 
-        private void SetRefreshTokenCookie(string refreshToken)
+        // Shared shape for both session cookies. They carry the same weight — whoever
+        // holds either one can assume the session — so they get the same protections.
+        //
+        // `Secure` tracks the request scheme rather than being pinned to `true`, and the
+        // difference is not cosmetic: a `Secure` cookie arriving over plain HTTP is
+        // dropped by the browser. Chrome makes an exception for `http://localhost`;
+        // Safari does not, so a hardcoded `Secure = true` meant every Safari login in
+        // development returned 200 and then went nowhere — the cookie never landed, the
+        // Next.js proxy saw no `refreshToken`, and it bounced the user back to /login.
+        //
+        // In production this still resolves to `true`: the reverse proxy terminates TLS
+        // and UseForwardedHeaders (Program.cs) restores the original scheme before this
+        // runs, and CookiePolicyOptions.Secure = Always is the backstop if it ever
+        // doesn't. That policy cannot be the fix on its own — CookiePolicy only ever
+        // strengthens a cookie, so `SameAsRequest` can add `Secure` but never remove it.
+        private CookieOptions SessionCookie(DateTimeOffset expires) => new()
         {
-            Response.Cookies.Append(RefreshTokenCookieName, refreshToken, new CookieOptions
-            {
-                HttpOnly = true,   // JavaScript cannot read this cookie
-                Secure = true,     // HTTPS only
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(30),
-                Path = "/"
-            });
-        }
+            HttpOnly = true,          // JavaScript cannot read this cookie
+            Secure = Request.IsHttps, // HTTPS only wherever the request is HTTPS
+            SameSite = SameSiteMode.Strict,
+            Expires = expires,
+            Path = "/"
+        };
 
-        private void ClearRefreshTokenCookie()
-        {
-            Response.Cookies.Append(RefreshTokenCookieName, string.Empty, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UnixEpoch,
-                Path = "/"
-            });
-        }
+        private void SetRefreshTokenCookie(string refreshToken) =>
+            Response.Cookies.Append(
+                RefreshTokenCookieName,
+                refreshToken,
+                SessionCookie(DateTimeOffset.UtcNow.AddDays(30)));
+
+        private void ClearRefreshTokenCookie() =>
+            Response.Cookies.Append(
+                RefreshTokenCookieName,
+                string.Empty,
+                SessionCookie(DateTimeOffset.UnixEpoch));
 
         // Same protections as the refresh cookie, and for the same reason: whoever holds
         // this value skips the second factor, so script must never be able to read it.
         // Its lifetime matches TrustedDeviceLifetime in UserService.
-        private void SetTrustedDeviceCookie(string trustedDeviceToken)
-        {
-            Response.Cookies.Append(TrustedDeviceCookieName, trustedDeviceToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(30),
-                Path = "/"
-            });
-        }
+        private void SetTrustedDeviceCookie(string trustedDeviceToken) =>
+            Response.Cookies.Append(
+                TrustedDeviceCookieName,
+                trustedDeviceToken,
+                SessionCookie(DateTimeOffset.UtcNow.AddDays(30)));
 
-        private void ClearTrustedDeviceCookie()
-        {
-            Response.Cookies.Append(TrustedDeviceCookieName, string.Empty, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UnixEpoch,
-                Path = "/"
-            });
-        }
+        private void ClearTrustedDeviceCookie() =>
+            Response.Cookies.Append(
+                TrustedDeviceCookieName,
+                string.Empty,
+                SessionCookie(DateTimeOffset.UnixEpoch));
     }
 }

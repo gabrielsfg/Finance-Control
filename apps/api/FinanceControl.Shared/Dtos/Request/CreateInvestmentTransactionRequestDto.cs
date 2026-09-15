@@ -27,6 +27,24 @@ namespace FinanceControl.Shared.Dtos.Request
         public bool CreateLinkedTransaction { get; set; } = true;
 
         /// <summary>
+        /// Whether the cash movement counts against the active budget. On by default: a
+        /// contribution is planned spending like any other line of the budget, and leaving
+        /// it out made the budget under-report what actually left the account.
+        /// </summary>
+        public bool IncludeInBudget { get; set; } = true;
+
+        /// <summary>Tags for the cash movement, same names the transaction form uses.</summary>
+        public List<string> Tags { get; set; } = [];
+
+        /// <summary>
+        /// Register the operation against a NEW asset even when the ticker is already
+        /// taken, by suffixing it (CDB → CDB-2). Fixed income is the reason: every CDB is
+        /// a different contract with its own rate and maturity, and folding a second one
+        /// into the first position averages two unrelated investments together.
+        /// </summary>
+        public bool ForceNewAsset { get; set; }
+
+        /// <summary>
         /// For fixed income only: what the position earns against, since nobody quotes a
         /// CDB. Null leaves the position valued at its purchase price.
         /// </summary>

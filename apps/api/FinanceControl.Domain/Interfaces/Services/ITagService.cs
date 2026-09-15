@@ -6,8 +6,9 @@ namespace FinanceControl.Domain.Interfaces.Services
 {
     public interface ITagService
     {
-        Task<IEnumerable<GetTagResponseDto>> GetAllTagsAsync(int userId);
+        Task<IEnumerable<GetTagItemResponseDto>> GetAllTagsAsync(int userId);
         Task<Result<GetTagResponseDto>> CreateTagAsync(CreateTagRequestDto requestDto, int userId);
+        Task<Result<GetTagResponseDto>> UpdateTagAsync(int id, UpdateTagRequestDto requestDto, int userId);
         Task<Result<bool>> DeleteTagAsync(int id, int userId);
     }
 }

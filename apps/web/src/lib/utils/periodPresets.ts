@@ -73,8 +73,15 @@ export function buildPeriodRange(
       return { start: monthsBack(11), finish: isoDate(today) };
     case "current-year":
       return { start: isoDate(new Date(today.getFullYear(), 0, 1)), finish: isoDate(today) };
-    case "custom-range":
-      return { start: value.startDate, finish: value.finishDate };
+    case "custom-range": {
+      // Picking a single day leaves the range half-filled — the calendar only fills the
+      // second edge on a second click. An empty edge reaches the API as an unparseable
+      // date and the whole list errors out, so a lone edge means "that one day".
+      const start = value.startDate || value.finishDate;
+      const finish = value.finishDate || value.startDate;
+      if (!start) return { start: monthsBack(0), finish: isoDate(today) };
+      return { start, finish };
+    }
   }
 }
 

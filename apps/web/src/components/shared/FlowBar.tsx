@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { AnimatedCount } from "@/components/shared/AnimatedValue";
 
 const IN_FILL = "bg-gradient-to-r from-[var(--moss)] to-[var(--moss-lift)]";
 const OUT_FILL = "bg-gradient-to-r from-[var(--clay)] to-[var(--clay-lift)]";
@@ -15,6 +16,30 @@ export function FlowBar({ pct, variant }: { pct: number; variant: "in" | "out" }
       />
     </div>
   );
+}
+
+/**
+ * One side's share of a `FlowSplit` track, for the value slot of its `FlowLabelRow`.
+ * The split draws the ratio; this puts a number on it. Pass `undefined` when there is
+ * no volume to divide — an empty track has no shares, and "0.0%" on both sides would
+ * claim otherwise.
+ */
+export function FlowShareChip({ pct }: { pct: number | undefined }) {
+  if (pct === undefined) return null;
+  return (
+    <span className="mr-[9px] font-mono text-[11px] font-normal text-[var(--panel-muted)]">
+      <AnimatedCount value={pct} decimals={1} suffix="%" />
+    </span>
+  );
+}
+
+/** Each side's share of the track, or undefined for both when nothing moved. */
+export function flowShares(inValue: number, outValue: number) {
+  const a = Math.max(0, inValue);
+  const b = Math.max(0, outValue);
+  const total = a + b;
+  if (total <= 0) return { inPct: undefined, outPct: undefined };
+  return { inPct: (a / total) * 100, outPct: (b / total) * 100 };
 }
 
 /** The dot + label + value header shared by the flow layouts. */

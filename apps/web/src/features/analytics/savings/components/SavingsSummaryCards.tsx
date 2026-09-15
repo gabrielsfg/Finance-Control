@@ -91,9 +91,16 @@ export function SavingsSummaryCards({ detail }: Props) {
           className="mt-5 flex items-center justify-between border-t pt-4"
           style={{ borderColor: "rgba(255,255,255,0.12)" }}
         >
-          <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">
-            Investido
-          </span>
+          <div className="flex flex-col">
+            <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">
+              Guardado
+            </span>
+            {detail.savedInCategories > 0 && (
+              <span className="font-mono text-[10px] text-[var(--panel-muted)]">
+                inclui categorias marcadas como economia
+              </span>
+            )}
+          </div>
           <span
             className="font-mono text-[22px] font-semibold"
             style={{ color: detail.invested > 0 ? "var(--moss-lift)" : "var(--panel-muted)" }}

@@ -5,6 +5,7 @@ using FinanceControl.Shared.Dtos.Others;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
 using FinanceControl.Shared.Enums;
+using FinanceControl.Services.Helpers;
 using FinanceControl.Shared.Helpers;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -345,12 +346,34 @@ namespace FinanceControl.Services.Services
                 .Where(a => a.AllocationType == EnumAllocationType.Expense)
                 .SumAsync(a => (int?)a.ExpectedValue) ?? 0;
 
-            var totalSpent = await context.Transactions
+            // Subcategories the plan expects money *in* from (salary, rent received). Income
+            // landing anywhere else is money coming back on a spend — a refund, a
+            // reimbursement, a chargeback — so it is discounted from the spend it undoes
+            // instead of being ignored, matching how BudgetService nets each allocation.
+            var incomeSubCategoryIds = await context.BudgetSubcategoryAllocations
+                .Where(a => a.Budget.UserId == requestDto.UserId)
+                .WhereIf(requestDto.BudgetId.HasValue, a => a.BudgetId == requestDto.BudgetId)
+                .Where(a => a.AllocationType == EnumAllocationType.Income)
+                .Select(a => a.SubCategoryId)
+                .Distinct()
+                .ToListAsync();
+
+            var grossSpent = await context.Transactions
                 .Where(t => t.UserId == requestDto.UserId)
                 .Where(t => t.Type == EnumTransactionType.Expense)
                 .WhereIf(requestDto.BudgetId.HasValue, t => t.BudgetId == requestDto.BudgetId)
                 .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
                 .SumAsync(t => (int?)t.Value) ?? 0;
+
+            var refunded = await context.Transactions
+                .Where(t => t.UserId == requestDto.UserId)
+                .Where(t => t.Type == EnumTransactionType.Income)
+                .Where(t => !incomeSubCategoryIds.Contains(t.SubCategoryId))
+                .WhereIf(requestDto.BudgetId.HasValue, t => t.BudgetId == requestDto.BudgetId)
+                .Where(t => t.TransactionDate >= requestDto.StartDate && t.TransactionDate <= requestDto.FinishDate)
+                .SumAsync(t => (int?)t.Value) ?? 0;
+
+            var totalSpent = grossSpent - refunded;
 
             var spentPercentage = totalExpected > 0
                 ? Math.Round((decimal)totalSpent / totalExpected * 100, 2)
@@ -367,13 +390,22 @@ namespace FinanceControl.Services.Services
                     CategoryName = a.SubCategory.Category.Name,
                     CategoryColor = a.SubCategory.Category.Color,
                     Allocated = a.ExpectedValue,
-                    Spent = context.Transactions
+                    Spent = (context.Transactions
                         .Where(t => t.UserId == requestDto.UserId
                             && t.SubCategoryId == a.SubCategoryId
                             && t.Type == EnumTransactionType.Expense
                             && t.TransactionDate >= requestDto.StartDate
                             && t.TransactionDate <= requestDto.FinishDate)
-                        .Sum(t => (int?)t.Value) ?? 0
+                        .Sum(t => (int?)t.Value) ?? 0)
+                        - (incomeSubCategoryIds.Contains(a.SubCategoryId)
+                            ? 0
+                            : context.Transactions
+                                .Where(t => t.UserId == requestDto.UserId
+                                    && t.SubCategoryId == a.SubCategoryId
+                                    && t.Type == EnumTransactionType.Income
+                                    && t.TransactionDate >= requestDto.StartDate
+                                    && t.TransactionDate <= requestDto.FinishDate)
+                                .Sum(t => (int?)t.Value) ?? 0)
                 })
                 .OrderByDescending(x => x.Spent)
                 .Take(4)
@@ -950,72 +982,10 @@ namespace FinanceControl.Services.Services
             return new CreateTransactionResponseDto { Transactions = transactions };
         }
 
-        private async Task AssociateTagsAsync(List<Transaction> transactions, List<string>? tagNames, int userId)
-        {
-            if (tagNames is null || tagNames.Count == 0)
-                return;
-
-            var requestedNames = tagNames
-                .Select(n => n.Trim())
-                .Where(n => n.Length > 0)
-                .DistinctBy(TextNormalization.ToComparisonKey)
-                .ToList();
-
-            if (requestedNames.Count == 0)
-                return;
-
-            // The whole tag list, matched in memory by comparison key. The previous
-            // version looked the names up with an IN clause, which Postgres resolves
-            // case-sensitively: sending "viagem" when "Viagem" already existed created a
-            // second tag, and the two drifted apart from there. Accents did the same to
-            // "férias". A user has a handful of tags, so loading them is cheaper than
-            // being wrong.
-            var userTags = await _context.Tags
-                .Where(t => t.UserId == userId)
-                .ToListAsync();
-
-            var tagsByKey = new Dictionary<string, Tag>();
-            foreach (var tag in userTags)
-                tagsByKey.TryAdd(TextNormalization.ToComparisonKey(tag.Name), tag);
-
-            var resolvedTags = new List<Tag>();
-            foreach (var name in requestedNames)
-            {
-                var key = TextNormalization.ToComparisonKey(name);
-                if (key.Length == 0)
-                    continue;
-
-                // An existing tag keeps its own spelling — the first one created is the
-                // canonical one, and later transactions attach to it rather than renaming it.
-                if (tagsByKey.TryGetValue(key, out var existing))
-                {
-                    resolvedTags.Add(existing);
-                    continue;
-                }
-
-                var created = new Tag { UserId = userId, Name = name };
-                _context.Tags.Add(created);
-                tagsByKey[key] = created;
-                resolvedTags.Add(created);
-            }
-
-            var existingTags = resolvedTags;
-
-            await _context.SaveChangesAsync();
-
-            foreach (var transaction in transactions)
-            {
-                var fullTransaction = await _context.Transactions
-                    .Include(t => t.Tags)
-                    .FirstAsync(t => t.Id == transaction.Id);
-
-                fullTransaction.Tags.Clear();
-                foreach (var tag in existingTags)
-                    fullTransaction.Tags.Add(tag);
-            }
-
-            await _context.SaveChangesAsync();
-        }
+        // Delegates to the shared helper: investments tag their linked transaction through
+        // the same path, and one implementation of "is this the same tag?" is the point.
+        private Task AssociateTagsAsync(List<Transaction> transactions, List<string>? tagNames, int userId)
+            => TagAssociationHelper.AssociateAsync(_context, transactions, tagNames, userId);
 
         private static (int firstValue, int otherValue) CalculateInstallmentValues(int total, int installments)
         {

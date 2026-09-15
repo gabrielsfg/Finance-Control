@@ -28,10 +28,17 @@ type Props = { data: NetWorthPoint[] };
 export const AnalyticsNetWorthChart = ({ data }: Props) => {
   const latest = data[data.length - 1];
 
+  // The range is whatever the global analytics filter says, so the subtitle has to
+  // follow it — it used to claim "últimos 7 meses" for every range.
+  const subtitle =
+    data.length > 0
+      ? `Patrimônio líquido, bens e dívidas · ${data[0].label} → ${data[data.length - 1].label}`
+      : "Patrimônio líquido, bens e dívidas";
+
   if (data.length === 0) {
     return (
       <Card>
-        <CardHead title="Evolução Patrimonial" subtitle="Patrimônio líquido, ativos e passivos (últimos 7 meses)" />
+        <CardHead title="Evolução Patrimonial" subtitle={subtitle} />
         <ChartEmptyState message="Sem dados patrimoniais para o período" />
       </Card>
     );
@@ -39,10 +46,10 @@ export const AnalyticsNetWorthChart = ({ data }: Props) => {
 
   return (
     <Card>
-      <CardHead title="Evolução Patrimonial" subtitle="Patrimônio líquido, ativos e passivos (últimos 7 meses)" />
+      <CardHead title="Evolução Patrimonial" subtitle={subtitle} />
 
       {latest && (
-        <div className="bg-[var(--surface2)] mb-5 grid grid-cols-3 gap-3 rounded-[13px] p-4">
+        <div className="bg-[var(--surface2)] mb-5 grid grid-cols-2 gap-3 rounded-[13px] p-4 sm:grid-cols-4">
           <div>
             <p className="text-text-muted text-[12px]">Patrimônio líquido</p>
             <p className={`font-money font-600 text-[18px] ${(latest.netWorth ?? 0) < 0 ? "text-[var(--clay)]" : "text-text"}`}>
@@ -50,11 +57,15 @@ export const AnalyticsNetWorthChart = ({ data }: Props) => {
             </p>
           </div>
           <div>
-            <p className="text-text-muted text-[12px]">Total de ativos</p>
+            <p className="text-text-muted text-[12px]">Total em bens</p>
             <p className="font-money font-600 text-text text-[18px]">{formatCurrency((latest.assets ?? 0) / 100)}</p>
           </div>
           <div>
-            <p className="text-text-muted text-[12px]">Total de passivos</p>
+            <p className="text-text-muted text-[12px]">Investimentos</p>
+            <p className="font-money font-600 text-[var(--blue)] text-[18px]">{formatCurrency((latest.investments ?? 0) / 100)}</p>
+          </div>
+          <div>
+            <p className="text-text-muted text-[12px]">Total de dívidas</p>
             <p className="font-money font-600 text-[var(--clay)] text-[18px]">{formatCurrency((latest.liabilities ?? 0) / 100)}</p>
           </div>
         </div>
@@ -92,18 +103,18 @@ export const AnalyticsNetWorthChart = ({ data }: Props) => {
               width={70}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }} />
-            <Area {...chartAnim(0)} type="monotone" dataKey="assets"      name="Ativos"              stroke="var(--blue)"  strokeWidth={2} fill="url(#gradAssets)" />
+            <Area {...chartAnim(0)} type="monotone" dataKey="assets"      name="Bens"                stroke="var(--blue)"  strokeWidth={2} fill="url(#gradAssets)" />
             <Area {...chartAnim(1)} type="monotone" dataKey="netWorth"    name="Patrimônio líquido"  stroke="var(--green)" strokeWidth={2} fill="url(#gradNetWorth)" />
-            <Area {...chartAnim(2)} type="monotone" dataKey="liabilities" name="Passivos"            stroke="var(--red)"   strokeWidth={2} fill="url(#gradLiabilities)" strokeDasharray="4 3" />
+            <Area {...chartAnim(2)} type="monotone" dataKey="liabilities" name="Dívidas"             stroke="var(--red)"   strokeWidth={2} fill="url(#gradLiabilities)" strokeDasharray="4 3" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
       <div className="mt-3 flex gap-4">
         {[
-          ["var(--blue)",  "Ativos"],
+          ["var(--blue)",  "Bens"],
           ["var(--green)", "Patrimônio líquido"],
-          ["var(--red)",   "Passivos"],
+          ["var(--red)",   "Dívidas"],
         ].map(([color, label]) => (
           <div key={label} className="flex items-center gap-1.5">
             <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: color }} />

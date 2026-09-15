@@ -34,7 +34,7 @@ export const BudgetsSummaryBar = ({ budgets, daysInPeriod, dayOfPeriod }: Props)
   const willExceed = projected > totalAllocated && totalAllocated > 0 && !isOver;
   const daysToBlow = dailyRate > 0 ? Math.round((totalAllocated - totalSpent) / dailyRate) : 0;
 
-  const spentPct = totalAllocated > 0 ? totalSpent / totalAllocated : 0;
+  const spentPct = totalAllocated > 0 ? Math.max(0, totalSpent) / totalAllocated : 0;
   const availPct = totalAllocated > 0 ? Math.max(0, available) / totalAllocated : 0;
 
   return (

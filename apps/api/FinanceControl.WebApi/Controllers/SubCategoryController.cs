@@ -94,6 +94,17 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(result.Value);
         }
 
+        /// <summary>
+        /// Replaces the set of subcategories whose spending counts as savings.
+        /// </summary>
+        [HttpPut("savings")]
+        public async Task<IActionResult> SetSavingsSubCategoriesAsync([FromBody] SetSavingsSubCategoriesRequestDto requestDto)
+        {
+            var userId = GetUserId();
+            var result = await _subCategoryService.SetSavingsSubCategoriesAsync(requestDto.SubCategoryIds, userId);
+            return Ok(result);
+        }
+
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteSubCategoryAsync([FromRoute] int id)
         {

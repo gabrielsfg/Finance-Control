@@ -23,7 +23,7 @@ function modeForPath(pathname: string): AnalyticsFilterMode {
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "":              { title: "Gastos",        subtitle: "Para onde o seu dinheiro foi no período" },
   economia:        { title: "Economia",      subtitle: "Quanto você guardou e a aderência ao plano" },
-  patrimonio:      { title: "Patrimônio",    subtitle: "Evolução de ativos, passivos e patrimônio líquido" },
+  patrimonio:      { title: "Patrimônio",    subtitle: "Evolução de bens, dívidas e patrimônio líquido" },
   investimentos:   { title: "Investimentos", subtitle: "Desempenho e composição da carteira" },
   projecoes:       { title: "Projeções",     subtitle: "Para onde suas finanças tendem a caminhar" },
 };

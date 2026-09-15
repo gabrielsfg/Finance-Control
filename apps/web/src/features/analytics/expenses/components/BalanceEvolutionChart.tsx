@@ -22,6 +22,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
+const labelFor = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+
 type Props = { data: BalanceEvolutionPoint[] };
 
 export function BalanceEvolutionChart({ data }: Props) {
@@ -34,10 +36,33 @@ export function BalanceEvolutionChart({ data }: Props) {
     );
   }
 
-  const chartData = data.map((p) => ({
-    label: new Date(p.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
-    balance: p.balance,
-  }));
+  // The API only emits a point on days that moved. Recharts spaces categories evenly, so
+  // those gaps used to render as if a three-week lull took the same time as a single day —
+  // the slope of the line was whatever the gaps happened to be. Filling the quiet days in
+  // at the balance they carried makes the horizontal axis mean elapsed time again.
+  const chartData: { label: string; balance: number }[] = [];
+  const dayMs = 86_400_000;
+  const asDate = (iso: string) => new Date(iso.slice(0, 10) + "T00:00:00");
+
+  for (let i = 0; i < data.length; i++) {
+    const point = data[i];
+    chartData.push({ label: labelFor(asDate(point.date)), balance: point.balance });
+
+    const next = data[i + 1];
+    if (!next) continue;
+
+    // Cap the fill so a multi-year gap cannot blow the series up; past that the gap is
+    // the story and drawing every day of it buys nothing.
+    const gapDays = Math.round((asDate(next.date).getTime() - asDate(point.date).getTime()) / dayMs);
+    if (gapDays <= 1 || gapDays > 400) continue;
+
+    for (let d = 1; d < gapDays; d++) {
+      chartData.push({
+        label: labelFor(new Date(asDate(point.date).getTime() + d * dayMs)),
+        balance: point.balance,
+      });
+    }
+  }
 
   const hasNegative = chartData.some((p) => p.balance < 0);
 

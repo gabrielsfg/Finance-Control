@@ -194,7 +194,24 @@ namespace FinanceControl.Services.Services
                 })
                 .FirstOrDefaultAsync();
 
-            var runningBalance = openingBalance is null ? 0 : openingBalance.Income - openingBalance.Expense;
+            long runningBalance = openingBalance is null ? 0 : openingBalance.Income - openingBalance.Expense;
+
+            // Transfers move money between the user's own accounts, so across every account
+            // they net to zero and leaving them out is correct. Once the request narrows to a
+            // subset of accounts that stops being true — money crossing the boundary of the
+            // filter really does change the balance being drawn — so the two legs are folded
+            // in for that case. Any other filter (category, tag, type, payment method) is a
+            // view of spending rather than of a balance, and a transfer belongs to neither
+            // side of it; it stays excluded there, as its system subcategory intends.
+            var includeTransfers = requestDto.AccountIds.Count > 0
+                && requestDto.CategoryIds.Count == 0
+                && requestDto.TagIds.Count == 0
+                && !requestDto.TransactionType.HasValue
+                && !requestDto.PaymentType.HasValue;
+
+            if (includeTransfers)
+                runningBalance += await TransferNetAsync(
+                    context, requestDto.UserId, requestDto.AccountIds, null, requestDto.StartDate);
 
             // Daily net movements within the period
             var dailyMovements = await context.Transactions
@@ -209,18 +226,87 @@ namespace FinanceControl.Services.Services
                 .Select(g => new
                 {
                     Date = g.Key,
-                    Net = g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (int?)t.Value) ?? 0
+                    // The parentheses around the income side are load-bearing: `??` binds
+                    // looser than `-`, so `a ?? 0 - (b ?? 0)` parses as `a ?? (0 - (b ?? 0))`.
+                    // Without them, any day that had income at all returned the income alone
+                    // and silently discarded that day's expenses — the balance only ever went
+                    // up on those days, and the line drifted tens of thousands above reality.
+                    Net = (g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (int?)t.Value) ?? 0)
                           - (g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (int?)t.Value) ?? 0)
                 })
                 .OrderBy(x => x.Date)
                 .ToListAsync();
 
+            var transfersByDay = includeTransfers
+                ? await TransferNetByDayAsync(
+                    context, requestDto.UserId, requestDto.AccountIds,
+                    requestDto.StartDate, requestDto.FinishDate)
+                : [];
+
+            var netByDay = dailyMovements.ToDictionary(d => d.Date, d => (long)d.Net);
+            foreach (var (date, net) in transfersByDay)
+                netByDay[date] = netByDay.GetValueOrDefault(date) + net;
+
             var result = new List<BalanceEvolutionItemDto>();
-            foreach (var day in dailyMovements)
+            foreach (var date in netByDay.Keys.OrderBy(d => d))
             {
-                runningBalance += day.Net;
-                result.Add(new BalanceEvolutionItemDto { Date = day.Date, Balance = runningBalance });
+                runningBalance += netByDay[date];
+                result.Add(new BalanceEvolutionItemDto { Date = date, Balance = (int)runningBalance });
             }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Net effect of transfers on <paramref name="accountIds"/> over <c>[from, to]</c>:
+        /// what landed on those accounts minus what left them. Transfers wholly inside the
+        /// set cancel out, which is what we want — only money crossing the filter counts.
+        /// </summary>
+        private static async Task<long> TransferNetAsync(
+            ApplicationDbContext context, int userId, List<int> accountIds, DateOnly? from, DateOnly to)
+        {
+            var inbound = await context.Transactions
+                .Where(t => t.UserId == userId && t.Type == EnumTransactionType.Transfer
+                    && t.DestinationAccountId != null && accountIds.Contains(t.DestinationAccountId.Value)
+                    && t.TransactionDate < to)
+                .Where(t => from == null || t.TransactionDate >= from)
+                .SumAsync(t => (long?)t.Value) ?? 0L;
+
+            var outbound = await context.Transactions
+                .Where(t => t.UserId == userId && t.Type == EnumTransactionType.Transfer
+                    && accountIds.Contains(t.AccountId)
+                    && t.TransactionDate < to)
+                .Where(t => from == null || t.TransactionDate >= from)
+                .SumAsync(t => (long?)t.Value) ?? 0L;
+
+            return inbound - outbound;
+        }
+
+        /// <summary>Per-day version of <see cref="TransferNetAsync"/>, inclusive of both ends.</summary>
+        private static async Task<Dictionary<DateOnly, long>> TransferNetByDayAsync(
+            ApplicationDbContext context, int userId, List<int> accountIds, DateOnly from, DateOnly to)
+        {
+            var inbound = await context.Transactions
+                .Where(t => t.UserId == userId && t.Type == EnumTransactionType.Transfer
+                    && t.DestinationAccountId != null && accountIds.Contains(t.DestinationAccountId.Value)
+                    && t.TransactionDate >= from && t.TransactionDate <= to)
+                .GroupBy(t => t.TransactionDate)
+                .Select(g => new { Date = g.Key, Value = g.Sum(t => (long?)t.Value) ?? 0L })
+                .ToListAsync();
+
+            var outbound = await context.Transactions
+                .Where(t => t.UserId == userId && t.Type == EnumTransactionType.Transfer
+                    && accountIds.Contains(t.AccountId)
+                    && t.TransactionDate >= from && t.TransactionDate <= to)
+                .GroupBy(t => t.TransactionDate)
+                .Select(g => new { Date = g.Key, Value = g.Sum(t => (long?)t.Value) ?? 0L })
+                .ToListAsync();
+
+            var result = new Dictionary<DateOnly, long>();
+            foreach (var i in inbound)
+                result[i.Date] = result.GetValueOrDefault(i.Date) + i.Value;
+            foreach (var o in outbound)
+                result[o.Date] = result.GetValueOrDefault(o.Date) - o.Value;
 
             return result;
         }
@@ -248,45 +334,37 @@ namespace FinanceControl.Services.Services
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Net worth is everything the user owns: the cash sitting in their accounts plus
+        /// what the portfolio is worth, month by month.
+        /// </summary>
+        /// <remarks>
+        /// Balances are rebuilt from transactions rather than read off the account, because
+        /// an account only knows what it is worth *today* — the shape of the last twelve
+        /// months has to be replayed.
+        /// </remarks>
         public async Task<List<NetWorthEvolutionItemDto>> GetNetWorthEvolutionAsync(AnalyticsRequestDto requestDto)
         {
             await using var context = _contextFactory.CreateDbContext();
 
             var startMonth = new DateOnly(requestDto.StartDate.Year, requestDto.StartDate.Month, 1);
 
-            // Account display names, resolved once.
+            // Every account counts, system ones included. The only accounts flagged IsSystem
+            // are the virtual envelopes behind Item goals, and the money parked in them is
+            // the user's — put there by a transfer out of a real account. Skipping them
+            // would delete that money from net worth twice over: it already left the
+            // account that funded it, and its destination would not be counted.
             var nameById = await context.Accounts
                 .Where(a => a.UserId == requestDto.UserId)
                 .Select(a => new { a.Id, a.Name })
                 .ToDictionaryAsync(a => a.Id, a => a.Name);
 
             // Opening balance per account: net of everything before the first month shown.
-            var opening = await context.Transactions
-                .Where(t => t.UserId == requestDto.UserId && t.TransactionDate < startMonth)
-                .GroupBy(t => t.AccountId)
-                .Select(g => new
-                {
-                    AccountId = g.Key,
-                    Net = (g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (long?)t.Value) ?? 0L)
-                        - (g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (long?)t.Value) ?? 0L)
-                })
-                .ToListAsync();
+            var opening = await AccountDeltasAsync(context, requestDto.UserId, null, startMonth);
 
-            // Monthly net movement per account within the range — aggregated in the database
-            // instead of pulling every transaction row into memory.
-            var monthlyByAccount = await context.Transactions
-                .Where(t => t.UserId == requestDto.UserId
-                    && t.TransactionDate >= startMonth && t.TransactionDate <= requestDto.FinishDate)
-                .GroupBy(t => new { t.AccountId, t.TransactionDate.Year, t.TransactionDate.Month })
-                .Select(g => new
-                {
-                    g.Key.AccountId,
-                    g.Key.Year,
-                    g.Key.Month,
-                    Net = (g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (long?)t.Value) ?? 0L)
-                        - (g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (long?)t.Value) ?? 0L)
-                })
-                .ToListAsync();
+            // Monthly net movement per account within the range.
+            var monthlyByAccount = await AccountDeltasAsync(
+                context, requestDto.UserId, startMonth, requestDto.FinishDate.AddDays(1));
 
             var months = new List<(int Year, int Month)>();
             var cursor = startMonth;
@@ -297,15 +375,18 @@ namespace FinanceControl.Services.Services
                 cursor = cursor.AddMonths(1);
             }
 
+            var portfolioByMonth = await PortfolioValueByMonthAsync(context, requestDto.UserId, months);
+
             // Carry each account's balance forward across months (cumulative), seeded with the opening.
             var runningByAccount = new Dictionary<int, long>();
-            foreach (var o in opening)
-                runningByAccount[o.AccountId] = o.Net;
+            foreach (var o in opening.Where(o => nameById.ContainsKey(o.AccountId)))
+                runningByAccount[o.AccountId] = runningByAccount.GetValueOrDefault(o.AccountId) + o.Net;
 
             var result = new List<NetWorthEvolutionItemDto>();
             foreach (var (year, month) in months)
             {
-                foreach (var m in monthlyByAccount.Where(x => x.Year == year && x.Month == month))
+                foreach (var m in monthlyByAccount.Where(x =>
+                             x.Year == year && x.Month == month && nameById.ContainsKey(x.AccountId)))
                     runningByAccount[m.AccountId] = runningByAccount.GetValueOrDefault(m.AccountId) + m.Net;
 
                 var snapshot = runningByAccount
@@ -318,13 +399,161 @@ namespace FinanceControl.Services.Services
                     .OrderBy(a => a.AccountName)
                     .ToList();
 
+                var portfolio = portfolioByMonth.GetValueOrDefault((year, month), 0L);
+
                 result.Add(new NetWorthEvolutionItemDto
                 {
                     Year = year,
                     Month = month,
-                    NetWorth = snapshot.Sum(a => a.Balance),
+                    NetWorth = snapshot.Sum(a => a.Balance) + portfolio,
+                    Investments = portfolio,
                     Breakdown = snapshot
                 });
+            }
+
+            return result;
+        }
+
+        private record AccountDelta(int AccountId, int Year, int Month, long Net);
+
+        /// <summary>
+        /// Per-account, per-month money movement over <c>[from, to)</c> — <paramref name="from"/>
+        /// null means "everything up to <paramref name="to"/>".
+        /// </summary>
+        /// <remarks>
+        /// A transfer is two movements on one row: it leaves <c>AccountId</c> and lands on
+        /// <c>DestinationAccountId</c>. Summing only income and expense — which is what this
+        /// used to do — drops both halves, so paying a credit-card invoice never cleared the
+        /// card and never debited the account that paid it. The totals still added up, since
+        /// the two halves cancel, but every per-account balance drifted further from reality
+        /// each month, and the assets/liabilities split drawn from those balances with it.
+        /// <para>
+        /// The two legs are queried separately and concatenated rather than combined in one
+        /// GroupBy, because a single row belongs to two different accounts and no grouping
+        /// key can express that.
+        /// </para>
+        /// </remarks>
+        private static async Task<List<AccountDelta>> AccountDeltasAsync(
+            ApplicationDbContext context, int userId, DateOnly? from, DateOnly to)
+        {
+            var outbound = await context.Transactions
+                .Where(t => t.UserId == userId && t.TransactionDate < to)
+                .Where(t => from == null || t.TransactionDate >= from)
+                .GroupBy(t => new { t.AccountId, t.TransactionDate.Year, t.TransactionDate.Month })
+                .Select(g => new AccountDelta(
+                    g.Key.AccountId,
+                    g.Key.Year,
+                    g.Key.Month,
+                    (g.Where(t => t.Type == EnumTransactionType.Income).Sum(t => (long?)t.Value) ?? 0L)
+                    - (g.Where(t => t.Type == EnumTransactionType.Expense).Sum(t => (long?)t.Value) ?? 0L)
+                    - (g.Where(t => t.Type == EnumTransactionType.Transfer).Sum(t => (long?)t.Value) ?? 0L)))
+                .ToListAsync();
+
+            var inbound = await context.Transactions
+                .Where(t => t.UserId == userId
+                    && t.Type == EnumTransactionType.Transfer
+                    && t.DestinationAccountId != null
+                    && t.TransactionDate < to)
+                .Where(t => from == null || t.TransactionDate >= from)
+                .GroupBy(t => new { AccountId = t.DestinationAccountId!.Value, t.TransactionDate.Year, t.TransactionDate.Month })
+                .Select(g => new AccountDelta(
+                    g.Key.AccountId,
+                    g.Key.Year,
+                    g.Key.Month,
+                    g.Sum(t => (long?)t.Value) ?? 0L))
+                .ToListAsync();
+
+            return outbound.Concat(inbound).ToList();
+        }
+
+        /// <summary>
+        /// What the portfolio was worth at the close of each requested month.
+        /// </summary>
+        /// <remarks>
+        /// Quantity held is replayed from the buy/sell log, then priced at the last close the
+        /// market published on or before that month's end — so a month shows the money the
+        /// position was actually worth back then, not today's price applied retroactively.
+        /// <para>
+        /// Positions the market does not quote (fixed income, and anything whose price feed
+        /// has no history yet) fall back to what was paid for them. That understates a CDB by
+        /// its accrued yield, which is the same trade-off <c>FixedIncomeAccrual</c> already
+        /// makes for the current month: showing the amount invested is never wrong, while
+        /// extrapolating a yield month by month would invent a curve.
+        /// </para>
+        /// </remarks>
+        private static async Task<Dictionary<(int Year, int Month), long>> PortfolioValueByMonthAsync(
+            ApplicationDbContext context, int userId, List<(int Year, int Month)> months)
+        {
+            if (months.Count == 0) return [];
+
+            var lastMonth = months[^1];
+            var horizon = new DateOnly(lastMonth.Year, lastMonth.Month, 1).AddMonths(1);
+
+            var trades = await context.InvestmentTransactions
+                .Where(it => it.Investment.UserId == userId && it.Date < horizon)
+                .Select(it => new
+                {
+                    it.InvestmentId,
+                    it.Investment.MarketAssetId,
+                    it.Date,
+                    it.Operation,
+                    it.Quantity,
+                    it.TotalValue
+                })
+                .ToListAsync();
+
+            if (trades.Count == 0) return [];
+
+            var assetIds = trades.Select(t => t.MarketAssetId).Distinct().ToList();
+
+            var priceHistory = await context.MarketPriceHistories
+                .Where(h => assetIds.Contains(h.MarketAssetId) && h.Date < horizon)
+                .Select(h => new { h.MarketAssetId, h.Date, h.Price })
+                .ToListAsync();
+
+            var pricesByAsset = priceHistory
+                .GroupBy(h => h.MarketAssetId)
+                .ToDictionary(g => g.Key, g => g.OrderBy(h => h.Date).ToList());
+
+            var result = new Dictionary<(int, int), long>();
+
+            foreach (var (year, month) in months)
+            {
+                var monthEnd = new DateOnly(year, month, 1).AddMonths(1).AddDays(-1);
+                var total = 0L;
+
+                foreach (var position in trades.Where(t => t.Date <= monthEnd).GroupBy(t => t.InvestmentId))
+                {
+                    var quantity = position.Sum(t =>
+                        t.Operation == EnumInvestmentOperation.Buy ? t.Quantity : -t.Quantity);
+
+                    // Fully sold, or sold down past zero by a correction in the log.
+                    if (quantity <= 0) continue;
+
+                    var assetId = position.First().MarketAssetId;
+                    var close = pricesByAsset.TryGetValue(assetId, out var history)
+                        ? history.LastOrDefault(h => h.Date <= monthEnd)?.Price
+                        : null;
+
+                    if (close is { } price)
+                    {
+                        total += (long)Math.Round(quantity * price);
+                        continue;
+                    }
+
+                    // No quote by that date — value it at what was paid per unit so far.
+                    var boughtQty = position
+                        .Where(t => t.Operation == EnumInvestmentOperation.Buy)
+                        .Sum(t => t.Quantity);
+                    var boughtCost = position
+                        .Where(t => t.Operation == EnumInvestmentOperation.Buy)
+                        .Sum(t => t.TotalValue);
+
+                    if (boughtQty > 0)
+                        total += (long)Math.Round(quantity * (boughtCost / boughtQty));
+                }
+
+                result[(year, month)] = total;
             }
 
             return result;
@@ -571,11 +800,21 @@ namespace FinanceControl.Services.Services
                 cursor = cursor.AddMonths(1);
             }
 
+            // Same definition of net worth as the patrimony screen: cash plus portfolio.
+            // Leaving investments out here would have the projection start from a smaller
+            // number than the one the user was just looking at.
+            var projectionPortfolio = await PortfolioValueByMonthAsync(context, userId, months);
+
             var running = openingBalance;
             foreach (var (year, month) in months)
             {
                 running += netByMonth.GetValueOrDefault((year, month), 0L);
-                historical.Add(new NetWorthProjectionPointDto { Year = year, Month = month, NetWorth = running });
+                historical.Add(new NetWorthProjectionPointDto
+                {
+                    Year = year,
+                    Month = month,
+                    NetWorth = running + projectionPortfolio.GetValueOrDefault((year, month), 0L)
+                });
             }
 
             var currentNetWorth = historical.LastOrDefault()?.NetWorth ?? 0;
@@ -930,12 +1169,19 @@ namespace FinanceControl.Services.Services
                 tc = tc.AddMonths(1);
             }
 
+            var timelinePortfolio = await PortfolioValueByMonthAsync(context, userId, timelineMos);
+
             var timeline = new List<NetWorthTimelinePointDto>();
             var running = 0L;
             foreach (var (year, month) in timelineMos)
             {
                 running += netByMonth.GetValueOrDefault((year, month), 0L);
-                timeline.Add(new NetWorthTimelinePointDto { Year = year, Month = month, NetWorth = running });
+                timeline.Add(new NetWorthTimelinePointDto
+                {
+                    Year = year,
+                    Month = month,
+                    NetWorth = running + timelinePortfolio.GetValueOrDefault((year, month), 0L)
+                });
             }
 
             var milestones = new List<FinancialMilestoneDto>();
@@ -1826,13 +2072,31 @@ namespace FinanceControl.Services.Services
                         .ThenInclude(sc => sc.Category)
                 .ToListAsync();
 
-            var spentBySubCategory = await context.Transactions
+            // Subcategories the plan expects money in from. Income anywhere else is money
+            // coming back on a spend (refund, reimbursement, chargeback), so it is
+            // discounted from that spend — the same netting BudgetService applies, so the
+            // two screens can't disagree about how much a category cost.
+            var incomeSubCategoryIds = areas
+                .SelectMany(a => a.BudgetSubcategoryAllocations)
+                .Where(al => al.AllocationType == EnumAllocationType.Income)
+                .Select(al => al.SubCategoryId)
+                .ToHashSet();
+
+            var movementsBySubCategory = await context.Transactions
                 .Where(t => t.BudgetId == budgetId && t.UserId == userId
-                    && t.Type == EnumTransactionType.Expense
+                    && (t.Type == EnumTransactionType.Expense || t.Type == EnumTransactionType.Income)
                     && t.TransactionDate >= start && t.TransactionDate < end)
-                .GroupBy(t => t.SubCategoryId)
-                .Select(g => new { SubCategoryId = g.Key, Total = g.Sum(t => t.Value) })
-                .ToDictionaryAsync(x => x.SubCategoryId, x => x.Total);
+                .GroupBy(t => new { t.SubCategoryId, t.Type })
+                .Select(g => new { g.Key.SubCategoryId, g.Key.Type, Total = g.Sum(t => t.Value) })
+                .ToListAsync();
+
+            var spentBySubCategory = movementsBySubCategory
+                .Where(m => m.Type == EnumTransactionType.Expense
+                            || !incomeSubCategoryIds.Contains(m.SubCategoryId))
+                .GroupBy(m => m.SubCategoryId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Sum(m => m.Type == EnumTransactionType.Income ? -m.Total : m.Total));
 
             var allocations = areas
                 .SelectMany(a => a.BudgetSubcategoryAllocations
@@ -1847,6 +2111,7 @@ namespace FinanceControl.Services.Services
                         AreaName = a.Name,
                         Allocated = al.ExpectedValue,
                         Spent = spentBySubCategory.GetValueOrDefault(al.SubCategoryId),
+                        IsSavings = al.SubCategory.IsSavings,
                     }))
                 .OrderByDescending(al => al.Spent - al.Allocated)
                 .ToList();
@@ -1862,12 +2127,21 @@ namespace FinanceControl.Services.Services
                     ActualExpense = a.BudgetSubcategoryAllocations
                         .Where(al => al.AllocationType == EnumAllocationType.Expense)
                         .Sum(al => spentBySubCategory.GetValueOrDefault(al.SubCategoryId)),
+                    // An area is a savings area when everything planned in it is savings —
+                    // an investments area that took more than planned did better, not worse.
+                    IsSavings = a.BudgetSubcategoryAllocations
+                        .Where(al => al.AllocationType == EnumAllocationType.Expense)
+                        .All(al => al.SubCategory.IsSavings),
                 })
                 .Where(a => a.PlannedExpense > 0 || a.ActualExpense > 0)
                 .OrderByDescending(a => a.ActualExpense - a.PlannedExpense)
                 .ToList();
 
-            var withinLimit = allocations.Count(al => al.Spent <= al.Allocated);
+            // Adherence asks "did this line go the way it was planned?", and for a savings
+            // line that means reaching the target, not staying under it.
+            var withinLimit = allocations.Count(al => al.IsSavings
+                ? al.Spent >= al.Allocated
+                : al.Spent <= al.Allocated);
 
             return new SavingsDetailDto
             {
@@ -1877,6 +2151,7 @@ namespace FinanceControl.Services.Services
                 Income = core.Income,
                 Expense = core.Expense,
                 Invested = core.Invested,
+                SavedInCategories = core.SavedInCategories,
                 GoalContributions = core.GoalContributions,
                 Savings = core.Savings,
                 SavingsRate = core.SavingsRate,
@@ -1901,7 +2176,7 @@ namespace FinanceControl.Services.Services
         /// sliced per period in memory.
         /// </summary>
         private sealed record SavingsFlows(
-            List<(DateOnly Date, EnumTransactionType Type, int Value)> Transactions,
+            List<(DateOnly Date, EnumTransactionType Type, int Value, bool IsSavings)> Transactions,
             List<(DateOnly Date, EnumInvestmentOperation Operation, long TotalValue)> InvestmentTransactions,
             List<(DateOnly Date, int Value, bool FromSystem, bool ToSystem)> SystemTransfers);
 
@@ -1915,9 +2190,9 @@ namespace FinanceControl.Services.Services
                     && t.TransactionDate >= from && t.TransactionDate < to
                     && t.Type != EnumTransactionType.Transfer
                     && !context.InvestmentTransactions.Any(it => it.LinkedTransactionId == t.Id))
-                .Select(t => new { t.TransactionDate, t.Type, t.Value })
+                .Select(t => new { t.TransactionDate, t.Type, t.Value, t.SubCategory.IsSavings })
                 .ToListAsync())
-                .Select(t => (t.TransactionDate, t.Type, t.Value))
+                .Select(t => (t.TransactionDate, t.Type, t.Value, t.IsSavings))
                 .ToList();
 
             var investmentTransactions = (await context.InvestmentTransactions
@@ -1951,14 +2226,22 @@ namespace FinanceControl.Services.Services
             var income = flows.Transactions
                 .Where(t => t.Date >= start && t.Date < end && t.Type == EnumTransactionType.Income)
                 .Sum(t => t.Value);
+            // Spending on a subcategory the user marked as savings is money kept, not money
+            // gone — an "Aporte" line is the clearest case. It leaves the expense figure and
+            // joins what was set aside, so the savings rate reflects the decision.
             var expense = flows.Transactions
-                .Where(t => t.Date >= start && t.Date < end && t.Type == EnumTransactionType.Expense)
+                .Where(t => t.Date >= start && t.Date < end && t.Type == EnumTransactionType.Expense && !t.IsSavings)
+                .Sum(t => t.Value);
+            var savedInCategories = flows.Transactions
+                .Where(t => t.Date >= start && t.Date < end && t.Type == EnumTransactionType.Expense && t.IsSavings)
                 .Sum(t => t.Value);
 
             var investedLong = flows.InvestmentTransactions
                 .Where(it => it.Date >= start && it.Date < end)
                 .Sum(it => it.Operation == EnumInvestmentOperation.Buy ? it.TotalValue : -it.TotalValue);
-            var invested = (int)Math.Clamp(investedLong, int.MinValue, int.MaxValue);
+            // No double counting: transactions linked to an investment operation are already
+            // out of the transaction list above.
+            var invested = (int)Math.Clamp(investedLong + savedInCategories, int.MinValue, int.MaxValue);
 
             var goalContributions = flows.SystemTransfers
                 .Where(t => t.Date >= start && t.Date < end)
@@ -1973,6 +2256,7 @@ namespace FinanceControl.Services.Services
                 Income = income,
                 Expense = expense,
                 Invested = invested,
+                SavedInCategories = savedInCategories,
                 GoalContributions = goalContributions,
                 Savings = savings,
                 SavingsRate = income > 0 ? Math.Round((double)savings / income * 100, 1) : null,

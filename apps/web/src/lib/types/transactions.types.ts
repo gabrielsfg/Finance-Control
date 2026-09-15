@@ -49,6 +49,8 @@ export type SubCategoryItem = {
   categoryColor: string | null;
   name: string;
   emoji: string | null;
+  /** Spending here counts as money kept, not as an expense (aportes, reservas). */
+  isSavings: boolean;
 };
 
 export type CreateTransactionRequest = {

@@ -92,7 +92,7 @@ export function SavingsRateChart({ data }: Props) {
           <p className="text-text-muted mt-0.5 text-[11px]">
             {avgRate >= RECOMMENDED_RATE
               ? "Acima da meta recomendada"
-              : `${(RECOMMENDED_RATE - avgRate).toFixed(1)}pp abaixo da meta`}
+              : `${(RECOMMENDED_RATE - avgRate).toFixed(1).replace(".", ",")} pontos abaixo da meta de ${RECOMMENDED_RATE}%`}
           </p>
         </div>
         <div>

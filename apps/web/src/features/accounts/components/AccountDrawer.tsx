@@ -407,6 +407,7 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
               value={watch("newBalance") ?? ""}
               onChange={(v) => setValue("newBalance", v)}
               className={INPUT_CLASS}
+              allowZero
             />
           </FormField>
           {newBalanceValue?.trim() && (

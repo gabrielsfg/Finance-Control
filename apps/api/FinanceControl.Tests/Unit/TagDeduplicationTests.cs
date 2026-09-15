@@ -172,5 +172,98 @@ namespace FinanceControl.Tests.Unit
             Assert.True(duplicate.IsFailure);
             Assert.Single(await context.Tags.Where(t => t.UserId == user.Id).ToListAsync());
         }
+
+        [Fact]
+        public async Task UpdateTag_RenamesInPlaceAndKeepsTheTaggedTransactions()
+        {
+            using var context = DbContextHelper.CreateInMemory();
+            var (transactions, user, subCategory, account) = SetupTransactionService(context);
+
+            await transactions.CreateTransactionAsync(
+                BuildTransaction(subCategory, account, ["Viajem"]), user.Id);
+
+            var tag = await context.Tags.SingleAsync(t => t.UserId == user.Id);
+            var service = new TagService(context);
+
+            var result = await service.UpdateTagAsync(tag.Id, new UpdateTagRequestDto { Name = "Viagem" }, user.Id);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal("Viagem", result.Value.Name);
+
+            // Same row, same markings — fixing the spelling must not cost the user the tags.
+            var stored = Assert.Single(await context.Tags.Where(t => t.UserId == user.Id).ToListAsync());
+            Assert.Equal(tag.Id, stored.Id);
+
+            var transaction = await context.Transactions.Include(t => t.Tags).SingleAsync();
+            Assert.Equal("Viagem", Assert.Single(transaction.Tags).Name);
+        }
+
+        [Fact]
+        public async Task UpdateTag_RefusesANameAnotherTagAlreadyAnswersTo()
+        {
+            using var context = DbContextHelper.CreateInMemory();
+            var user = new User { Email = "tags@test.com", Name = "Test", PasswordHash = "x" };
+            context.Users.Add(user);
+            await context.SaveChangesAsync();
+
+            var wrong = new Tag { UserId = user.Id, Name = "Viajem" };
+            context.Tags.AddRange(wrong, new Tag { UserId = user.Id, Name = "Viagem" });
+            await context.SaveChangesAsync();
+
+            var service = new TagService(context);
+            var result = await service.UpdateTagAsync(wrong.Id, new UpdateTagRequestDto { Name = "viagem" }, user.Id);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(TagService.TagNameTakenError, result.Error);
+            Assert.Equal(2, await context.Tags.CountAsync(t => t.UserId == user.Id));
+        }
+
+        [Fact]
+        public async Task UpdateTag_WithMergeMovesTheTransactionsAndDropsTheOldTag()
+        {
+            using var context = DbContextHelper.CreateInMemory();
+            var (transactions, user, subCategory, account) = SetupTransactionService(context);
+
+            await transactions.CreateTransactionAsync(
+                BuildTransaction(subCategory, account, ["Viajem"]), user.Id);
+
+            var wrong = await context.Tags.SingleAsync(t => t.UserId == user.Id);
+            context.Tags.Add(new Tag { UserId = user.Id, Name = "Viagem" });
+            await context.SaveChangesAsync();
+
+            var service = new TagService(context);
+            var result = await service.UpdateTagAsync(
+                wrong.Id, new UpdateTagRequestDto { Name = "Viagem", Merge = true }, user.Id);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal("Viagem", result.Value.Name);
+
+            var remaining = Assert.Single(await context.Tags.Where(t => t.UserId == user.Id).ToListAsync());
+            Assert.Equal("Viagem", remaining.Name);
+
+            // The transaction follows the merge instead of losing its tag with the old row.
+            var transaction = await context.Transactions.Include(t => t.Tags).SingleAsync();
+            Assert.Equal("Viagem", Assert.Single(transaction.Tags).Name);
+        }
+
+        [Fact]
+        public async Task UpdateTag_DoesNotTouchAnotherUsersTag()
+        {
+            using var context = DbContextHelper.CreateInMemory();
+            var stranger = new User { Email = "other@test.com", Name = "Other", PasswordHash = "x" };
+            var user = new User { Email = "tags@test.com", Name = "Test", PasswordHash = "x" };
+            context.Users.AddRange(stranger, user);
+            await context.SaveChangesAsync();
+
+            var theirs = new Tag { UserId = stranger.Id, Name = "Viajem" };
+            context.Tags.Add(theirs);
+            await context.SaveChangesAsync();
+
+            var service = new TagService(context);
+            var result = await service.UpdateTagAsync(theirs.Id, new UpdateTagRequestDto { Name = "Viagem" }, user.Id);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal("Viajem", (await context.Tags.SingleAsync()).Name);
+        }
     }
 }

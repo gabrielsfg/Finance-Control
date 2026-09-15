@@ -5,6 +5,7 @@ import type {
   InvestmentTransaction,
   InvestmentDividend,
   CreateInvestmentTransactionRequest,
+  UpdateInvestmentTransactionRequest,
   CreateInvestmentDividendRequest,
   UpdateInvestmentPriceRequest,
 } from "@/lib/types/investments.types";
@@ -33,6 +34,14 @@ export const investmentsApi = {
 
   registerTransaction: async (dto: CreateInvestmentTransactionRequest): Promise<InvestmentPortfolio> => {
     const response = await api.post<InvestmentPortfolio>("/investment/transactions", dto);
+    return response.data;
+  },
+
+  updateTransaction: async (
+    transactionId: number,
+    dto: UpdateInvestmentTransactionRequest,
+  ): Promise<InvestmentPortfolio> => {
+    const response = await api.put<InvestmentPortfolio>(`/investment/transactions/${transactionId}`, dto);
     return response.data;
   },
 

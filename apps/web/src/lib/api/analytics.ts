@@ -50,6 +50,8 @@ type RawNetWorthPoint = {
   month: number;
   year: number;
   netWorth: number;
+  /** Portfolio value at the close of the month; always an asset. */
+  investments: number;
   breakdown: { accountId: number; accountName: string; balance: number }[];
 };
 
@@ -101,9 +103,9 @@ export const analyticsApi = {
   },
 
   /**
-   * The endpoint reports `netWorth` plus a per-account breakdown; the split into assets
-   * and liabilities is the sign of each account's balance. Deriving it here is what makes
-   * the returned `NetWorthPoint` true — the chart's "Ativos"/"Passivos" series and the
+   * The endpoint reports `netWorth` plus a per-account breakdown; the split into what is
+   * owned and what is owed is the sign of each account's balance. Deriving it here is what
+   * makes the returned `NetWorthPoint` true — the chart's "Bens"/"Dívidas" series and the
    * summary tiles read those two fields, and were silently getting `undefined` (the tiles'
    * `?? 0` printed R$ 0,00, and the missing `label` left the whole chart blank).
    */
@@ -112,7 +114,11 @@ export const analyticsApi = {
       params: { startDate, finishDate },
     });
     return response.data.map((point) => {
-      let assets = 0;
+      // An account in the red is money owed, whatever its type: an open card invoice and
+      // a current account in overdraft are both debt. The sign is the whole story now that
+      // transfers are accounted for — before, paying an invoice never cleared the card, so
+      // the split drifted apart month after month.
+      let assets = point.investments ?? 0;
       let liabilities = 0;
       for (const account of point.breakdown ?? []) {
         if (account.balance >= 0) assets += account.balance;
@@ -123,6 +129,7 @@ export const analyticsApi = {
         netWorth: point.netWorth,
         assets,
         liabilities,
+        investments: point.investments ?? 0,
       };
     });
   },

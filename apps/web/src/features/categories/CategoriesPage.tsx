@@ -11,6 +11,7 @@ import { CreateSubCategoryModal } from "@/features/categories/components/CreateS
 import { EditSubCategoryModal } from "@/features/categories/components/EditSubCategoryModal";
 import { DeleteCategoryModal } from "@/features/categories/components/DeleteCategoryModal";
 import { DeleteSubCategoryModal } from "@/features/categories/components/DeleteSubCategoryModal";
+import { TagsPanel } from "@/features/categories/components/TagsPanel";
 import { usePageNova, usePageSearch } from "@/lib/hooks/usePageHeader";
 import { includesNormalized } from "@/lib/utils";
 import type { Category, SubCategory } from "@/lib/types/categories.types";
@@ -58,7 +59,7 @@ export function CategoriesPage() {
   const [search, setSearch] = useState("");
 
   usePageNova("Nova categoria", () => setShowCreateCategory(true));
-  usePageSearch((q) => setSearch(q), "Buscar categoria…");
+  usePageSearch((q) => setSearch(q), "Buscar categoria ou tag…");
 
   const userCategories = categories ?? [];
   const totalSubs = userCategories.reduce((acc, c) => acc + c.subCategories.length, 0);
@@ -161,6 +162,8 @@ export function CategoriesPage() {
               )}
             </>
           )}
+
+          <TagsPanel search={search} />
         </div>
       </div>
 

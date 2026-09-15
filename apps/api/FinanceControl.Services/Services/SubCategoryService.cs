@@ -54,7 +54,8 @@ namespace FinanceControl.Services.Services
                     Emoji = s.Emoji,
                     CategoryId = s.CategoryId,
                     CategoryName = s.Category.Name,
-                    CategoryColor = s.Category.Color
+                    CategoryColor = s.Category.Color,
+                    IsSavings = s.IsSavings
                 }).ToListAsync();
 
             return subCategories;
@@ -71,7 +72,8 @@ namespace FinanceControl.Services.Services
                     Emoji = s.Emoji,
                     CategoryId = s.CategoryId,
                     CategoryName = s.Category.Name,
-                    CategoryColor = s.Category.Color
+                    CategoryColor = s.Category.Color,
+                    IsSavings = s.IsSavings
                 })
                 .FirstOrDefaultAsync();
         }
@@ -95,11 +97,35 @@ namespace FinanceControl.Services.Services
             subCategory.Name = requestDto.Name;
             subCategory.Emoji = requestDto.Emoji;
             subCategory.CategoryId = requestDto.CategoryId;
+            subCategory.IsSavings = requestDto.IsSavings;
 
             await _context.SaveChangesAsync();
             var result = await GetAllSubCategoryAsync(userId);
 
             return Result<IEnumerable<GetSubCategoryResponseDto>>.Success(result);
+        }
+
+        /// <summary>
+        /// Replaces the set of subcategories that count as savings. Sent whole rather than
+        /// one flag at a time because the screen that owns it is a checklist: what the user
+        /// left unticked is as much a decision as what they ticked.
+        /// </summary>
+        public async Task<IEnumerable<GetSubCategoryResponseDto>> SetSavingsSubCategoriesAsync(
+            IEnumerable<int> subCategoryIds,
+            int userId)
+        {
+            var wanted = subCategoryIds?.ToHashSet() ?? [];
+
+            var subCategories = await _context.SubCategories
+                .Where(s => s.UserId == userId && !s.IsSystem)
+                .ToListAsync();
+
+            foreach (var subCategory in subCategories)
+                subCategory.IsSavings = wanted.Contains(subCategory.Id);
+
+            await _context.SaveChangesAsync();
+
+            return await GetAllSubCategoryAsync(userId);
         }
 
         public async Task<Result<IEnumerable<GetSubCategoryResponseDto>>> DeleteSubCategoryAsync(int id, int userId)

@@ -560,6 +560,8 @@ function CreateForm({
 
   const isTransfer = transactionType === "Transfer";
   const paymentType = watch("paymentType") as PaymentType;
+  const createPaymentMethod = watch("paymentMethod");
+  const recurrenceValue = watch("recurrence");
   const accountIdValue = watch("accountId");
   const destinationAccountIdValue = watch("destinationAccountId");
   const subCategoryIdValue = watch("subCategoryId");
@@ -774,9 +776,9 @@ function CreateForm({
 
       {!isTransfer && (
         <FormField label="Tipo de pagamento">
-          <Select defaultValue="OneTime" onValueChange={(v) => setValue("paymentType", v as PaymentType)}>
+          <Select value={paymentType} onValueChange={(v) => setValue("paymentType", v as PaymentType)}>
             <SelectTrigger className={TRIGGER_CLASS}>
-              <SelectValue />
+              <SelectValue>{PAYMENT_TYPE_LABELS[paymentType]}</SelectValue>
             </SelectTrigger>
             <PaymentTypeSelectContent accountType={createAccountSelected?.type} />
           </Select>
@@ -786,11 +788,15 @@ function CreateForm({
       {!isTransfer && (
         <FormField label="Forma de pagamento">
           <Select
-            defaultValue=""
+            value={createPaymentMethod ?? ""}
             onValueChange={(v) => setValue("paymentMethod", v as "Debit" | "Credit" | "")}
           >
             <SelectTrigger className={TRIGGER_CLASS}>
-              <SelectValue placeholder="Opcional" />
+              <SelectValue>
+                {PAYMENT_METHOD_LABELS[createPaymentMethod ?? ""] ?? (
+                  <span className="text-text-muted">Opcional</span>
+                )}
+              </SelectValue>
             </SelectTrigger>
             <PaymentMethodSelectContent />
           </Select>
@@ -816,11 +822,18 @@ function CreateForm({
 
       {!isTransfer && paymentType === "Recurring" && (
         <FormField label="Recorrência" error={errors.recurrence?.message}>
-          <Select onValueChange={(v) => setValue("recurrence", v as string)}>
+          <Select
+            value={recurrenceValue ?? ""}
+            onValueChange={(v) => setValue("recurrence", v as string)}
+          >
             <SelectTrigger
               className={cn(TRIGGER_CLASS, errors.recurrence && "border-red/60")}
             >
-              <SelectValue placeholder="Selecionar frequência" />
+              <SelectValue>
+                {RECURRENCE_LABELS[recurrenceValue as RecurrenceType] ?? (
+                  <span className="text-text-muted">Selecionar frequência</span>
+                )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {(Object.keys(RECURRENCE_LABELS) as RecurrenceType[]).map((r) => (
@@ -886,6 +899,25 @@ function CreateForm({
 
 // ── Edit form ─────────────────────────────────────────────────────────────────
 
+function editDefaults(transaction: TransactionItem): EditValues {
+  return {
+    description: transaction.description,
+    value: String(transaction.value / 100),
+    transactionDate: transaction.transactionDate,
+    subCategoryId: String(transaction.subCategoryId),
+    accountId: String(transaction.accountId),
+    destinationAccountId: transaction.destinationAccountId
+      ? String(transaction.destinationAccountId)
+      : "",
+    paymentMethod: transaction.paymentMethod ?? "",
+    type: transaction.type,
+    paymentType: transaction.paymentType,
+    totalInstallments: "",
+    recurrence: "",
+    includeInBudget: transaction.budgetId !== null,
+  };
+}
+
 function EditForm({
   transaction,
   onClose,
@@ -901,6 +933,10 @@ function EditForm({
   const [editTags, setEditTags] = useState<string[]>(() => transaction.tags.map((t) => t.name));
   const [subcatModalOpen, setSubcatModalOpen] = useState(false);
 
+  // Seeded on the first render, not only from the effect below: the selects are
+  // controlled, and Base UI locks a Select into uncontrolled mode when its `value` is
+  // undefined on mount — the payment type and method then never picked up what the
+  // transaction already had.
   const {
     register,
     handleSubmit,
@@ -908,27 +944,17 @@ function EditForm({
     setValue,
     reset,
     formState: { errors },
-  } = useForm<EditValues>({ resolver: zodResolver(editSchema) });
+  } = useForm<EditValues>({
+    resolver: zodResolver(editSchema),
+    defaultValues: editDefaults(transaction),
+  });
 
   const [transactionType, setTransactionType] = useState<TransactionType>(transaction.type);
 
   useEffect(() => {
     setTransactionType(transaction.type);
     setEditTags(transaction.tags.map((t) => t.name));
-    reset({
-      description: transaction.description,
-      value: String(transaction.value / 100),
-      transactionDate: transaction.transactionDate,
-      subCategoryId: String(transaction.subCategoryId),
-      accountId: String(transaction.accountId),
-      destinationAccountId: transaction.destinationAccountId ? String(transaction.destinationAccountId) : "",
-      paymentMethod: transaction.paymentMethod ?? "",
-      type: transaction.type,
-      paymentType: transaction.paymentType,
-      totalInstallments: "",
-      recurrence: "",
-      includeInBudget: transaction.budgetId !== null,
-    });
+    reset(editDefaults(transaction));
     setServerError(null);
   }, [transaction, reset]);
 
@@ -938,6 +964,7 @@ function EditForm({
   const destinationAccountValue = watch("destinationAccountId");
   const paymentMethodValue = watch("paymentMethod");
   const editPaymentType = watch("paymentType") as PaymentType;
+  const editRecurrenceValue = watch("recurrence");
 
   const accountSelected = accounts.find((a) => String(a.id) === accountValue);
   const editDestAccountSelected = accounts.find((a) => String(a.id) === destinationAccountValue);
@@ -951,7 +978,7 @@ function EditForm({
       }
     }
   }, [accountSelected?.type]); // eslint-disable-line react-hooks/exhaustive-deps
-  const paymentMethodLabel = paymentMethodValue === "Debit" ? "Débito" : paymentMethodValue === "Credit" ? "Crédito" : undefined;
+  const paymentMethodLabel = PAYMENT_METHOD_LABELS[paymentMethodValue ?? ""];
 
   const onSubmit = async (values: EditValues) => {
     setServerError(null);
@@ -1147,7 +1174,7 @@ function EditForm({
             onValueChange={(v) => setValue("paymentType", v as PaymentType)}
           >
             <SelectTrigger className={TRIGGER_CLASS}>
-              <SelectValue />
+              <SelectValue>{PAYMENT_TYPE_LABELS[editPaymentType]}</SelectValue>
             </SelectTrigger>
             <PaymentTypeSelectContent accountType={accountSelected?.type} />
           </Select>
@@ -1179,9 +1206,16 @@ function EditForm({
 
       {editPaymentType === "Recurring" && (
         <FormField label="Recorrência" error={errors.recurrence?.message}>
-          <Select onValueChange={(v) => setValue("recurrence", v as string)}>
+          <Select
+            value={editRecurrenceValue ?? ""}
+            onValueChange={(v) => setValue("recurrence", v as string)}
+          >
             <SelectTrigger className={cn(TRIGGER_CLASS, errors.recurrence && "border-red/60")}>
-              <SelectValue placeholder="Selecionar frequência" />
+              <SelectValue>
+                {RECURRENCE_LABELS[editRecurrenceValue as RecurrenceType] ?? (
+                  <span className="text-text-muted">Selecionar frequência</span>
+                )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {(Object.keys(RECURRENCE_LABELS) as RecurrenceType[]).map((r) => (

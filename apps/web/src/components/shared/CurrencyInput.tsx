@@ -7,6 +7,13 @@ type Props = {
   onChange: (v: string) => void;
   className?: string;
   disabled?: boolean;
+  /**
+   * Report a typed zero as "0.00" instead of "". The field always displays "0,00" when
+   * empty, so the two are indistinguishable on screen — but for "novo saldo" zero is a
+   * balance the user means, not an untouched field, and reporting "" made setting an
+   * account to R$ 0,00 read as "nothing changed".
+   */
+  allowZero?: boolean;
 };
 
 const MAX_CENTS = 999_999_999;
@@ -22,9 +29,11 @@ function formatDisplay(cents: number): string {
   return `${intFormatted},${decPart}`;
 }
 
-export function CurrencyInput({ value, onChange, className, disabled }: Props) {
+export function CurrencyInput({ value, onChange, className, disabled, allowZero }: Props) {
   const [cents, setCents] = useState(() => toCents(value));
   const externalRef = useRef(value);
+
+  const emit = (next: number) => (next > 0 || allowZero ? (next / 100).toFixed(2) : "");
 
   useEffect(() => {
     if (value !== externalRef.current) {
@@ -38,13 +47,13 @@ export function CurrencyInput({ value, onChange, className, disabled }: Props) {
       e.preventDefault();
       const newCents = Math.min(cents * 10 + parseInt(e.key, 10), MAX_CENTS);
       setCents(newCents);
-      externalRef.current = newCents > 0 ? (newCents / 100).toFixed(2) : "";
+      externalRef.current = emit(newCents);
       onChange(externalRef.current);
     } else if (e.key === "Backspace") {
       e.preventDefault();
       const newCents = Math.floor(cents / 10);
       setCents(newCents);
-      externalRef.current = newCents > 0 ? (newCents / 100).toFixed(2) : "";
+      externalRef.current = emit(newCents);
       onChange(externalRef.current);
     }
   };

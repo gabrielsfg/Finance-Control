@@ -13,5 +13,8 @@ namespace FinanceControl.Shared.Dtos.Response
         public string? CategoryColor { get; set; }
         public string Name { get; set; }
         public string? Emoji { get; set; }
+
+        /// <summary>Spending here counts as savings, not as an expense.</summary>
+        public bool IsSavings { get; set; }
     }
 }

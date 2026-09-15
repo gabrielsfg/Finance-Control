@@ -90,7 +90,7 @@ export function SavingsRateHistoryChart({ periods, plannedRate, positiveStreak }
                 {plannedRate !== null
                   ? avgRate >= plannedRate
                     ? "acima da meta do orçamento"
-                    : `${(plannedRate - avgRate).toFixed(1).replace(".", ",")}pp abaixo da meta`
+                    : `${(plannedRate - avgRate).toFixed(1).replace(".", ",")} pontos abaixo da meta de ${plannedRate.toFixed(1).replace(".", ",")}%`
                   : "nos períodos exibidos"}
               </p>
             </div>

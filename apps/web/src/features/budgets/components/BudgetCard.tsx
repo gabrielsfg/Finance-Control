@@ -43,7 +43,9 @@ function StatusBadge({ pct, isActive }: { pct: number; isActive: boolean }) {
 
 /** Thin labelled progress bar (track + fill), the in-card budget bar. */
 function Bar({ value, max, color }: { value: number; max: number; color: string }) {
-  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+  // Clamped low as well as high: a net-negative spend (more refunded than spent) would
+  // otherwise emit a negative width, which the browser drops and renders as a full bar.
+  const pct = max > 0 ? Math.min(Math.max((value / max) * 100, 0), 100) : 0;
   const over = value > max;
   return (
     <div

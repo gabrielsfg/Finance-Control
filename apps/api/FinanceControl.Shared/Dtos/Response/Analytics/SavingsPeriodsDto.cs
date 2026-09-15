@@ -21,10 +21,18 @@ namespace FinanceControl.Shared.Dtos.Response.Analytics
         public bool IsCurrent { get; set; }
         /// <summary>Income in the period, excluding proceeds from investment sells.</summary>
         public int Income { get; set; }
-        /// <summary>Expenses in the period, excluding investment buys.</summary>
+        /// <summary>
+        /// Expenses in the period, excluding investment buys and anything filed under a
+        /// subcategory the user marked as savings.
+        /// </summary>
         public int Expense { get; set; }
-        /// <summary>Net amount moved into investments (buys − sells).</summary>
+        /// <summary>
+        /// Money set aside: net investment buys (buys − sells) plus spending on
+        /// subcategories marked as savings.
+        /// </summary>
         public int Invested { get; set; }
+        /// <summary>The savings-subcategory share of <see cref="Invested"/>.</summary>
+        public int SavedInCategories { get; set; }
         /// <summary>Net transfers into goal (system) accounts.</summary>
         public int GoalContributions { get; set; }
         public int Savings { get; set; }

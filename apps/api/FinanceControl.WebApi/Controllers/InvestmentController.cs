@@ -95,6 +95,39 @@ namespace FinanceControl.WebApi.Controllers
             }
         }
 
+        [HttpPut("transactions/{id:int}")]
+        public async Task<IActionResult> UpdateTransactionAsync([FromRoute] int id, [FromBody] UpdateInvestmentTransactionRequestDto dto)
+        {
+            var validation = this.ValidatePositiveId(id, "id");
+            if (validation is not null) return validation;
+
+            if (dto.Quantity <= 0)
+                return BadRequest(new { error = "Quantity must be greater than 0." });
+
+            if (dto.UnitPrice <= 0)
+                return BadRequest(new { error = "UnitPrice must be greater than 0." });
+
+            if (dto.OtherCosts < 0)
+                return BadRequest(new { error = "OtherCosts cannot be negative." });
+
+            var accountValidation = this.ValidatePositiveId(dto.AccountId, "accountId");
+            if (accountValidation is not null) return accountValidation;
+
+            try
+            {
+                var result = await _investmentService.UpdateTransactionAsync(id, GetUserId(), dto);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { error = "Investment transaction not found." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
         [HttpDelete("transactions/{id:int}")]
         public async Task<IActionResult> DeleteTransactionAsync([FromRoute] int id)
         {

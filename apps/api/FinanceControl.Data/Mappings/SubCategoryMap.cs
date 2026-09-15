@@ -16,6 +16,7 @@ namespace FinanceControl.Data.Mappings
             builder.HasKey(s => s.Id);
             builder.Property(s => s.Name);
             builder.Property(s => s.IsSystem).HasDefaultValue(false).IsRequired();
+            builder.Property(s => s.IsSavings).HasDefaultValue(false).IsRequired();
             builder.Property(s => s.CreatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("now()")

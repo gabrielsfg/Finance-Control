@@ -25,6 +25,7 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { ASSET_TYPE_LABELS } from "@/features/investments/utils/assetLabels";
 import { useRegisterTransaction } from "@/features/investments/hooks/useInvestments";
 import { useMarketSearch } from "@/features/market/hooks/useMarket";
+import { TagInput } from "@/features/transactions/components/TagInput";
 import type { AssetType, InvestmentOperation, YieldIndex } from "@/lib/types/investments.types";
 import type { MarketAsset } from "@/lib/types/market.types";
 
@@ -57,6 +58,7 @@ const schema = z.object({
   otherCosts: z.string().optional(),
   accountId:  z.string().min(1, "Conta é obrigatória"),
   createLinkedTransaction: z.boolean(),
+  includeInBudget: z.boolean(),
   yieldIndex:   z.enum(["Cdi", "Ipca", "Prefixed"]),
   yieldRatePct: z.string(),
 });
@@ -213,7 +215,8 @@ function FormField({ label, error, children }: { label: string; error?: string; 
 type AssetSearchFieldProps = {
   assetType: AssetType;
   onSelect: (asset: MarketAsset) => void;
-  onCreateCustom: (ticker: string) => void;
+  /** `duplicate` is true when an asset already answers to this ticker. */
+  onCreateCustom: (ticker: string, duplicate: boolean) => void;
 };
 
 function AssetSearchField({ assetType, onSelect, onCreateCustom }: AssetSearchFieldProps) {
@@ -241,7 +244,11 @@ function AssetSearchField({ assetType, onSelect, onCreateCustom }: AssetSearchFi
   }, []);
 
   const trimmed = query.trim().toUpperCase();
-  const showCreateOption = trimmed.length >= 1 && !filtered.some(a => a.ticker === trimmed);
+  // Creating stays on offer even when the ticker is taken. Fixed income is why: every CDB
+  // is a different contract, and hiding the option behind an exact match left no way to
+  // register a second one. The duplicate gets its own suffixed ticker server-side.
+  const duplicate = results.some(a => a.ticker === trimmed);
+  const showCreateOption = trimmed.length >= 1;
 
   return (
     <div className="relative">
@@ -268,10 +275,6 @@ function AssetSearchField({ assetType, onSelect, onCreateCustom }: AssetSearchFi
           ref={listRef}
           className="border-border bg-surface absolute left-0 top-12 z-[70] w-full rounded-xl border shadow-2xl overflow-hidden"
         >
-          {filtered.length === 0 && !isFetching && !showCreateOption && (
-            <div className="px-4 py-3 text-[13px] text-text-muted">Nenhum resultado</div>
-          )}
-
           {filtered.map(asset => (
             <button
               key={asset.ticker}
@@ -296,12 +299,18 @@ function AssetSearchField({ assetType, onSelect, onCreateCustom }: AssetSearchFi
           {showCreateOption && (
             <button
               type="button"
-              onClick={() => { onCreateCustom(trimmed); setQuery(""); setOpen(false); }}
+              onClick={() => { onCreateCustom(trimmed, duplicate); setQuery(""); setOpen(false); }}
               className="flex w-full items-center gap-3 border-t border-border px-4 py-3 text-left transition-colors hover:bg-surface2"
             >
               <Plus size={14} className="shrink-0 text-green" />
               <span className="text-[13px] text-text">
-                Criar <span className="font-semibold text-green">{trimmed}</span> manualmente
+                Criar {duplicate ? "outro " : ""}
+                <span className="font-semibold text-green">{trimmed}</span> manualmente
+                {duplicate && (
+                  <span className="block text-[11.5px] text-text-muted">
+                    Separado do que já existe
+                  </span>
+                )}
               </span>
             </button>
           )}
@@ -317,6 +326,8 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
   const { mutateAsync, isPending } = useRegisterTransaction();
   const [serverError, setServerError] = useState<string | null>(null);
   const [assetConfirmed, setAssetConfirmed] = useState(false);
+  const [forceNewAsset, setForceNewAsset] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
   const [unitPriceCents, setUnitPriceCents] = useState(0);
   const [otherCostsCents, setOtherCostsCents] = useState(0);
 
@@ -341,6 +352,9 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
       otherCosts: "",
       accountId:  accountOptions[0]?.id.toString() ?? "",
       createLinkedTransaction: true,
+      // A contribution is planned spending like any other budget line; leaving it out made
+      // the budget under-report what actually left the account.
+      includeInBudget: true,
       yieldIndex:   "Cdi",
       yieldRatePct: "",
     },
@@ -351,6 +365,7 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
   const date       = watch("date") ?? "";
   const accountId  = watch("accountId");
   const createsTransaction = watch("createLinkedTransaction");
+  const includeInBudget = watch("includeInBudget");
   const yieldIndex         = watch("yieldIndex");
   const yieldRatePct       = watch("yieldRatePct");
 
@@ -379,6 +394,7 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
   useEffect(() => {
     if (assetConfirmed) {
       setAssetConfirmed(false);
+      setForceNewAsset(false);
       setValue("ticker", "");
       setValue("name", "");
       setValue("unitPrice", "");
@@ -399,6 +415,8 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
     reset();
     setServerError(null);
     setAssetConfirmed(false);
+    setForceNewAsset(false);
+    setTags([]);
     setUnitPriceCents(0);
     setOtherCostsCents(0);
     onClose();
@@ -443,6 +461,7 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
   }
 
   function handleSelectAsset(asset: MarketAsset) {
+    setForceNewAsset(false);
     setValue("ticker", asset.ticker, { shouldValidate: true });
     setValue("name", asset.name, { shouldValidate: true });
     if (asset.currentPrice > 0) {
@@ -454,12 +473,14 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
     setAssetConfirmed(true);
   }
 
-  function handleCreateCustom(inputTicker: string) {
+  function handleCreateCustom(inputTicker: string, duplicate: boolean) {
     setValue("ticker", inputTicker, { shouldValidate: true });
+    setForceNewAsset(duplicate);
     setAssetConfirmed(true);
   }
 
   function handleClearAsset() {
+    setForceNewAsset(false);
     setValue("ticker", "");
     setValue("name", "");
     setValue("unitPrice", "");
@@ -485,6 +506,9 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
         otherCosts: otherCostsCents,
         accountId:  parseInt(values.accountId),
         createLinkedTransaction: values.createLinkedTransaction,
+        includeInBudget: values.createLinkedTransaction && values.includeInBudget,
+        tags: values.createLinkedTransaction ? tags : [],
+        forceNewAsset,
         ...(isFixedIncome && values.yieldRatePct
           ? {
               yieldIndex: values.yieldIndex as YieldIndex,
@@ -761,6 +785,30 @@ export const RegisterTransactionModal = ({ open, onClose, accountOptions }: Prop
                     </SelectContent>
                   </Select>
                 </FormField>
+
+                {/* Budget + tags apply to the account movement, so they are hidden without one */}
+                {createsTransaction && (
+                  <>
+                    <label className="border-border bg-surface2 flex cursor-pointer items-start gap-3 rounded-[13px] border p-3.5">
+                      <input
+                        type="checkbox"
+                        checked={includeInBudget}
+                        onChange={(e) => setValue("includeInBudget", e.target.checked)}
+                        className="accent-green mt-0.5 h-4 w-4 shrink-0"
+                      />
+                      <span className="flex flex-col gap-0.5">
+                        <span className="text-text text-[14px] font-medium">Incluir no orçamento</span>
+                        <span className="text-text-sub text-[12.5px] leading-relaxed">
+                          O lançamento entra no orçamento ativo, na categoria Aporte.
+                        </span>
+                      </span>
+                    </label>
+
+                    <FormField label="Tags">
+                      <TagInput value={tags} onChange={setTags} />
+                    </FormField>
+                  </>
+                )}
               </>
             )}
 

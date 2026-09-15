@@ -9,8 +9,11 @@ import type { SavingsDetailResponse } from "@/lib/types/analytics.types";
 type Props = { detail: SavingsDetailResponse };
 
 export function SavingsLeaksCard({ detail }: Props) {
-  // API sends allocations sorted by overage descending
-  const leaks = detail.allocations.filter((al) => al.spent > al.allocated).slice(0, 5);
+  // API sends allocations sorted by overage descending. Savings lines are left out:
+  // putting more than planned into an aporte is the opposite of a leak.
+  const leaks = detail.allocations
+    .filter((al) => !al.isSavings && al.spent > al.allocated)
+    .slice(0, 5);
 
   return (
     <Card className="flex flex-col">
@@ -53,7 +56,7 @@ export function SavingsLeaksCard({ detail }: Props) {
                   <p className="font-money text-red text-[13px]">{formatCurrency(overage / 100)} acima</p>
                   {ppImpact !== null && (
                     <p className="text-text-muted text-[11px]">
-                      {ppImpact.toFixed(1).replace(".", ",")}pp da sua taxa
+                      custou {ppImpact.toFixed(1).replace(".", ",")}% da sua taxa de economia
                     </p>
                   )}
                 </div>

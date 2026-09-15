@@ -6,6 +6,7 @@ import type {
   InvestmentTransaction,
   InvestmentDividend,
   CreateInvestmentTransactionRequest,
+  UpdateInvestmentTransactionRequest,
   CreateInvestmentDividendRequest,
   UpdateInvestmentPriceRequest,
 } from "@/lib/types/investments.types";
@@ -55,12 +56,40 @@ export const useRegisterTransaction = () => {
   });
 };
 
+export const useUpdateTransaction = () => {
+  const queryClient = useQueryClient();
+  return useMutation<
+    InvestmentPortfolio,
+    Error,
+    { id: number; investmentId: number; dto: UpdateInvestmentTransactionRequest }
+  >({
+    mutationFn: ({ id, dto }) => investmentsApi.updateTransaction(id, dto),
+    onSuccess: (data, { investmentId }) => {
+      queryClient.setQueryData(["investments"], data);
+      // The operation list the edit came from is a separate query.
+      queryClient.invalidateQueries({ queryKey: ["investments", investmentId, "transactions"] });
+      // Rewriting an operation rewrites its linked cash transaction with it.
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      // Net worth and investment analytics derive from the portfolio.
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+};
+
 export const useDeleteTransaction = () => {
   const queryClient = useQueryClient();
   return useMutation<InvestmentPortfolio, Error, number>({
     mutationFn: investmentsApi.deleteTransaction,
     onSuccess: (data) => {
       queryClient.setQueryData(["investments"], data);
+      // The per-position operation lists are separate queries — without this the row
+      // the user just deleted stays on screen until the modal is reopened.
+      queryClient.invalidateQueries({ queryKey: ["investments"], exact: false });
+      // Deleting an operation deletes its linked cash transaction with it.
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
       // Net worth and investment analytics derive from the portfolio.
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });

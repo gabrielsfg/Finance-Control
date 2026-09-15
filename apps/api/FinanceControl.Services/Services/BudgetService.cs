@@ -111,16 +111,13 @@ namespace FinanceControl.Services.Services
                     .Select(g => new SubCategorySpend(g.Key.SubCategoryId, g.Key.Type, g.Sum(t => t.Value)))
                     .ToListAsync();
 
+                var twoWaySubCategories = TwoWaySubCategories(areas);
+
                 var flatAllocations = areas
                     .SelectMany(a => a.BudgetSubcategoryAllocations.Select(al =>
                     {
-                        var matchingType = al.AllocationType == EnumAllocationType.Income
-                            ? EnumTransactionType.Income
-                            : EnumTransactionType.Expense;
-
-                        var spent = spentBySubCategory
-                            .Where(s => s.SubCategoryId == al.SubCategoryId && s.Type == matchingType)
-                            .Sum(s => s.Total);
+                        var spent = NetMovement(
+                            al.SubCategoryId, al.AllocationType, spentBySubCategory, twoWaySubCategories);
 
                         var pct = al.ExpectedValue > 0
                             ? Math.Round((double)spent / al.ExpectedValue * 100, 2)
@@ -183,6 +180,67 @@ namespace FinanceControl.Services.Services
         private sealed record SubCategorySpend(int SubCategoryId, EnumTransactionType Type, int Total);
 
         /// <summary>
+        /// Subcategories allocated in both directions inside the same budget. Netting is
+        /// switched off for them: the plan already has a row for each direction, so
+        /// discounting one from the other would subtract the same money twice.
+        /// </summary>
+        private static HashSet<int> TwoWaySubCategories(List<Area> areas)
+        {
+            var byDirection = areas
+                .SelectMany(a => a.BudgetSubcategoryAllocations)
+                .GroupBy(al => al.SubCategoryId);
+
+            return byDirection
+                .Where(g => g.Any(al => al.AllocationType == EnumAllocationType.Expense)
+                            && g.Any(al => al.AllocationType == EnumAllocationType.Income))
+                .Select(g => g.Key)
+                .ToHashSet();
+        }
+
+        /// <summary>
+        /// What an allocation actually consumed in the period: its own direction minus the
+        /// money that came back the other way under the same subcategory.
+        ///
+        /// A target of 5.000 in a category where 7.000 was spent and 4.000 came back (a
+        /// refund, a reimbursement, a chargeback, a split someone paid you back for) has
+        /// really cost 3.000, so that is what counts against the target — the earlier
+        /// behaviour reported the gross 7.000 as blown and parked the 4.000 in a separate
+        /// income row, double-counting money that never left. Income allocations net the
+        /// same way, in reverse.
+        ///
+        /// The result can go negative when more came back than went out; callers report it
+        /// as-is (a category that gave money back is information, not an error) and clamp
+        /// only the progress bars.
+        /// </summary>
+        private static int NetMovement(
+            int subCategoryId,
+            EnumAllocationType direction,
+            List<SubCategorySpend> movements,
+            HashSet<int> twoWaySubCategories)
+        {
+            var own = direction == EnumAllocationType.Income
+                ? EnumTransactionType.Income
+                : EnumTransactionType.Expense;
+
+            var gross = movements
+                .Where(s => s.SubCategoryId == subCategoryId && s.Type == own)
+                .Sum(s => s.Total);
+
+            if (twoWaySubCategories.Contains(subCategoryId))
+                return gross;
+
+            var opposite = direction == EnumAllocationType.Income
+                ? EnumTransactionType.Expense
+                : EnumTransactionType.Income;
+
+            var offset = movements
+                .Where(s => s.SubCategoryId == subCategoryId && s.Type == opposite)
+                .Sum(s => s.Total);
+
+            return gross - offset;
+        }
+
+        /// <summary>
         /// Spend that was explicitly assigned to the budget but whose subcategory has no
         /// allocation in it.
         ///
@@ -192,10 +250,13 @@ namespace FinanceControl.Services.Services
         /// in the totals — that is the whole point of next period's plan being informed by
         /// this one — so it comes back as rows with no target, under a synthetic area.
         ///
-        /// Matching is on (subcategory, direction), the same pair the planned rows use: a
-        /// subcategory allocated as an expense still reports unbudgeted *income*, because
-        /// that income has no target either. Transfers are excluded — they move money
-        /// between the user's own accounts and were never spend.
+        /// One row per unplanned subcategory, carrying its net movement: expenses minus
+        /// what came back in, reported as an expense row when the subcategory cost money
+        /// and as an income row when it brought money in. A subcategory that has *any*
+        /// allocation is not unplanned in either direction — its planned row already nets
+        /// both ways (see <see cref="NetMovement"/>), so listing it here too would
+        /// double-count. Transfers are excluded — they move money between the user's own
+        /// accounts and were never spend.
         /// </summary>
         private async Task<List<BudgetAllocationFlatResponseDto>> BuildUnbudgetedAllocationsAsync(
             List<Area> areas,
@@ -203,23 +264,24 @@ namespace FinanceControl.Services.Services
         {
             var planned = areas
                 .SelectMany(a => a.BudgetSubcategoryAllocations)
-                .Select(al => (
-                    al.SubCategoryId,
-                    Type: al.AllocationType == EnumAllocationType.Income
-                        ? EnumTransactionType.Income
-                        : EnumTransactionType.Expense))
+                .Select(al => al.SubCategoryId)
                 .ToHashSet();
 
             var unplanned = spentBySubCategory
-                .Where(s => s.Type != EnumTransactionType.Transfer
-                            && s.Total != 0
-                            && !planned.Contains((s.SubCategoryId, s.Type)))
+                .Where(s => s.Type != EnumTransactionType.Transfer && !planned.Contains(s.SubCategoryId))
+                .GroupBy(s => s.SubCategoryId)
+                .Select(g => new
+                {
+                    SubCategoryId = g.Key,
+                    Net = g.Sum(s => s.Type == EnumTransactionType.Income ? -s.Total : s.Total),
+                })
+                .Where(x => x.Net != 0)
                 .ToList();
 
             if (unplanned.Count == 0)
                 return [];
 
-            var subCategoryIds = unplanned.Select(s => s.SubCategoryId).Distinct().ToList();
+            var subCategoryIds = unplanned.Select(s => s.SubCategoryId).ToList();
 
             var subCategories = await _context.SubCategories
                 .Include(sc => sc.Category)
@@ -231,6 +293,7 @@ namespace FinanceControl.Services.Services
                 .Select(s =>
                 {
                     var subCategory = subCategories[s.SubCategoryId];
+                    var isExpense = s.Net > 0;
                     return new BudgetAllocationFlatResponseDto
                     {
                         // No allocation row exists, so there is no id to report. Callers key
@@ -243,14 +306,14 @@ namespace FinanceControl.Services.Services
                         CategoryColor = subCategory.Category.Color,
                         AreaName = UnbudgetedAreaName,
                         Allocated = 0,
-                        Spent = s.Total,
+                        Spent = isExpense ? s.Net : -s.Net,
                         // Spent over a zero target has no percentage. Kept at 0 to match what
                         // the planned rows report for a zero allocation; `IsUnbudgeted` is
                         // what callers should branch on.
                         SpentPercentage = 0,
-                        AllocationType = s.Type == EnumTransactionType.Income
-                            ? EnumAllocationType.Income
-                            : EnumAllocationType.Expense,
+                        AllocationType = isExpense
+                            ? EnumAllocationType.Expense
+                            : EnumAllocationType.Income,
                         IsUnbudgeted = true,
                     };
                 })
@@ -296,8 +359,10 @@ namespace FinanceControl.Services.Services
                 .Where(t => t.BudgetId == id && t.UserId == userId
                     && t.TransactionDate >= startDate && t.TransactionDate < finishDate)
                 .GroupBy(t => new { t.SubCategoryId, t.Type })
-                .Select(g => new { g.Key.SubCategoryId, g.Key.Type, Total = g.Sum(t => t.Value) })
+                .Select(g => new SubCategorySpend(g.Key.SubCategoryId, g.Key.Type, g.Sum(t => t.Value)))
                 .ToListAsync();
+
+            var twoWaySubCategories = TwoWaySubCategories(areas);
 
             return new GetBudgetWithAreasResponseDto
             {
@@ -313,13 +378,8 @@ namespace FinanceControl.Services.Services
                     Name = a.Name,
                     Allocations = a.BudgetSubcategoryAllocations.Select(al =>
                     {
-                        var matchingType = al.AllocationType == EnumAllocationType.Income
-                            ? EnumTransactionType.Income
-                            : EnumTransactionType.Expense;
-
-                        var spent = spentBySubCategory
-                            .Where(s => s.SubCategoryId == al.SubCategoryId && s.Type == matchingType)
-                            .Sum(s => s.Total);
+                        var spent = NetMovement(
+                            al.SubCategoryId, al.AllocationType, spentBySubCategory, twoWaySubCategories);
 
                         return new AllocationInBudgetResponseDto
                         {

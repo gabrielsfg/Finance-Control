@@ -66,8 +66,12 @@ export type CategoryMonthlyData = {
 export type NetWorthPoint = {
   label: string;
   netWorth: number;
+  /** Cash in accounts that are in the black, plus the portfolio. */
   assets: number;
+  /** Everything owed: card invoices and overdrawn accounts, as a positive number. */
   liabilities: number;
+  /** The portfolio's share of `assets`, broken out for the summary. */
+  investments: number;
 };
 
 // ── Investments (from investments feature) ────────────────────────────────────
@@ -317,8 +321,9 @@ export type SavingsPeriodItem = {
   periodEnd: string;   // exclusive (start of the next period)
   isCurrent: boolean;
   income: number;            // cents, excludes investment-sell proceeds
-  expense: number;           // cents, excludes investment buys
-  invested: number;          // cents, net buys − sells
+  expense: number;           // cents, excludes investment buys and savings subcategories
+  invested: number;          // cents, net buys − sells plus savings-subcategory spending
+  savedInCategories: number; // cents, the savings-subcategory share of `invested`
   goalContributions: number; // cents, net transfers into goal accounts
   savings: number;           // cents
   savingsRate: number | null; // %, null when no income
@@ -342,6 +347,8 @@ export type SavingsAllocationStatus = {
   areaName: string;
   allocated: number; // cents
   spent: number;     // cents
+  /** Money kept, not spent — overspending it is a win, not a leak. */
+  isSavings: boolean;
 };
 
 export type SavingsAreaImpact = {
@@ -349,6 +356,8 @@ export type SavingsAreaImpact = {
   name: string;
   plannedExpense: number; // cents
   actualExpense: number;  // cents
+  /** Every expense allocation in the area is a savings one. */
+  isSavings: boolean;
 };
 
 export type SavingsDetailResponse = {
@@ -358,6 +367,7 @@ export type SavingsDetailResponse = {
   income: number;
   expense: number;
   invested: number;
+  savedInCategories: number;
   goalContributions: number;
   savings: number;
   savingsRate: number | null;

@@ -36,15 +36,15 @@ export function AnalyticsNetWorthPage() {
     ? ((last.netWorth - prev.netWorth) / Math.abs(prev.netWorth)) * 100
     : null;
   const first = pts[0];
-  const yearGrowth = last && first && first.netWorth
+  // First point vs. last point of whatever range the filter holds — which is the growth
+  // over the period, not over the calendar year. It was labelled with the year.
+  const periodGrowth = last && first && first.netWorth
     ? ((last.netWorth - first.netWorth) / Math.abs(first.netWorth)) * 100
     : null;
   const mo = monthly.data ?? [];
   const totalInc = mo.reduce((s, m) => s + (m.totalIncome ?? 0), 0);
   const totalExp = mo.reduce((s, m) => s + (m.totalExpense ?? 0), 0);
   const sr = totalInc > 0 ? ((totalInc - totalExp) / totalInc) * 100 : null;
-
-  const currentYear = new Date().getFullYear();
 
   return (
     <div className="flex flex-col gap-5">
@@ -64,7 +64,7 @@ export function AnalyticsNetWorthPage() {
             style={{ fontSize: "clamp(40px, 5.6vw, 70px)" } as React.CSSProperties}
           />
           <div className="mt-2 font-mono text-[13px] text-[var(--panel-muted)]">
-            Patrimônio líquido das suas contas
+            Dinheiro em contas somado aos investimentos
           </div>
         </div>
 
@@ -75,10 +75,10 @@ export function AnalyticsNetWorthPage() {
           </div>
           <div className="grid grid-cols-3 gap-6">
             {[
-              { label: "No mês", value: monthGrowth },
-              { label: `Em ${currentYear}`, value: yearGrowth },
-              { label: "Tx. poupança", value: sr },
-            ].map(({ label, value }) => (
+              { label: "No mês", value: monthGrowth, signed: true },
+              { label: "No período", value: periodGrowth, signed: true },
+              { label: "Tx. poupança", value: sr, signed: false },
+            ].map(({ label, value, signed }) => (
               <div key={label}>
                 <div className="font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--panel-muted)] mb-[6px]">
                   {label}
@@ -89,7 +89,7 @@ export function AnalyticsNetWorthPage() {
                     color:
                       value === null
                         ? "var(--panel-muted)"
-                        : label === `Em ${currentYear}` || label === "No mês"
+                        : signed
                           ? value >= 0
                             ? "var(--moss-lift)"
                             : "var(--clay-lift)"

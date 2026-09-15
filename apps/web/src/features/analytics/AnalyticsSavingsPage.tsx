@@ -15,6 +15,7 @@ import { SavingsAdherenceCard } from "./savings/components/SavingsAdherenceCard"
 import { SavingsLeaksCard } from "./savings/components/SavingsLeaksCard";
 import { SavingsDestinationCard } from "./savings/components/SavingsDestinationCard";
 import { SavingsAreaImpactCard } from "./savings/components/SavingsAreaImpactCard";
+import { SavingsCategoriesCard } from "./savings/components/SavingsCategoriesCard";
 
 export function AnalyticsSavingsPage() {
   const { data: budgets = [], isLoading: budgetsLoading } = useBudgets();
@@ -126,6 +127,8 @@ export function AnalyticsSavingsPage() {
         <SavingsDestinationCard detail={detail} />
         <SavingsAreaImpactCard areas={detail.areas} />
       </div>
+
+      <SavingsCategoriesCard />
     </div>
   );
 }

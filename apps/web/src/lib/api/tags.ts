@@ -1,5 +1,5 @@
 import { api } from "./axios";
-import type { TagItem } from "@/lib/types/tags.types";
+import type { TagItem, UpdateTagRequest } from "@/lib/types/tags.types";
 
 export const tagsApi = {
   getAll: async (): Promise<TagItem[]> => {
@@ -9,6 +9,11 @@ export const tagsApi = {
 
   create: async (name: string): Promise<TagItem> => {
     const res = await api.post<TagItem>("/tag", { name });
+    return res.data;
+  },
+
+  update: async (id: number, data: UpdateTagRequest): Promise<TagItem> => {
+    const res = await api.put<TagItem>(`/tag/${id}`, data);
     return res.data;
   },
 

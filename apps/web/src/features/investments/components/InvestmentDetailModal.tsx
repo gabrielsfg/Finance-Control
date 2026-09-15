@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, Trash2, Loader2, Building2 } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Pencil, Trash2, Loader2, Building2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,8 @@ import {
   useDeleteTransaction,
 } from "@/features/investments/hooks/useInvestments";
 import { FundamentalsDrawer } from "@/features/market/components/FundamentalsDrawer";
-import type { Investment } from "@/lib/types/investments.types";
+import { EditTransactionModal } from "@/features/investments/components/EditTransactionModal";
+import type { Investment, InvestmentTransaction } from "@/lib/types/investments.types";
 
 // AssetTypes eligible for fundamental data
 const FUNDAMENTAL_TYPES = new Set([
@@ -53,6 +54,7 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
   const [subTab, setSubTab]                     = useState<SubTab>("transactions");
   const [showFundamentals, setShowFundamentals] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId]   = useState<number | null>(null);
+  const [editing, setEditing]                   = useState<InvestmentTransaction | null>(null);
   const transactions = useInvestmentTransactions(investment.id);
   const dividends    = useInvestmentDividends(investment.id);
   const deleteOp     = useDeleteTransaction();
@@ -155,6 +157,13 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
                   </div>
                   <Money cents={isBuy ? tx.totalValue : -tx.totalValue} sign className="text-[14px]" />
                   <button
+                    onClick={() => setEditing(tx)}
+                    title="Editar operação"
+                    className="ml-1 text-[var(--text-sub)] transition-colors hover:text-[var(--brand-accent)]"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
                     onClick={() => setConfirmDeleteId(tx.id)}
                     disabled={deleteOp.isPending}
                     title="Excluir operação"
@@ -212,6 +221,8 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
           <Button variant="outline" size="sm" onClick={onClose}>Fechar</Button>
         </div>
       </DialogContent>
+
+      <EditTransactionModal transaction={editing} onClose={() => setEditing(null)} />
 
       <FundamentalsDrawer
         ticker={showFundamentals ? investment.ticker : null}

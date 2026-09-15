@@ -13,6 +13,9 @@ namespace FinanceControl.Services.Services
 {
     public class AccountService : IAccountService
     {
+        /// <summary>Name of the system category/subcategory seeded for balance corrections.</summary>
+        private const string BalanceUpdateName = "BalanceUpdate";
+
         private readonly ApplicationDbContext _context;
 
         public AccountService(ApplicationDbContext context)
@@ -53,28 +56,19 @@ namespace FinanceControl.Services.Services
 
             if (requestDto.InitialBalance.HasValue && requestDto.InitialBalance.Value != 0)
             {
-                var otherIncomeSubCategoryId = await _context.SubCategories
-                    .Where(s => s.UserId == userId &&
-                                (s.Name == "Other income" || s.Name == "Outras receitas"))
-                    .Select(s => (int?)s.Id)
-                    .FirstOrDefaultAsync();
-
-                if (otherIncomeSubCategoryId.HasValue)
+                var isExpense = requestDto.InitialBalance.Value < 0;
+                _context.Transactions.Add(new Transaction
                 {
-                    var isExpense = requestDto.InitialBalance.Value < 0;
-                    _context.Transactions.Add(new Transaction
-                    {
-                        UserId = userId,
-                        AccountId = account.Id,
-                        SubCategoryId = otherIncomeSubCategoryId.Value,
-                        Value = Math.Abs(requestDto.InitialBalance.Value),
-                        Type = isExpense ? EnumTransactionType.Expense : EnumTransactionType.Income,
-                        PaymentType = EnumPaymentType.OneTime,
-                        TransactionDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                        Description = "Initial balance",
-                    });
-                    await _context.SaveChangesAsync();
-                }
+                    UserId = userId,
+                    AccountId = account.Id,
+                    SubCategoryId = await GetBalanceUpdateSubCategoryIdAsync(userId),
+                    Value = Math.Abs(requestDto.InitialBalance.Value),
+                    Type = isExpense ? EnumTransactionType.Expense : EnumTransactionType.Income,
+                    PaymentType = EnumPaymentType.OneTime,
+                    TransactionDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                    Description = "Initial balance",
+                });
+                await _context.SaveChangesAsync();
             }
 
             var accounts = await GetAllAccountAsync(userId);
@@ -202,34 +196,62 @@ namespace FinanceControl.Services.Services
                 var diff = requestDto.NewBalance.Value - currentBalance;
                 if (diff != 0)
                 {
-                    var subCategoryId = await _context.SubCategories
-                        .Where(s => s.UserId == userId &&
-                                    (diff > 0
-                                        ? (s.Name == "Other income" || s.Name == "Outras receitas")
-                                        : (s.Name == "Other expense" || s.Name == "Outras despesas")))
-                        .Select(s => (int?)s.Id)
-                        .FirstOrDefaultAsync();
-
-                    if (subCategoryId.HasValue)
+                    _context.Transactions.Add(new Transaction
                     {
-                        _context.Transactions.Add(new Transaction
-                        {
-                            UserId = userId,
-                            AccountId = account.Id,
-                            SubCategoryId = subCategoryId.Value,
-                            Value = Math.Abs(diff),
-                            Type = diff > 0 ? EnumTransactionType.Income : EnumTransactionType.Expense,
-                            PaymentType = EnumPaymentType.OneTime,
-                            TransactionDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                            Description = "Balance adjustment",
-                        });
-                        await _context.SaveChangesAsync();
-                    }
+                        UserId = userId,
+                        AccountId = account.Id,
+                        SubCategoryId = await GetBalanceUpdateSubCategoryIdAsync(userId),
+                        Value = Math.Abs(diff),
+                        Type = diff > 0 ? EnumTransactionType.Income : EnumTransactionType.Expense,
+                        PaymentType = EnumPaymentType.OneTime,
+                        TransactionDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                        Description = "Balance adjustment",
+                    });
+                    await _context.SaveChangesAsync();
                 }
             }
 
             var accounts = await GetAllAccountAsync(userId);
             return Result<IEnumerable<GetAccountItemResponseDto>>.Success(accounts);
+        }
+
+        /// <summary>
+        /// The per-user system subcategory that carries balance corrections, created on
+        /// demand. Registration seeds it, but the previous lookup went by display name
+        /// ("Outras receitas" / "Other expense") — and no seed ever created an expense
+        /// subcategory with those names, so lowering an account balance silently wrote
+        /// nothing and the balance stayed put.
+        /// </summary>
+        private async Task<int> GetBalanceUpdateSubCategoryIdAsync(int userId)
+        {
+            var existing = await _context.SubCategories
+                .Where(s => s.UserId == userId && s.IsSystem && s.Name == BalanceUpdateName)
+                .Select(s => (int?)s.Id)
+                .FirstOrDefaultAsync();
+
+            if (existing.HasValue)
+                return existing.Value;
+
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.IsSystem && c.Name == BalanceUpdateName);
+
+            if (category is null)
+            {
+                category = new Category { UserId = userId, Name = BalanceUpdateName, IsSystem = true };
+                _context.Categories.Add(category);
+                await _context.SaveChangesAsync();
+            }
+
+            var subCategory = new SubCategory
+            {
+                UserId = userId,
+                CategoryId = category.Id,
+                Name = BalanceUpdateName,
+                IsSystem = true,
+            };
+            _context.SubCategories.Add(subCategory);
+            await _context.SaveChangesAsync();
+            return subCategory.Id;
         }
 
         public async Task<Result<IEnumerable<GetAccountItemResponseDto>>> DeleteAccountByIdAsync(int id, int userId)

@@ -3,8 +3,10 @@ using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response.Investment;
+using FinanceControl.Services.Helpers;
 using FinanceControl.Services.Investments;
 using FinanceControl.Shared.Enums;
+using FinanceControl.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceControl.Services.Services
@@ -110,6 +112,13 @@ namespace FinanceControl.Services.Services
                     UnitPrice    = t.UnitPrice,
                     OtherCosts   = t.OtherCosts,
                     TotalValue   = t.TotalValue,
+                    // The cash side may sit on a different account than the position's default.
+                    AccountId    = t.LinkedTransaction != null ? t.LinkedTransaction.AccountId : t.Investment.AccountId,
+                    HasLinkedTransaction = t.LinkedTransactionId != null,
+                    IncludeInBudget = t.LinkedTransaction != null && t.LinkedTransaction.BudgetId != null,
+                    Tags = t.LinkedTransaction != null
+                        ? t.LinkedTransaction.Tags.Select(tag => tag.Name).ToList()
+                        : new List<string>(),
                 })
                 .ToListAsync();
         }
@@ -182,8 +191,12 @@ namespace FinanceControl.Services.Services
             var ticker = dto.Ticker.ToUpperInvariant();
 
             // Find or create the GLOBAL market asset (shared across all users)
-            var asset = await context.MarketAssets
-                .FirstOrDefaultAsync(a => a.Ticker == ticker);
+            var asset = dto.ForceNewAsset
+                ? null
+                : await context.MarketAssets.FirstOrDefaultAsync(a => a.Ticker == ticker);
+
+            if (asset is null && dto.ForceNewAsset)
+                ticker = await NextFreeTickerAsync(context, ticker);
 
             if (asset is null)
             {
@@ -250,6 +263,7 @@ namespace FinanceControl.Services.Services
                 {
                     UserId        = userId,
                     AccountId     = dto.AccountId,
+                    BudgetId      = dto.IncludeInBudget ? await GetActiveBudgetIdAsync(context, userId) : null,
                     Value         = (int)Math.Min(totalValue, int.MaxValue),
                     Type          = dto.Operation == EnumInvestmentOperation.Buy
                                         ? EnumTransactionType.Expense
@@ -259,10 +273,15 @@ namespace FinanceControl.Services.Services
                                         : $"Venda: {asset.Ticker}",
                     TransactionDate = dto.Date,
                     PaymentType   = EnumPaymentType.OneTime,
+                    // The money leaves the account the moment the order settles, which is
+                    // what debit means here — a contribution is not billed on an invoice.
+                    PaymentMethod = EnumPaymentMethod.Debit,
                     SubCategoryId = await GetInvestmentSubCategoryIdAsync(context, userId),
                 };
                 context.Transactions.Add(linkedTransaction);
                 await context.SaveChangesAsync();
+
+                await TagAssociationHelper.AssociateAsync(context, [linkedTransaction], dto.Tags, userId);
             }
 
             // Create the investment transaction record
@@ -303,6 +322,65 @@ namespace FinanceControl.Services.Services
             await context.SaveChangesAsync();
 
             return await BuildPortfolioFromDbAsync(context, userId);
+        }
+
+        /// <summary>
+        /// Rewrites an operation. Implemented as delete + re-register inside one database
+        /// transaction so the position (quantity, weighted average price) and the linked
+        /// cash transaction are rebuilt by the very code that created them, instead of a
+        /// second implementation of the same arithmetic drifting away from it.
+        /// </summary>
+        public async Task<InvestmentPortfolioDto> UpdateTransactionAsync(int transactionId, int userId, UpdateInvestmentTransactionRequestDto dto)
+        {
+            await using var strategyContext = _contextFactory.CreateDbContext();
+            var strategy = strategyContext.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var context = _contextFactory.CreateDbContext();
+                await using var dbTx = await context.Database.BeginTransactionAsync();
+
+                var existing = await context.InvestmentTransactions
+                    .Include(t => t.Investment).ThenInclude(i => i.MarketAsset)
+                    .Include(t => t.LinkedTransaction).ThenInclude(t => t!.Tags)
+                    .FirstOrDefaultAsync(t => t.Id == transactionId && t.UserId == userId)
+                    ?? throw new KeyNotFoundException($"Investment transaction {transactionId} not found.");
+
+                var investment = existing.Investment;
+                var asset      = investment.MarketAsset;
+
+                // Tags the caller did not resend are the ones the cash movement already
+                // carried: the edit form owns them, but an older client that knows nothing
+                // about tags must not strip them on an unrelated change.
+                var tags = dto.Tags.Count > 0
+                    ? dto.Tags
+                    : existing.LinkedTransaction?.Tags.Select(t => t.Name).ToList() ?? [];
+
+                var rewritten = new CreateInvestmentTransactionRequestDto
+                {
+                    Ticker      = asset.Ticker,
+                    Name        = asset.Name,
+                    AssetType   = asset.AssetType,
+                    Broker      = investment.Broker,
+                    Operation   = dto.Operation,
+                    Date        = dto.Date,
+                    Quantity    = dto.Quantity,
+                    UnitPrice   = dto.UnitPrice,
+                    OtherCosts  = dto.OtherCosts,
+                    AccountId   = dto.AccountId,
+                    CreateLinkedTransaction = dto.CreateLinkedTransaction,
+                    IncludeInBudget = dto.IncludeInBudget,
+                    Tags = tags,
+                    YieldIndex   = investment.YieldIndex,
+                    YieldRatePct = investment.ExpectedYieldPct,
+                    MaturityDate = investment.MaturityDate,
+                };
+
+                await DeleteTransactionCoreAsync(context, transactionId, userId);
+                var portfolio = await RegisterTransactionCoreAsync(context, userId, rewritten);
+
+                await dbTx.CommitAsync();
+                return portfolio;
+            });
         }
 
         public async Task<InvestmentPortfolioDto> DeleteTransactionAsync(int transactionId, int userId)
@@ -394,6 +472,7 @@ namespace FinanceControl.Services.Services
                     Description     = $"Dividendo: {investment.MarketAsset.Ticker}",
                     TransactionDate = transactionDate,
                     PaymentType     = EnumPaymentType.OneTime,
+                    PaymentMethod   = EnumPaymentMethod.Debit,
                     SubCategoryId   = await GetDividendSubCategoryIdAsync(context, userId),
                 };
                 context.Transactions.Add(linkedTransaction);
@@ -618,35 +697,113 @@ namespace FinanceControl.Services.Services
 
         // Resolves the SubCategoryId for investment-related subcategories.
         // Falls back to the first available subcategory if the seed names are not found.
-        private static async Task<int> GetInvestmentSubCategoryIdAsync(ApplicationDbContext context, int userId)
+        /// <summary>
+        /// First unused variant of a ticker: CDB, then CDB-2, CDB-3... Tickers are global
+        /// and unique, so a second hand-registered asset under a name someone already used
+        /// needs one of its own.
+        /// </summary>
+        private static async Task<string> NextFreeTickerAsync(ApplicationDbContext context, string ticker)
         {
-            var subCategoryId = await context.SubCategories
-                .Where(s => s.Category.UserId == userId && s.Name == "investments")
-                .Select(s => (int?)s.Id)
-                .FirstOrDefaultAsync();
+            var taken = await context.MarketAssets
+                .Where(a => a.Ticker == ticker || a.Ticker.StartsWith(ticker + "-"))
+                .Select(a => a.Ticker)
+                .ToListAsync();
 
-            if (subCategoryId.HasValue) return subCategoryId.Value;
+            if (taken.Count == 0)
+                return ticker;
 
-            // Fallback: any subcategory belonging to this user
-            return await context.SubCategories
-                .Where(s => s.Category.UserId == userId)
-                .Select(s => s.Id)
-                .FirstAsync();
+            for (var suffix = 2; ; suffix++)
+            {
+                var candidate = $"{ticker}-{suffix}";
+                if (!taken.Contains(candidate))
+                    return candidate;
+            }
         }
 
-        private static async Task<int> GetDividendSubCategoryIdAsync(ApplicationDbContext context, int userId)
-        {
-            var subCategoryId = await context.SubCategories
-                .Where(s => s.Category.UserId == userId && s.Name == "dividends")
-                .Select(s => (int?)s.Id)
+        /// <summary>
+        /// The subcategory a contribution is filed under: "Aporte", created on demand under
+        /// the user's investments category and flagged as savings, because buying an asset
+        /// is money kept rather than money spent.
+        /// </summary>
+        /// <remarks>
+        /// The previous lookup went by the seed KEY ("investments"), a name no seed ever
+        /// writes — so it always fell through to "any subcategory of this user", and the
+        /// first row a user owns is the internal BalanceUpdate one. Every purchase was
+        /// landing there. Dividends had the same defect.
+        /// </remarks>
+        private static Task<int> GetInvestmentSubCategoryIdAsync(ApplicationDbContext context, int userId)
+            => GetOrCreateInvestmentSubCategoryAsync(context, userId, ContributionNames, "Aporte", "💰", isSavings: true);
+
+        private static Task<int> GetDividendSubCategoryIdAsync(ApplicationDbContext context, int userId)
+            => GetOrCreateInvestmentSubCategoryAsync(context, userId, DividendNames, "Dividendos", "💵", isSavings: false);
+
+        /// <summary>The budget a movement counts against, or null when none is active.</summary>
+        private static async Task<int?> GetActiveBudgetIdAsync(ApplicationDbContext context, int userId)
+            => await context.Budgets
+                .Where(b => b.UserId == userId && b.IsActive)
+                .Select(b => (int?)b.Id)
                 .FirstOrDefaultAsync();
 
-            if (subCategoryId.HasValue) return subCategoryId.Value;
+        private static readonly string[] ContributionNames = ["Aporte", "Aportes", "Contribution"];
+        private static readonly string[] DividendNames = ["Dividendos", "Dividends"];
+        private static readonly string[] InvestmentCategoryNames = ["Investimentos", "Investments"];
 
-            return await context.SubCategories
-                .Where(s => s.Category.UserId == userId)
-                .Select(s => s.Id)
-                .FirstAsync();
+        private static async Task<int> GetOrCreateInvestmentSubCategoryAsync(
+            ApplicationDbContext context,
+            int userId,
+            string[] acceptedNames,
+            string nameToCreate,
+            string emoji,
+            bool isSavings)
+        {
+            // Matched over the user's own rows in memory, by the same accent- and case-free
+            // key the rest of the app compares names with: "aporte" and "Aporte" are the
+            // same subcategory, and Postgres would not agree in an IN clause.
+            var keys = acceptedNames.Select(TextNormalization.ToComparisonKey).ToHashSet();
+
+            var candidates = await context.SubCategories
+                .Where(s => s.UserId == userId && !s.IsSystem)
+                .Select(s => new { s.Id, s.Name })
+                .ToListAsync();
+
+            var match = candidates.FirstOrDefault(s => keys.Contains(TextNormalization.ToComparisonKey(s.Name)));
+            if (match is not null)
+                return match.Id;
+
+            var categoryKeys = InvestmentCategoryNames.Select(TextNormalization.ToComparisonKey).ToHashSet();
+            var categories = await context.Categories
+                .Where(c => c.UserId == userId && !c.IsSystem)
+                .Select(c => new { c.Id, c.Name })
+                .ToListAsync();
+
+            var categoryId = categories
+                .FirstOrDefault(c => categoryKeys.Contains(TextNormalization.ToComparisonKey(c.Name)))?.Id;
+
+            if (categoryId is null)
+            {
+                var category = new Category
+                {
+                    UserId = userId,
+                    Name = "Investimentos",
+                    Color = "#7c6fe0",
+                };
+                context.Categories.Add(category);
+                await context.SaveChangesAsync();
+                categoryId = category.Id;
+            }
+
+            var subCategory = new SubCategory
+            {
+                UserId = userId,
+                CategoryId = categoryId.Value,
+                Name = nameToCreate,
+                Emoji = emoji,
+                IsSavings = isSavings,
+            };
+            context.SubCategories.Add(subCategory);
+            await context.SaveChangesAsync();
+
+            return subCategory.Id;
         }
     }
 }

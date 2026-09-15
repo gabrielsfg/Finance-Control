@@ -21,7 +21,10 @@ export const ProgressBar = ({
   tinted = false,
   overflowColor = "var(--clay)",
 }: ProgressBarProps) => {
-  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+  // `value` can be negative — a category that got more money back than it spent — and a
+  // negative width is an invalid declaration the browser drops, leaving the fill at its
+  // full auto width. Clamped to an empty bar; the number beside it carries the sign.
+  const pct = max > 0 ? Math.min(Math.max((value / max) * 100, 0), 100) : 0;
   const isOverflow = value > max;
 
   return (

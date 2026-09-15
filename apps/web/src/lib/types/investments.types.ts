@@ -74,6 +74,14 @@ export type InvestmentTransaction = {
   unitPrice: number;
   otherCosts: number;
   totalValue: number;
+  /** Account the cash side of the operation was booked against. */
+  accountId: number;
+  /** Whether the operation moved money in that account. */
+  hasLinkedTransaction: boolean;
+  /** Whether that movement counts against the active budget. */
+  includeInBudget: boolean;
+  /** Tags on that movement. */
+  tags: string[];
 };
 
 export type InvestmentDividend = {
@@ -104,11 +112,33 @@ export type CreateInvestmentTransactionRequest = {
    * position bought long ago, whose cash movement is not part of this ledger.
    */
   createLinkedTransaction: boolean;
+  /** Whether that movement counts against the active budget. */
+  includeInBudget?: boolean;
+  /** Tags for that movement, same names the transaction form uses. */
+  tags?: string[];
+  /**
+   * Register against a NEW asset even when the ticker already exists, suffixing it
+   * (CDB → CDB-2). Two CDBs share a name but not a rate, a maturity or a position.
+   */
+  forceNewAsset?: boolean;
   /** Fixed income only: what the position earns against, since nobody quotes a CDB. */
   yieldIndex?: YieldIndex;
   /** The rate paired with yieldIndex — 110 for "110% do CDI". */
   yieldRatePct?: number;
   maturityDate?: string;
+};
+
+/** Edits an operation already registered. The asset it belongs to is not editable. */
+export type UpdateInvestmentTransactionRequest = {
+  operation: InvestmentOperation;
+  date: string;
+  quantity: number;
+  unitPrice: number;
+  otherCosts: number;
+  accountId: number;
+  createLinkedTransaction: boolean;
+  includeInBudget: boolean;
+  tags: string[];
 };
 
 export type CreateInvestmentDividendRequest = {

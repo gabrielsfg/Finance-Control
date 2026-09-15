@@ -2,7 +2,7 @@
 
 import { HeroPanel } from "@/components/shared/HeroPanel";
 import { BigMoney } from "@/components/shared/Money";
-import { FlowRow } from "@/components/shared/FlowBar";
+import { FlowLabelRow, FlowShareChip, FlowSplit, flowShares } from "@/components/shared/FlowBar";
 import { AnimatedCurrency } from "@/components/shared/AnimatedValue";
 import type { AccountItem } from "@/lib/types/accounts.types";
 
@@ -23,7 +23,11 @@ export const AccountsNetWorthHero = ({ accounts }: { accounts: AccountItem[] }) 
     total: accounts.filter((a) => a.type === t).reduce((s, a) => s + a.currentAmount, 0),
   }));
 
-  const invoicePct = netWorth > 0 ? Math.min(1, totalInvoice / netWorth) : totalInvoice > 0 ? 1 : 0;
+  // Available and invoice are opposing sides of one position, not two independent
+  // magnitudes, so they share a single track: the halves are what the money is up
+  // against. The 50/50 tick is the break-even — landing on it means the balance in
+  // your accounts covers the open invoices exactly, and nothing more.
+  const { inPct, outPct } = flowShares(netWorth, totalInvoice);
 
   return (
     <HeroPanel split>
@@ -62,22 +66,33 @@ export const AccountsNetWorthHero = ({ accounts }: { accounts: AccountItem[] }) 
           </span>
         </div>
 
-        <FlowRow
+        <FlowLabelRow
           label="Disponível"
           dotColor="var(--moss-lift)"
-          value={<AnimatedCurrency cents={netWorth} />}
+          value={
+            <>
+              <FlowShareChip pct={inPct} />
+              <AnimatedCurrency cents={netWorth} />
+            </>
+          }
           valueColor="var(--moss-lift)"
-          pct={netWorth > 0 ? 1 : 0}
-          variant="in"
         />
-        <FlowRow
+        <FlowLabelRow
           label="Fatura a pagar"
           dotColor="var(--clay-lift)"
-          value={<AnimatedCurrency cents={totalInvoice} />}
+          value={
+            <>
+              <FlowShareChip pct={outPct} />
+              <AnimatedCurrency cents={totalInvoice} />
+            </>
+          }
           valueColor="var(--clay-lift)"
-          pct={invoicePct}
-          variant="out"
         />
+
+        <FlowSplit inValue={netWorth} outValue={totalInvoice} />
+        <div className="mt-[6px] text-center font-mono text-[10px] tracking-[0.14em] uppercase text-[var(--panel-muted)]">
+          equilíbrio
+        </div>
 
         <div className="mt-5 flex items-center justify-between border-t pt-4" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
           <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">Saldo livre</span>
