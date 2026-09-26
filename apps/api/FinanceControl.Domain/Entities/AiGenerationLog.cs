@@ -13,7 +13,10 @@ namespace FinanceControl.Domain.Entities
     /// </remarks>
     public class AiGenerationLog : OwnedEntity
     {
-        public EnumInsightKind Kind { get; set; }
+        public EnumAiFeature Feature { get; set; }
+
+        /// <summary>Which analysis, for the two insight features. Null for chat and import.</summary>
+        public EnumInsightKind? Kind { get; set; }
         public EnumAiOutcome Outcome { get; set; }
         public string Model { get; set; } = string.Empty;
         public int InputTokens { get; set; }

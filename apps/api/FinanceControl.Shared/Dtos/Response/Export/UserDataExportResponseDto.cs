@@ -39,5 +39,11 @@ namespace FinanceControl.Shared.Dtos.Response.Export
 
         /// <summary>The free-text context the user wrote for the analyses.</summary>
         public List<ExportAiContextDto> AiContexts { get; set; } = [];
+
+        /// <summary>The in-app assistant conversations, as the user saw them.</summary>
+        public List<ExportAiConversationDto> AiConversations { get; set; } = [];
+
+        /// <summary>AI applications connected through the MCP connector, active or revoked.</summary>
+        public List<ExportMcpConnectionDto> McpConnections { get; set; } = [];
     }
 }

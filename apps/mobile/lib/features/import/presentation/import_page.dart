@@ -460,9 +460,23 @@ class _RowCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (row.parsed.isDuplicate) ...[
+                if (row.parsed.isDuplicate ||
+                    row.categorizationSource != 'None') ...[
                   const SizedBox(height: 8),
-                  TonalTag('Já existe', color: t.gold),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      if (row.parsed.isDuplicate)
+                        TonalTag('Já existe', color: t.gold),
+                      if (row.categorizationSource == 'History')
+                        TonalTag('Histórico',
+                            color: t.txtSecondary, icon: LucideIcons.history),
+                      if (row.categorizationSource == 'Ai')
+                        TonalTag('IA',
+                            color: t.accent, icon: LucideIcons.sparkles),
+                    ],
+                  ),
                 ],
               ],
             ),

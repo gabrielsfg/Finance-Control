@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
+import { AssistantLauncher } from "@/features/assistant/components/AssistantLauncher";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { useEffect } from "react";
 
@@ -31,6 +32,7 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
           {children}
         </div>
       </main>
+      <AssistantLauncher />
     </div>
   );
 };

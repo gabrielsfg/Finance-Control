@@ -12,6 +12,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../accounts/providers/accounts_provider.dart';
+import '../../ai/presentation/ai_settings_card.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../budgets/providers/budget_provider.dart';
@@ -50,6 +51,8 @@ class ProfilePage extends ConsumerWidget {
               const _PreferencesSection(),
               const SizedBox(height: 16),
               const _PrivacySection(),
+              const SizedBox(height: 16),
+              const AiSettingsCard(),
               const SizedBox(height: 16),
               const _AccountSection(),
               const SizedBox(height: 24),

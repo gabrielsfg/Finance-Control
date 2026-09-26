@@ -2,9 +2,11 @@
 using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Ai;
+using FinanceControl.Services.Ai.Tools;
 using FinanceControl.Services.Brapi;
 using FinanceControl.Services.Email;
 using FinanceControl.Services.Investments;
+using FinanceControl.Services.Mcp;
 using FinanceControl.Services.Seeds;
 using FinanceControl.Services.Services;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +21,7 @@ namespace FinanceControl.Services.Extensions
         {
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IImportService, ImportService>();
+            services.AddScoped<ImportCategorizer>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IBudgetService, BudgetService>();
@@ -65,24 +68,24 @@ namespace FinanceControl.Services.Extensions
                 client.Timeout = TimeSpan.FromSeconds(10);
             });
 
-            // The AI analyses ship dark: AnthropicSettings.Enabled defaults to false and the
-            // client refuses without a key, so a deployment that has not been configured
-            // simply renders no card.
+            // The AI features ship dark: AnthropicSettings.Enabled defaults to false and the
+            // client refuses without a key, so an unconfigured deployment renders no card.
+            // One key, one SDK, every in-app AI feature: analyses, chat and import
+            // categorisation all go through ClaudeClient and stop together when Enabled is
+            // off. Enabled is never inferred from the key: turning the spend on stays an
+            // explicit decision.
             services.Configure<AnthropicSettings>(configuration.GetSection("AnthropicSettings"));
-
-            // One Anthropic account, two consumers: the import categoriser reads
-            // "Claude:ApiKey" directly, and this section was added later with its own key.
-            // Falling back keeps a deployment from having to store the same secret twice —
-            // and from the failure that costs an afternoon, where the key is set under the
-            // older name and the analyses stay silently off. Enabled is deliberately not
-            // inferred: turning the spend on stays an explicit decision.
-            services.PostConfigure<AnthropicSettings>(settings =>
-            {
-                if (string.IsNullOrWhiteSpace(settings.ApiKey))
-                    settings.ApiKey = configuration["Claude:ApiKey"] ?? string.Empty;
-            });
             services.Configure<AdminSettings>(configuration.GetSection("AdminSettings"));
-            services.AddSingleton<AnthropicInsightClient>();
+            services.AddSingleton<ClaudeClient>();
+            services.AddSingleton<AiToolRegistry>();
+            services.AddScoped<AiAccessPolicy>();
+            services.AddScoped<IAssistantService, AssistantService>();
+
+            // The MCP connector: the user's own AI reads their data through the same tool
+            // catalog, authorised by OAuth. Nothing is sent to a model from this side.
+            services.Configure<McpSettings>(configuration.GetSection("McpSettings"));
+            services.AddScoped<McpClientResolver>();
+            services.AddScoped<McpOAuthService>();
 
             services.Configure<BrapiSettings>(configuration.GetSection("BrapiSettings"));
             services.AddSingleton<BrapiPriceUpdateJobService>();

@@ -14,8 +14,10 @@ namespace FinanceControl.Services.Ai
     /// rather than calculates. Adding a raw number to the snapshot would invite the model
     /// to do arithmetic on it, and arithmetic is where a language model invents.
     /// <para>
-    /// Never add identification (name, email, document, account number) or an individual
-    /// transaction. Category totals are the finest granularity allowed.
+    /// Never add identification (full name, email, document, bank account or card data).
+    /// Individual transactions are allowed because the privacy policy lists
+    /// descriptions, values and account names among the data sent — the serialized
+    /// snapshot still goes through AiPayloadSanitizer before it leaves.
     /// </para>
     /// </remarks>
     public class InsightSnapshotBuilder
@@ -52,6 +54,8 @@ namespace FinanceControl.Services.Ai
                 {
                     t.TransactionDate,
                     t.Value,
+                    t.Description,
+                    Account = t.Account.Name,
                     Category = t.SubCategory.Category.Name
                 })
                 .ToListAsync();
@@ -100,6 +104,19 @@ namespace FinanceControl.Services.Ai
                 })
                 .ToList();
 
+            var topTransactions = currentWeek
+                .OrderByDescending(t => t.Value)
+                .Take(5)
+                .Select(t => new InsightTransactionDto
+                {
+                    Date = t.TransactionDate.ToString("dd/MM/yyyy"),
+                    Description = t.Description ?? string.Empty,
+                    Category = t.Category,
+                    Account = t.Account,
+                    Value = InsightFormat.Money(t.Value)
+                })
+                .ToList();
+
             var months = await BuildMonthsAsync(userId, weekEnd);
 
             var snapshot = new InsightSnapshotDto
@@ -117,7 +134,8 @@ namespace FinanceControl.Services.Ai
                     CurrentWeekendTotal = InsightFormat.Money(currentWeekendTotal),
                     WeekendChangeVsAverage = InsightFormat.Change(currentWeekendTotal, weekendAveragePerWeek),
                     Categories = categories,
-                    Months = months
+                    Months = months,
+                    TopTransactions = topTransactions
                 },
                 Reserve = await BuildReserveAsync(userId, weekEnd),
                 Goals = await BuildGoalsAsync(userId)

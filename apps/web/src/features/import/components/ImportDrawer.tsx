@@ -188,7 +188,7 @@ export function ImportDrawer({ flow }: Props) {
             )}
           >
             {flow.parseMutation.isPending
-              ? <><Loader2 size={15} className="animate-spin" /> Analisando com IA…</>
+              ? <><Loader2 size={15} className="animate-spin" /> Analisando arquivo…</>
               : <><Upload size={15} /> Analisar arquivo</>}
           </button>
         </div>

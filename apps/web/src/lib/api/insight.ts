@@ -1,30 +1,49 @@
 import { api } from "./axios";
 import type {
   AiContext,
-  Insight,
+  AiSettings,
+  DeletedCountResponse,
+  InsightResult,
   RiskProfile,
   SaveRiskProfileRequest,
+  UpdateAiSettingsRequest,
 } from "@/lib/types/insight.types";
 
 /**
- * The analysis endpoints answer 204 whenever there is nothing to show — free plan,
- * feature disabled, quota spent or too little history. All of those are normal states,
- * so they come back as null and the card simply does not render.
+ * The analysis endpoints always answer 200 with `{ status, insight }`. Free plan, AI
+ * switched off, quota spent or too little history are normal states the card renders,
+ * so none of them is an error.
  */
 export const insightApi = {
-  getSpending: async (): Promise<Insight | null> => {
-    const response = await api.get<Insight | "">("/insight/spending");
-    return response.status === 204 ? null : (response.data as Insight);
+  getSpending: async (): Promise<InsightResult> => {
+    const response = await api.get<InsightResult>("/insight/spending");
+    return response.data;
   },
 
-  refreshSpending: async (): Promise<Insight | null> => {
-    const response = await api.post<Insight | "">("/insight/spending/refresh");
-    return response.status === 204 ? null : (response.data as Insight);
+  refreshSpending: async (): Promise<InsightResult> => {
+    const response = await api.post<InsightResult>("/insight/spending/refresh");
+    return response.data;
   },
 
-  getPortfolio: async (): Promise<Insight | null> => {
-    const response = await api.get<Insight | "">("/insight/portfolio");
-    return response.status === 204 ? null : (response.data as Insight);
+  getPortfolio: async (): Promise<InsightResult> => {
+    const response = await api.get<InsightResult>("/insight/portfolio");
+    return response.data;
+  },
+
+  /** Deletes every stored analysis of the user. */
+  deleteAll: async (): Promise<DeletedCountResponse> => {
+    const response = await api.delete<DeletedCountResponse>("/insight");
+    return response.data;
+  },
+
+  getSettings: async (): Promise<AiSettings> => {
+    const response = await api.get<AiSettings>("/insight/settings");
+    return response.data;
+  },
+
+  updateSettings: async (data: UpdateAiSettingsRequest): Promise<AiSettings> => {
+    const response = await api.put<AiSettings>("/insight/settings", data);
+    return response.data;
   },
 
   getContext: async (): Promise<AiContext | null> => {

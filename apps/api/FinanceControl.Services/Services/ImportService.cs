@@ -1,33 +1,30 @@
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml;
-using Anthropic.SDK;
-using Anthropic.SDK.Constants;
-using Anthropic.SDK.Messaging;
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Services;
+using FinanceControl.Services.Ai;
+using FinanceControl.Services.Helpers;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response.Import;
 using FinanceControl.Shared.Enums;
 using FinanceControl.Shared.Helpers;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace FinanceControl.Services.Services;
 
 public class ImportService : IImportService
 {
     private readonly ApplicationDbContext _context;
-    private readonly IConfiguration _configuration;
+    private readonly ImportCategorizer _categorizer;
 
-    public ImportService(ApplicationDbContext context, IConfiguration configuration)
+    public ImportService(ApplicationDbContext context, ImportCategorizer categorizer)
     {
         _context = context;
-        _configuration = configuration;
+        _categorizer = categorizer;
     }
 
     public async Task<Result<ParseImportFileResponseDto>> ParseFileAsync(Stream fileStream, string fileName, int accountId, int userId)
@@ -65,7 +62,7 @@ public class ImportService : IImportService
             .Select(t => new { t.Value, t.TransactionDate, t.Description })
             .ToListAsync();
 
-        var categorized = await CategorizeWithClaudeAsync(rawTransactions, subcategories.Select(s => $"{s.Id}:{s.Name}").ToList());
+        var categorized = await CategorizeAsync(rawTransactions, userId);
 
         var result = new List<ParsedTransactionItemDto>();
         foreach (var item in categorized)
@@ -113,6 +110,7 @@ public class ImportService : IImportService
                 PaymentType = item.PaymentType,
                 TotalInstallments = item.TotalInstallments,
                 InstallmentNumber = item.InstallmentNumber,
+                CategorizationSource = item.CategorizationSource,
                 IsDuplicate = isDuplicate,
                 DuplicateReason = duplicateReason,
             });
@@ -560,77 +558,26 @@ public class ImportService : IImportService
         return amount >= 0 ? EnumTransactionType.Income : EnumTransactionType.Expense;
     }
 
-    // ── Claude Categorization ────────────────────────────────────────────────
+    // ── Categorization ───────────────────────────────────────────────────────
 
-    private async Task<List<CategorizedTransaction>> CategorizeWithClaudeAsync(
+    /// <summary>
+    /// Installments are read from the description here; subcategories come from the
+    /// user's history, then — Premium with the AI switched on — from Claude for the rest.
+    /// </summary>
+    private async Task<List<CategorizedTransaction>> CategorizeAsync(
         List<RawTransaction> transactions,
-        List<string> subcategories)
+        int userId)
     {
-        var apiKey = _configuration["Claude:ApiKey"];
-        var client = new AnthropicClient(apiKey);
+        var suggestions = await _categorizer.SuggestAsync(
+            transactions.Select(t => new ImportCategorizationInput(t.Description, t.Value, t.Type)).ToList(),
+            userId);
 
-        var subcategoryList = string.Join("\n", subcategories.Select(s => $"- {s}"));
-        var transactionList = string.Join("\n", transactions.Select((t, i) =>
-            $"{i}|{t.Date:yyyy-MM-dd}|{t.Description}|{t.Value}|{t.Type}|{t.RawType}"));
-
-        var systemPrompt = """
-            You are a financial transaction categorizer for a Brazilian personal finance app.
-            You will receive a list of bank transactions and a list of available subcategories.
-            For each transaction, return a JSON array with categorization.
-
-            Rules:
-            - Match each transaction to the most appropriate subcategory from the list
-            - If no subcategory fits, use null for subcategoryId
-            - Detect installments: if description contains "Parcela X/Y" or "X/Y", set paymentType to "Installment", totalInstallments to Y, installmentNumber to X
-            - Transfers between accounts (PIX between own accounts, fatura payment) should have type "Transfer"
-            - All monetary values are already in cents (integers)
-            - Return ONLY valid JSON, no explanation
-
-            Response format (array with one object per transaction, in same order as input):
-            [
-              {
-                "index": 0,
-                "subcategoryId": 5,
-                "paymentType": "OneTime",
-                "totalInstallments": null,
-                "installmentNumber": null
-              }
-            ]
-
-            PaymentType values: "OneTime", "Installment", "Recurring"
-            """;
-
-        var userMessage = $"""
-            Available subcategories (id:name):
-            {subcategoryList}
-
-            Transactions (index|date|description|valueCents|type|rawType):
-            {transactionList}
-            """;
-
-        var response = await client.Messages.GetClaudeMessageAsync(new MessageParameters
-        {
-            Model = AnthropicModels.Claude45Haiku,
-            MaxTokens = 4096,
-            Messages = [new Message(RoleType.User, userMessage)],
-            System = [new SystemMessage(systemPrompt)],
-        });
-
-        var jsonText = response.Message.ToString().Trim();
-
-        // Extract JSON array if wrapped in markdown
-        var jsonMatch = Regex.Match(jsonText, @"\[[\s\S]*\]");
-        if (jsonMatch.Success)
-            jsonText = jsonMatch.Value;
-
-        var categorizations = JsonSerializer.Deserialize<List<ClaudeCategorization>>(jsonText,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
-
-        var result = new List<CategorizedTransaction>();
-        for (int i = 0; i < transactions.Count; i++)
+        var result = new List<CategorizedTransaction>(transactions.Count);
+        for (var i = 0; i < transactions.Count; i++)
         {
             var raw = transactions[i];
-            var cat = categorizations.FirstOrDefault(c => c.Index == i);
+            var suggestion = suggestions[i];
+            var installment = ImportDescriptionHelper.DetectInstallment(raw.Description);
 
             result.Add(new CategorizedTransaction
             {
@@ -639,10 +586,11 @@ public class ImportService : IImportService
                 Description = raw.Description,
                 Value = raw.Value,
                 Type = raw.Type,
-                SuggestedSubCategoryId = cat?.SubcategoryId,
-                PaymentType = Enum.TryParse<EnumPaymentType>(cat?.PaymentType, out var pt) ? pt : EnumPaymentType.OneTime,
-                TotalInstallments = cat?.TotalInstallments,
-                InstallmentNumber = cat?.InstallmentNumber,
+                SuggestedSubCategoryId = suggestion.SubCategoryId,
+                CategorizationSource = suggestion.Source,
+                PaymentType = installment is null ? EnumPaymentType.OneTime : EnumPaymentType.Installment,
+                TotalInstallments = installment?.Total,
+                InstallmentNumber = installment?.Number,
             });
         }
 
@@ -688,17 +636,9 @@ public class ImportService : IImportService
         public int Value { get; init; }
         public EnumTransactionType Type { get; init; }
         public int? SuggestedSubCategoryId { get; init; }
+        public EnumCategorizationSource CategorizationSource { get; init; }
         public EnumPaymentType PaymentType { get; init; }
         public int? TotalInstallments { get; init; }
         public int? InstallmentNumber { get; init; }
-    }
-
-    private class ClaudeCategorization
-    {
-        public int Index { get; set; }
-        public int? SubcategoryId { get; set; }
-        public string? PaymentType { get; set; }
-        public int? TotalInstallments { get; set; }
-        public int? InstallmentNumber { get; set; }
     }
 }

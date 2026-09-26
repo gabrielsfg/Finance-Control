@@ -9,9 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceControl.WebApi.Controllers
 {
-    /// The AI analyses. Every endpoint here answers 204 rather than an error when there
-    /// is nothing to show — free plan, feature disabled, quota spent or too little data
-    /// are all normal states, and the client renders nothing instead of an error card.
+    /// The AI analyses. Every analysis endpoint answers 200 with a status — free plan, AI
+    /// switched off, feature disabled, quota spent or too little data are all normal
+    /// states, and the client picks the card to render from the status.
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
@@ -31,9 +31,9 @@ namespace FinanceControl.WebApi.Controllers
         [HttpGet("spending")]
         public async Task<IActionResult> GetSpendingInsightAsync()
         {
-            var insight = await _aiInsightService.GetInsightAsync(EnumInsightKind.SpendingWeekly, GetUserId());
+            var result = await _aiInsightService.GetInsightAsync(EnumInsightKind.SpendingWeekly, GetUserId());
 
-            return insight is null ? NoContent() : Ok(insight);
+            return Ok(result);
         }
 
         /// Regenerates within the same week, still subject to the monthly quota. Without
@@ -42,18 +42,28 @@ namespace FinanceControl.WebApi.Controllers
         [HttpPost("spending/refresh")]
         public async Task<IActionResult> RefreshSpendingInsightAsync()
         {
-            var insight = await _aiInsightService.GetInsightAsync(
+            var result = await _aiInsightService.GetInsightAsync(
                 EnumInsightKind.SpendingWeekly, GetUserId(), forceRefresh: true);
 
-            return insight is null ? NoContent() : Ok(insight);
+            return Ok(result);
         }
 
         [HttpGet("portfolio")]
         public async Task<IActionResult> GetPortfolioInsightAsync()
         {
-            var insight = await _aiInsightService.GetInsightAsync(EnumInsightKind.PortfolioSnapshot, GetUserId());
+            var result = await _aiInsightService.GetInsightAsync(EnumInsightKind.PortfolioSnapshot, GetUserId());
 
-            return insight is null ? NoContent() : Ok(insight);
+            return Ok(result);
+        }
+
+        /// Deletes every stored analysis and the snapshot each one was generated from. The
+        /// next visit generates a new one, still counted against the monthly quota.
+        [HttpDelete]
+        public async Task<IActionResult> DeleteInsightsAsync()
+        {
+            var deleted = await _aiInsightService.DeleteInsightsAsync(GetUserId());
+
+            return Ok(new { deleted });
         }
 
         [HttpGet("context")]
@@ -74,6 +84,23 @@ namespace FinanceControl.WebApi.Controllers
             var context = await _aiInsightService.UpsertContextAsync(requestDto, GetUserId());
 
             return Ok(context);
+        }
+
+        /// The "IA no Quantia" profile card: the user's switch, usage and what is stored.
+        [HttpGet("settings")]
+        public async Task<IActionResult> GetSettingsAsync()
+        {
+            var settings = await _aiInsightService.GetSettingsAsync(GetUserId());
+
+            return settings is null ? NotFound(new { error = "User not found." }) : Ok(settings);
+        }
+
+        [HttpPut("settings")]
+        public async Task<IActionResult> UpdateSettingsAsync([FromBody] UpdateAiSettingsRequestDto requestDto)
+        {
+            var settings = await _aiInsightService.UpdateSettingsAsync(requestDto, GetUserId());
+
+            return settings is null ? NotFound(new { error = "User not found." }) : Ok(settings);
         }
     }
 }

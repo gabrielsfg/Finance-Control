@@ -3,6 +3,7 @@
 import { Loader2, Zap } from "lucide-react";
 import { usePortfolioInsight } from "../hooks/useInsight";
 import { PremiumNotice } from "@/components/shared/PremiumNotice";
+import { AiStatusNotice } from "./AiStatusNotice";
 import { usePlan } from "@/lib/hooks/usePlan";
 
 const CARD_STYLE = {
@@ -15,17 +16,17 @@ const CARD_STYLE = {
  * The descriptive portfolio analysis: weights, concentration, observed oscillation and
  * how the composition compares with the declared profile.
  *
- * Renders nothing when the API answers 204. Besides the usual reasons, that also covers
- * prices being too old — a portfolio analysis narrated over stale quotes is worse than
- * no analysis, so the server refuses rather than dressing it up.
+ * NotEnoughData also covers prices being too old — a portfolio analysis narrated over
+ * stale quotes is worse than no analysis, so the server refuses rather than dressing it
+ * up. A platform-wide pause (Unavailable) hides the card altogether.
  */
 export const PortfolioInsightCard = () => {
   const { isPremium, isLoading: planLoading } = usePlan();
-  const { data: insight, isLoading } = usePortfolioInsight(isPremium);
+  const { data: result, isLoading } = usePortfolioInsight(isPremium);
 
   if (planLoading) return null;
 
-  if (!isPremium) {
+  if (!isPremium || result?.status === "NotPremium") {
     return (
       <div className="rounded-[20px] border p-[22px]" style={CARD_STYLE}>
         <Eyebrow />
@@ -48,7 +49,19 @@ export const PortfolioInsightCard = () => {
     );
   }
 
-  if (!insight) return null;
+  if (!result || result.status === "Unavailable") return null;
+
+  const { status, insight } = result;
+
+  if (!insight) {
+    if (status === "Available") return null;
+    return (
+      <div className="rounded-[20px] border p-[22px]" style={CARD_STYLE}>
+        <Eyebrow />
+        <AiStatusNotice status={status} />
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-[20px] border p-[22px]" style={CARD_STYLE}>
@@ -71,6 +84,12 @@ export const PortfolioInsightCard = () => {
           ? "Análise gerada por inteligência artificial a partir dos ativos que você cadastrou. É informativa, pode conter erros e não é recomendação de investimento."
           : "Resumo calculado a partir dos ativos que você cadastrou. É informativo e não é recomendação de investimento."}
       </p>
+
+      {status === "QuotaExceeded" && (
+        <div className="mt-3">
+          <AiStatusNotice status="QuotaExceeded" compact />
+        </div>
+      )}
     </div>
   );
 };

@@ -6,7 +6,11 @@ import { useProfile } from "@/features/profile/hooks/useProfile";
 import { PremiumUpgradeButton } from "@/components/shared/PremiumNotice";
 import { PREMIUM_FEATURES } from "@/lib/config/premium";
 
-const FREE_FEATURES = ["Contas e categorias ilimitadas", "Análises dos últimos 12 meses"];
+const FREE_FEATURES = [
+  "Contas e categorias ilimitadas",
+  "Análises dos últimos 12 meses",
+  "Conexão com Claude, ChatGPT e outras IAs",
+];
 
 export const ProfilePlanCard = () => {
   const { data: profile } = useProfile();
@@ -67,7 +71,7 @@ export const ProfilePlanCard = () => {
         ))}
         <div className="flex items-center gap-2.5 text-[13.5px] text-[var(--text-sub)]">
           <Plus size={16} strokeWidth={2} className="shrink-0" />
-          Insight diário com IA
+          Assistente de IA e análises semanais
           <span
             className="rounded-full px-2 py-0.5 font-mono text-[9.5px] tracking-[0.06em]"
             style={{ background: "color-mix(in srgb, var(--gold) 18%, transparent)", color: "var(--gold)" }}

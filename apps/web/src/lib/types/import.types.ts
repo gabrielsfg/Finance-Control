@@ -1,5 +1,8 @@
 import type { TransactionType, PaymentType } from "./transactions.types";
 
+/** Where the suggested subcategory came from: the user's own past imports, the AI, or nowhere. */
+export type CategorizationSource = "None" | "History" | "Ai";
+
 export type ParsedTransactionItem = {
   externalId: string;
   date: string;
@@ -13,6 +16,7 @@ export type ParsedTransactionItem = {
   installmentNumber: number | null;
   isDuplicate: boolean;
   duplicateReason: string | null;
+  categorizationSource: CategorizationSource;
 };
 
 export type ParseImportFileResponse = {

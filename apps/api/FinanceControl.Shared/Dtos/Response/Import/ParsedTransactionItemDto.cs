@@ -14,6 +14,9 @@ public class ParsedTransactionItemDto
     public EnumPaymentType PaymentType { get; set; }
     public int? TotalInstallments { get; set; }
     public int? InstallmentNumber { get; set; }
+
+    /// <summary>Where SuggestedSubCategoryId came from, for the badge on the review screen.</summary>
+    public EnumCategorizationSource CategorizationSource { get; set; }
     public bool IsDuplicate { get; set; }
     public string? DuplicateReason { get; set; }
 }

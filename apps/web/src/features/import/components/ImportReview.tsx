@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   CheckCircle2, AlertTriangle, Loader2, X,
-  TrendingDown, TrendingUp, ArrowLeftRight, ChevronDown, Check,
+  TrendingDown, TrendingUp, ArrowLeftRight, ChevronDown, Check, History, Sparkles,
 } from "lucide-react";
 import { PageTopbar } from "@/components/layout/PageTopbar";
 import { DatePickerField } from "@/components/shared/DatePickerField";
@@ -15,6 +15,7 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import type { useImportFlow } from "@/features/import/hooks/useImportFlow";
 import type { TransactionType } from "@/lib/types/transactions.types";
+import type { CategorizationSource } from "@/lib/types/import.types";
 
 type Flow = ReturnType<typeof useImportFlow>;
 
@@ -25,6 +26,38 @@ const TYPE_CONFIG: Record<TransactionType, { label: string; icon: React.ElementT
 };
 
 const ALL_TYPES: TransactionType[] = ["Expense", "Income", "Transfer"];
+
+const SOURCE_BADGE: Record<Exclude<CategorizationSource, "None">, { label: string; title: string; icon: React.ElementType; color: string }> = {
+  History: {
+    label: "Histórico",
+    title: "Categoria sugerida a partir das suas importações anteriores",
+    icon: History,
+    color: "var(--moss)",
+  },
+  Ai: {
+    label: "IA",
+    title: "Categoria sugerida por IA — confira antes de importar",
+    icon: Sparkles,
+    color: "var(--brand-accent)",
+  },
+};
+
+/** Where the suggested category came from, so the reviewer knows which ones to double-check. */
+function SourceBadge({ source }: { source: CategorizationSource }) {
+  if (source === "None") return null;
+  const cfg = SOURCE_BADGE[source];
+  const Icon = cfg.icon;
+  return (
+    <span
+      title={cfg.title}
+      className="flex shrink-0 items-center gap-1 rounded-full px-1.5 py-[2px] font-mono text-[10px] tracking-[0.04em]"
+      style={{ color: cfg.color, background: `color-mix(in srgb, ${cfg.color} 14%, transparent)` }}
+    >
+      <Icon size={10} strokeWidth={2} />
+      {cfg.label}
+    </span>
+  );
+}
 
 function useDropdown() {
   const [open, setOpen] = useState(false);
@@ -163,7 +196,7 @@ export function ImportReview({ flow }: { flow: Flow }) {
 
       {/* Table */}
       <div className="border-border bg-surface flex-1 overflow-auto rounded-xl border">
-        <table className="w-full min-w-[1180px] text-[13px]">
+        <table className="w-full min-w-[1260px] text-[13px]">
           <thead className="sticky top-0 z-10">
             <tr className="border-border bg-surface border-b">
               <th className="px-4 py-3 text-left">
@@ -235,15 +268,22 @@ export function ImportReview({ flow }: { flow: Flow }) {
                     <TypeDropdown value={row.type} onChange={(v) => flow.setRowType(idx, v)} />
                   </td>
                   <td className="px-3 py-2.5">
-                    <CategoryPickerField
-                      size="sm"
-                      allowEmpty
-                      placeholder="Sem categoria"
-                      value={row.subCategoryId}
-                      onChange={(id) => flow.setRowSubcat(idx, id)}
-                      subcategories={flow.subcats}
-                      onCreateNew={() => setCreateSubcatForRow(idx)}
-                    />
+                    <div className="flex items-center gap-2">
+                      <CategoryPickerField
+                        size="sm"
+                        allowEmpty
+                        placeholder="Sem categoria"
+                        value={row.subCategoryId}
+                        onChange={(id) => flow.setRowSubcat(idx, id)}
+                        subcategories={flow.subcats}
+                        onCreateNew={() => setCreateSubcatForRow(idx)}
+                      />
+                      {/* Only while the suggestion stands — once the reviewer picks another
+                          category the badge would be describing a choice nobody made. */}
+                      {row.subCategoryId !== null && row.subCategoryId === row.suggestedSubCategoryId && (
+                        <SourceBadge source={row.categorizationSource ?? "None"} />
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2.5">
                     {/* The transaction form's own control, shrunk to the cell, so an

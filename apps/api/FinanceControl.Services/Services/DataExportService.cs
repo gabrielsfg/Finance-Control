@@ -363,6 +363,41 @@ namespace FinanceControl.Services.Services
                 })
                 .ToListAsync();
 
+            var aiConversations = await _context.AiConversations
+                .AsNoTracking()
+                .Where(c => c.UserId == userId)
+                .OrderBy(c => c.CreatedAt)
+                .Select(c => new ExportAiConversationDto
+                {
+                    Title = c.Title,
+                    CreatedAt = c.CreatedAt,
+                    Messages = c.Messages
+                        .OrderBy(m => m.CreatedAt)
+                        .Select(m => new ExportAiMessageDto
+                        {
+                            Role = m.Role,
+                            Content = m.Content,
+                            CreatedAt = m.CreatedAt
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
+
+            // Connections only — the tokens are hashes and would mean nothing to the user.
+            var mcpConnections = await _context.McpGrants
+                .AsNoTracking()
+                .Where(g => g.UserId == userId && (g.RefreshTokenHash != null || g.RevokedAt != null))
+                .OrderBy(g => g.CreatedAt)
+                .Select(g => new ExportMcpConnectionDto
+                {
+                    ClientName = g.ClientName,
+                    Scopes = g.Scopes,
+                    CreatedAt = g.CreatedAt,
+                    LastUsedAt = g.LastUsedAt,
+                    RevokedAt = g.RevokedAt
+                })
+                .ToListAsync();
+
             return new UserDataExportResponseDto
             {
                 ExportedAt = DateTime.UtcNow,
@@ -382,7 +417,9 @@ namespace FinanceControl.Services.Services
                 NotificationPreferences = notificationPreferences,
                 RiskProfile = riskProfile,
                 Insights = insights,
-                AiContexts = aiContexts
+                AiContexts = aiContexts,
+                AiConversations = aiConversations,
+                McpConnections = mcpConnections
             };
         }
     }
