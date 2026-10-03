@@ -13,6 +13,15 @@ namespace FinanceControl.Domain.Entities
 
         public DateTime LastMessageAt { get; set; }
 
+        /// <summary>
+        /// Short summary of the turns already folded out of the model's window, replayed in
+        /// their place so a long thread keeps its context. Null until the first block closes.
+        /// </summary>
+        public string? Summary { get; set; }
+
+        /// <summary>Last message the summary covers; later messages are sent to the model verbatim.</summary>
+        public int? SummarizedUntilMessageId { get; set; }
+
         public User User { get; set; } = null!;
         public ICollection<AiMessage> Messages { get; set; } = [];
         public ICollection<AiPendingAction> Actions { get; set; } = [];

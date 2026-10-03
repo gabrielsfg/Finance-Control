@@ -371,6 +371,7 @@ namespace FinanceControl.Services.Services
                 {
                     Title = c.Title,
                     CreatedAt = c.CreatedAt,
+                    Summary = c.Summary,
                     Messages = c.Messages
                         .OrderBy(m => m.CreatedAt)
                         .Select(m => new ExportAiMessageDto

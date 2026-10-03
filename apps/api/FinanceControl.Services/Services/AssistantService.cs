@@ -33,9 +33,6 @@ namespace FinanceControl.Services.Services
     /// </remarks>
     public class AssistantService : IAssistantService
     {
-        /// <summary>Prior turns replayed to the model. Older ones stay visible to the user, not to the model.</summary>
-        private const int HistoryTurns = 20;
-
         private const int MaxTitleLength = 80;
 
         private readonly ApplicationDbContext _context;
@@ -185,13 +182,20 @@ namespace FinanceControl.Services.Services
                 await _context.SaveChangesAsync(cancellationToken);
             }
 
-            var history = await _context.AiMessages
+            // Turns after the summary. Older ones stay visible to the user; the model sees
+            // them only through the summary.
+            var summarizedUntil = conversation.SummarizedUntilMessageId ?? 0;
+            var unsummarized = await _context.AiMessages
                 .AsNoTracking()
-                .Where(m => m.ConversationId == conversation.Id && m.UserId == userId && !m.IsError)
-                .OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id)
-                .Take(HistoryTurns)
+                .Where(m => m.ConversationId == conversation.Id && m.UserId == userId && !m.IsError && m.Id > summarizedUntil)
+                .OrderBy(m => m.Id)
                 .ToListAsync(cancellationToken);
-            history.Reverse();
+
+            if (ChatHistoryWindow.ShouldSummarize(unsummarized.Count)
+                && await SummarizeAsync(conversation, unsummarized, userId, cancellationToken))
+                unsummarized = [];
+
+            var history = ChatHistoryWindow.RecentTurns(unsummarized);
 
             var userMessage = new AiMessage
             {
@@ -203,7 +207,7 @@ namespace FinanceControl.Services.Services
             _context.AiMessages.Add(userMessage);
             await _context.SaveChangesAsync(cancellationToken);
 
-            var outcome = await RunAsync(conversation.Id, userId, history, userMessage.Content, cancellationToken);
+            var outcome = await RunAsync(conversation.Id, userId, conversation.Summary, history, userMessage.Content, cancellationToken);
 
             var assistantMessage = new AiMessage
             {
@@ -333,9 +337,65 @@ namespace FinanceControl.Services.Services
 
         // ── The model loop ────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Folds a full block of turns into the conversation's summary. A failure leaves the
+        /// conversation as it was: the question goes with the newest turns only, and the
+        /// fold is tried again on the next one. The call is logged under its own feature so
+        /// it never counts against the user's message quota.
+        /// </summary>
+        private async Task<bool> SummarizeAsync(
+            AiConversation conversation,
+            IReadOnlyList<AiMessage> turns,
+            int userId,
+            CancellationToken cancellationToken)
+        {
+            var stopwatch = Stopwatch.StartNew();
+
+            var result = await _client.GenerateStructuredAsync<ChatSummaryOutput>(
+                _settings.SummaryModel,
+                ChatSummaryPrompt.System,
+                ChatHistoryWindow.BuildSummaryInput(conversation.Summary, turns),
+                ChatSummaryPrompt.OutputSchemaJson,
+                _settings.SummaryMaxOutputTokens,
+                cancellationToken);
+
+            var summary = result.Output is null
+                ? null
+                : Truncate(AiPayloadSanitizer.ScrubText(result.Output.Summary.Trim()), ChatHistoryWindow.MaxSummaryLength);
+
+            var succeeded = !string.IsNullOrWhiteSpace(summary);
+            if (succeeded)
+            {
+                conversation.Summary = summary;
+                conversation.SummarizedUntilMessageId = turns[^1].Id;
+            }
+            else
+            {
+                _logger.LogWarning("Chat summary failed for conversation {ConversationId}: {Error}",
+                    conversation.Id, result.Error ?? "empty summary");
+            }
+
+            _context.AiGenerationLogs.Add(new AiGenerationLog
+            {
+                UserId = userId,
+                Feature = EnumAiFeature.ChatSummary,
+                Outcome = succeeded ? EnumAiOutcome.Delivered : EnumAiOutcome.ApiError,
+                Model = _settings.SummaryModel,
+                InputTokens = result.InputTokens,
+                OutputTokens = result.OutputTokens,
+                CachedInputTokens = result.CachedInputTokens,
+                DurationMs = (int)stopwatch.ElapsedMilliseconds,
+                RejectionReason = succeeded ? null : Truncate(result.Error ?? "Empty summary.", 300)
+            });
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return succeeded;
+        }
+
         private async Task<ChatTurnOutcome> RunAsync(
             int conversationId,
             int userId,
+            string? summary,
             IReadOnlyList<AiMessage> history,
             string question,
             CancellationToken cancellationToken)
@@ -363,6 +423,8 @@ namespace FinanceControl.Services.Services
             var allowedTickers = new HashSet<string>(ChatOutputGuard.ExtractTickers(question), StringComparer.OrdinalIgnoreCase);
             foreach (var turn in history)
                 allowedTickers.UnionWith(ChatOutputGuard.ExtractTickers(turn.Content));
+            if (!string.IsNullOrWhiteSpace(summary))
+                allowedTickers.UnionWith(ChatOutputGuard.ExtractTickers(summary));
             allowedTickers.UnionWith(await _context.Investments
                 .AsNoTracking()
                 .Where(i => i.UserId == userId)
@@ -374,6 +436,11 @@ namespace FinanceControl.Services.Services
                 new() { Text = ChatPrompt.System, CacheControl = new CacheControlEphemeral() },
                 new() { Text = await BuildUserContextAsync(userId, cancellationToken) }
             };
+
+            // Changes only when a block is folded, so it does not break the cached prefix
+            // between questions.
+            if (!string.IsNullOrWhiteSpace(summary))
+                system.Add(new TextBlockParam { Text = ChatHistoryWindow.BuildSummaryBlock(summary) });
 
             var tools = _registry.All
                 .OrderBy(t => t.Name, StringComparer.Ordinal)
@@ -394,6 +461,10 @@ namespace FinanceControl.Services.Services
                         System = system,
                         Tools = tools,
                         Messages = messages,
+                        // Automatic caching: the breakpoint moves to the end of the conversation,
+                        // so each tool round, and the next question within five minutes, reads
+                        // the history already sent at the cache price instead of the full one.
+                        CacheControl = new CacheControlEphemeral(),
                         // Low effort: questions here are lookups over tools, not reasoning
                         // problems, and the prompt asks for one-line answers — thinking and
                         // prose are where the tokens would go otherwise.

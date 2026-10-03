@@ -11,6 +11,7 @@ namespace FinanceControl.Data.Mappings
             builder.ToTable("AiConversations");
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Title).HasMaxLength(120).IsRequired();
+            builder.Property(c => c.Summary).HasMaxLength(2000);
             builder.Property(c => c.LastMessageAt)
                 .HasColumnType("timestamp with time zone")
                 .IsRequired();

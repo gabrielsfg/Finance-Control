@@ -8,6 +8,15 @@
       "port": 4173
     },
     {
+      "name": "api-dev",
+      "cwd": "apps/api/FinanceControl.WebApi",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--launch-profile", "http"],
+      "port": 5112,
+      "url": "http://localhost:5112",
+      "autoPort": false
+    },
+    {
       "name": "web-dev",
       "cwd": "apps/web",
       "runtimeExecutable": "npm",

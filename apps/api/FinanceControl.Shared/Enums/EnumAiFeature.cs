@@ -6,6 +6,7 @@ namespace FinanceControl.Shared.Enums
         SpendingInsight,
         PortfolioInsight,
         Chat,
-        ImportCategorization
+        ImportCategorization,
+        ChatSummary
     }
 }

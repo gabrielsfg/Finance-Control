@@ -19,18 +19,24 @@ namespace FinanceControl.Services.Ai
         /// </summary>
         public bool Enabled { get; set; } = false;
 
-        public string AnalysisModel { get; set; } = "claude-sonnet-5";
+        public string AnalysisModel { get; set; } = "claude-sonnet-5-5";
 
         /// <summary>The chat assistant. Every message may run several tool rounds, so this is the main cost line.</summary>
-        public string ChatModel { get; set; } = "claude-sonnet-5";
+        public string ChatModel { get; set; } = "claude-sonnet-5-5";
 
         /// <summary>Categorising import rows is a short classification task; the small model is enough.</summary>
         public string ImportModel { get; set; } = "claude-haiku-4-5";
+
+        /// <summary>Folding old chat turns into a summary is a short compression task; the small model is enough.</summary>
+        public string SummaryModel { get; set; } = "claude-haiku-4-5";
 
         public int MaxOutputTokens { get; set; } = 2000;
 
         /// <summary>Per model call. Answers are meant to be a few lines; this is a ceiling, not a target.</summary>
         public int ChatMaxOutputTokens { get; set; } = 1500;
+
+        /// <summary>The summary is capped at a few sentences by the prompt; this is a ceiling, not a target.</summary>
+        public int SummaryMaxOutputTokens { get; set; } = 600;
         public int TimeoutSeconds { get; set; } = 60;
 
         /// <summary>Per user, per calendar month. Counted from AiGenerationLogs.</summary>
