@@ -9,6 +9,8 @@ export type ParsedTransactionItem = {
   description: string;
   value: number;
   type: TransactionType;
+  /** Whether the statement line credited the account — the direction a transfer goes. */
+  isInflow: boolean;
   suggestedSubCategoryId: number | null;
   suggestedSubCategoryName: string | null;
   paymentType: PaymentType;
@@ -30,8 +32,11 @@ export type ImportTransactionItem = {
   description: string;
   value: number;
   type: TransactionType;
+  /** Ignored for transfers — the server files them under the system transfer subcategory. */
   subCategoryId: number | null;
-  destinationAccountId: number | null;
+  /** Transfers only: the other account. Source when `isInflow`, destination otherwise. */
+  counterpartAccountId: number | null;
+  isInflow: boolean;
   paymentType: PaymentType;
   totalInstallments: number | null;
   installmentNumber: number | null;

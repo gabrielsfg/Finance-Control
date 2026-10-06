@@ -11,6 +11,11 @@ import { CategoryPickerField } from "@/components/shared/CategoryPickerField";
 import { TagInput } from "@/features/transactions/components/TagInput";
 import { CreateSubCategoryModal } from "@/features/categories/components/CreateSubCategoryModal";
 import { useCategories } from "@/features/categories/hooks/useCategories";
+import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { getApiErrorMessage } from "@/features/assistant/utils/apiError";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ACCOUNT_TYPE_CONFIG } from "@/lib/config/accountTypes";
+import type { AccountItem } from "@/lib/types/accounts.types";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import type { useImportFlow } from "@/features/import/hooks/useImportFlow";
@@ -119,15 +124,83 @@ function TypeDropdown({ value, onChange }: { value: TransactionType; onChange: (
   );
 }
 
+/**
+ * Stands in for the category on a transfer row: a transfer is filed under the system
+ * transfer category, and what the reviewer has to supply is the other account. The
+ * label follows the bank's sign — money in came *from* it, money out went *to* it.
+ */
+function CounterpartAccountPicker({
+  value,
+  onChange,
+  accounts,
+  isInflow,
+}: {
+  value: number | null;
+  onChange: (id: number | null) => void;
+  accounts: AccountItem[];
+  isInflow: boolean;
+}) {
+  const selected = accounts.find((a) => a.id === value);
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-text-muted shrink-0 text-[11px]">{isInflow ? "De" : "Para"}</span>
+      <Select
+        value={value === null ? "" : String(value)}
+        onValueChange={(v) => onChange(v ? Number(v) : null)}
+      >
+        <SelectTrigger
+          size="sm"
+          className={cn(
+            "bg-surface2 w-[176px] text-[12px]",
+            value === null ? "border-red/60" : "border-border",
+          )}
+        >
+          <SelectValue>
+            {selected
+              ? (() => {
+                  const cfg = ACCOUNT_TYPE_CONFIG[selected.type];
+                  const Icon = cfg.Icon;
+                  return (
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <Icon size={12} className="shrink-0" style={{ color: cfg.color }} />
+                      <span className="truncate">{selected.name}</span>
+                    </span>
+                  );
+                })()
+              : <span className="text-text-muted">Selecionar conta</span>}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent alignItemWithTrigger={false} sideOffset={4}>
+          {accounts.map((a) => {
+            const cfg = ACCOUNT_TYPE_CONFIG[a.type];
+            const Icon = cfg.Icon;
+            return (
+              <SelectItem key={a.id} value={String(a.id)}>
+                <span className="flex items-center gap-2">
+                  <Icon size={13} style={{ color: cfg.color }} />
+                  <span className="text-[13px]">{a.name}</span>
+                </span>
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export function ImportReview({ flow }: { flow: Flow }) {
   const allSelected = flow.rows.length > 0 && flow.rows.every((r) => r.selected);
   const { data: categories = [] } = useCategories();
+  const { data: allAccounts = [] } = useAccounts();
+  // The other side of a transfer is any of the user's accounts but the one being imported.
+  const counterpartAccounts = allAccounts.filter((a) => a.id !== Number(flow.accountId));
 
   // Which row opened the create drawer, so the new subcategory lands on it. One drawer
   // for the whole table rather than one per row.
   const [createSubcatForRow, setCreateSubcatForRow] = useState<number | null>(null);
 
-  const busy = flow.selectedCount === 0 || flow.confirmMutation.isPending;
+  const busy = flow.selectedCount === 0 || flow.incompleteCount > 0 || flow.confirmMutation.isPending;
 
   return (
     <div className="flex h-full flex-col px-[clamp(20px,3.4vw,46px)] pb-[30px]">
@@ -193,6 +266,15 @@ export function ImportReview({ flow }: { flow: Flow }) {
           — as transações importadas serão associadas ao orçamento ativo atual.
         </span>
       </label>
+
+      {flow.incompleteCount > 0 && (
+        <p className="text-orange mb-3 flex shrink-0 items-center gap-1.5 text-[13px]">
+          <AlertTriangle size={13} strokeWidth={2} />
+          {flow.incompleteCount === 1
+            ? "1 transação selecionada está sem categoria (ou sem conta, se for transferência)."
+            : `${flow.incompleteCount} transações selecionadas estão sem categoria (ou sem conta, se forem transferências).`}
+        </p>
+      )}
 
       {/* Table */}
       <div className="border-border bg-surface flex-1 overflow-auto rounded-xl border">
@@ -268,6 +350,14 @@ export function ImportReview({ flow }: { flow: Flow }) {
                     <TypeDropdown value={row.type} onChange={(v) => flow.setRowType(idx, v)} />
                   </td>
                   <td className="px-3 py-2.5">
+                    {row.type === "Transfer" ? (
+                      <CounterpartAccountPicker
+                        value={row.counterpartAccountId}
+                        onChange={(id) => flow.setRowCounterpart(idx, id)}
+                        accounts={counterpartAccounts}
+                        isInflow={row.isInflow}
+                      />
+                    ) : (
                     <div className="flex items-center gap-2">
                       <CategoryPickerField
                         size="sm"
@@ -284,6 +374,7 @@ export function ImportReview({ flow }: { flow: Flow }) {
                         <SourceBadge source={row.categorizationSource ?? "None"} />
                       )}
                     </div>
+                    )}
                   </td>
                   <td className="px-3 py-2.5">
                     {/* The transaction form's own control, shrunk to the cell, so an
@@ -299,7 +390,8 @@ export function ImportReview({ flow }: { flow: Flow }) {
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono font-medium"
                     style={{ color: typeCfg.color }}>
-                    {row.type === "Income" ? "+" : "-"}{formatCurrency(row.value / 100)}
+                    {row.type === "Income" || (row.type === "Transfer" && row.isInflow) ? "+" : "-"}
+                    {formatCurrency(row.value / 100)}
                   </td>
                 </tr>
               );
@@ -310,7 +402,7 @@ export function ImportReview({ flow }: { flow: Flow }) {
 
       {flow.confirmMutation.isError && (
         <p className="text-red mt-3 text-[13px]">
-          {(flow.confirmMutation.error as Error)?.message ?? "Erro ao confirmar importação."}
+          {getApiErrorMessage(flow.confirmMutation.error, "Erro ao confirmar importação.")}
         </p>
       )}
 

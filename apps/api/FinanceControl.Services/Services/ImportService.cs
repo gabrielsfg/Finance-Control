@@ -57,10 +57,15 @@ public class ImportService : IImportService
             .Select(s => new { s.Id, s.Name })
             .ToListAsync();
 
+        // Transfers into this account show up on its statement too, so they count.
         var existingTransactions = await _context.Transactions
-            .Where(t => t.UserId == userId && t.AccountId == accountId)
-            .Select(t => new { t.Value, t.TransactionDate, t.Description })
+            .Where(t => t.UserId == userId && (t.AccountId == accountId || t.DestinationAccountId == accountId))
+            .Select(t => new ExistingTransaction(t.Id, t.Value, t.TransactionDate, t.Description))
             .ToListAsync();
+
+        // Each existing row can vouch for one imported row only: two identical coffees in
+        // the file against one already saved means one of them is new.
+        var matchedExistingIds = new HashSet<int>();
 
         var categorized = await CategorizeAsync(rawTransactions, userId);
 
@@ -72,16 +77,25 @@ public class ImportService : IImportService
             var isDuplicate = false;
             string? duplicateReason = null;
 
-            // Check for exact duplicate (same date + value + similar description)
-            var potentialDup = existingTransactions.FirstOrDefault(e =>
-                e.TransactionDate == item.Date &&
-                e.Value == item.Value &&
-                IsSimilarDescription(e.Description, item.Description));
+            // Value and date are what survive a review: the reviewer routinely rewrites the
+            // bank's description and moves a card purchase to the day it happened, so
+            // requiring a similar description missed rows that had been imported and edited.
+            // The window absorbs those date moves; the closest date wins.
+            var potentialDup = existingTransactions
+                .Where(e => !matchedExistingIds.Contains(e.Id)
+                    && e.Value == item.Value
+                    && Math.Abs(e.TransactionDate.DayNumber - item.Date.DayNumber) <= DuplicateDateWindowDays)
+                .OrderBy(e => Math.Abs(e.TransactionDate.DayNumber - item.Date.DayNumber))
+                .ThenByDescending(e => IsSimilarDescription(e.Description, item.Description))
+                .FirstOrDefault();
 
             if (potentialDup is not null)
             {
+                matchedExistingIds.Add(potentialDup.Id);
                 isDuplicate = true;
-                duplicateReason = "Transaction with same date, value and description already exists.";
+                duplicateReason = potentialDup.TransactionDate == item.Date
+                    ? $"Já existe uma transação com o mesmo valor nesta data: \"{potentialDup.Description}\"."
+                    : $"Já existe uma transação com o mesmo valor em {potentialDup.TransactionDate:dd/MM}: \"{potentialDup.Description}\".";
             }
 
             // Check for installment already existing
@@ -94,7 +108,7 @@ public class ImportService : IImportService
                 if (installmentExists)
                 {
                     isDuplicate = true;
-                    duplicateReason = "An installment with the same value and description already exists.";
+                    duplicateReason = "Já existe uma parcela com o mesmo valor e descrição.";
                 }
             }
 
@@ -105,6 +119,7 @@ public class ImportService : IImportService
                 Description = item.Description,
                 Value = item.Value,
                 Type = item.Type,
+                IsInflow = item.IsInflow,
                 SuggestedSubCategoryId = item.SuggestedSubCategoryId,
                 SuggestedSubCategoryName = sub?.Name,
                 PaymentType = item.PaymentType,
@@ -129,6 +144,47 @@ public class ImportService : IImportService
         var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == requestDto.AccountId && a.UserId == userId);
         if (account is null)
             return Result<int>.Failure("Account not found.");
+
+        // A transaction always links to a subcategory; letting a null through became
+        // SubCategoryId 0, which only failed at SaveChanges as an FK violation (HTTP 500).
+        // Transfers are the exception: they are filed under the system transfer subcategory
+        // and need the other account of the pair instead.
+        var uncategorized = requestDto.Transactions
+            .Where(t => t.Type != EnumTransactionType.Transfer && !t.SubCategoryId.HasValue)
+            .ToList();
+        if (uncategorized.Count > 0)
+        {
+            var sample = string.Join("; ", uncategorized.Take(5).Select(t => $"{t.Date:yyyy-MM-dd} {t.Description}"));
+            return Result<int>.Failure($"{uncategorized.Count} transaction(s) have no subcategory: {sample}");
+        }
+
+        var transfers = requestDto.Transactions.Where(t => t.Type == EnumTransactionType.Transfer).ToList();
+        int? transferSubCategoryId = null;
+        if (transfers.Count > 0)
+        {
+            var counterpartIds = transfers
+                .Where(t => t.CounterpartAccountId.HasValue)
+                .Select(t => t.CounterpartAccountId!.Value)
+                .Distinct()
+                .ToList();
+            var validCounterpartIds = await _context.Accounts
+                .Where(a => a.UserId == userId && !a.IsSystem && counterpartIds.Contains(a.Id))
+                .Select(a => a.Id)
+                .ToHashSetAsync();
+
+            var invalidTransfers = transfers
+                .Where(t => !t.CounterpartAccountId.HasValue
+                    || t.CounterpartAccountId.Value == requestDto.AccountId
+                    || !validCounterpartIds.Contains(t.CounterpartAccountId.Value))
+                .ToList();
+            if (invalidTransfers.Count > 0)
+            {
+                var sample = string.Join("; ", invalidTransfers.Take(5).Select(t => $"{t.Date:yyyy-MM-dd} {t.Description}"));
+                return Result<int>.Failure($"{invalidTransfers.Count} transfer(s) have no valid counterpart account: {sample}");
+            }
+
+            transferSubCategoryId = await TransferSubCategoryHelper.GetIdAsync(_context, userId);
+        }
 
         var subcategoryIds = requestDto.Transactions
             .Where(t => t.SubCategoryId.HasValue)
@@ -173,6 +229,29 @@ public class ImportService : IImportService
 
         foreach (var item in requestDto.Transactions)
         {
+            // Same shape the transaction form gives a transfer: one-time, outside the
+            // budget, under the system subcategory — whatever the row carried before the
+            // reviewer switched its type is dropped.
+            if (item.Type == EnumTransactionType.Transfer)
+            {
+                // Money that arrived on this statement came from the counterpart account;
+                // money that left went to it.
+                _context.Transactions.Add(new Transaction
+                {
+                    UserId = userId,
+                    AccountId = item.IsInflow ? item.CounterpartAccountId!.Value : requestDto.AccountId,
+                    DestinationAccountId = item.IsInflow ? requestDto.AccountId : item.CounterpartAccountId,
+                    SubCategoryId = transferSubCategoryId!.Value,
+                    Value = item.Value,
+                    Type = EnumTransactionType.Transfer,
+                    Description = item.Description,
+                    TransactionDate = item.Date,
+                    PaymentType = EnumPaymentType.OneTime,
+                });
+                savedCount++;
+                continue;
+            }
+
             if (item.SubCategoryId.HasValue && !validSubcategoryIds.Contains(item.SubCategoryId.Value))
                 return Result<int>.Failure($"SubCategory {item.SubCategoryId} not found.");
 
@@ -230,7 +309,6 @@ public class ImportService : IImportService
                     UserId = userId,
                     AccountId = requestDto.AccountId,
                     BudgetId = budgetId,
-                    DestinationAccountId = item.DestinationAccountId,
                     SubCategoryId = item.SubCategoryId ?? 0,
                     Value = item.Value,
                     Type = item.Type,
@@ -367,6 +445,7 @@ public class ImportService : IImportService
                 Value = valueInCents,
                 Type = type,
                 RawType = trnType ?? string.Empty,
+                IsInflow = amountDecimal >= 0,
             });
         }
 
@@ -501,6 +580,7 @@ public class ImportService : IImportService
                 Value = valueInCents,
                 Type = type,
                 RawType = rawType,
+                IsInflow = amount >= 0,
             });
         }
 
@@ -586,6 +666,7 @@ public class ImportService : IImportService
                 Description = raw.Description,
                 Value = raw.Value,
                 Type = raw.Type,
+                IsInflow = raw.IsInflow,
                 SuggestedSubCategoryId = suggestion.SubCategoryId,
                 CategorizationSource = suggestion.Source,
                 PaymentType = installment is null ? EnumPaymentType.OneTime : EnumPaymentType.Installment,
@@ -618,6 +699,11 @@ public class ImportService : IImportService
 
     // ── Internal models ───────────────────────────────────────────────────────
 
+    /// <summary>How far apart, in days, an imported row and a saved one may be and still match.</summary>
+    private const int DuplicateDateWindowDays = 3;
+
+    private record ExistingTransaction(int Id, int Value, DateOnly TransactionDate, string Description);
+
     private record RawTransaction
     {
         public string ExternalId { get; init; } = string.Empty;
@@ -626,6 +712,7 @@ public class ImportService : IImportService
         public int Value { get; init; }
         public EnumTransactionType Type { get; init; }
         public string RawType { get; init; } = string.Empty;
+        public bool IsInflow { get; init; }
     }
 
     private record CategorizedTransaction
@@ -635,6 +722,7 @@ public class ImportService : IImportService
         public string Description { get; init; } = string.Empty;
         public int Value { get; init; }
         public EnumTransactionType Type { get; init; }
+        public bool IsInflow { get; init; }
         public int? SuggestedSubCategoryId { get; init; }
         public EnumCategorizationSource CategorizationSource { get; init; }
         public EnumPaymentType PaymentType { get; init; }
