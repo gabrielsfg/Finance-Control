@@ -37,13 +37,6 @@ namespace FinanceControl.Data.Mappings
             builder.Property(u => u.FailedLoginAttempts).HasDefaultValue(0).IsRequired();
             builder.Property(u => u.LockoutEnd)
                 .HasColumnType("timestamp with time zone");
-            // Stored as text so the column reads as "Free"/"Premium" during support work,
-            // matching how every other enum in the schema is persisted.
-            builder.Property(u => u.Plan)
-                .HasConversion<string>()
-                .HasMaxLength(20)
-                .HasDefaultValue(EnumUserPlan.Free)
-                .IsRequired();
             builder.Property(u => u.PreferredCurrency).HasDefaultValue("BRL").IsRequired();
             builder.Property(u => u.PreferredLanguage).HasDefaultValue("pt-BR").IsRequired();
             builder.Property(u => u.Country).HasMaxLength(2);

@@ -9,6 +9,7 @@ using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Workers;
+using FinanceControl.WebApi.Filters;
 using FinanceControl.Services.Brapi;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -94,6 +95,8 @@ builder.Services.AddAplicationServices(builder.Configuration);
 builder.Services.AddHostedService<RecurringTransactionHostedService>();
 builder.Services.AddHostedService<RefreshTokenCleanupHostedService>();
 builder.Services.AddHostedService<NotificationReminderHostedService>();
+builder.Services.AddHostedService<SubscriptionBillingHostedService>();
+builder.Services.AddHostedService<AsaasWebhookProcessorHostedService>();
 
 // Brapi sync jobs — desativados enquanto a assinatura está cancelada (pré-lançamento).
 // Sem assinatura ativa eles só acumulariam erro de autenticação a cada janela de sync.
@@ -124,7 +127,9 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
         }), ServiceLifetime.Scoped);
 
 // Add services to the container.
-builder.Services.AddControllers()
+// The paywall runs on every action; endpoints that must stay open opt out with
+// [SkipSubscriptionCheck] (or are [AllowAnonymous]).
+builder.Services.AddControllers(options => options.Filters.Add<SubscriptionAccessFilter>())
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
@@ -240,6 +245,19 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = 20,
             Window = TimeSpan.FromMinutes(15),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        }));
+
+    // Card forms (subscribe, change card): 10 per hour per IP. The real brake on card
+    // testing is per account (declined cards per day, in the service) and the captcha;
+    // this only blunts a script hammering from one address.
+    options.AddPolicy("billing", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: GetClientKey(httpContext),
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromHours(1),
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
             QueueLimit = 0
         }));

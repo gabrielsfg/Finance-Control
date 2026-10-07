@@ -1,3 +1,4 @@
+using FinanceControl.Services.Billing;
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Service;
@@ -343,7 +344,7 @@ namespace FinanceControl.Services.Services
                 Email = user.Email,
                 TwoFactorEnabled = user.TwoFactorEnabled,
                 EmailVerified = user.EmailVerifiedAt is not null,
-                Plan = user.Plan
+                Plan = (await SubscriptionRules.GetAccessAsync(_context, user.Id, DateTime.UtcNow)).Plan
             };
         }
 
@@ -388,7 +389,7 @@ namespace FinanceControl.Services.Services
                 Email = user.Email,
                 TwoFactorEnabled = user.TwoFactorEnabled,
                 EmailVerified = user.EmailVerifiedAt is not null,
-                Plan = user.Plan
+                Plan = (await SubscriptionRules.GetAccessAsync(_context, user.Id, DateTime.UtcNow)).Plan
             };
         }
 

@@ -1,3 +1,4 @@
+using FinanceControl.Services.Billing;
 using System.Diagnostics;
 using System.Text.Json;
 using FinanceControl.Data.Data;
@@ -56,13 +57,8 @@ namespace FinanceControl.Services.Services
             int userId,
             bool forceRefresh = false)
         {
-            var plan = await _context.Users
-                .AsNoTracking()
-                .Where(u => u.Id == userId)
-                .Select(u => u.Plan)
-                .FirstOrDefaultAsync();
-
-            if (plan != EnumUserPlan.Premium)
+            var access = await SubscriptionRules.GetAccessAsync(_context, userId, DateTime.UtcNow);
+            if (!access.IsPremium)
                 return null;
 
             if (!_client.IsConfigured)

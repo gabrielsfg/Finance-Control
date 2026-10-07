@@ -2,6 +2,8 @@
 using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Ai;
+using FinanceControl.Services.Asaas;
+using FinanceControl.Services.Billing;
 using FinanceControl.Services.Brapi;
 using FinanceControl.Services.Email;
 using FinanceControl.Services.Investments;
@@ -88,7 +90,41 @@ namespace FinanceControl.Services.Extensions
             services.AddSingleton<BrapiPriceUpdateJobService>();
             services.AddSingleton<BrapiCleanupJobService>();
 
+            AddBilling(services, configuration);
+
             return services;
+        }
+
+        private static void AddBilling(IServiceCollection services, IConfiguration configuration)
+        {
+            services.Configure<AsaasSettings>(configuration.GetSection("AsaasSettings"));
+            services.Configure<BillingSettings>(configuration.GetSection("BillingSettings"));
+            services.Configure<TurnstileSettings>(configuration.GetSection("TurnstileSettings"));
+
+            services.AddHttpClient<AsaasClient>((provider, client) =>
+            {
+                var settings = provider.GetRequiredService<IOptions<AsaasSettings>>().Value;
+
+                // Relative paths ("payments") only resolve under the base when it ends in a slash.
+                client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+                client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(settings.UserAgent);
+
+                // A missing key is a supported state (local dev without Asaas): the client
+                // refuses every call itself instead of sending an empty header.
+                if (!string.IsNullOrWhiteSpace(settings.ApiKey))
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("access_token", settings.ApiKey);
+            });
+            services.AddHttpClient<TurnstileVerifier>(client => client.Timeout = TimeSpan.FromSeconds(10));
+
+            services.AddSingleton<BillingSecrets>();
+            services.AddScoped<BillingNotifier>();
+            services.AddScoped<BillingEngine>();
+            services.AddScoped<ISubscriptionService, SubscriptionService>();
+            services.AddScoped<ISubscriptionAccessService, SubscriptionAccessService>();
+
+            services.AddSingleton<SubscriptionBillingJobService>();
+            services.AddSingleton<AsaasWebhookProcessorJobService>();
         }
     }
 }

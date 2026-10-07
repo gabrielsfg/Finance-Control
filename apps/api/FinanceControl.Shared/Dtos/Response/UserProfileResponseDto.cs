@@ -13,7 +13,10 @@ namespace FinanceControl.Shared.Dtos.Response
 
         public bool EmailVerified { get; set; }
 
-        /// <summary>Which features the account is entitled to. The web client already declared this field; it now has a source.</summary>
-        public EnumUserPlan Plan { get; set; }
+        /// <summary>
+        /// The plan the account can use right now, or null without an active subscription.
+        /// Read-only mirror of the subscription — GET /api/subscription has the full state.
+        /// </summary>
+        public EnumSubscriptionPlan? Plan { get; set; }
     }
 }

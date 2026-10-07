@@ -73,6 +73,10 @@ Never create a user-owned entity without `UserId`.
 | `Tag` | Many-to-many with Transaction |
 | `UserPreferences` | Per-user settings (currency, language) |
 | `RefreshToken` | JWT refresh token persistence |
+| `BillingProfile` | One per user: Asaas customer id, CPF HMAC, encrypted card token, trial flag |
+| `Subscription` | The paid plan; we run the billing ourselves (period, status, scheduled plan change) |
+| `SubscriptionCharge` | One charge per period, mirrored from Asaas; unique idempotency key |
+| `AsaasWebhookEvent` | Stored webhook, applied later by a worker |
 
 ### Account balance rule
 
@@ -236,6 +240,11 @@ When a feature only adds behavior to existing entities (no new table), skip step
 Rate limiting policies (defined in `Program.cs`):
 - `"auth"` — 5 requests / 15 min (login, register, refresh, forgot-password)
 - `"general"` — 100 requests / 1 min (applied to all controllers by default)
+- `"billing"` — 10 requests / 1 hour (card forms: subscribe, change card)
+
+### Subscription paywall
+
+`SubscriptionAccessFilter` is registered globally: an authenticated user without an active subscription gets `403 { error: "SUBSCRIPTION_REQUIRED" }`. New controllers are behind it by default; mark with `[SkipSubscriptionCheck]` only what a non-subscriber must reach (auth/profile, subscription, legal, admin, feedback, notifications). `BillingSettings:EnforceAccess=false` turns it off for local development. Premium-only features check `SubscriptionRules.GetAccessAsync(...).IsPremium`.
 
 CORS policy `"WebApp"` allows `http://localhost:3000` and `https://localhost:3000`.
 
@@ -245,6 +254,8 @@ All `IHostedService` / `BackgroundService` implementations live in the `FinanceC
 
 - `RecurringTransactionHostedService` (Workers) → drives `RecurringTransactionJobService` (Services)
 - Brapi sync workers and any future scheduled jobs follow the same pattern: hosted service in Workers, logic in Services
+- `SubscriptionBillingHostedService` (hourly) → `SubscriptionBillingJobService`: card renewals, Pix/boleto renewals, expirations, billing emails
+- `AsaasWebhookProcessorHostedService` (every 15s) → `AsaasWebhookProcessorJobService`: applies stored Asaas webhooks
 
 ## Naming conventions
 

@@ -42,6 +42,11 @@ namespace FinanceControl.Data.Data
         public DbSet<UserInsight> UserInsights { get; set; }
         public DbSet<UserAiContext> UserAiContexts { get; set; }
         public DbSet<AiGenerationLog> AiGenerationLogs { get; set; }
+        public DbSet<BillingProfile> BillingProfiles { get; set; }
+        public DbSet<Subscription> Subscriptions { get; set; }
+        public DbSet<SubscriptionCharge> SubscriptionCharges { get; set; }
+        public DbSet<AsaasWebhookEvent> AsaasWebhookEvents { get; set; }
+        public DbSet<BillingEmailLog> BillingEmailLogs { get; set; }
 
         public override int SaveChanges()
         {
