@@ -28,6 +28,7 @@ export function TabChips<T extends string = string>({
         const active = item.id === value;
         return (
           <button
+            type="button"
             key={item.id}
             role="tab"
             aria-selected={active}

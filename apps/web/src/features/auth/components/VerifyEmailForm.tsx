@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useReturnTo } from "@/features/auth/hooks/useReturnTo";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Loader2, MailCheck } from "lucide-react";
@@ -17,6 +18,7 @@ import { ResendCodeButton } from "./ResendCodeButton";
 
 export const VerifyEmailForm = ({ email, onBack }: { email: string; onBack: () => void }) => {
   const router = useRouter();
+  const returnTo = useReturnTo();
   const { login } = useAuthStore();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -34,7 +36,7 @@ export const VerifyEmailForm = ({ email, onBack }: { email: string; onBack: () =
       const response = await authApi.verifyEmail({ email, code: data.code });
       login(response.accessToken);
       router.refresh();
-      router.push("/dashboard");
+      router.push(returnTo);
     } catch (err: unknown) {
       const status = (err as { response?: { status: number } })?.response?.status;
       setServerError(

@@ -49,6 +49,7 @@ import { DatePickerField } from "@/components/shared/DatePickerField";
 import { CategoryPickerField } from "@/components/shared/CategoryPickerField";
 import { CreateSubCategoryModal } from "@/features/categories/components/CreateSubCategoryModal";
 import { useCategories } from "@/features/categories/hooks/useCategories";
+import { getApiErrorMessage } from "@/features/assistant/utils/apiError";
 import type {
   TransactionItem,
   TransactionType,
@@ -652,6 +653,7 @@ function CreateForm({
   };
 
   return (
+    <>
     <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
       {/* Scrollable fields */}
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
@@ -873,7 +875,11 @@ function CreateForm({
           </Button>
         </div>
       </div>
+    </form>
 
+      {/* Outside the <form>: the account drawer has a form of its own, and React never
+          dispatches onSubmit to a form nested inside another — "Criar conta" fell
+          through to a native GET submit and the account was never saved. */}
       <AccountDrawer
         open={accountDrawerOpen}
         mode="create"
@@ -893,7 +899,7 @@ function CreateForm({
           setValue("subCategoryId", String(created.id), { shouldValidate: true })
         }
       />
-    </form>
+    </>
   );
 }
 
@@ -904,7 +910,9 @@ function editDefaults(transaction: TransactionItem): EditValues {
     description: transaction.description,
     value: String(transaction.value / 100),
     transactionDate: transaction.transactionDate,
-    subCategoryId: String(transaction.subCategoryId),
+    // A transfer's subcategory is the system "Transferência" one — not a choice the user
+    // made, so converting it to an expense/income starts with the picker empty.
+    subCategoryId: transaction.type === "Transfer" ? "" : String(transaction.subCategoryId),
     accountId: String(transaction.accountId),
     destinationAccountId: transaction.destinationAccountId
       ? String(transaction.destinationAccountId)
@@ -959,6 +967,14 @@ function EditForm({
   }, [transaction, reset]);
 
   const isTransfer = transactionType === "Transfer";
+  const wasTransfer = transaction.type === "Transfer";
+  // Only a standalone one-off row can become a transfer; an installment or a recurrence
+  // occurrence belongs to a series the server would not convert.
+  const canBecomeTransfer =
+    wasTransfer ||
+    (transaction.paymentType === "OneTime" &&
+      transaction.parentTransactionId === null &&
+      transaction.recurringTransactionId === null);
   const subCategoryValue = watch("subCategoryId");
   const accountValue = watch("accountId");
   const destinationAccountValue = watch("destinationAccountId");
@@ -1030,8 +1046,8 @@ function EditForm({
         });
       }
       onClose();
-    } catch {
-      setServerError("Erro ao atualizar transação. Tente novamente.");
+    } catch (err) {
+      setServerError(getApiErrorMessage(err, "Erro ao atualizar transação. Tente novamente."));
     }
   };
 
@@ -1040,19 +1056,22 @@ function EditForm({
     <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
       {/* Scrollable fields */}
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
-      {/* Type toggle — transfers keep their type; expense/income can swap freely */}
-      {isTransfer ? (
-        <div className="bg-blue/10 text-blue flex items-center justify-center gap-2 rounded-[13px] py-2.5 text-[14px] font-medium">
-          <ArrowLeftRight size={15} />
-          Transferência
-        </div>
-      ) : (
-        <TypeToggle
-          value={transactionType}
-          onChange={(t) => { setTransactionType(t); setValue("type", t); }}
-          options={["Expense", "Income"]}
-        />
-      )}
+      {/* Type toggle — a transfer converts to expense/income and back, so a row imported
+          with the wrong type can be fixed in place instead of deleted and re-entered. */}
+      <TypeToggle
+        value={transactionType}
+        onChange={(t) => {
+          setTransactionType(t);
+          setValue("type", t);
+          // Leaving a transfer: it was always one-off and outside the budget, but a new
+          // expense should count against the budget like any other entry does by default.
+          if (wasTransfer && t !== "Transfer") {
+            setValue("paymentType", "OneTime");
+            setValue("includeInBudget", t === "Expense");
+          }
+        }}
+        options={canBecomeTransfer ? ["Expense", "Income", "Transfer"] : ["Expense", "Income"]}
+      />
 
       <FormField label="Descrição" error={errors.description?.message}>
         <input
@@ -1130,6 +1149,7 @@ function EditForm({
       {!isTransfer && (
         <FormField
           label="Categoria"
+          error={errors.subCategoryId?.message}
           action={
             <button
               type="button"
@@ -1147,6 +1167,7 @@ function EditForm({
               setValue("subCategoryId", id === null ? "" : String(id), { shouldValidate: true })
             }
             subcategories={subcategories}
+            hasError={!!errors.subCategoryId}
           />
         </FormField>
       )}
@@ -1167,7 +1188,9 @@ function EditForm({
         </FormField>
       )}
 
-      {!isTransfer && (
+      {/* A converted transfer stays one-off: the server converts it as is, and turning it
+          into an installment plan or recurrence is a second, ordinary edit. */}
+      {!isTransfer && !wasTransfer && (
         <FormField label="Tipo de pagamento">
           <Select
             value={editPaymentType}

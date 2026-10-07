@@ -69,19 +69,19 @@ namespace FinanceControl.Services.Ai
         /// Mirrors InsightModelOutputDto. additionalProperties is false everywhere so the
         /// model cannot smuggle a field the DTO would silently drop.
         /// </summary>
+        // Lengths and counts are not expressible in structured outputs (the API rejects
+        // maxLength/maxItems); the prompt states them and InsightOutputGuard enforces them.
         public const string OutputSchemaJson = """
             {
               "type": "object",
               "properties": {
-                "headline": { "type": "string", "maxLength": 90 },
+                "headline": { "type": "string" },
                 "paragraphs": {
                   "type": "array",
-                  "minItems": 1,
-                  "maxItems": 3,
                   "items": {
                     "type": "object",
                     "properties": {
-                      "text": { "type": "string", "maxLength": 320 },
+                      "text": { "type": "string" },
                       "figures": { "type": "array", "items": { "type": "string" } }
                     },
                     "required": ["text", "figures"],

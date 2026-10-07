@@ -9,7 +9,16 @@ public class ImportTransactionItemRequestDto
     public int Value { get; set; }
     public EnumTransactionType Type { get; set; }
     public int? SubCategoryId { get; set; }
-    public int? DestinationAccountId { get; set; }
+
+    /// <summary>
+    /// Transfers only: the user's other account in the pair. Whether it is the source or
+    /// the destination follows <see cref="IsInflow"/> — money that arrived on the imported
+    /// statement came from it, money that left went to it.
+    /// </summary>
+    public int? CounterpartAccountId { get; set; }
+
+    /// <summary>Whether the statement line credited the imported account (positive amount).</summary>
+    public bool IsInflow { get; set; }
     public EnumPaymentType PaymentType { get; set; }
     public int? TotalInstallments { get; set; }
     public int? InstallmentNumber { get; set; }

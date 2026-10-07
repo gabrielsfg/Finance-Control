@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { authApi } from "@/lib/api/auth";
 import { clearPersistedQueryCache } from "@/lib/queryClient";
 import type { AuthUser } from "@/lib/types/auth.types";
+import { RETURN_TO_PARAM } from "@/lib/utils/returnTo";
 
 type AuthState = {
   accessToken: string | null;
@@ -51,7 +52,16 @@ export const useAuthStore = create<AuthState>()(
         // `expired` tells the middleware not to bounce us straight back into the app:
         // the refresh-token cookie can outlive this call (request never landed, API
         // down), and without the flag a dead session traps the user in a redirect loop.
-        window.location.href = "/login?expired=1";
+        //
+        // A session that dies on the MCP consent page keeps its place: the AI client is
+        // waiting on that exact URL, and landing on the dashboard after signing back in
+        // would silently abandon the connection. Everywhere else a voluntary logout
+        // looks the same as an expired one, so nothing else is carried over.
+        const { pathname, search } = window.location;
+        const returnTo = pathname.startsWith("/oauth/")
+          ? `&${RETURN_TO_PARAM}=${encodeURIComponent(pathname + search)}`
+          : "";
+        window.location.href = `/login?expired=1${returnTo}`;
       },
 
       setAccessToken: (token) => set({ accessToken: token }),

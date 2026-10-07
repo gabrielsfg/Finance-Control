@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useReturnTo } from "@/features/auth/hooks/useReturnTo";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { loginSchema, type LoginFormData } from "@/features/auth/schemas/authSchema";
 import { authApi } from "@/lib/api/auth";
@@ -24,6 +25,7 @@ export const LoginForm = ({
   notice?: string | null;
 }) => {
   const router = useRouter();
+  const returnTo = useReturnTo();
   const { login } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export const LoginForm = ({
 
       login(result.accessToken);
       router.refresh();
-      router.push("/dashboard");
+      router.push(returnTo);
     } catch (err: unknown) {
       const status = (err as { response?: { status: number } })?.response?.status;
       if (status === 423) {

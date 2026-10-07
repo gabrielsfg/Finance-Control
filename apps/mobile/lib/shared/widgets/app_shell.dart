@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/providers/overlay_provider.dart';
+import '../../features/ai/presentation/assistant_speed_dial.dart';
 import 'app_widgets.dart';
 
 class AppShell extends ConsumerWidget {
@@ -30,9 +31,13 @@ class AppShell extends ConsumerWidget {
         extendBody: true,
         backgroundColor: Colors.transparent,
         body: child,
-        floatingActionButton: fabRoute == null
+        // One button: it opens upwards with "create" and "chat com IA".
+        floatingActionButton: overlayOpen
             ? null
-            : AppFAB(onTap: () => context.push(fabRoute)),
+            : AssistantSpeedDial(
+                createLabel: _fabLabelFor(fabRoute),
+                onCreate: fabRoute == null ? null : () => context.push(fabRoute),
+              ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         bottomNavigationBar: AppNavBar(
           activeIndex: currentIndex,
@@ -64,6 +69,14 @@ class AppShell extends ConsumerWidget {
     // Home and transactions both add a transaction.
     return '/transactions/add';
   }
+
+  /// What the "create" option of the floating button says for [route].
+  String? _fabLabelFor(String? route) => switch (route) {
+        null => null,
+        '/accounts/create' => 'Nova conta',
+        '/budgets/create/step1' => 'Novo orçamento',
+        _ => 'Novo lançamento',
+      };
 
   void _onTap(BuildContext context, int index) {
     switch (index) {

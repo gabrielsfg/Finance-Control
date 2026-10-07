@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { RETURN_TO_PARAM, sanitizeReturnTo } from "@/lib/utils/returnTo";
 
 // The legal pages are linked from the registration form and from the profile, so
 // they have to open in both states — bouncing a visitor to /login for reading the
@@ -16,7 +17,13 @@ export default function proxy(request: NextRequest) {
   const hasSession = !!request.cookies.get("refreshToken")?.value;
 
   if (!isPublicRoute && !hasSession) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    // Remember where the visitor was going. The MCP consent page depends on it: the
+    // authorization flow lands on /oauth/consent?request=…, and dropping that on the way
+    // through login would strand the AI client mid-connection.
+    const loginUrl = new URL("/login", request.url);
+    const target = sanitizeReturnTo(pathname + request.nextUrl.search);
+    if (target && target !== "/dashboard") loginUrl.searchParams.set(RETURN_TO_PARAM, target);
+    return NextResponse.redirect(loginUrl);
   }
 
   // `?expired=1` is the client reporting that it has just torn its session down.
@@ -27,7 +34,8 @@ export default function proxy(request: NextRequest) {
   const isReturningFromLogout = request.nextUrl.searchParams.get("expired") === "1";
 
   if (pathname === "/login" && hasSession && !isReturningFromLogout) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const target = sanitizeReturnTo(request.nextUrl.searchParams.get(RETURN_TO_PARAM));
+    return NextResponse.redirect(new URL(target ?? "/dashboard", request.url));
   }
 
   return NextResponse.next();

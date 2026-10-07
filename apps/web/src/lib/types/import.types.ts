@@ -1,11 +1,16 @@
 import type { TransactionType, PaymentType } from "./transactions.types";
 
+/** Where the suggested subcategory came from: the user's own past imports, the AI, or nowhere. */
+export type CategorizationSource = "None" | "History" | "Ai";
+
 export type ParsedTransactionItem = {
   externalId: string;
   date: string;
   description: string;
   value: number;
   type: TransactionType;
+  /** Whether the statement line credited the account — the direction a transfer goes. */
+  isInflow: boolean;
   suggestedSubCategoryId: number | null;
   suggestedSubCategoryName: string | null;
   paymentType: PaymentType;
@@ -13,6 +18,7 @@ export type ParsedTransactionItem = {
   installmentNumber: number | null;
   isDuplicate: boolean;
   duplicateReason: string | null;
+  categorizationSource: CategorizationSource;
 };
 
 export type ParseImportFileResponse = {
@@ -26,8 +32,11 @@ export type ImportTransactionItem = {
   description: string;
   value: number;
   type: TransactionType;
+  /** Ignored for transfers — the server files them under the system transfer subcategory. */
   subCategoryId: number | null;
-  destinationAccountId: number | null;
+  /** Transfers only: the other account. Source when `isInflow`, destination otherwise. */
+  counterpartAccountId: number | null;
+  isInflow: boolean;
   paymentType: PaymentType;
   totalInstallments: number | null;
   installmentNumber: number | null;

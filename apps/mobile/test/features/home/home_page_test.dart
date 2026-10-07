@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finance_control_front/core/utils/app_locale.dart';
 import 'package:finance_control_front/features/accounts/data/models/account.dart';
 import 'package:finance_control_front/features/accounts/providers/accounts_provider.dart';
+import 'package:finance_control_front/features/ai/data/ai_models.dart';
+import 'package:finance_control_front/features/ai/providers/insight_provider.dart';
 import 'package:finance_control_front/features/goals/data/goal_models.dart';
 import 'package:finance_control_front/features/goals/providers/goal_provider.dart';
 import 'package:finance_control_front/features/home/data/models/home_summary.dart';
@@ -39,6 +41,14 @@ class _FakeUnreadNotificationCountNotifier
     extends UnreadNotificationCountNotifier {
   @override
   Future<int> build() async => 0;
+}
+
+// The weekly analysis card renders nothing for Unavailable, which keeps the
+// assertions below about the rest of the home.
+class _FakeSpendingInsightNotifier extends SpendingInsightNotifier {
+  @override
+  Future<AiInsightResult> build() async =>
+      const AiInsightResult(status: AiAvailability.unavailable);
 }
 
 class _FakeHomeNotifier extends HomeNotifier {
@@ -105,6 +115,7 @@ Widget _buildSubject(AsyncValue<HomeState> asyncState) {
       recurrenceProvider.overrideWith(_FakeRecurrenceNotifier.new),
       unreadNotificationCountProvider
           .overrideWith(_FakeUnreadNotificationCountNotifier.new),
+      spendingInsightProvider.overrideWith(_FakeSpendingInsightNotifier.new),
     ],
     child: const MaterialApp(
       home: AppLocaleScope(

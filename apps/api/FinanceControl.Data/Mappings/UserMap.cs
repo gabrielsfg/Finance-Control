@@ -1,4 +1,4 @@
-﻿using FinanceControl.Domain.Entities;
+using FinanceControl.Domain.Entities;
 using FinanceControl.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -26,6 +26,7 @@ namespace FinanceControl.Data.Mappings
             builder.Property(u => u.EmailVerifiedAt)
                 .HasColumnType("timestamp with time zone");
             builder.Property(u => u.TwoFactorEnabled).HasDefaultValue(false).IsRequired();
+            builder.Property(u => u.AiEnabled).HasDefaultValue(true).IsRequired();
             builder.Property(u => u.CreatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("now()")

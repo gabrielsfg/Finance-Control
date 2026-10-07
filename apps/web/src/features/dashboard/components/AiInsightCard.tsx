@@ -4,6 +4,7 @@ import { Loader2, RefreshCw, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRefreshSpendingInsight, useSpendingInsight } from "@/features/insights/hooks/useInsight";
 import { PremiumNotice } from "@/components/shared/PremiumNotice";
+import { AiStatusNotice } from "@/features/insights/components/AiStatusNotice";
 import { usePlan } from "@/lib/hooks/usePlan";
 
 const CARD_STYLE = {
@@ -17,21 +18,24 @@ const CARD_STYLE = {
  *
  * A free account gets the card locked rather than absent: the feature is the reason to
  * upgrade, and a card that never appears is a feature nobody discovers. The API is not
- * asked at all in that case — it would answer 204 by plan anyway.
+ * asked at all in that case — it would answer NotPremium by plan anyway.
  *
- * A subscriber still gets nothing when the API answers 204 (quota spent, feature off,
- * too little history). Those are not upsells, and dressing them as one would be a lie.
+ * Every other state the API answers is rendered for what it is: the user switched the AI
+ * off, the month's quota is spent (the cached analysis still shows), or there is too
+ * little history. None of them is an upsell, and dressing them as one would be a lie.
+ * Only a platform-wide pause (Unavailable) hides the card — there is nothing the user
+ * can do about it.
  */
 export const AiInsightCard = () => {
   const { isPremium, isLoading: planLoading } = usePlan();
-  const { data: insight, isLoading } = useSpendingInsight(isPremium);
+  const { data: result, isLoading } = useSpendingInsight(isPremium);
   const refresh = useRefreshSpendingInsight();
 
   // Nothing at all until the plan is known — a lock flashed at a subscriber reads as an
   // expired subscription.
   if (planLoading) return null;
 
-  if (!isPremium) {
+  if (!isPremium || result?.status === "NotPremium") {
     return (
       <div className="rounded-[20px] border p-[22px]" style={CARD_STYLE}>
         <Header />
@@ -55,7 +59,22 @@ export const AiInsightCard = () => {
     );
   }
 
-  if (!insight) return null;
+  if (!result || result.status === "Unavailable") return null;
+
+  const { status, insight } = result;
+
+  if (!insight) {
+    // Available always carries an insight; anything else without one is a notice.
+    if (status === "Available") return null;
+    return (
+      <div className="rounded-[20px] border p-[22px]" style={CARD_STYLE}>
+        <Header />
+        <AiStatusNotice status={status} />
+      </div>
+    );
+  }
+
+  const quotaReached = status === "QuotaExceeded";
 
   return (
     <div className="rounded-[20px] border p-[22px]" style={CARD_STYLE}>
@@ -82,21 +101,30 @@ export const AiInsightCard = () => {
             : "Resumo calculado a partir dos dados que você cadastrou. É informativo e não é recomendação de investimento."}
         </p>
 
-        <Button
-          size="sm"
-          variant="outline"
-          className="shrink-0 text-[11px]"
-          onClick={() => refresh.mutate()}
-          disabled={refresh.isPending}
-          aria-label="Atualizar análise"
-        >
-          {refresh.isPending ? (
-            <Loader2 size={12} className="animate-spin" />
-          ) : (
-            <RefreshCw size={12} />
-          )}
-        </Button>
+        {/* Regenerating spends quota, so the button goes once there is none left. */}
+        {!quotaReached && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0 text-[11px]"
+            onClick={() => refresh.mutate()}
+            disabled={refresh.isPending}
+            aria-label="Atualizar análise"
+          >
+            {refresh.isPending ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <RefreshCw size={12} />
+            )}
+          </Button>
+        )}
       </div>
+
+      {quotaReached && (
+        <div className="mt-3">
+          <AiStatusNotice status="QuotaExceeded" compact />
+        </div>
+      )}
     </div>
   );
 };

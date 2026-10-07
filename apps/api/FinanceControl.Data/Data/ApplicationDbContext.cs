@@ -42,6 +42,14 @@ namespace FinanceControl.Data.Data
         public DbSet<UserInsight> UserInsights { get; set; }
         public DbSet<UserAiContext> UserAiContexts { get; set; }
         public DbSet<AiGenerationLog> AiGenerationLogs { get; set; }
+        public DbSet<AiConversation> AiConversations { get; set; }
+        public DbSet<AiMessage> AiMessages { get; set; }
+        public DbSet<AiPendingAction> AiPendingActions { get; set; }
+        public DbSet<McpClient> McpClients { get; set; }
+        public DbSet<McpAuthorizationRequest> McpAuthorizationRequests { get; set; }
+        public DbSet<McpGrant> McpGrants { get; set; }
+        public DbSet<McpPersonalToken> McpPersonalTokens { get; set; }
+        public DbSet<McpAccessLog> McpAccessLogs { get; set; }
 
         public override int SaveChanges()
         {

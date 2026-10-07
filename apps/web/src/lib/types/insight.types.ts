@@ -43,3 +43,41 @@ export type AiContext = {
   text: string;
   updatedAt: string | null;
 };
+
+/**
+ * Why an AI surface is (not) showing content. Every AI endpoint answers 200 with one of
+ * these, so a locked or switched-off feature is a state to render, never an error.
+ */
+export type AiAvailability =
+  | "Available"
+  | "NotPremium"
+  | "AiDisabled"
+  | "Unavailable"
+  | "QuotaExceeded"
+  | "NotEnoughData";
+
+export type InsightResult = {
+  status: AiAvailability;
+  /** Null unless status is Available — or QuotaExceeded with an analysis already cached. */
+  insight: Insight | null;
+};
+
+export type AiSettings = {
+  aiEnabled: boolean;
+  isPremium: boolean;
+  /** False while the platform has the integration switched off by configuration. */
+  isAvailable: boolean;
+  provider: string;
+  chatMessagesUsed: number;
+  chatMessagesLimit: number;
+  insightCount: number;
+  conversationCount: number;
+};
+
+export type UpdateAiSettingsRequest = {
+  aiEnabled: boolean;
+};
+
+export type DeletedCountResponse = {
+  deleted: number;
+};

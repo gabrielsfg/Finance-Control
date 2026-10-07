@@ -8,6 +8,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/color_hex.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../ai/data/ai_models.dart';
+import '../../ai/presentation/ai_insight_card.dart';
 import '../data/investment_models.dart';
 import '../providers/investment_provider.dart';
 
@@ -70,6 +72,10 @@ class InvestmentsPage extends ConsumerWidget {
                               _AllocationBar(allocations: p.allocations),
                               const SizedBox(height: 24),
                             ],
+                            const AiInsightCard(
+                              kind: AiInsightKind.portfolio,
+                              bottomSpacing: 24,
+                            ),
                             const SectionHeader('Meus ativos'),
                             const SizedBox(height: 6),
                             ...List.generate(

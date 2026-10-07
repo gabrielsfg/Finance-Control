@@ -9,11 +9,21 @@ public class ParsedTransactionItemDto
     public string Description { get; set; } = string.Empty;
     public int Value { get; set; }
     public EnumTransactionType Type { get; set; }
+
+    /// <summary>
+    /// Whether the statement line credited the account. Kept apart from <see cref="Type"/>
+    /// because the reviewer can retype a row as a transfer, and the direction of that
+    /// transfer is only known from the sign the bank gave it.
+    /// </summary>
+    public bool IsInflow { get; set; }
     public int? SuggestedSubCategoryId { get; set; }
     public string? SuggestedSubCategoryName { get; set; }
     public EnumPaymentType PaymentType { get; set; }
     public int? TotalInstallments { get; set; }
     public int? InstallmentNumber { get; set; }
+
+    /// <summary>Where SuggestedSubCategoryId came from, for the badge on the review screen.</summary>
+    public EnumCategorizationSource CategorizationSource { get; set; }
     public bool IsDuplicate { get; set; }
     public string? DuplicateReason { get; set; }
 }

@@ -1,4 +1,5 @@
 using FinanceControl.Domain.Entities;
+using FinanceControl.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -10,7 +11,12 @@ namespace FinanceControl.Data.Mappings
         {
             builder.ToTable("AiGenerationLogs");
             builder.HasKey(l => l.Id);
-            builder.Property(l => l.Kind).HasConversion<string>().HasMaxLength(30).IsRequired();
+            builder.Property(l => l.Feature)
+                .HasConversion<string>()
+                .HasMaxLength(30)
+                .HasDefaultValue(EnumAiFeature.SpendingInsight)
+                .IsRequired();
+            builder.Property(l => l.Kind).HasConversion<string>().HasMaxLength(30);
             builder.Property(l => l.Outcome).HasConversion<string>().HasMaxLength(30).IsRequired();
             builder.Property(l => l.Model).HasMaxLength(60).IsRequired();
             builder.Property(l => l.RejectionReason).HasMaxLength(300);
@@ -31,6 +37,10 @@ namespace FinanceControl.Data.Mappings
             // The monthly quota counts rows in this table per user and month.
             builder.HasIndex(l => new { l.UserId, l.Kind, l.CreatedAt })
                 .HasDatabaseName("IX_AiGenerationLogs_UserId_Kind_CreatedAt");
+
+            // Chat and import quotas count by feature rather than by analysis kind.
+            builder.HasIndex(l => new { l.UserId, l.Feature, l.CreatedAt })
+                .HasDatabaseName("IX_AiGenerationLogs_UserId_Feature_CreatedAt");
         }
     }
 }

@@ -15,5 +15,8 @@ namespace FinanceControl.Shared.Dtos.Response
 
         /// <summary>Which features the account is entitled to. The web client already declared this field; it now has a source.</summary>
         public EnumUserPlan Plan { get; set; }
+
+        /// <summary>The user's switch for the in-app AI features.</summary>
+        public bool AiEnabled { get; set; }
     }
 }
