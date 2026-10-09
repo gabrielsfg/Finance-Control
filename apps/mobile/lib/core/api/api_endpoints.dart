@@ -147,6 +147,22 @@ abstract class ApiEndpoints {
   static const String importParse = '/api/import/parse';
   static const String importConfirm = '/api/import/confirm';
 
+  // AI — weekly analyses and the "IA no Quantia" settings (InsightController)
+  static const String insightSpending = '/api/insight/spending';
+  static const String insightPortfolio = '/api/insight/portfolio';
+  static const String insights = '/api/insight';
+  static const String insightSettings = '/api/insight/settings';
+
+  // AI — chat assistant (AssistantController)
+  static const String assistantConversations = '/api/assistant/conversations';
+  static String assistantConversationById(int id) =>
+      '/api/assistant/conversations/$id';
+  static const String assistantMessages = '/api/assistant/messages';
+  static String assistantActionConfirm(int id) =>
+      '/api/assistant/actions/$id/confirm';
+  static String assistantActionCancel(int id) =>
+      '/api/assistant/actions/$id/cancel';
+
   // Budget Allocations
   static String budgetAllocations(int budgetId) =>
       '/api/budgets/$budgetId/allocation';

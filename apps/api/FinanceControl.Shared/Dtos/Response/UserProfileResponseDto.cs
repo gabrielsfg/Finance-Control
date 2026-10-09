@@ -18,5 +18,8 @@ namespace FinanceControl.Shared.Dtos.Response
         /// Read-only mirror of the subscription — GET /api/subscription has the full state.
         /// </summary>
         public EnumSubscriptionPlan? Plan { get; set; }
+
+        /// <summary>The user's switch for the in-app AI features.</summary>
+        public bool AiEnabled { get; set; }
     }
 }

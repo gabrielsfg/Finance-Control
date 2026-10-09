@@ -1,33 +1,30 @@
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml;
-using Anthropic.SDK;
-using Anthropic.SDK.Constants;
-using Anthropic.SDK.Messaging;
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Services;
+using FinanceControl.Services.Ai;
+using FinanceControl.Services.Helpers;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response.Import;
 using FinanceControl.Shared.Enums;
 using FinanceControl.Shared.Helpers;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace FinanceControl.Services.Services;
 
 public class ImportService : IImportService
 {
     private readonly ApplicationDbContext _context;
-    private readonly IConfiguration _configuration;
+    private readonly ImportCategorizer _categorizer;
 
-    public ImportService(ApplicationDbContext context, IConfiguration configuration)
+    public ImportService(ApplicationDbContext context, ImportCategorizer categorizer)
     {
         _context = context;
-        _configuration = configuration;
+        _categorizer = categorizer;
     }
 
     public async Task<Result<ParseImportFileResponseDto>> ParseFileAsync(Stream fileStream, string fileName, int accountId, int userId)
@@ -60,12 +57,17 @@ public class ImportService : IImportService
             .Select(s => new { s.Id, s.Name })
             .ToListAsync();
 
+        // Transfers into this account show up on its statement too, so they count.
         var existingTransactions = await _context.Transactions
-            .Where(t => t.UserId == userId && t.AccountId == accountId)
-            .Select(t => new { t.Value, t.TransactionDate, t.Description })
+            .Where(t => t.UserId == userId && (t.AccountId == accountId || t.DestinationAccountId == accountId))
+            .Select(t => new ExistingTransaction(t.Id, t.Value, t.TransactionDate, t.Description))
             .ToListAsync();
 
-        var categorized = await CategorizeWithClaudeAsync(rawTransactions, subcategories.Select(s => $"{s.Id}:{s.Name}").ToList());
+        // Each existing row can vouch for one imported row only: two identical coffees in
+        // the file against one already saved means one of them is new.
+        var matchedExistingIds = new HashSet<int>();
+
+        var categorized = await CategorizeAsync(rawTransactions, userId);
 
         var result = new List<ParsedTransactionItemDto>();
         foreach (var item in categorized)
@@ -75,16 +77,25 @@ public class ImportService : IImportService
             var isDuplicate = false;
             string? duplicateReason = null;
 
-            // Check for exact duplicate (same date + value + similar description)
-            var potentialDup = existingTransactions.FirstOrDefault(e =>
-                e.TransactionDate == item.Date &&
-                e.Value == item.Value &&
-                IsSimilarDescription(e.Description, item.Description));
+            // Value and date are what survive a review: the reviewer routinely rewrites the
+            // bank's description and moves a card purchase to the day it happened, so
+            // requiring a similar description missed rows that had been imported and edited.
+            // The window absorbs those date moves; the closest date wins.
+            var potentialDup = existingTransactions
+                .Where(e => !matchedExistingIds.Contains(e.Id)
+                    && e.Value == item.Value
+                    && Math.Abs(e.TransactionDate.DayNumber - item.Date.DayNumber) <= DuplicateDateWindowDays)
+                .OrderBy(e => Math.Abs(e.TransactionDate.DayNumber - item.Date.DayNumber))
+                .ThenByDescending(e => IsSimilarDescription(e.Description, item.Description))
+                .FirstOrDefault();
 
             if (potentialDup is not null)
             {
+                matchedExistingIds.Add(potentialDup.Id);
                 isDuplicate = true;
-                duplicateReason = "Transaction with same date, value and description already exists.";
+                duplicateReason = potentialDup.TransactionDate == item.Date
+                    ? $"Já existe uma transação com o mesmo valor nesta data: \"{potentialDup.Description}\"."
+                    : $"Já existe uma transação com o mesmo valor em {potentialDup.TransactionDate:dd/MM}: \"{potentialDup.Description}\".";
             }
 
             // Check for installment already existing
@@ -97,7 +108,7 @@ public class ImportService : IImportService
                 if (installmentExists)
                 {
                     isDuplicate = true;
-                    duplicateReason = "An installment with the same value and description already exists.";
+                    duplicateReason = "Já existe uma parcela com o mesmo valor e descrição.";
                 }
             }
 
@@ -108,11 +119,13 @@ public class ImportService : IImportService
                 Description = item.Description,
                 Value = item.Value,
                 Type = item.Type,
+                IsInflow = item.IsInflow,
                 SuggestedSubCategoryId = item.SuggestedSubCategoryId,
                 SuggestedSubCategoryName = sub?.Name,
                 PaymentType = item.PaymentType,
                 TotalInstallments = item.TotalInstallments,
                 InstallmentNumber = item.InstallmentNumber,
+                CategorizationSource = item.CategorizationSource,
                 IsDuplicate = isDuplicate,
                 DuplicateReason = duplicateReason,
             });
@@ -131,6 +144,47 @@ public class ImportService : IImportService
         var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == requestDto.AccountId && a.UserId == userId);
         if (account is null)
             return Result<int>.Failure("Account not found.");
+
+        // A transaction always links to a subcategory; letting a null through became
+        // SubCategoryId 0, which only failed at SaveChanges as an FK violation (HTTP 500).
+        // Transfers are the exception: they are filed under the system transfer subcategory
+        // and need the other account of the pair instead.
+        var uncategorized = requestDto.Transactions
+            .Where(t => t.Type != EnumTransactionType.Transfer && !t.SubCategoryId.HasValue)
+            .ToList();
+        if (uncategorized.Count > 0)
+        {
+            var sample = string.Join("; ", uncategorized.Take(5).Select(t => $"{t.Date:yyyy-MM-dd} {t.Description}"));
+            return Result<int>.Failure($"{uncategorized.Count} transaction(s) have no subcategory: {sample}");
+        }
+
+        var transfers = requestDto.Transactions.Where(t => t.Type == EnumTransactionType.Transfer).ToList();
+        int? transferSubCategoryId = null;
+        if (transfers.Count > 0)
+        {
+            var counterpartIds = transfers
+                .Where(t => t.CounterpartAccountId.HasValue)
+                .Select(t => t.CounterpartAccountId!.Value)
+                .Distinct()
+                .ToList();
+            var validCounterpartIds = await _context.Accounts
+                .Where(a => a.UserId == userId && !a.IsSystem && counterpartIds.Contains(a.Id))
+                .Select(a => a.Id)
+                .ToHashSetAsync();
+
+            var invalidTransfers = transfers
+                .Where(t => !t.CounterpartAccountId.HasValue
+                    || t.CounterpartAccountId.Value == requestDto.AccountId
+                    || !validCounterpartIds.Contains(t.CounterpartAccountId.Value))
+                .ToList();
+            if (invalidTransfers.Count > 0)
+            {
+                var sample = string.Join("; ", invalidTransfers.Take(5).Select(t => $"{t.Date:yyyy-MM-dd} {t.Description}"));
+                return Result<int>.Failure($"{invalidTransfers.Count} transfer(s) have no valid counterpart account: {sample}");
+            }
+
+            transferSubCategoryId = await TransferSubCategoryHelper.GetIdAsync(_context, userId);
+        }
 
         var subcategoryIds = requestDto.Transactions
             .Where(t => t.SubCategoryId.HasValue)
@@ -175,6 +229,29 @@ public class ImportService : IImportService
 
         foreach (var item in requestDto.Transactions)
         {
+            // Same shape the transaction form gives a transfer: one-time, outside the
+            // budget, under the system subcategory — whatever the row carried before the
+            // reviewer switched its type is dropped.
+            if (item.Type == EnumTransactionType.Transfer)
+            {
+                // Money that arrived on this statement came from the counterpart account;
+                // money that left went to it.
+                _context.Transactions.Add(new Transaction
+                {
+                    UserId = userId,
+                    AccountId = item.IsInflow ? item.CounterpartAccountId!.Value : requestDto.AccountId,
+                    DestinationAccountId = item.IsInflow ? requestDto.AccountId : item.CounterpartAccountId,
+                    SubCategoryId = transferSubCategoryId!.Value,
+                    Value = item.Value,
+                    Type = EnumTransactionType.Transfer,
+                    Description = item.Description,
+                    TransactionDate = item.Date,
+                    PaymentType = EnumPaymentType.OneTime,
+                });
+                savedCount++;
+                continue;
+            }
+
             if (item.SubCategoryId.HasValue && !validSubcategoryIds.Contains(item.SubCategoryId.Value))
                 return Result<int>.Failure($"SubCategory {item.SubCategoryId} not found.");
 
@@ -232,7 +309,6 @@ public class ImportService : IImportService
                     UserId = userId,
                     AccountId = requestDto.AccountId,
                     BudgetId = budgetId,
-                    DestinationAccountId = item.DestinationAccountId,
                     SubCategoryId = item.SubCategoryId ?? 0,
                     Value = item.Value,
                     Type = item.Type,
@@ -369,6 +445,7 @@ public class ImportService : IImportService
                 Value = valueInCents,
                 Type = type,
                 RawType = trnType ?? string.Empty,
+                IsInflow = amountDecimal >= 0,
             });
         }
 
@@ -503,6 +580,7 @@ public class ImportService : IImportService
                 Value = valueInCents,
                 Type = type,
                 RawType = rawType,
+                IsInflow = amount >= 0,
             });
         }
 
@@ -560,77 +638,26 @@ public class ImportService : IImportService
         return amount >= 0 ? EnumTransactionType.Income : EnumTransactionType.Expense;
     }
 
-    // ── Claude Categorization ────────────────────────────────────────────────
+    // ── Categorization ───────────────────────────────────────────────────────
 
-    private async Task<List<CategorizedTransaction>> CategorizeWithClaudeAsync(
+    /// <summary>
+    /// Installments are read from the description here; subcategories come from the
+    /// user's history, then — Premium with the AI switched on — from Claude for the rest.
+    /// </summary>
+    private async Task<List<CategorizedTransaction>> CategorizeAsync(
         List<RawTransaction> transactions,
-        List<string> subcategories)
+        int userId)
     {
-        var apiKey = _configuration["Claude:ApiKey"];
-        var client = new AnthropicClient(apiKey);
+        var suggestions = await _categorizer.SuggestAsync(
+            transactions.Select(t => new ImportCategorizationInput(t.Description, t.Value, t.Type)).ToList(),
+            userId);
 
-        var subcategoryList = string.Join("\n", subcategories.Select(s => $"- {s}"));
-        var transactionList = string.Join("\n", transactions.Select((t, i) =>
-            $"{i}|{t.Date:yyyy-MM-dd}|{t.Description}|{t.Value}|{t.Type}|{t.RawType}"));
-
-        var systemPrompt = """
-            You are a financial transaction categorizer for a Brazilian personal finance app.
-            You will receive a list of bank transactions and a list of available subcategories.
-            For each transaction, return a JSON array with categorization.
-
-            Rules:
-            - Match each transaction to the most appropriate subcategory from the list
-            - If no subcategory fits, use null for subcategoryId
-            - Detect installments: if description contains "Parcela X/Y" or "X/Y", set paymentType to "Installment", totalInstallments to Y, installmentNumber to X
-            - Transfers between accounts (PIX between own accounts, fatura payment) should have type "Transfer"
-            - All monetary values are already in cents (integers)
-            - Return ONLY valid JSON, no explanation
-
-            Response format (array with one object per transaction, in same order as input):
-            [
-              {
-                "index": 0,
-                "subcategoryId": 5,
-                "paymentType": "OneTime",
-                "totalInstallments": null,
-                "installmentNumber": null
-              }
-            ]
-
-            PaymentType values: "OneTime", "Installment", "Recurring"
-            """;
-
-        var userMessage = $"""
-            Available subcategories (id:name):
-            {subcategoryList}
-
-            Transactions (index|date|description|valueCents|type|rawType):
-            {transactionList}
-            """;
-
-        var response = await client.Messages.GetClaudeMessageAsync(new MessageParameters
-        {
-            Model = AnthropicModels.Claude45Haiku,
-            MaxTokens = 4096,
-            Messages = [new Message(RoleType.User, userMessage)],
-            System = [new SystemMessage(systemPrompt)],
-        });
-
-        var jsonText = response.Message.ToString().Trim();
-
-        // Extract JSON array if wrapped in markdown
-        var jsonMatch = Regex.Match(jsonText, @"\[[\s\S]*\]");
-        if (jsonMatch.Success)
-            jsonText = jsonMatch.Value;
-
-        var categorizations = JsonSerializer.Deserialize<List<ClaudeCategorization>>(jsonText,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
-
-        var result = new List<CategorizedTransaction>();
-        for (int i = 0; i < transactions.Count; i++)
+        var result = new List<CategorizedTransaction>(transactions.Count);
+        for (var i = 0; i < transactions.Count; i++)
         {
             var raw = transactions[i];
-            var cat = categorizations.FirstOrDefault(c => c.Index == i);
+            var suggestion = suggestions[i];
+            var installment = ImportDescriptionHelper.DetectInstallment(raw.Description);
 
             result.Add(new CategorizedTransaction
             {
@@ -639,10 +666,12 @@ public class ImportService : IImportService
                 Description = raw.Description,
                 Value = raw.Value,
                 Type = raw.Type,
-                SuggestedSubCategoryId = cat?.SubcategoryId,
-                PaymentType = Enum.TryParse<EnumPaymentType>(cat?.PaymentType, out var pt) ? pt : EnumPaymentType.OneTime,
-                TotalInstallments = cat?.TotalInstallments,
-                InstallmentNumber = cat?.InstallmentNumber,
+                IsInflow = raw.IsInflow,
+                SuggestedSubCategoryId = suggestion.SubCategoryId,
+                CategorizationSource = suggestion.Source,
+                PaymentType = installment is null ? EnumPaymentType.OneTime : EnumPaymentType.Installment,
+                TotalInstallments = installment?.Total,
+                InstallmentNumber = installment?.Number,
             });
         }
 
@@ -670,6 +699,11 @@ public class ImportService : IImportService
 
     // ── Internal models ───────────────────────────────────────────────────────
 
+    /// <summary>How far apart, in days, an imported row and a saved one may be and still match.</summary>
+    private const int DuplicateDateWindowDays = 3;
+
+    private record ExistingTransaction(int Id, int Value, DateOnly TransactionDate, string Description);
+
     private record RawTransaction
     {
         public string ExternalId { get; init; } = string.Empty;
@@ -678,6 +712,7 @@ public class ImportService : IImportService
         public int Value { get; init; }
         public EnumTransactionType Type { get; init; }
         public string RawType { get; init; } = string.Empty;
+        public bool IsInflow { get; init; }
     }
 
     private record CategorizedTransaction
@@ -687,18 +722,11 @@ public class ImportService : IImportService
         public string Description { get; init; } = string.Empty;
         public int Value { get; init; }
         public EnumTransactionType Type { get; init; }
+        public bool IsInflow { get; init; }
         public int? SuggestedSubCategoryId { get; init; }
+        public EnumCategorizationSource CategorizationSource { get; init; }
         public EnumPaymentType PaymentType { get; init; }
         public int? TotalInstallments { get; init; }
         public int? InstallmentNumber { get; init; }
-    }
-
-    private class ClaudeCategorization
-    {
-        public int Index { get; set; }
-        public int? SubcategoryId { get; set; }
-        public string? PaymentType { get; set; }
-        public int? TotalInstallments { get; set; }
-        public int? InstallmentNumber { get; set; }
     }
 }

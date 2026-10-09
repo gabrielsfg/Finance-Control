@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   CheckCircle2, AlertTriangle, Loader2, X,
-  TrendingDown, TrendingUp, ArrowLeftRight, ChevronDown, Check,
+  TrendingDown, TrendingUp, ArrowLeftRight, ChevronDown, Check, History, Sparkles,
 } from "lucide-react";
 import { PageTopbar } from "@/components/layout/PageTopbar";
 import { DatePickerField } from "@/components/shared/DatePickerField";
@@ -11,10 +11,16 @@ import { CategoryPickerField } from "@/components/shared/CategoryPickerField";
 import { TagInput } from "@/features/transactions/components/TagInput";
 import { CreateSubCategoryModal } from "@/features/categories/components/CreateSubCategoryModal";
 import { useCategories } from "@/features/categories/hooks/useCategories";
+import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { getApiErrorMessage } from "@/features/assistant/utils/apiError";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ACCOUNT_TYPE_CONFIG } from "@/lib/config/accountTypes";
+import type { AccountItem } from "@/lib/types/accounts.types";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import type { useImportFlow } from "@/features/import/hooks/useImportFlow";
 import type { TransactionType } from "@/lib/types/transactions.types";
+import type { CategorizationSource } from "@/lib/types/import.types";
 
 type Flow = ReturnType<typeof useImportFlow>;
 
@@ -25,6 +31,38 @@ const TYPE_CONFIG: Record<TransactionType, { label: string; icon: React.ElementT
 };
 
 const ALL_TYPES: TransactionType[] = ["Expense", "Income", "Transfer"];
+
+const SOURCE_BADGE: Record<Exclude<CategorizationSource, "None">, { label: string; title: string; icon: React.ElementType; color: string }> = {
+  History: {
+    label: "Histórico",
+    title: "Categoria sugerida a partir das suas importações anteriores",
+    icon: History,
+    color: "var(--moss)",
+  },
+  Ai: {
+    label: "IA",
+    title: "Categoria sugerida por IA — confira antes de importar",
+    icon: Sparkles,
+    color: "var(--brand-accent)",
+  },
+};
+
+/** Where the suggested category came from, so the reviewer knows which ones to double-check. */
+function SourceBadge({ source }: { source: CategorizationSource }) {
+  if (source === "None") return null;
+  const cfg = SOURCE_BADGE[source];
+  const Icon = cfg.icon;
+  return (
+    <span
+      title={cfg.title}
+      className="flex shrink-0 items-center gap-1 rounded-full px-1.5 py-[2px] font-mono text-[10px] tracking-[0.04em]"
+      style={{ color: cfg.color, background: `color-mix(in srgb, ${cfg.color} 14%, transparent)` }}
+    >
+      <Icon size={10} strokeWidth={2} />
+      {cfg.label}
+    </span>
+  );
+}
 
 function useDropdown() {
   const [open, setOpen] = useState(false);
@@ -86,15 +124,83 @@ function TypeDropdown({ value, onChange }: { value: TransactionType; onChange: (
   );
 }
 
+/**
+ * Stands in for the category on a transfer row: a transfer is filed under the system
+ * transfer category, and what the reviewer has to supply is the other account. The
+ * label follows the bank's sign — money in came *from* it, money out went *to* it.
+ */
+function CounterpartAccountPicker({
+  value,
+  onChange,
+  accounts,
+  isInflow,
+}: {
+  value: number | null;
+  onChange: (id: number | null) => void;
+  accounts: AccountItem[];
+  isInflow: boolean;
+}) {
+  const selected = accounts.find((a) => a.id === value);
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-text-muted shrink-0 text-[11px]">{isInflow ? "De" : "Para"}</span>
+      <Select
+        value={value === null ? "" : String(value)}
+        onValueChange={(v) => onChange(v ? Number(v) : null)}
+      >
+        <SelectTrigger
+          size="sm"
+          className={cn(
+            "bg-surface2 w-[176px] text-[12px]",
+            value === null ? "border-red/60" : "border-border",
+          )}
+        >
+          <SelectValue>
+            {selected
+              ? (() => {
+                  const cfg = ACCOUNT_TYPE_CONFIG[selected.type];
+                  const Icon = cfg.Icon;
+                  return (
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <Icon size={12} className="shrink-0" style={{ color: cfg.color }} />
+                      <span className="truncate">{selected.name}</span>
+                    </span>
+                  );
+                })()
+              : <span className="text-text-muted">Selecionar conta</span>}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent alignItemWithTrigger={false} sideOffset={4}>
+          {accounts.map((a) => {
+            const cfg = ACCOUNT_TYPE_CONFIG[a.type];
+            const Icon = cfg.Icon;
+            return (
+              <SelectItem key={a.id} value={String(a.id)}>
+                <span className="flex items-center gap-2">
+                  <Icon size={13} style={{ color: cfg.color }} />
+                  <span className="text-[13px]">{a.name}</span>
+                </span>
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export function ImportReview({ flow }: { flow: Flow }) {
   const allSelected = flow.rows.length > 0 && flow.rows.every((r) => r.selected);
   const { data: categories = [] } = useCategories();
+  const { data: allAccounts = [] } = useAccounts();
+  // The other side of a transfer is any of the user's accounts but the one being imported.
+  const counterpartAccounts = allAccounts.filter((a) => a.id !== Number(flow.accountId));
 
   // Which row opened the create drawer, so the new subcategory lands on it. One drawer
   // for the whole table rather than one per row.
   const [createSubcatForRow, setCreateSubcatForRow] = useState<number | null>(null);
 
-  const busy = flow.selectedCount === 0 || flow.confirmMutation.isPending;
+  const busy = flow.selectedCount === 0 || flow.incompleteCount > 0 || flow.confirmMutation.isPending;
 
   return (
     <div className="flex h-full flex-col px-[clamp(20px,3.4vw,46px)] pb-[30px]">
@@ -161,9 +267,18 @@ export function ImportReview({ flow }: { flow: Flow }) {
         </span>
       </label>
 
+      {flow.incompleteCount > 0 && (
+        <p className="text-orange mb-3 flex shrink-0 items-center gap-1.5 text-[13px]">
+          <AlertTriangle size={13} strokeWidth={2} />
+          {flow.incompleteCount === 1
+            ? "1 transação selecionada está sem categoria (ou sem conta, se for transferência)."
+            : `${flow.incompleteCount} transações selecionadas estão sem categoria (ou sem conta, se forem transferências).`}
+        </p>
+      )}
+
       {/* Table */}
       <div className="border-border bg-surface flex-1 overflow-auto rounded-xl border">
-        <table className="w-full min-w-[1180px] text-[13px]">
+        <table className="w-full min-w-[1260px] text-[13px]">
           <thead className="sticky top-0 z-10">
             <tr className="border-border bg-surface border-b">
               <th className="px-4 py-3 text-left">
@@ -235,15 +350,31 @@ export function ImportReview({ flow }: { flow: Flow }) {
                     <TypeDropdown value={row.type} onChange={(v) => flow.setRowType(idx, v)} />
                   </td>
                   <td className="px-3 py-2.5">
-                    <CategoryPickerField
-                      size="sm"
-                      allowEmpty
-                      placeholder="Sem categoria"
-                      value={row.subCategoryId}
-                      onChange={(id) => flow.setRowSubcat(idx, id)}
-                      subcategories={flow.subcats}
-                      onCreateNew={() => setCreateSubcatForRow(idx)}
-                    />
+                    {row.type === "Transfer" ? (
+                      <CounterpartAccountPicker
+                        value={row.counterpartAccountId}
+                        onChange={(id) => flow.setRowCounterpart(idx, id)}
+                        accounts={counterpartAccounts}
+                        isInflow={row.isInflow}
+                      />
+                    ) : (
+                    <div className="flex items-center gap-2">
+                      <CategoryPickerField
+                        size="sm"
+                        allowEmpty
+                        placeholder="Sem categoria"
+                        value={row.subCategoryId}
+                        onChange={(id) => flow.setRowSubcat(idx, id)}
+                        subcategories={flow.subcats}
+                        onCreateNew={() => setCreateSubcatForRow(idx)}
+                      />
+                      {/* Only while the suggestion stands — once the reviewer picks another
+                          category the badge would be describing a choice nobody made. */}
+                      {row.subCategoryId !== null && row.subCategoryId === row.suggestedSubCategoryId && (
+                        <SourceBadge source={row.categorizationSource ?? "None"} />
+                      )}
+                    </div>
+                    )}
                   </td>
                   <td className="px-3 py-2.5">
                     {/* The transaction form's own control, shrunk to the cell, so an
@@ -259,7 +390,8 @@ export function ImportReview({ flow }: { flow: Flow }) {
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono font-medium"
                     style={{ color: typeCfg.color }}>
-                    {row.type === "Income" ? "+" : "-"}{formatCurrency(row.value / 100)}
+                    {row.type === "Income" || (row.type === "Transfer" && row.isInflow) ? "+" : "-"}
+                    {formatCurrency(row.value / 100)}
                   </td>
                 </tr>
               );
@@ -270,7 +402,7 @@ export function ImportReview({ flow }: { flow: Flow }) {
 
       {flow.confirmMutation.isError && (
         <p className="text-red mt-3 text-[13px]">
-          {(flow.confirmMutation.error as Error)?.message ?? "Erro ao confirmar importação."}
+          {getApiErrorMessage(flow.confirmMutation.error, "Erro ao confirmar importação.")}
         </p>
       )}
 

@@ -344,7 +344,8 @@ namespace FinanceControl.Services.Services
                 Email = user.Email,
                 TwoFactorEnabled = user.TwoFactorEnabled,
                 EmailVerified = user.EmailVerifiedAt is not null,
-                Plan = (await SubscriptionRules.GetAccessAsync(_context, user.Id, DateTime.UtcNow)).Plan
+                Plan = (await SubscriptionRules.GetAccessAsync(_context, user.Id, DateTime.UtcNow)).Plan,
+                AiEnabled = user.AiEnabled
             };
         }
 
@@ -389,7 +390,8 @@ namespace FinanceControl.Services.Services
                 Email = user.Email,
                 TwoFactorEnabled = user.TwoFactorEnabled,
                 EmailVerified = user.EmailVerifiedAt is not null,
-                Plan = (await SubscriptionRules.GetAccessAsync(_context, user.Id, DateTime.UtcNow)).Plan
+                Plan = (await SubscriptionRules.GetAccessAsync(_context, user.Id, DateTime.UtcNow)).Plan,
+                AiEnabled = user.AiEnabled
             };
         }
 

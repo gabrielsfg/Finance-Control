@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useReturnTo } from "@/features/auth/hooks/useReturnTo";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
@@ -22,6 +23,7 @@ export const TwoFactorForm = ({
   onBack: () => void;
 }) => {
   const router = useRouter();
+  const returnTo = useReturnTo();
   const { login } = useAuthStore();
   const [trustDevice, setTrustDevice] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export const TwoFactorForm = ({
       });
       login(response.accessToken);
       router.refresh();
-      router.push("/dashboard");
+      router.push(returnTo);
     } catch (err: unknown) {
       const status = (err as { response?: { status: number } })?.response?.status;
       setServerError(

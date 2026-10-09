@@ -26,6 +26,14 @@ namespace FinanceControl.Domain.Entities
         // The plan is no longer a column here: it is whatever the live Subscription grants
         // (see SubscriptionRules), so it can never drift from what was actually paid.
 
+        /// <summary>
+        /// The user's switch for every in-app AI feature (chat, analyses, import
+        /// categorisation). On by default for Premium; switching it off is the objection
+        /// right the privacy policy offers, so no model call may go out while it is false.
+        /// It does not touch the MCP connector, which the user authorises separately.
+        /// </summary>
+        public bool AiEnabled { get; set; } = true;
+
         public string PreferredCurrency { get; set; } = "BRL";
         public string PreferredLanguage { get; set; } = "pt-BR";
         public string? Country { get; set; }

@@ -1,4 +1,4 @@
-﻿using FinanceControl.Domain.Entities;
+using FinanceControl.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using FinanceControl.Domain.Common;
 
@@ -47,6 +47,14 @@ namespace FinanceControl.Data.Data
         public DbSet<SubscriptionCharge> SubscriptionCharges { get; set; }
         public DbSet<AsaasWebhookEvent> AsaasWebhookEvents { get; set; }
         public DbSet<BillingEmailLog> BillingEmailLogs { get; set; }
+        public DbSet<AiConversation> AiConversations { get; set; }
+        public DbSet<AiMessage> AiMessages { get; set; }
+        public DbSet<AiPendingAction> AiPendingActions { get; set; }
+        public DbSet<McpClient> McpClients { get; set; }
+        public DbSet<McpAuthorizationRequest> McpAuthorizationRequests { get; set; }
+        public DbSet<McpGrant> McpGrants { get; set; }
+        public DbSet<McpPersonalToken> McpPersonalTokens { get; set; }
+        public DbSet<McpAccessLog> McpAccessLogs { get; set; }
 
         public override int SaveChanges()
         {

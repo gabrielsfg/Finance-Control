@@ -17,6 +17,7 @@ class ParsedTransaction {
     required this.installmentNumber,
     required this.isDuplicate,
     required this.duplicateReason,
+    this.categorizationSource = 'None',
   });
 
   final String externalId;
@@ -42,6 +43,9 @@ class ParsedTransaction {
   final bool isDuplicate;
   final String? duplicateReason;
 
+  /// Where the suggested subcategory came from: "None" | "History" | "Ai".
+  final String categorizationSource;
+
   factory ParsedTransaction.fromJson(Map<String, dynamic> json) =>
       ParsedTransaction(
         externalId: json['externalId'] as String? ?? '',
@@ -57,6 +61,8 @@ class ParsedTransaction {
         installmentNumber: (json['installmentNumber'] as num?)?.toInt(),
         isDuplicate: json['isDuplicate'] as bool? ?? false,
         duplicateReason: json['duplicateReason'] as String?,
+        categorizationSource:
+            json['categorizationSource'] as String? ?? 'None',
       );
 }
 
@@ -122,6 +128,13 @@ class ImportRow {
         subCategoryName: subCategoryName ?? this.subCategoryName,
         type: type ?? this.type,
       );
+
+  /// The origin of the category shown on the row — only while the row still
+  /// holds the server's suggestion; once the user picks another one it is theirs.
+  String get categorizationSource =>
+      subCategoryId != null && subCategoryId == parsed.suggestedSubCategoryId
+          ? parsed.categorizationSource
+          : 'None';
 
   ImportTransactionItem toRequestItem() => ImportTransactionItem(
         date: parsed.date,

@@ -16,5 +16,8 @@ namespace FinanceControl.Shared.Dtos.Others.Insight
 
         public List<InsightCategoryTotalDto> Categories { get; set; } = [];
         public List<InsightMonthTotalDto> Months { get; set; } = [];
+
+        /// <summary>The week's largest expenses, biggest first.</summary>
+        public List<InsightTransactionDto> TopTransactions { get; set; } = [];
     }
 }

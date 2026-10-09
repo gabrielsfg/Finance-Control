@@ -13,9 +13,15 @@ export type RowState = ParsedTransactionItem & {
   selected: boolean;
   subCategoryId: number | null;
   type: TransactionType;
+  /** Transfers only: the user's other account in the pair. */
+  counterpartAccountId: number | null;
   /** Tag names, per row. Names rather than ids because the reviewer can invent one. */
   tags: string[];
 };
+
+function isRowComplete(row: RowState): boolean {
+  return row.type === "Transfer" ? row.counterpartAccountId !== null : row.subCategoryId !== null;
+}
 
 export function useImportFlow() {
   const [step, setStep] = useState<ImportStep>("closed");
@@ -79,15 +85,26 @@ export function useImportFlow() {
         selected: !t.isDuplicate,
         subCategoryId: t.suggestedSubCategoryId,
         type: t.type,
+        counterpartAccountId: null,
         tags: [],
       }))
     );
     setStep("review");
   }, [file, accountId, parseMutation]);
 
+  /**
+   * Selected rows the server would refuse: a transfer needs the other account, anything
+   * else a category. Counted here so the import button can say so up front — finding out
+   * from a failed request meant guessing which of hundreds of rows was the problem.
+   */
+  const incompleteCount = useMemo(
+    () => rows.filter((r) => r.selected && !isRowComplete(r)).length,
+    [rows]
+  );
+
   const handleConfirm = useCallback(async () => {
     const selected = rows.filter((r) => r.selected);
-    if (selected.length === 0) return;
+    if (selected.length === 0 || selected.some((r) => !isRowComplete(r))) return;
     const res = await confirmMutation.mutateAsync({
       accountId: Number(accountId),
       countForBudget,
@@ -96,8 +113,9 @@ export function useImportFlow() {
         description: r.description,
         value: r.value,
         type: r.type,
-        subCategoryId: r.subCategoryId,
-        destinationAccountId: null,
+        subCategoryId: r.type === "Transfer" ? null : r.subCategoryId,
+        counterpartAccountId: r.type === "Transfer" ? r.counterpartAccountId : null,
+        isInflow: r.isInflow,
         paymentType: r.paymentType,
         totalInstallments: r.totalInstallments,
         installmentNumber: r.installmentNumber,
@@ -149,6 +167,12 @@ export function useImportFlow() {
     []
   );
 
+  const setRowCounterpart = useCallback(
+    (idx: number, val: number | null) =>
+      setRows((p) => p.map((r, i) => (i === idx ? { ...r, counterpartAccountId: val } : r))),
+    []
+  );
+
   const setRowType = useCallback(
     (idx: number, val: TransactionType) =>
       setRows((p) => p.map((r, i) => (i === idx ? { ...r, type: val } : r))),
@@ -167,9 +191,10 @@ export function useImportFlow() {
     parseMutation, confirmMutation,
     open, close, reset,
     handleParse, handleConfirm,
-    toggleRow, toggleAll, setRowSubcat, setRowType, setRowTags,
+    toggleRow, toggleAll, setRowSubcat, setRowType, setRowTags, setRowCounterpart,
     setRowDescription, setRowDate,
     selectedCount: rows.filter((r) => r.selected).length,
+    incompleteCount,
     duplicateCount: rows.filter((r) => r.isDuplicate).length,
   };
 }

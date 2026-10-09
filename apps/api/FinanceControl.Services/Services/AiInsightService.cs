@@ -19,16 +19,17 @@ namespace FinanceControl.Services.Services
     /// Orchestrates one analysis: entitlement, cache, quota, generation, guard, log.
     /// </summary>
     /// <remarks>
-    /// The order of the checks is a requirement, not a style choice. The plan check comes
-    /// first and returns before a snapshot is built, so a Free account's data never reaches
-    /// the point where it could be serialised, let alone sent. AiInsightServiceTests pins
-    /// that ordering.
+    /// The order of the checks is a requirement, not a style choice. The entitlement check
+    /// (plan, the user's AI switch, configuration) comes first and returns before a
+    /// snapshot is built, so a Free or opted-out account's data never reaches the point
+    /// where it could be serialised, let alone sent.
     /// </remarks>
     public class AiInsightService : IAiInsightService
     {
         private readonly ApplicationDbContext _context;
         private readonly InsightSnapshotBuilder _snapshotBuilder;
-        private readonly AnthropicInsightClient _client;
+        private readonly ClaudeClient _client;
+        private readonly AiAccessPolicy _accessPolicy;
         private readonly AnthropicSettings _settings;
         private readonly ILogger<AiInsightService> _logger;
 
@@ -41,28 +42,27 @@ namespace FinanceControl.Services.Services
         public AiInsightService(
             ApplicationDbContext context,
             InsightSnapshotBuilder snapshotBuilder,
-            AnthropicInsightClient client,
+            ClaudeClient client,
+            AiAccessPolicy accessPolicy,
             IOptions<AnthropicSettings> settings,
             ILogger<AiInsightService> logger)
         {
             _context = context;
             _snapshotBuilder = snapshotBuilder;
             _client = client;
+            _accessPolicy = accessPolicy;
             _settings = settings.Value;
             _logger = logger;
         }
 
-        public async Task<GetInsightResponseDto?> GetInsightAsync(
+        public async Task<InsightResultResponseDto> GetInsightAsync(
             EnumInsightKind kind,
             int userId,
             bool forceRefresh = false)
         {
-            var access = await SubscriptionRules.GetAccessAsync(_context, userId, DateTime.UtcNow);
-            if (!access.IsPremium)
-                return null;
-
-            if (!_client.IsConfigured)
-                return null;
+            var availability = await _accessPolicy.CheckAsync(userId);
+            if (availability != EnumAiAvailability.Available)
+                return new InsightResultResponseDto { Status = availability };
 
             var weekStart = GetWeekStart(DateOnly.FromDateTime(DateTime.UtcNow));
 
@@ -71,14 +71,18 @@ namespace FinanceControl.Services.Services
                 .FirstOrDefaultAsync(i => i.UserId == userId && i.Kind == kind && i.PeriodStart == weekStart);
 
             if (cached is not null && !forceRefresh)
-                return ToResponse(cached);
+                return Available(ToResponse(cached));
 
             if (await IsQuotaExceededAsync(kind, userId))
             {
                 await LogAsync(userId, kind, EnumAiOutcome.QuotaExceeded, null, 0, "Monthly quota reached.");
 
                 // The cached analysis, when there is one, beats an empty card.
-                return cached is not null ? ToResponse(cached) : null;
+                return new InsightResultResponseDto
+                {
+                    Status = EnumAiAvailability.QuotaExceeded,
+                    Insight = cached is not null ? ToResponse(cached) : null
+                };
             }
 
             var snapshot = kind == EnumInsightKind.SpendingWeekly
@@ -88,13 +92,15 @@ namespace FinanceControl.Services.Services
             if (snapshot is null)
             {
                 await LogAsync(userId, kind, EnumAiOutcome.NotEnoughData, null, 0, null);
-                return null;
+                return new InsightResultResponseDto { Status = EnumAiAvailability.NotEnoughData };
             }
 
-            var snapshotJson = JsonSerializer.Serialize(snapshot, SnapshotSerializerOptions);
+            // Sanitized before anything else sees it: what is stored in UserInsight.Snapshot
+            // is exactly what was sent, and the guard compares against the same text.
+            var snapshotJson = AiPayloadSanitizer.Serialize(snapshot, SnapshotSerializerOptions);
 
             var stopwatch = Stopwatch.StartNew();
-            var generation = await _client.GenerateAsync(snapshotJson);
+            var generation = await _client.GenerateInsightAsync(snapshotJson);
             stopwatch.Stop();
 
             var output = generation.Output;
@@ -129,12 +135,12 @@ namespace FinanceControl.Services.Services
             {
                 await LogAsync(userId, kind, EnumAiOutcome.Delivered, generation, (int)stopwatch.ElapsedMilliseconds, null);
                 var stored = await StoreAsync(userId, kind, weekStart, snapshotJson, output, generation, cached);
-                return ToResponse(stored);
+                return Available(ToResponse(stored));
             }
 
             // Fallback text is never stored: it is cheap to rebuild, and caching it would
             // hide a bad week behind a card that looks generated.
-            return new GetInsightResponseDto
+            return Available(new GetInsightResponseDto
             {
                 Kind = kind,
                 PeriodStart = weekStart,
@@ -143,6 +149,62 @@ namespace FinanceControl.Services.Services
                 GeneratedAt = DateTime.UtcNow,
                 IsFallback = true,
                 GeneratedByAi = false
+            });
+        }
+
+        public async Task<int> DeleteInsightsAsync(int userId)
+        {
+            var insights = await _context.UserInsights
+                .Where(i => i.UserId == userId)
+                .ToListAsync();
+
+            _context.UserInsights.RemoveRange(insights);
+            await _context.SaveChangesAsync();
+
+            return insights.Count;
+        }
+
+        public async Task<GetAiSettingsResponseDto?> GetSettingsAsync(int userId)
+        {
+            var aiEnabled = await _context.Users
+                .AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => (bool?)u.AiEnabled)
+                .FirstOrDefaultAsync();
+
+            if (aiEnabled is null)
+                return null;
+
+            return await BuildSettingsAsync(userId, aiEnabled.Value);
+        }
+
+        public async Task<GetAiSettingsResponseDto?> UpdateSettingsAsync(UpdateAiSettingsRequestDto requestDto, int userId)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user is null)
+                return null;
+
+            user.AiEnabled = requestDto.AiEnabled;
+            await _context.SaveChangesAsync();
+
+            return await BuildSettingsAsync(userId, user.AiEnabled);
+        }
+
+        private async Task<GetAiSettingsResponseDto> BuildSettingsAsync(int userId, bool aiEnabled)
+        {
+            var access = await SubscriptionRules.GetAccessAsync(_context, userId, DateTime.UtcNow);
+            var chatUsed = await _accessPolicy.CountMonthlyUsageAsync(userId, EnumAiFeature.Chat);
+
+            return new GetAiSettingsResponseDto
+            {
+                AiEnabled = aiEnabled,
+                IsPremium = access.IsPremium,
+                IsAvailable = _client.IsConfigured,
+                Provider = "Anthropic",
+                ChatMessagesUsed = chatUsed,
+                ChatMessagesLimit = _settings.MonthlyChatMessagesPerUser,
+                InsightCount = await _context.UserInsights.CountAsync(i => i.UserId == userId),
+                ConversationCount = await _context.AiConversations.CountAsync(c => c.UserId == userId)
             };
         }
 
@@ -221,13 +283,7 @@ namespace FinanceControl.Services.Services
 
         private async Task<bool> IsQuotaExceededAsync(EnumInsightKind kind, int userId)
         {
-            var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-
-            var used = await _context.AiGenerationLogs
-                .AsNoTracking()
-                .Where(l => l.UserId == userId && l.Kind == kind && l.CreatedAt >= monthStart)
-                .Where(l => l.Outcome == EnumAiOutcome.Delivered || l.Outcome == EnumAiOutcome.GuardRejected)
-                .CountAsync();
+            var used = await _accessPolicy.CountMonthlyUsageAsync(userId, FeatureOf(kind));
 
             var limit = kind == EnumInsightKind.SpendingWeekly
                 ? _settings.MonthlySpendingInsightsPerUser
@@ -247,6 +303,7 @@ namespace FinanceControl.Services.Services
             _context.AiGenerationLogs.Add(new AiGenerationLog
             {
                 UserId = userId,
+                Feature = FeatureOf(kind),
                 Kind = kind,
                 Outcome = outcome,
                 Model = _settings.AnalysisModel,
@@ -259,6 +316,12 @@ namespace FinanceControl.Services.Services
 
             await _context.SaveChangesAsync();
         }
+
+        private static EnumAiFeature FeatureOf(EnumInsightKind kind) =>
+            kind == EnumInsightKind.SpendingWeekly ? EnumAiFeature.SpendingInsight : EnumAiFeature.PortfolioInsight;
+
+        private static InsightResultResponseDto Available(GetInsightResponseDto insight) =>
+            new() { Status = EnumAiAvailability.Available, Insight = insight };
 
         private static InsightModelOutputDto Fallback(EnumInsightKind kind, InsightSnapshotDto snapshot) =>
             kind == EnumInsightKind.SpendingWeekly

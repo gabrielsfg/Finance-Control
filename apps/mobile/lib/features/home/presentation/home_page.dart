@@ -12,6 +12,8 @@ import '../../../features/analytics/presentation/home_analytics_view.dart';
 import '../../../features/analytics/presentation/home_filter_sheet.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../accounts/data/models/account.dart';
+import '../../ai/data/ai_models.dart';
+import '../../ai/presentation/ai_insight_card.dart';
 import '../../accounts/providers/accounts_provider.dart';
 import '../../goals/data/goal_models.dart';
 import '../../notifications/presentation/notification_bell.dart';
@@ -103,7 +105,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                       index: 1,
                       child: _BudgetCard(summary: summary),
                     ),
-                    const SizedBox(height: 26),
+                    const SizedBox(height: 14),
+                    const FadeSlideIn(
+                      index: 2,
+                      child: AiInsightCard(
+                        kind: AiInsightKind.spending,
+                        bottomSpacing: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     FadeSlideIn(
                       index: 2,
                       child: _AccountsPreview(accounts: accounts),
