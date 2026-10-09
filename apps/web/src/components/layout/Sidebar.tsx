@@ -155,7 +155,7 @@ export const Sidebar = () => {
   // so the chip follows a plan change without a re-login.
   const { data: profile } = useProfile();
   const displayName = profile?.name ?? user?.name ?? "Usuário";
-  const planLabel = profile?.plan === "Premium" ? "plano premium" : "plano pessoal";
+  const planLabel = profile?.plan === "Premium" ? "plano premium" : profile?.plan === "Basic" ? "plano basic" : "sem assinatura";
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
     "/analytics":   pathname.startsWith("/analytics"),
