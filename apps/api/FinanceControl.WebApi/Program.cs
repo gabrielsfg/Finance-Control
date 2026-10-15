@@ -102,6 +102,10 @@ builder.Services.AddHostedService<RefreshTokenCleanupHostedService>();
 builder.Services.AddHostedService<NotificationReminderHostedService>();
 builder.Services.AddHostedService<SubscriptionBillingHostedService>();
 builder.Services.AddHostedService<AsaasWebhookProcessorHostedService>();
+builder.Services.AddHostedService<OpenFinanceWebhookProcessorHostedService>();
+builder.Services.AddHostedService<OpenFinanceMaintenanceHostedService>();
+builder.Services.AddHostedService<OpenFinanceEntitlementHostedService>();
+builder.Services.AddHostedService<DataRetentionHostedService>();
 
 // Brapi sync jobs — desativados enquanto a assinatura está cancelada (pré-lançamento).
 // Sem assinatura ativa eles só acumulariam erro de autenticação a cada janela de sync.
@@ -294,6 +298,18 @@ builder.Services.AddRateLimiter(options =>
         factory: _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 10,
+            Window = TimeSpan.FromHours(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        }));
+
+    // Bank connection actions that call Pluggy (connect token, register, sync now): 20 per
+    // hour per IP. Each one costs a Pluggy request and, for sync, an Open Finance quota.
+    options.AddPolicy("openFinance", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: GetClientKey(httpContext),
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 20,
             Window = TimeSpan.FromHours(1),
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
             QueueLimit = 0

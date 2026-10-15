@@ -42,6 +42,9 @@ namespace FinanceControl.Data.Mappings
             builder.Property(u => u.PreferredLanguage).HasDefaultValue("pt-BR").IsRequired();
             builder.Property(u => u.Country).HasMaxLength(2);
 
+            // Webhooks are resolved back to the user through it.
+            builder.HasIndex(u => u.ExternalRef).IsUnique();
+
             // The reset token used to live on this table. It moved to SecurityCodes, which
             // holds the emailed 6-digit codes for verification, reset and two-factor alike
             // — one expiry and one attempt counter covering all three.

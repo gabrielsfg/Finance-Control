@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { filterInvestments } from "@/features/investments/utils/filterInvestments";
 import { ASSET_CLASSES, ASSET_TYPE_COLORS } from "@/lib/config/assetColors";
 import type { AssetType, Investment, InvestmentPortfolio } from "@/lib/types/investments.types";
+import { displayTicker } from "@/features/investments/utils/displayTicker";
 
 
 /**
@@ -90,8 +91,10 @@ function InvestmentRow({
         <div className="flex items-center gap-2.5">
           <span className="h-[9px] w-[9px] shrink-0 rounded-full" style={{ background: color }} />
           <div className="min-w-0">
-            <p className="truncate font-mono text-[14.5px] font-bold tracking-[-0.01em] text-[var(--text)]">{inv.ticker}</p>
-            <p className="truncate text-[12px] text-[var(--text-sub)]">{inv.name}</p>
+            <p className="truncate font-mono text-[14.5px] font-bold tracking-[-0.01em] text-[var(--text)]">{displayTicker(inv)}</p>
+            <p className="truncate text-[12px] text-[var(--text-sub)]">
+              {inv.fromBank ? `${inv.broker ?? "Banco"} · Open Finance` : inv.name}
+            </p>
           </div>
         </div>
       </td>

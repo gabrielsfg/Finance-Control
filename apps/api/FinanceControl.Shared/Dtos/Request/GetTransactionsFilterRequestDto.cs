@@ -37,6 +37,12 @@ namespace FinanceControl.Shared.Dtos.Request
         public int? MinValue { get; set; }
         public int? MaxValue { get; set; }
 
+        /// <summary>True returns only bank-synced rows the user has not confirmed yet.</summary>
+        public bool? NeedsReview { get; set; }
+
+        /// <summary>"Manual" | "FileImport" | "OpenFinance". Null means every source.</summary>
+        public EnumTransactionSource? Source { get; set; }
+
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 20;
         public string SortField { get; set; } = "date";

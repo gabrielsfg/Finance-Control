@@ -34,6 +34,11 @@ namespace FinanceControl.Shared.Dtos.Response
         public int? TotalInstallments { get; set; }
         public int? AreaId { get; set; }
         public string? AreaName { get; set; }
+        public EnumTransactionSource Source { get; set; }
+
+        /// Synced from the bank and not confirmed by the user yet.
+        public bool NeedsReview { get; set; }
+        public bool PossibleDuplicate { get; set; }
         public List<GetTagResponseDto> Tags { get; set; } = new();
     }
 }

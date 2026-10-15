@@ -66,7 +66,7 @@ namespace FinanceControl.Services.Services
             // Join MarketAsset with MarketPriceHistory to find assets that actually have
             // historical price data in the DB, and return the usable date range.
             var results = await _context.MarketAssets
-                .Where(a => a.PriceHistory.Any())
+                .Where(a => a.OwnerUserId == null && a.PriceHistory.Any())
                 .Select(a => new AvailableBenchmarkDto
                 {
                     Ticker           = a.Ticker,
@@ -386,7 +386,7 @@ namespace FinanceControl.Services.Services
             string ticker, DateOnly from, DateOnly to)
         {
             var asset = await _context.MarketAssets
-                .Where(a => a.Ticker == ticker)
+                .Where(a => a.Ticker == ticker && a.OwnerUserId == null)
                 .Select(a => new { a.Id })
                 .FirstOrDefaultAsync();
 

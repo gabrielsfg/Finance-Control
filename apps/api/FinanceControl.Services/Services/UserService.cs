@@ -45,17 +45,20 @@ namespace FinanceControl.Services.Services
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
         private readonly ILegalService _legalService;
+        private readonly IOpenFinanceService? _openFinanceService;
 
         public UserService(
             ApplicationDbContext context,
             IConfiguration configuration,
             IEmailService emailService,
-            ILegalService legalService)
+            ILegalService legalService,
+            IOpenFinanceService? openFinanceService = null)
         {
             _context = context;
             _configuration = configuration;
             _emailService = emailService;
             _legalService = legalService;
+            _openFinanceService = openFinanceService;
         }
 
         public async Task<Result> RegisterUserAsync(CreateUserRequestDto requestDto, string? ipAddress, string? userAgent)
@@ -469,7 +472,17 @@ namespace FinanceControl.Services.Services
             if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, password) == PasswordVerificationResult.Failed)
                 return false;
 
+            // Bank connections first: deleting the rows here would leave the items (and
+            // the Open Finance consents) alive at Pluggy.
+            if (_openFinanceService is not null)
+                await _openFinanceService.RemoveAllConnectionsAsync(userId);
+
             _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            // Private assets (bank positions) have no foreign key to the user; their
+            // investments went with the cascade above, so they can go now.
+            _context.MarketAssets.RemoveRange(_context.MarketAssets.Where(a => a.OwnerUserId == userId));
             await _context.SaveChangesAsync();
             return true;
         }
@@ -493,12 +506,19 @@ namespace FinanceControl.Services.Services
             // transaction via the execution strategy so it is atomic (all-or-nothing)
             // and safe to retry against a Neon connection that may have gone cold.
             // Order matters: children are deleted before their parents.
+            //
+            // Bank connections go first and outside the transaction: they revoke the
+            // consents at Pluggy, which no rollback could undo anyway.
+            if (_openFinanceService is not null)
+                await _openFinanceService.RemoveAllConnectionsAsync(userId);
+
             var strategy = _context.Database.CreateExecutionStrategy();
             await strategy.ExecuteAsync(async () =>
             {
                 await using var dbTransaction = await _context.Database.BeginTransactionAsync();
 
                 await _context.Transactions.Where(t => t.UserId == userId).ExecuteDeleteAsync();
+                await _context.IgnoredExternalTransactions.Where(i => i.UserId == userId).ExecuteDeleteAsync();
                 await _context.RecurringTransactions.Where(t => t.UserId == userId).ExecuteDeleteAsync();
                 await _context.BudgetSubcategoryAllocations
                     .Where(a => _context.Budgets.Any(b => b.Id == a.BudgetId && b.UserId == userId))
@@ -508,6 +528,7 @@ namespace FinanceControl.Services.Services
                 await _context.InvestmentDividends.Where(d => d.UserId == userId).ExecuteDeleteAsync();
                 await _context.InvestmentTransactions.Where(t => t.UserId == userId).ExecuteDeleteAsync();
                 await _context.Investments.Where(i => i.UserId == userId).ExecuteDeleteAsync();
+                await _context.MarketAssets.Where(a => a.OwnerUserId == userId).ExecuteDeleteAsync();
                 await _context.Accounts.Where(a => a.UserId == userId).ExecuteDeleteAsync();
                 await _context.Goals.Where(g => g.UserId == userId).ExecuteDeleteAsync();
                 await _context.SubCategories.Where(s => s.UserId == userId).ExecuteDeleteAsync();

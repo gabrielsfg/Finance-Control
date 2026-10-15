@@ -9,6 +9,8 @@ using FinanceControl.Services.Brapi;
 using FinanceControl.Services.Email;
 using FinanceControl.Services.Investments;
 using FinanceControl.Services.Mcp;
+using FinanceControl.Services.Pluggy;
+using FinanceControl.Services.Retention;
 using FinanceControl.Services.Seeds;
 using FinanceControl.Services.Services;
 using Microsoft.Extensions.Configuration;
@@ -94,6 +96,7 @@ namespace FinanceControl.Services.Extensions
             services.AddSingleton<BrapiCleanupJobService>();
 
             AddBilling(services, configuration);
+            AddOpenFinance(services, configuration);
 
             return services;
         }
@@ -128,6 +131,34 @@ namespace FinanceControl.Services.Extensions
 
             services.AddSingleton<SubscriptionBillingJobService>();
             services.AddSingleton<AsaasWebhookProcessorJobService>();
+        }
+
+        private static void AddOpenFinance(IServiceCollection services, IConfiguration configuration)
+        {
+            services.Configure<PluggySettings>(configuration.GetSection("PluggySettings"));
+            services.Configure<OpenFinanceSettings>(configuration.GetSection("OpenFinanceSettings"));
+
+            // The key lives two hours; the typed client is per request, its cache is not.
+            services.AddSingleton<PluggyApiKeyCache>();
+            services.AddHttpClient<PluggyClient>((provider, client) =>
+            {
+                var settings = provider.GetRequiredService<IOptions<PluggySettings>>().Value;
+
+                // Relative paths ("items/...") only resolve under the base when it ends in a slash.
+                client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+                client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+            });
+
+            services.AddScoped<OpenFinanceInvestmentSyncService>();
+            services.AddScoped<OpenFinanceSyncService>();
+            services.AddScoped<IOpenFinanceService, OpenFinanceService>();
+
+            services.AddSingleton<OpenFinanceWebhookProcessorJobService>();
+            services.AddSingleton<OpenFinanceMaintenanceJobService>();
+            services.AddSingleton<OpenFinanceEntitlementJobService>();
+
+            services.Configure<DataRetentionSettings>(configuration.GetSection("DataRetentionSettings"));
+            services.AddSingleton<DataRetentionJobService>();
         }
     }
 }

@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { InvestmentPortfolio } from "@/lib/types/investments.types";
 import { pieAnim } from "@/lib/config/chartAnimation";
 import { assetTypeColor, distinctColorsFor } from "@/lib/config/assetColors";
+import { displayTicker } from "@/features/investments/utils/displayTicker";
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
@@ -61,7 +62,7 @@ export const InvestmentsAllocationChart = ({ summary }: Props) => {
 
     return holdings.map((inv, idx) => ({
       key:     inv.ticker,
-      name:    inv.ticker,
+      name:    displayTicker(inv),
       value:   inv.currentValue,
       percent: total > 0 ? (inv.currentValue / total) * 100 : 0,
       color:   colors[idx],

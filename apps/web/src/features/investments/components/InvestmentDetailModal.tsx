@@ -23,6 +23,7 @@ import {
 import { FundamentalsDrawer } from "@/features/market/components/FundamentalsDrawer";
 import { EditTransactionModal } from "@/features/investments/components/EditTransactionModal";
 import type { Investment, InvestmentTransaction } from "@/lib/types/investments.types";
+import { displayTicker } from "@/features/investments/utils/displayTicker";
 
 // AssetTypes eligible for fundamental data
 const FUNDAMENTAL_TYPES = new Set([
@@ -76,7 +77,7 @@ export const InvestmentDetailModal = ({ open, onClose, investment }: Props) => {
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-display text-[16px] font-bold tracking-[-0.01em] text-[var(--text)]">
-            <span className="font-mono">{investment.ticker}</span>
+            <span className="font-mono">{displayTicker(investment)}</span>
             <span className="text-[var(--text-sub)]"> · {investment.name}</span>
           </DialogTitle>
         </DialogHeader>

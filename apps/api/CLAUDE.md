@@ -77,6 +77,12 @@ Never create a user-owned entity without `UserId`.
 | `Subscription` | The paid plan; we run the billing ourselves (period, status, scheduled plan change) |
 | `SubscriptionCharge` | One charge per period, mirrored from Asaas; unique idempotency key |
 | `AsaasWebhookEvent` | Stored webhook, applied later by a worker |
+| `BankConnection` / `BankConnectionAccount` | Open Finance (Pluggy) item and its accounts, each linked to an app `Account` or ignored |
+| `PluggyWebhookEvent` | Stored Pluggy webhook or internal sync work (`internal/*`), applied by a worker one at a time |
+| `IgnoredExternalTransaction` | Bank transaction ids the user deleted, so the sync does not bring them back |
+| `BankConnectionInvestment` | A bank investment position and the portfolio `Investment` it feeds (Active / MatchedExisting / Dismissed / Closed) |
+
+`MarketAsset.OwnerUserId` marks a **private** asset (a bank position no market quotes, created by the Open Finance sync). Private assets must never appear in market screens, searches or the Brapi job — filter `OwnerUserId == null` in any new market query, and delete them explicitly with the user's data (no FK).
 
 ### Account balance rule
 
@@ -256,6 +262,10 @@ All `IHostedService` / `BackgroundService` implementations live in the `FinanceC
 - Brapi sync workers and any future scheduled jobs follow the same pattern: hosted service in Workers, logic in Services
 - `SubscriptionBillingHostedService` (hourly) → `SubscriptionBillingJobService`: card renewals, Pix/boleto renewals, expirations, billing emails
 - `AsaasWebhookProcessorHostedService` (every 15s) → `AsaasWebhookProcessorJobService`: applies stored Asaas webhooks
+- `OpenFinanceWebhookProcessorHostedService` (every 15s) → `OpenFinanceWebhookProcessorJobService`: applies stored Pluggy webhooks and queued sync work through `OpenFinanceSyncService` — the only writer of synced transactions
+- `OpenFinanceMaintenanceHostedService` (daily) → `OpenFinanceMaintenanceJobService`: queues a read of every healthy bank connection (never asks Pluggy to re-collect)
+- `OpenFinanceEntitlementHostedService` (every minute) → `OpenFinanceEntitlementJobService`: revokes bank connections over the plan (none without a subscription, 3 on Basic)
+- `DataRetentionHostedService` (daily) → `DataRetentionJobService`: deletes AI generation logs after 12 months and accounts left without a subscription for 5 years (`DataRetentionSettings`)
 
 ## Naming conventions
 

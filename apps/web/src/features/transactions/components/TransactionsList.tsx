@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ArrowLeftRight, Pencil, RefreshCw, Layers, Trash2 } from "lucide-react";
+import { ArrowLeftRight, Pencil, RefreshCw, Layers, Trash2, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { parseLocalDate } from "@/lib/utils/budgetPeriod";
@@ -190,6 +190,15 @@ export const TransactionsList = ({ transactions, subcategoryMeta = [], search, g
                       <span className="text-blue border-blue/25 bg-blue/8 flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium">
                         <Layers size={9} />
                         Parcela {t.installmentNumber}/{t.totalInstallments}
+                      </span>
+                    )}
+                    {t.needsReview && (
+                      <span
+                        title="Importada do banco — confira a categoria e salve, ou confirme em lote"
+                        className="text-orange border-orange/30 bg-orange/8 flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+                      >
+                        <Landmark size={9} />
+                        {t.possibleDuplicate ? "Possível duplicada" : "A revisar"}
                       </span>
                     )}
                   </div>

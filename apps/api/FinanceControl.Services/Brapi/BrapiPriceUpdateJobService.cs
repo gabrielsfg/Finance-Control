@@ -91,8 +91,10 @@ namespace FinanceControl.Services.Brapi
             await using var scope = _scopeFactory.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+            // Private assets are bank positions priced by the Open Finance sync, not by Brapi.
             var allAssets = await context.MarketAssets
                 .AsNoTracking()
+                .Where(a => a.OwnerUserId == null)
                 .ToListAsync(cancellationToken);
 
             var quoteGroup = allAssets.Where(a => QuoteAssetTypes.Contains(a.AssetType)).ToList();
@@ -183,8 +185,10 @@ namespace FinanceControl.Services.Brapi
             }
 
             // Market assets are global and already unique per ticker — no grouping needed.
+            // Private assets are bank positions priced by the Open Finance sync, not by Brapi.
             var allAssets = await context.MarketAssets
                 .AsNoTracking()
+                .Where(a => a.OwnerUserId == null)
                 .ToListAsync(cancellationToken);
 
             var quoteGroup = allAssets

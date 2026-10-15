@@ -18,15 +18,30 @@ namespace FinanceControl.WebApi.Controllers
         private readonly ITransactionService _transactionService;
         private readonly IValidator<CreateTransactionRequestDto> _createTransactionValidator;
         private readonly IValidator<UpdateTransactionRequestDto> _updateTransactionValidator;
+        private readonly IValidator<ReviewTransactionsRequestDto> _reviewTransactionsValidator;
 
         public TransactionController(
             ITransactionService transactionService,
             IValidator<CreateTransactionRequestDto> createTransactionValidator,
-            IValidator<UpdateTransactionRequestDto> updateTransactionValidator)
+            IValidator<UpdateTransactionRequestDto> updateTransactionValidator,
+            IValidator<ReviewTransactionsRequestDto> reviewTransactionsValidator)
         {
             _transactionService = transactionService;
             _createTransactionValidator = createTransactionValidator;
             _updateTransactionValidator = updateTransactionValidator;
+            _reviewTransactionsValidator = reviewTransactionsValidator;
+        }
+
+        /// <summary>Confirms bank-synced transactions as they are ("A revisar" → reviewed).</summary>
+        [HttpPost("review")]
+        public async Task<IActionResult> MarkReviewedAsync([FromBody] ReviewTransactionsRequestDto requestDto)
+        {
+            var validationResult = _reviewTransactionsValidator.Validate(requestDto);
+            if (validationResult.ToActionResult() is { } errorResult)
+                return errorResult;
+
+            var result = await _transactionService.MarkReviewedAsync(requestDto, GetUserId());
+            return Ok(new { updated = result.Value });
         }
 
         [HttpPost]

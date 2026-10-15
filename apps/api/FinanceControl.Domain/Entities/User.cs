@@ -34,6 +34,13 @@ namespace FinanceControl.Domain.Entities
         /// </summary>
         public bool AiEnabled { get; set; } = true;
 
+        /// <summary>
+        /// Opaque id sent to third parties that need to tag data with the user (Pluggy's
+        /// clientUserId), so neither the sequential id nor personal data leaves the app.
+        /// Created on first use.
+        /// </summary>
+        public Guid? ExternalRef { get; set; }
+
         public string PreferredCurrency { get; set; } = "BRL";
         public string PreferredLanguage { get; set; } = "pt-BR";
         public string? Country { get; set; }

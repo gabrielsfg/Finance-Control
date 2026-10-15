@@ -84,7 +84,7 @@ export const AccountCard = ({
                   : "bg-surface2 text-text-muted border-border",
               )}
             >
-              {isConnected ? "Conectado" : "Manual"}
+              {isConnected ? account.connectorName ?? "Conectado" : "Manual"}
             </span>
           </div>
         </div>

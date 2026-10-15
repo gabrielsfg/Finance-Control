@@ -31,7 +31,7 @@ namespace FinanceControl.Services.Services
             CreateAlertRuleRequestDto requestDto, int userId)
         {
             var assetExists = await _context.MarketAssets
-                .AnyAsync(a => a.Id == requestDto.MarketAssetId);
+                .AnyAsync(a => a.Id == requestDto.MarketAssetId && (a.OwnerUserId == null || a.OwnerUserId == userId));
             if (!assetExists)
                 return Result<IEnumerable<GetAlertRuleResponseDto>>.Failure("Asset not found.");
 

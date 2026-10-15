@@ -46,6 +46,11 @@ namespace FinanceControl.Data.Data
         public DbSet<Subscription> Subscriptions { get; set; }
         public DbSet<SubscriptionCharge> SubscriptionCharges { get; set; }
         public DbSet<AsaasWebhookEvent> AsaasWebhookEvents { get; set; }
+        public DbSet<BankConnection> BankConnections { get; set; }
+        public DbSet<BankConnectionAccount> BankConnectionAccounts { get; set; }
+        public DbSet<BankConnectionInvestment> BankConnectionInvestments { get; set; }
+        public DbSet<IgnoredExternalTransaction> IgnoredExternalTransactions { get; set; }
+        public DbSet<PluggyWebhookEvent> PluggyWebhookEvents { get; set; }
         public DbSet<BillingEmailLog> BillingEmailLogs { get; set; }
         public DbSet<AiConversation> AiConversations { get; set; }
         public DbSet<AiMessage> AiMessages { get; set; }

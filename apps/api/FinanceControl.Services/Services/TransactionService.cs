@@ -228,6 +228,8 @@ namespace FinanceControl.Services.Services
                 return await CreateTransactionAsync(createDto, userId);
             }
 
+            MarkReviewedByUser(transaction, requestDto.Value, requestDto.TransactionDate, requestDto.Description);
+
             transaction.AccountId = requestDto.AccountId;
             transaction.SubCategoryId = requestDto.SubCategoryId;
             transaction.Value = requestDto.Value;
@@ -264,11 +266,62 @@ namespace FinanceControl.Services.Services
             if (transaction is null)
                 return Result<IEnumerable<GetTransactionResponseDto>>.Failure("Transaction not found.");
 
+            RememberDeletedBankRows(transaction);
             _context.Transactions.Remove(transaction);
             await _context.SaveChangesAsync();
 
             var transactions = await GetAllTransactionsAsync(userId);
             return Result<IEnumerable<GetTransactionResponseDto>>.Success(transactions);
+        }
+
+        public async Task<Result<int>> MarkReviewedAsync(ReviewTransactionsRequestDto requestDto, int userId)
+        {
+            var updated = await _context.Transactions
+                .Where(t => t.UserId == userId && t.NeedsReview && requestDto.Ids.Contains(t.Id))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(t => t.NeedsReview, false)
+                    .SetProperty(t => t.PossibleDuplicate, false));
+
+            return Result<int>.Success(updated);
+        }
+
+        /// <summary>
+        /// Saving a synced row is the user's confirmation. Changing what the bank owns
+        /// (value, date, description) also hands the row over: later syncs stop
+        /// overwriting it.
+        /// </summary>
+        private static void MarkReviewedByUser(Transaction transaction, int value, DateOnly date, string description)
+        {
+            transaction.NeedsReview = false;
+            transaction.PossibleDuplicate = false;
+
+            if (transaction.ExternalId is not null
+                && (transaction.Value != value || transaction.TransactionDate != date || transaction.Description != description))
+                transaction.ExternalModified = true;
+        }
+
+        /// <summary>
+        /// The bank re-sends recent days on every sync; remembering the ids of a deleted
+        /// synced row keeps it from coming straight back.
+        /// </summary>
+        private void RememberDeletedBankRows(Transaction transaction)
+        {
+            foreach (var externalId in new[] { transaction.ExternalId, transaction.ExternalCounterpartId })
+            {
+                if (externalId is null)
+                    continue;
+
+                var alreadyIgnored = _context.IgnoredExternalTransactions.Local
+                    .Any(i => i.UserId == transaction.UserId && i.ExternalId == externalId)
+                    || _context.IgnoredExternalTransactions
+                        .Any(i => i.UserId == transaction.UserId && i.ExternalId == externalId);
+                if (!alreadyIgnored)
+                    _context.IgnoredExternalTransactions.Add(new IgnoredExternalTransaction
+                    {
+                        UserId = transaction.UserId,
+                        ExternalId = externalId
+                    });
+            }
         }
 
         /// <summary>
@@ -624,6 +677,10 @@ namespace FinanceControl.Services.Services
             if (!sourceExists)
                 return Result<CreateTransactionResponseDto>.Failure("Invalid parameters.");
 
+            MarkReviewedByUser(transaction, requestDto.Value, requestDto.TransactionDate, requestDto.Description);
+            if (transaction.ExternalId is not null && transaction.Type != requestDto.Type)
+                transaction.ExternalModified = true;
+
             if (requestDto.Type == EnumTransactionType.Transfer)
             {
                 // A row of an installment plan or a recurrence belongs to a series; turning
@@ -874,6 +931,12 @@ namespace FinanceControl.Services.Services
             if (requestDto.PaymentType is { } paymentType)
                 query = query.Where(t => t.PaymentType == paymentType);
 
+            if (requestDto.NeedsReview is { } needsReview)
+                query = query.Where(t => t.NeedsReview == needsReview);
+
+            if (requestDto.Source is { } source)
+                query = query.Where(t => t.Source == source);
+
             // Value is stored as a positive magnitude — the sign lives in Type.
             if (requestDto.MinValue is { } minValue)
                 query = query.Where(t => t.Value >= minValue);
@@ -958,6 +1021,9 @@ namespace FinanceControl.Services.Services
                     PaymentMethod = t.PaymentMethod,
                     InstallmentNumber = t.InstallmentNumber,
                     TotalInstallments = t.TotalInstallments,
+                    Source = t.Source,
+                    NeedsReview = t.NeedsReview,
+                    PossibleDuplicate = t.PossibleDuplicate,
 
                     AreaId = _context.BudgetSubcategoryAllocations
                         .Where(a => a.SubCategoryId == t.SubCategoryId && a.BudgetId == t.BudgetId)

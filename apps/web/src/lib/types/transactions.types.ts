@@ -1,6 +1,7 @@
 export type TransactionType = "Income" | "Expense" | "Transfer";
 export type PaymentType = "OneTime" | "Installment" | "Recurring";
 export type PaymentMethod = "Debit" | "Credit";
+export type TransactionSource = "Manual" | "FileImport" | "OpenFinance";
 export type RecurrenceType =
   | "Daily"
   | "WorkDay"
@@ -40,6 +41,10 @@ export type TransactionItem = {
   installmentNumber: number | null;
   totalInstallments: number | null;
   tags: TagItem[];
+  source: TransactionSource;
+  /** Synced from the bank and not confirmed by the user yet. */
+  needsReview: boolean;
+  possibleDuplicate: boolean;
 };
 
 export type SubCategoryItem = {
@@ -104,6 +109,9 @@ export type GetTransactionsFilterParams = {
   maxValue?: number;
   /** Matched against description, tag, subcategory and account name. */
   search?: string;
+  /** True: only bank-synced rows not confirmed yet. */
+  needsReview?: boolean;
+  source?: TransactionSource;
   page?: number;
   pageSize?: number;
   sortField?: TxSortField;

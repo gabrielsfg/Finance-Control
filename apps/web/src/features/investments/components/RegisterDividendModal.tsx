@@ -22,6 +22,7 @@ import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { cn } from "@/lib/utils";
 import { useRegisterDividend } from "@/features/investments/hooks/useInvestments";
 import type { DividendType } from "@/lib/types/investments.types";
+import { displayTicker } from "@/features/investments/utils/displayTicker";
 
 const DIVIDEND_TYPE_LABELS: Record<DividendType, string> = {
   Dividend:            "Dividendo",
@@ -307,7 +308,7 @@ const DividendForm = ({ onClose, investmentId, ticker, investments = [], account
                     {investments.map((inv) => (
                       <SelectItem key={inv.id} value={String(inv.id)}>
                         <div className="flex flex-col">
-                          <span className="text-[14px] font-medium leading-tight">{inv.ticker}</span>
+                          <span className="text-[14px] font-medium leading-tight">{displayTicker(inv)}</span>
                           <span className="text-text-muted text-[11px] leading-tight">{inv.name}</span>
                         </div>
                       </SelectItem>

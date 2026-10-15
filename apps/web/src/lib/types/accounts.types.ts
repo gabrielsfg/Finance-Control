@@ -1,3 +1,5 @@
+import type { BankConnectionStatus } from "@/lib/types/openFinance.types";
+
 export type AccountType = "Checking" | "Savings" | "Credit" | "Cash";
 
 export type AccountItem = {
@@ -7,6 +9,15 @@ export type AccountItem = {
   currentAmount: number;
   isDefaultAccount: boolean;
   creditLimit?: number | null;
+  /** Imports from a bank through Open Finance. */
+  isConnected?: boolean;
+  bankConnectionId?: number | null;
+  connectorName?: string | null;
+  connectorImageUrl?: string | null;
+  connectionStatus?: BankConnectionStatus | null;
+  lastSyncedAt?: string | null;
+  /** Cents, as the bank reports it (a card: the used limit). */
+  externalBalance?: number | null;
 };
 
 export type AccountDetail = {

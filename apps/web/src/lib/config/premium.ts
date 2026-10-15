@@ -14,10 +14,13 @@ export const PLAN_FEATURES: Record<SubscriptionPlan, string[]> = {
     "Orçamentos, metas e recorrências",
     "Investimentos, análises e simulações",
     "Importação de extratos",
+    "Conexão com até 3 bancos (Open Finance)",
     "Conexão com Claude, ChatGPT e outras IAs",
   ],
   Premium: [
     "Tudo do Basic",
+    "Bancos conectados sem limite",
+    "Categorização automática das transações com IA",
     "Assistente de IA dentro do app",
     "Análises semanais de gastos com IA",
     "Leitura da carteira de investimentos com IA",

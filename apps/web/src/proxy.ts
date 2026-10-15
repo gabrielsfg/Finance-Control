@@ -4,8 +4,10 @@ import { RETURN_TO_PARAM, sanitizeReturnTo } from "@/lib/utils/returnTo";
 
 // The legal pages are linked from the registration form and from the profile, so
 // they have to open in both states — bouncing a visitor to /login for reading the
-// terms would defeat the point of asking them to read the terms.
-const publicRoutes = ["/", "/login", "/privacy", "/terms"];
+// terms would defeat the point of asking them to read the terms. The Open Finance
+// callback is where a bank sends the browser back after an authorization; it shows no
+// data and may open in a tab without the session cookie.
+const publicRoutes = ["/", "/login", "/privacy", "/terms", "/open-finance/callback"];
 
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
