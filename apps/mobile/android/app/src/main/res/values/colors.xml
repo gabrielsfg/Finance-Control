@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Quantia cobalt, the seal's tile. -->
+    <color name="ic_launcher_background">#1F3CE0</color>
+    <!-- AppColors.lightBg (paper), so the splash hands over to the first frame without a flash. -->
+    <color name="splash_background">#EFEBE1</color>
+</resources>

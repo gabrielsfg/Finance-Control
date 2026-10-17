@@ -24,6 +24,10 @@ export const publicPaths = ["/", "/login", "/privacy", "/terms"] as const;
 /**
  * The authenticated area. Listed explicitly rather than derived: these live at
  * the root (no `/app` prefix), so there is no pattern to match on.
+ *
+ * Read by robots.txt (kept out of the index) and by the proxy (bounced to /login
+ * without a session). A new authenticated route has to be added here, or a visitor
+ * without a session reaches it and only the API's 401 sends them to login.
  */
 export const privatePaths = [
   "/dashboard",
@@ -38,4 +42,19 @@ export const privatePaths = [
   "/simulations",
   "/analytics",
   "/profile",
+  "/plans",
+  "/subscription",
+  // Public to the proxy but useless out of context: the MCP consent screen and the
+  // page a bank sends the browser back to after an Open Finance authorization.
+  "/oauth",
+  "/open-finance",
 ] as const;
+
+/**
+ * Ownership tokens from Google Search Console and Bing Webmaster Tools (the
+ * "HTML tag" method). Optional: unset renders no tag.
+ */
+export const siteVerification = {
+  google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+  bing: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || undefined,
+};

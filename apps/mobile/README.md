@@ -21,6 +21,7 @@ Designed around one constraint: **register a transaction in under 10 seconds.** 
 - [Project Structure](#project-structure)
 - [Core Patterns](#core-patterns)
 - [Authentication](#authentication)
+- [Release builds](#release-builds)
 
 ## Quick Start
 
@@ -59,6 +60,32 @@ static const AppEnv _current = AppEnv.local; // → http://localhost:5112
 
 > Start the API with the Kestrel HTTP profile so it isn't bound to IIS Express only:
 > `dotnet run --project FinanceControl.WebApi --launch-profile http`
+
+## Release builds
+
+Both stores use the identifier `com.gabrielsilva.financecontrol`; it cannot change once published.
+
+**Android.** Play only accepts bundles signed with your own upload key. Create it once and keep a backup outside the repo — losing it means asking Google to reset the key:
+
+```bash
+keytool -genkey -v -keystore android/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+
+Copy `android/key.properties.example` to `android/key.properties` and fill in the passwords (both files are git-ignored), then:
+
+```bash
+flutter build appbundle --dart-define=APP_ENV=production --dart-define=API_BASE_URL=https://api.seudominio.com.br
+```
+
+Without `key.properties` the release build is signed with the debug key: fine for testing on a device, rejected by the Play Console.
+
+**iOS.** Signing uses the Apple team set in Xcode. `ios/Runner/PrivacyInfo.xcprivacy` declares the data the app collects; keep it in line with the App Privacy answers in App Store Connect.
+
+```bash
+flutter build ipa --dart-define=APP_ENV=production --dart-define=API_BASE_URL=https://api.seudominio.com.br
+```
+
+Bump `version:` in `pubspec.yaml` (`1.0.0+1` → name `1.0.0`, build `1`) before each upload — both stores reject a build number they have already seen.
 
 ## Tech Stack
 

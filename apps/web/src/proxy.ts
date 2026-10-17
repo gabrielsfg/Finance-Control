@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { privatePaths } from "@/lib/config/site";
 import { RETURN_TO_PARAM, sanitizeReturnTo } from "@/lib/utils/returnTo";
 
 // The legal pages are linked from the registration form and from the profile, so
@@ -12,13 +13,19 @@ const publicRoutes = ["/", "/login", "/privacy", "/terms", "/open-finance/callba
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPublicRoute = publicRoutes.some((route) => pathname === route);
+  // Only the known private area bounces to /login. Anything else falls through, so a
+  // mistyped or dead URL answers with the 404 page instead of a redirect — crawlers
+  // drop a 404 from the index, while a redirect to /login keeps it alive.
+  const isPrivateRoute =
+    !isPublicRoute &&
+    privatePaths.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 
   // The refresh token is an HttpOnly cookie set by the API on login/refresh.
   // It's the only persistent session signal available to the middleware
   // (the access token lives in memory only and is never sent as a cookie).
   const hasSession = !!request.cookies.get("refreshToken")?.value;
 
-  if (!isPublicRoute && !hasSession) {
+  if (isPrivateRoute && !hasSession) {
     // Remember where the visitor was going. The MCP consent page depends on it: the
     // authorization flow lands on /oauth/consent?request=…, and dropping that on the way
     // through login would strand the AI client mid-connection.
@@ -44,8 +51,14 @@ export default function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // robots.txt, sitemap.xml and the generated OG card are metadata routes: they
-  // are not in `publicRoutes`, so without this exclusion the middleware would
-  // bounce every crawler to /login and the site would index as nothing.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|opengraph-image).*)"],
+  // Metadata routes (robots.txt, sitemap.xml, the manifest, the icons and the generated
+  // OG card) and the static files in /public are not in `publicRoutes`: without this
+  // exclusion the proxy would bounce every crawler and browser fetch for them to
+  // /login and the site would index as nothing. Static files are matched by extension
+  // rather than listed one by one, so a file dropped in /public (a search console
+  // verification file, an image) works without touching this. `.well-known` holds the
+  // app-link files the stores fetch to tie the mobile app to the domain.
+  matcher: [
+    "/((?!_next/static|_next/image|\\.well-known|icon|apple-icon|opengraph-image|twitter-image|[^?]*\\.(?:ico|png|jpe?g|gif|webp|avif|svg|txt|xml|webmanifest|json|html?|woff2?)$).*)",
+  ],
 };

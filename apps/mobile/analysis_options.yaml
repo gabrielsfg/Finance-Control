@@ -1,3 +1,10 @@
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - macos/**
+    - linux/**
 include: package:flutter_lints/flutter.yaml
 
 # custom_lint plugin desabilitado temporariamente (incompatível com Dart SDK 3.11)
