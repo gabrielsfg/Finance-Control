@@ -13,6 +13,7 @@ import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useGoals } from "@/features/goals/hooks/useGoals";
 import { useInvestments } from "@/features/investments/hooks/useInvestments";
 import { useAuthStore } from "@/lib/stores/authStore";
+import { useProfile } from "@/features/profile/hooks/useProfile";
 import { MonthlyEvolutionChart } from "@/features/dashboard/components/MonthlyEvolutionChart";
 import { SpendingPredictionChart } from "@/features/dashboard/components/SpendingPredictionChart";
 import { CategoryDonutChart } from "@/features/dashboard/components/CategoryDonutChart";
@@ -434,6 +435,8 @@ function BudgetCard({ budget }: { budget: BudgetSummary | null }) {
 export function DashboardPage() {
   const { data: activeBudget } = useActiveBudget();
   const { user } = useAuthStore();
+  // The store only holds the user login handed back, which a reload drops.
+  const { data: profile } = useProfile();
   const { theme, toggleTheme } = useUIStore();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -493,7 +496,7 @@ export function DashboardPage() {
   const investedValue = investments?.currentValue ?? 0;
 
   const monthName = format(new Date(), "MMMM yyyy", { locale: ptBR });
-  const firstName = user?.name?.split(" ")[0] ?? "usuário";
+  const firstName = (profile?.name ?? user?.name)?.split(" ")[0] ?? "usuário";
 
   const savingsRate = totalIncome > 0
     ? Math.round((periodBalance / totalIncome) * 100)
@@ -505,8 +508,8 @@ export function DashboardPage() {
     <div className="min-h-full px-[clamp(20px,3.4vw,46px)] pb-[60px]">
 
       {/* ── Topbar ── */}
-      <header className="flex items-end gap-5 pt-[26px] pb-[30px]">
-        <div>
+      <header className="flex flex-wrap items-end gap-x-5 gap-y-4 pt-[26px] pb-[30px]">
+        <div className="min-w-0">
           <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--text-sub)]">
             Demonstrativo · {monthName}
           </div>
@@ -521,7 +524,7 @@ export function DashboardPage() {
           )}
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
           <GlobalSearch />
 
           <PeriodFilter value={period} onChange={setPeriod} />
@@ -577,7 +580,8 @@ export function DashboardPage() {
             </svg>
           </div>
 
-          <div className="grid grid-cols-[1.05fr_1.25fr] gap-[34px]">
+          {/* Side by side only once there is room — the sidebar takes ~250px of the viewport. */}
+          <div className="grid grid-cols-1 gap-[30px] lg:grid-cols-[1.05fr_1.25fr] lg:gap-[34px]">
             {/* Left — patrimônio */}
             <div>
               <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">
@@ -605,7 +609,7 @@ export function DashboardPage() {
               )}
 
               {/* Mini-stats */}
-              <div className="mt-6 flex gap-[26px]">
+              <div className="mt-6 flex flex-wrap gap-x-[26px] gap-y-4 whitespace-nowrap">
                 <div>
                   <div className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--panel-muted)]">Em conta</div>
                   <div className="font-mono mt-[3px] text-[18px] font-medium">
@@ -631,10 +635,10 @@ export function DashboardPage() {
             </div>
 
             {/* Right — fluxo */}
-            <div className="self-center">
-              <div className="mb-[18px] flex items-baseline justify-between">
-                <span className="font-display text-[16px] font-bold">Fluxo do mês</span>
-                <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--panel-muted)]">
+            <div className="min-w-0 self-center">
+              <div className="mb-[18px] flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <span className="font-display text-[16px] font-bold whitespace-nowrap">Fluxo do mês</span>
+                <span className="font-mono text-[11px] tracking-[0.1em] whitespace-nowrap uppercase text-[var(--panel-muted)]">
                   {periodLabel}
                 </span>
               </div>
@@ -669,14 +673,14 @@ export function DashboardPage() {
 
               {/* Net */}
               <div
-                className="mt-5 flex items-center justify-between border-t pt-4"
+                className="mt-5 flex items-center justify-between gap-4 border-t pt-4"
                 style={{ borderColor: "rgba(255,255,255,0.12)" }}
               >
-                <span className="font-mono text-[11px] tracking-[0.16em] uppercase text-[var(--panel-muted)]">
+                <span className="font-mono text-[11px] tracking-[0.16em] whitespace-nowrap uppercase text-[var(--panel-muted)]">
                   Saldo do mês
                 </span>
                 <span
-                  className="font-mono text-[22px] font-semibold"
+                  className="font-mono text-[22px] font-semibold whitespace-nowrap"
                   style={{ color: periodBalance >= 0 ? "var(--moss-lift)" : "var(--clay-lift)" }}
                 >
                   {periodBalance >= 0 ? "+ " : "− "}
@@ -688,21 +692,21 @@ export function DashboardPage() {
         </section>
 
         {/* ── Row 2: Transactions (7) + Accounts (5) ── */}
-        <div className="col-span-7">
+        <div className="col-span-12 lg:col-span-7">
           <TransactionsCard transactions={recentTransactions} />
         </div>
-        <div className="col-span-5">
+        <div className="col-span-12 lg:col-span-5">
           <AccountsCard accounts={accounts} />
         </div>
 
-        {/* ── Row 3: Investments (5) + Goals (4) + Budget (3) ── */}
-        <div className="col-span-5">
+        {/* ── Row 3: Investments (5) + Goals (4) + Budget (3); narrower, investments on top ── */}
+        <div className="col-span-12 xl:col-span-5">
           <InvestmentsCard portfolio={investments} />
         </div>
-        <div className="col-span-4">
+        <div className="col-span-12 md:col-span-6 xl:col-span-4">
           <GoalsCard goals={goals} />
         </div>
-        <div className="col-span-3">
+        <div className="col-span-12 md:col-span-6 xl:col-span-3">
           <BudgetCard budget={budgetSummary ?? null} />
         </div>
 
