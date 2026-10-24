@@ -1,3 +1,4 @@
+using FinanceControl.WebApi.Filters;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Extensions;
 using FinanceControl.Shared.Dtos.Request;
@@ -13,6 +14,7 @@ namespace FinanceControl.WebApi.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [SkipSubscriptionCheck]
     public class NotificationController : BaseController
     {
         private readonly INotificationService _notificationService;

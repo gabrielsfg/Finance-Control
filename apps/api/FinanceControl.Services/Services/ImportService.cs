@@ -239,6 +239,7 @@ public class ImportService : IImportService
                 _context.Transactions.Add(new Transaction
                 {
                     UserId = userId,
+                    Source = EnumTransactionSource.FileImport,
                     AccountId = item.IsInflow ? item.CounterpartAccountId!.Value : requestDto.AccountId,
                     DestinationAccountId = item.IsInflow ? requestDto.AccountId : item.CounterpartAccountId,
                     SubCategoryId = transferSubCategoryId!.Value,
@@ -261,6 +262,7 @@ public class ImportService : IImportService
                 var parent = new Transaction
                 {
                     UserId = userId,
+                    Source = EnumTransactionSource.FileImport,
                     AccountId = requestDto.AccountId,
                     BudgetId = budgetId,
                     SubCategoryId = item.SubCategoryId ?? 0,
@@ -281,6 +283,7 @@ public class ImportService : IImportService
                     var installment = new Transaction
                     {
                         UserId = userId,
+                        Source = EnumTransactionSource.FileImport,
                         AccountId = requestDto.AccountId,
                         BudgetId = budgetId,
                         SubCategoryId = item.SubCategoryId ?? 0,
@@ -307,6 +310,7 @@ public class ImportService : IImportService
                 var transaction = new Transaction
                 {
                     UserId = userId,
+                    Source = EnumTransactionSource.FileImport,
                     AccountId = requestDto.AccountId,
                     BudgetId = budgetId,
                     SubCategoryId = item.SubCategoryId ?? 0,

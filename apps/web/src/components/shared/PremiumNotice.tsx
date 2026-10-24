@@ -4,18 +4,23 @@ import Link from "next/link";
 import { Lock, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PREMIUM_UPGRADE_HREF } from "@/lib/config/premium";
+import { usePlan } from "@/lib/hooks/usePlan";
 
 const BUTTON_CLASS =
   "inline-flex w-full items-center justify-center gap-2 rounded-[13px] px-[18px] py-2.5 text-[14px] font-semibold transition-transform";
 
 /**
  * The upgrade CTA, in one place so every locked surface sends people to the same
- * destination — and so there is a single line to change when the checkout exists.
+ * destination. A subscriber goes to their subscription (plan change); anyone else to the
+ * plans page.
  *
- * While there is no destination the button stays visible but inert and says why. An
- * enabled button that goes nowhere is worse than an honest one: it reads as broken.
+ * Without a destination the button stays visible but inert and says why. An enabled
+ * button that goes nowhere is worse than an honest one: it reads as broken.
  */
 export function PremiumUpgradeButton({ className }: { className?: string }) {
+  const { plan } = usePlan();
+  const hasPlan = plan !== null;
+
   if (!PREMIUM_UPGRADE_HREF) {
     return (
       <button
@@ -33,12 +38,12 @@ export function PremiumUpgradeButton({ className }: { className?: string }) {
 
   return (
     <Link
-      href={PREMIUM_UPGRADE_HREF}
+      href={hasPlan ? "/subscription" : PREMIUM_UPGRADE_HREF}
       className={cn(BUTTON_CLASS, "text-white hover:-translate-y-[1px]", className)}
       style={{ background: "var(--brand-cobalt)", boxShadow: "0 12px 24px -12px rgba(31,60,224,0.7)" }}
     >
       <Sparkles size={15} />
-      Assinar o Premium
+      {hasPlan ? "Mudar para o Premium" : "Assinar o Premium"}
     </Link>
   );
 }

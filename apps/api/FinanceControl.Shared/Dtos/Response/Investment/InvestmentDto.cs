@@ -27,5 +27,11 @@ namespace FinanceControl.Shared.Dtos.Response.Investment
         public int AccountId { get; set; }
         public string? LogoUrl { get; set; }
         public string Currency { get; set; } = "BRL";
+
+        /// <summary>
+        /// Imported from a bank through Open Finance and kept up to date by the sync. Its
+        /// operations are reconstructed from the positions the bank reports.
+        /// </summary>
+        public bool FromBank { get; set; }
     }
 }

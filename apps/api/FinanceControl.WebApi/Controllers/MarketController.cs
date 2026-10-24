@@ -10,6 +10,9 @@ namespace FinanceControl.WebApi.Controllers
     [Authorize]
     public class MarketController : BaseController
     {
+        // Brapi refuses (403) the modules the current plan does not include, and can be down.
+        private const string BrapiUnavailableError = "Market data provider unavailable.";
+
         private readonly IMarketService _marketService;
 
         public MarketController(IMarketService marketService)
@@ -57,6 +60,10 @@ namespace FinanceControl.WebApi.Controllers
             {
                 return StatusCode(503, new { error = ex.Message });
             }
+            catch (HttpRequestException)
+            {
+                return StatusCode(503, new { error = BrapiUnavailableError });
+            }
         }
 
         [HttpGet("macro")]
@@ -70,6 +77,10 @@ namespace FinanceControl.WebApi.Controllers
             catch (InvalidOperationException ex)
             {
                 return StatusCode(503, new { error = ex.Message });
+            }
+            catch (HttpRequestException)
+            {
+                return StatusCode(503, new { error = BrapiUnavailableError });
             }
         }
 
@@ -108,6 +119,10 @@ namespace FinanceControl.WebApi.Controllers
             catch (InvalidOperationException ex)
             {
                 return StatusCode(503, new { error = ex.Message });
+            }
+            catch (HttpRequestException)
+            {
+                return StatusCode(503, new { error = BrapiUnavailableError });
             }
         }
     }

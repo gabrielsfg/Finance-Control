@@ -1,3 +1,4 @@
+using FinanceControl.Services.Billing;
 using System.Diagnostics;
 using System.Text.Json;
 using FinanceControl.Data.Data;
@@ -165,16 +166,16 @@ namespace FinanceControl.Services.Services
 
         public async Task<GetAiSettingsResponseDto?> GetSettingsAsync(int userId)
         {
-            var user = await _context.Users
+            var aiEnabled = await _context.Users
                 .AsNoTracking()
                 .Where(u => u.Id == userId)
-                .Select(u => new { u.Plan, u.AiEnabled })
+                .Select(u => (bool?)u.AiEnabled)
                 .FirstOrDefaultAsync();
 
-            if (user is null)
+            if (aiEnabled is null)
                 return null;
 
-            return await BuildSettingsAsync(userId, user.Plan, user.AiEnabled);
+            return await BuildSettingsAsync(userId, aiEnabled.Value);
         }
 
         public async Task<GetAiSettingsResponseDto?> UpdateSettingsAsync(UpdateAiSettingsRequestDto requestDto, int userId)
@@ -186,17 +187,18 @@ namespace FinanceControl.Services.Services
             user.AiEnabled = requestDto.AiEnabled;
             await _context.SaveChangesAsync();
 
-            return await BuildSettingsAsync(userId, user.Plan, user.AiEnabled);
+            return await BuildSettingsAsync(userId, user.AiEnabled);
         }
 
-        private async Task<GetAiSettingsResponseDto> BuildSettingsAsync(int userId, EnumUserPlan plan, bool aiEnabled)
+        private async Task<GetAiSettingsResponseDto> BuildSettingsAsync(int userId, bool aiEnabled)
         {
+            var access = await SubscriptionRules.GetAccessAsync(_context, userId, DateTime.UtcNow);
             var chatUsed = await _accessPolicy.CountMonthlyUsageAsync(userId, EnumAiFeature.Chat);
 
             return new GetAiSettingsResponseDto
             {
                 AiEnabled = aiEnabled,
-                IsPremium = plan == EnumUserPlan.Premium,
+                IsPremium = access.IsPremium,
                 IsAvailable = _client.IsConfigured,
                 Provider = "Anthropic",
                 ChatMessagesUsed = chatUsed,

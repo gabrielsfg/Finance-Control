@@ -23,6 +23,30 @@ namespace FinanceControl.Domain.Entities
         public EnumPaymentMethod? PaymentMethod { get; set; }
         public int? InstallmentNumber { get; set; }
         public int? TotalInstallments { get; set; }
+
+        public EnumTransactionSource Source { get; set; } = EnumTransactionSource.Manual;
+
+        /// Pluggy's transaction id when the row came from (or was matched to) a bank sync.
+        /// Unique per user: it is what makes every sync an upsert instead of an insert.
+        public string? ExternalId { get; set; }
+
+        /// For a transfer between two connected accounts: Pluggy's id of the inflow leg,
+        /// which was folded into this row instead of becoming an income of its own.
+        public string? ExternalCounterpartId { get; set; }
+
+        /// The bank's own id for the transaction (Open Finance only) — the one id that
+        /// survives a reconnection, kept for reconciling across items.
+        public string? ExternalProviderId { get; set; }
+
+        /// Synced and not confirmed by the user yet.
+        public bool NeedsReview { get; set; }
+
+        /// The user edited a synced row; later syncs stop overwriting value, date and description.
+        public bool ExternalModified { get; set; }
+
+        /// Synced next to more than one similar hand-typed row, so it was not merged into any.
+        public bool PossibleDuplicate { get; set; }
+
         public Budget? Budget { get; set; }
         public SubCategory SubCategory { get; set; }
         public Account Account { get; set; }

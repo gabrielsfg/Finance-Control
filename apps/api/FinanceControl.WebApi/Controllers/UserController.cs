@@ -1,3 +1,4 @@
+using FinanceControl.WebApi.Filters;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -18,6 +19,7 @@ namespace FinanceControl.WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [SkipSubscriptionCheck]
     public class UserController : BaseController
     {
         private const string RefreshTokenCookieName = "refreshToken";

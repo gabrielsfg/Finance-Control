@@ -42,7 +42,7 @@ namespace FinanceControl.Services.Ai
         /// <summary>Per user, per calendar month. Counted from AiGenerationLogs.</summary>
         public int MonthlySpendingInsightsPerUser { get; set; } = 6;
         public int MonthlyPortfolioInsightsPerUser { get; set; } = 4;
-        public int MonthlyChatMessagesPerUser { get; set; } = 200;
+        public int MonthlyChatMessagesPerUser { get; set; } = 150;
 
         /// <summary>Tool rounds allowed for one chat message before the loop gives up.</summary>
         public int MaxChatToolIterations { get; set; } = 8;

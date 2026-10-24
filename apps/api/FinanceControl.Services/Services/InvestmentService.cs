@@ -70,7 +70,7 @@ namespace FinanceControl.Services.Services
             var assetIds = investments.Select(i => i.MarketAssetId).ToList();
             var prevCloseMap = await LoadPrevCloseMapAsync(context, assetIds);
 
-            return BuildPortfolio(investments, prevCloseMap);
+            return await MarkBankPositionsAsync(context, BuildPortfolio(investments, prevCloseMap), userId);
         }
 
         public async Task<InvestmentDto> GetByIdAsync(int id, int userId)
@@ -193,7 +193,8 @@ namespace FinanceControl.Services.Services
             // Find or create the GLOBAL market asset (shared across all users)
             var asset = dto.ForceNewAsset
                 ? null
-                : await context.MarketAssets.FirstOrDefaultAsync(a => a.Ticker == ticker);
+                : await context.MarketAssets.FirstOrDefaultAsync(a => a.Ticker == ticker
+                    && (a.OwnerUserId == null || a.OwnerUserId == userId));
 
             if (asset is null && dto.ForceNewAsset)
                 ticker = await NextFreeTickerAsync(context, ticker);
@@ -637,7 +638,22 @@ namespace FinanceControl.Services.Services
             var prevCloseMap = await LoadPrevCloseMapAsync(context, assetIds);
             var accruedMap = await BuildAccruedPriceMapAsync(context, investments);
 
-            return BuildPortfolio(investments, prevCloseMap, accruedMap);
+            return await MarkBankPositionsAsync(context, BuildPortfolio(investments, prevCloseMap, accruedMap), userId);
+        }
+
+        /// <summary>Flags the positions the Open Finance sync created and maintains.</summary>
+        private static async Task<InvestmentPortfolioDto> MarkBankPositionsAsync(
+            ApplicationDbContext context, InvestmentPortfolioDto portfolio, int userId)
+        {
+            var fromBank = (await context.BankConnectionInvestments
+                .Where(l => l.UserId == userId && l.InvestmentId != null
+                    && (l.Status == EnumBankInvestmentLinkStatus.Active || l.Status == EnumBankInvestmentLinkStatus.Closed))
+                .Select(l => l.InvestmentId!.Value)
+                .ToListAsync()).ToHashSet();
+
+            foreach (var investment in portfolio.Investments)
+                investment.FromBank = fromBank.Contains(investment.Id);
+            return portfolio;
         }
 
         /// <summary>

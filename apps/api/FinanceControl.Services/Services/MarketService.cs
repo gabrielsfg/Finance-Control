@@ -81,7 +81,7 @@ namespace FinanceControl.Services.Services
 
                 // Rank by a stored fundamental metric — order/limit in the DB via the join.
                 var fq = context.MarketAssets
-                    .Where(a => a.CurrentPrice > 0 && a.Fundamentals != null
+                    .Where(a => a.OwnerUserId == null && a.CurrentPrice > 0 && a.Fundamentals != null
                                 && a.Fundamentals.FetchedAt >= staleCutoff);
                 if (parsedType.HasValue)
                     fq = fq.Where(a => a.AssetType == parsedType.Value);
@@ -111,7 +111,7 @@ namespace FinanceControl.Services.Services
                 var needsHistory = sort is "change_desc" or "change_asc";
                 var poolSize = needsHistory ? limit * 5 : limit;
 
-                var q = context.MarketAssets.Where(a => a.CurrentPrice > 0);
+                var q = context.MarketAssets.Where(a => a.OwnerUserId == null && a.CurrentPrice > 0);
                 if (parsedType.HasValue)
                     q = q.Where(a => a.AssetType == parsedType.Value);
 
@@ -245,7 +245,9 @@ namespace FinanceControl.Services.Services
 
             var q = query.Trim().ToUpperInvariant();
 
+            // Private assets (a user's bank positions) are nobody else's business.
             var assets = await context.MarketAssets
+                .Where(a => a.OwnerUserId == null)
                 .Where(a =>
                     a.Ticker.ToUpper().Contains(q) ||
                     a.Name.ToUpper().Contains(q) ||
@@ -261,7 +263,7 @@ namespace FinanceControl.Services.Services
             var qNorm = StripDiacritics(q);
             var existingIds = assets.Select(a => a.Id).ToHashSet();
             var currencyCandidates = await context.MarketAssets
-                .Where(a => a.AssetType == EnumAssetType.Moeda)
+                .Where(a => a.OwnerUserId == null && a.AssetType == EnumAssetType.Moeda)
                 .ToListAsync();
             var extraCurrencies = currencyCandidates.Where(a =>
                 !existingIds.Contains(a.Id) &&
@@ -317,7 +319,7 @@ namespace FinanceControl.Services.Services
             var t = ticker.Trim().ToUpperInvariant();
 
             var asset = await context.MarketAssets
-                .FirstOrDefaultAsync(a => a.Ticker == t)
+                .FirstOrDefaultAsync(a => a.Ticker == t && a.OwnerUserId == null)
                 ?? throw new KeyNotFoundException($"Ticker {ticker} not found.");
 
             var history = await context.MarketPriceHistories

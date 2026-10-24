@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { AssistantLauncher } from "@/features/assistant/components/AssistantLauncher";
+import { SubscriptionGate } from "@/features/subscription/components/SubscriptionGate";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { useEffect } from "react";
 
@@ -34,7 +35,7 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
             buttons and swallowed the clicks. Important because `.anim-fade` is
             unlayered CSS and would otherwise beat the utility. */}
         <div key={pathname} className="anim-fade h-full [animation-fill-mode:backwards]!">
-          {children}
+          <SubscriptionGate pathname={pathname}>{children}</SubscriptionGate>
         </div>
       </main>
       <AssistantLauncher />

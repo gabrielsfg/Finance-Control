@@ -1,7 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { siteDescription, siteName, siteTagline, siteUrl } from "@/lib/config/site";
+import {
+  siteDescription,
+  siteName,
+  siteTagline,
+  siteUrl,
+  siteVerification,
+} from "@/lib/config/site";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
 import "./globals.css";
 
@@ -58,6 +64,24 @@ export const metadata: Metadata = {
     description: siteDescription,
   },
   robots: { index: true, follow: true },
+  verification: {
+    google: siteVerification.google,
+    other: siteVerification.bing ? { "msvalidate.01": siteVerification.bing } : undefined,
+  },
+  // iOS ignores the web manifest for the home-screen title and status bar.
+  appleWebApp: { title: siteName, statusBarStyle: "black-translucent" },
+  // Safari turns long digit runs (amounts, account numbers) into tel: links otherwise.
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  // Browser chrome on mobile follows the page: white on the light public pages, graphite
+  // in the app's default dark theme.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#0E0F10" },
+  ],
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

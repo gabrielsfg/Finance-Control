@@ -3,6 +3,9 @@ using System.Security.Claims;
 using System.Text.Json;
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
+using FinanceControl.Domain.Interfaces.Services;
+using FinanceControl.Services.Billing;
+using Microsoft.Extensions.Options;
 using FinanceControl.Services.Ai.Tools;
 using FinanceControl.WebApi.Authentication;
 using ModelContextProtocol.Protocol;
@@ -51,6 +54,16 @@ namespace FinanceControl.WebApi.Mcp
 
             if (!int.TryParse(user?.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
                 return Error("Not authenticated.");
+
+            // Same paywall as the app: the connector stays authorised, but reads no data
+            // while the subscription is not active.
+            var billing = services.GetRequiredService<IOptions<BillingSettings>>().Value;
+            if (billing.EnforceAccess)
+            {
+                var access = await services.GetRequiredService<ISubscriptionAccessService>().GetAccessAsync(userId, cancellationToken);
+                if (!access.HasAccess)
+                    return Error("This Quantia account has no active subscription. Subscribe at the Quantia website to use this connector again.");
+            }
 
             var arguments = request.Params?.Arguments is { } args
                 ? new AiToolArguments(new Dictionary<string, JsonElement>(args))

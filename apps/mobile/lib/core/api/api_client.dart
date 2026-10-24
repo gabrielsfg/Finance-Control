@@ -8,18 +8,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 import '../storage/token_storage.dart';
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/subscription/providers/subscription_provider.dart';
 import 'api_endpoints.dart';
 
-final apiClientProvider = Provider<ApiClient>((ref) {
+final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
   final storage = ref.read(tokenStorageProvider);
   return ApiClient(
     storage,
     onUnauthorized: () => ref.read(authNotifierProvider.notifier).logout(),
+    // The paywall answered: refetch the subscription so the shell swaps the
+    // screen for the "subscribe on the website" notice.
+    onSubscriptionRequired: () => ref.invalidate(subscriptionProvider),
   );
 });
 
 class ApiClient {
-  ApiClient(TokenStorage storage, {required Future<void> Function() onUnauthorized}) {
+  ApiClient(
+    TokenStorage storage, {
+    required Future<void> Function() onUnauthorized,
+    void Function()? onSubscriptionRequired,
+  }) {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiEndpoints.baseUrl,
@@ -44,6 +52,9 @@ class ApiClient {
     _dio.interceptors.add(
       _AuthInterceptor(_dio, storage, onUnauthorized: onUnauthorized),
     );
+    if (onSubscriptionRequired != null) {
+      _dio.interceptors.add(_SubscriptionInterceptor(onSubscriptionRequired));
+    }
     if (!kReleaseMode) {
       _dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
     }
@@ -155,5 +166,22 @@ class _AuthInterceptor extends Interceptor {
     if (_sessionEnded) return;
     _sessionEnded = true;
     await onUnauthorized();
+  }
+}
+
+/// Notices the API's paywall (403 with error SUBSCRIPTION_REQUIRED) and reports it,
+/// leaving the error to propagate as usual.
+class _SubscriptionInterceptor extends Interceptor {
+  _SubscriptionInterceptor(this.onSubscriptionRequired);
+
+  final void Function() onSubscriptionRequired;
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    final data = err.response?.data;
+    if (err.response?.statusCode == 403 && data is Map && data['error'] == 'SUBSCRIPTION_REQUIRED') {
+      onSubscriptionRequired();
+    }
+    handler.next(err);
   }
 }

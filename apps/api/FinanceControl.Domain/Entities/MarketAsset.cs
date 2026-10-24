@@ -16,6 +16,14 @@ namespace FinanceControl.Domain.Entities
         public string? LogoUrl { get; set; }
         public string Currency { get; set; } = "BRL";
 
+        /// <summary>
+        /// Set on an asset that belongs to one user — a bank position imported through Open
+        /// Finance (a CDB, a fund) that no market quotes. Private assets never appear in the
+        /// market screens or searches and are never priced by Brapi; the bank sync prices
+        /// them. No foreign key: the rows are removed with the user's data explicitly.
+        /// </summary>
+        public int? OwnerUserId { get; set; }
+
         public ICollection<MarketPriceHistory> PriceHistory { get; set; } = [];
         public ICollection<MarketPriceIntraday> PriceIntraday { get; set; } = [];
         public ICollection<Investment> Investments { get; set; } = [];

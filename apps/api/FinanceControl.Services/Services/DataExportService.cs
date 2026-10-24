@@ -399,6 +399,21 @@ namespace FinanceControl.Services.Services
                 })
                 .ToListAsync();
 
+            var bankConnections = await _context.BankConnections
+                .AsNoTracking()
+                .Where(c => c.UserId == userId)
+                .OrderBy(c => c.CreatedAt)
+                .Select(c => new ExportBankConnectionDto
+                {
+                    Bank = c.ConnectorName,
+                    Status = c.Status,
+                    CreatedAt = c.CreatedAt,
+                    LastSyncedAt = c.LastSyncedAt,
+                    ConsentExpiresAt = c.ConsentExpiresAt,
+                    Accounts = c.Accounts.Select(a => a.Name).ToList()
+                })
+                .ToListAsync();
+
             return new UserDataExportResponseDto
             {
                 ExportedAt = DateTime.UtcNow,
@@ -420,7 +435,8 @@ namespace FinanceControl.Services.Services
                 Insights = insights,
                 AiContexts = aiContexts,
                 AiConversations = aiConversations,
-                McpConnections = mcpConnections
+                McpConnections = mcpConnections,
+                BankConnections = bankConnections
             };
         }
     }

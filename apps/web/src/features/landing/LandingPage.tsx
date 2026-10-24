@@ -4,6 +4,7 @@ import { LandingFeatures } from "@/features/landing/components/LandingFeatures";
 import { LandingHowItWorks } from "@/features/landing/components/LandingHowItWorks";
 import { LandingSecurity } from "@/features/landing/components/LandingSecurity";
 import { LandingCta } from "@/features/landing/components/LandingCta";
+import { LandingStructuredData } from "@/features/landing/components/LandingStructuredData";
 
 /**
  * Deliberately a server component — the one route in the app whose whole job is
@@ -16,6 +17,7 @@ import { LandingCta } from "@/features/landing/components/LandingCta";
 export function LandingPage() {
   return (
     <>
+      <LandingStructuredData />
       <LandingHeader />
       <main>
         <LandingHero />

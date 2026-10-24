@@ -1,5 +1,7 @@
-using FinanceControl.Data.Data;
+using FinanceControl.WebApi.Filters;
+using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Ai;
+using FinanceControl.Services.Billing;
 using FinanceControl.Services.Brapi;
 using FinanceControl.Services.Extensions;
 using FinanceControl.Shared.Dtos.Request;
@@ -8,7 +10,6 @@ using FinanceControl.WebApi.Extensions;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace FinanceControl.WebApi.Controllers
@@ -16,25 +17,26 @@ namespace FinanceControl.WebApi.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [SkipSubscriptionCheck]
     public class AdminController : BaseController
     {
         private readonly BrapiPriceUpdateJobService _jobService;
-        private readonly ApplicationDbContext _context;
+        private readonly ISubscriptionService _subscriptionService;
         private readonly AdminSettings _adminSettings;
-        private readonly IValidator<UpdateUserPlanRequestDto> _updateUserPlanValidator;
+        private readonly IValidator<GrantComplimentarySubscriptionRequestDto> _grantSubscriptionValidator;
         private readonly ILogger<AdminController> _logger;
 
         public AdminController(
             BrapiPriceUpdateJobService jobService,
-            ApplicationDbContext context,
+            ISubscriptionService subscriptionService,
             IOptions<AdminSettings> adminSettings,
-            IValidator<UpdateUserPlanRequestDto> updateUserPlanValidator,
+            IValidator<GrantComplimentarySubscriptionRequestDto> grantSubscriptionValidator,
             ILogger<AdminController> logger)
         {
             _jobService = jobService;
-            _context = context;
+            _subscriptionService = subscriptionService;
             _adminSettings = adminSettings.Value;
-            _updateUserPlanValidator = updateUserPlanValidator;
+            _grantSubscriptionValidator = grantSubscriptionValidator;
             _logger = logger;
         }
 
@@ -67,44 +69,43 @@ namespace FinanceControl.WebApi.Controllers
         }
 
         /// <summary>
-        /// Switches an account between Free and Premium.
+        /// Gives an account a complimentary subscription (no gateway, no charges) for a
+        /// number of months — for testing the paid features and for courtesy accounts.
         /// </summary>
         /// <remarks>
-        /// Provisional: this exists so the paid features can be exercised before the
-        /// payment gateway is built, and it goes away when the gateway takes over the
-        /// field. Gated by AdminSettings because the endpoint hands out a paid feature and
-        /// there is no role system to lean on — an unconfigured list denies everyone.
+        /// Gated by AdminSettings because it hands out a paid plan and there is no role
+        /// system to lean on — an unconfigured list denies everyone.
         /// </remarks>
-        [HttpPut("user/{id:int}/plan")]
-        public async Task<IActionResult> UpdateUserPlanAsync(
+        [HttpPut("user/{id:int}/subscription")]
+        public async Task<IActionResult> GrantSubscriptionAsync(
             int id,
-            [FromBody] UpdateUserPlanRequestDto requestDto)
+            [FromBody] GrantComplimentarySubscriptionRequestDto requestDto)
         {
             if (this.ValidatePositiveId(id, "id") is { } idError)
                 return idError;
 
-            var validationResult = _updateUserPlanValidator.Validate(requestDto);
+            var validationResult = _grantSubscriptionValidator.Validate(requestDto);
             if (validationResult.ToActionResult() is { } errorResult)
                 return errorResult;
 
             var callerId = GetUserId();
             if (!_adminSettings.IsAdmin(callerId))
             {
-                _logger.LogWarning("User {UserId} attempted to change the plan of user {TargetId}.", callerId, id);
+                _logger.LogWarning("User {UserId} attempted to grant a subscription to user {TargetId}.", callerId, id);
                 return Forbid();
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
-            if (user is null)
-                return NotFound(new { error = "User not found." });
-
-            user.Plan = requestDto.Plan;
-            await _context.SaveChangesAsync();
+            var result = await _subscriptionService.GrantComplimentaryAsync(requestDto, id);
+            if (result.IsFailure)
+                return result.Error == BillingErrors.UserNotFound
+                    ? NotFound(new { error = result.Error })
+                    : Conflict(new { error = result.Error });
 
             _logger.LogInformation(
-                "User {UserId} set the plan of user {TargetId} to {Plan}.", callerId, id, requestDto.Plan);
+                "User {UserId} granted {Plan} for {Months} month(s) to user {TargetId}.",
+                callerId, requestDto.Plan, requestDto.Months, id);
 
-            return Ok(new { id = user.Id, plan = user.Plan });
+            return Ok(result.Value);
         }
     }
 }

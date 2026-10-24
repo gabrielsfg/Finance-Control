@@ -49,7 +49,7 @@ export const ProfileAvatarCard = ({ profile }: Props) => {
                 color: isPremium ? "var(--gold)" : "var(--text-sub)",
               }}
             >
-              {isPremium ? "Premium" : "Free"}
+              {profile.plan ?? "Sem plano"}
             </span>
           </div>
           <div className="mt-[3px] font-mono text-[11px] text-[var(--text-sub)]">{profile.email}</div>

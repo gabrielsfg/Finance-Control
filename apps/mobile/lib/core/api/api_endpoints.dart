@@ -29,6 +29,9 @@ abstract class ApiEndpoints {
   static const String exportData = '/api/user/me/export';
   static String banks(String country) => '/api/banks?country=$country';
 
+  // Subscription — read-only on mobile; subscribing happens on the website.
+  static const String subscription = '/api/subscription';
+
   // Main page
   static const String mainPageSummary = '/api/mainpage/summary';
 

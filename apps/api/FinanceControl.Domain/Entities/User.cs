@@ -22,12 +22,9 @@ namespace FinanceControl.Domain.Entities
 
         public int FailedLoginAttempts { get; set; } = 0;
         public DateTime? LockoutEnd { get; set; }
-        /// <summary>
-        /// Entitlement for the paid features. Free is the only value the app itself ever
-        /// writes; Premium is set through the admin endpoint until the payment gateway
-        /// exists and takes over.
-        /// </summary>
-        public EnumUserPlan Plan { get; set; } = EnumUserPlan.Free;
+
+        // The plan is no longer a column here: it is whatever the live Subscription grants
+        // (see SubscriptionRules), so it can never drift from what was actually paid.
 
         /// <summary>
         /// The user's switch for every in-app AI feature (chat, analyses, import
@@ -36,6 +33,13 @@ namespace FinanceControl.Domain.Entities
         /// It does not touch the MCP connector, which the user authorises separately.
         /// </summary>
         public bool AiEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Opaque id sent to third parties that need to tag data with the user (Pluggy's
+        /// clientUserId), so neither the sequential id nor personal data leaves the app.
+        /// Created on first use.
+        /// </summary>
+        public Guid? ExternalRef { get; set; }
 
         public string PreferredCurrency { get; set; } = "BRL";
         public string PreferredLanguage { get; set; } = "pt-BR";

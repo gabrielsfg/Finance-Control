@@ -30,6 +30,8 @@ export type Investment = {
   assetType: AssetType;
   assetClass: string;
   broker: string | null;
+  /** Imported from a bank through Open Finance and kept up to date by the sync. */
+  fromBank: boolean;
   currentQuantity: number;
   averagePrice: number;
   currentPrice: number;

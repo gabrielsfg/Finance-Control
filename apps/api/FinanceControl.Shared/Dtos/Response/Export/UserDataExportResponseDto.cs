@@ -45,5 +45,8 @@ namespace FinanceControl.Shared.Dtos.Response.Export
 
         /// <summary>AI applications connected through the MCP connector, active or revoked.</summary>
         public List<ExportMcpConnectionDto> McpConnections { get; set; } = [];
+
+        /// <summary>Banks connected through Open Finance.</summary>
+        public List<ExportBankConnectionDto> BankConnections { get; set; } = [];
     }
 }

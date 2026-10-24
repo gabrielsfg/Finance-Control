@@ -24,6 +24,7 @@ import { useSubCategories } from "@/features/transactions/hooks/useSubCategories
 import { useBudgets } from "@/features/budgets/hooks/useBudgets";
 import { useActiveBudget } from "@/features/budgets/hooks/useActiveBudget";
 import { useTags } from "@/features/transactions/hooks/useTags";
+import { ReviewBanner } from "@/features/open-finance/components/ReviewBanner";
 import { getCategoryColor } from "@/lib/config/categoryColors";
 import { parseLocalDate } from "@/lib/utils/budgetPeriod";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
@@ -60,6 +61,9 @@ const TYPE_FILTER_LABELS: Record<TransactionsFilter["typeFilter"], string> = {
  * boundary for Next to fall back to on the server and hydrate on the client.
  * Same shape as MarketRankingPage.
  */
+const REVIEW_RANGE_START = "2000-01-01";
+const REVIEW_RANGE_END = "2100-12-31";
+
 export function TransactionsPage() {
   return (
     <Suspense
@@ -84,6 +88,8 @@ function TransactionsContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  // Bank-synced rows waiting for confirmation, from any date ("?review=1" links here).
+  const [reviewOnly, setReviewOnly] = useState(() => searchParams.get("review") === "1");
 
   const [exportState, setExportState] = useState<ExportState>("idle");
   const [drawerOpen, setDrawerOpen] = useState(() => searchParams.get("new") === "1");
@@ -174,9 +180,11 @@ function TransactionsContent() {
    * Shared with the export, which sends the same object minus the paging.
    */
   const queryFilters = {
-    // A day picked from the calendar is just a one-day range.
-    startDate: filterDay ?? start,
-    finishDate: filterDay ?? finish,
+    // A day picked from the calendar is just a one-day range. Review mode ignores the
+    // period: a row to confirm is worth showing whatever month it fell in.
+    startDate: reviewOnly ? REVIEW_RANGE_START : filterDay ?? start,
+    finishDate: reviewOnly ? REVIEW_RANGE_END : filterDay ?? finish,
+    needsReview: reviewOnly ? true : undefined,
     budgetIds: filter.budgetIds.length > 0 ? filter.budgetIds : undefined,
     hasBudget: filter.budgetInclusion === "all" ? undefined : filter.budgetInclusion === "in",
     accountIds: filter.accountIds.length > 0 ? filter.accountIds : undefined,
@@ -404,6 +412,12 @@ function TransactionsContent() {
             ))}
           </div>
         )}
+
+        <ReviewBanner
+          active={reviewOnly}
+          onToggle={(active) => { setReviewOnly(active); setPage(1); }}
+          visible={items}
+        />
 
         <TransactionsSummary
           totalIncome={totalIncome}

@@ -1,4 +1,4 @@
-﻿using FinanceControl.Domain.Entities;
+using FinanceControl.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using FinanceControl.Domain.Common;
 
@@ -42,6 +42,16 @@ namespace FinanceControl.Data.Data
         public DbSet<UserInsight> UserInsights { get; set; }
         public DbSet<UserAiContext> UserAiContexts { get; set; }
         public DbSet<AiGenerationLog> AiGenerationLogs { get; set; }
+        public DbSet<BillingProfile> BillingProfiles { get; set; }
+        public DbSet<Subscription> Subscriptions { get; set; }
+        public DbSet<SubscriptionCharge> SubscriptionCharges { get; set; }
+        public DbSet<AsaasWebhookEvent> AsaasWebhookEvents { get; set; }
+        public DbSet<BankConnection> BankConnections { get; set; }
+        public DbSet<BankConnectionAccount> BankConnectionAccounts { get; set; }
+        public DbSet<BankConnectionInvestment> BankConnectionInvestments { get; set; }
+        public DbSet<IgnoredExternalTransaction> IgnoredExternalTransactions { get; set; }
+        public DbSet<PluggyWebhookEvent> PluggyWebhookEvents { get; set; }
+        public DbSet<BillingEmailLog> BillingEmailLogs { get; set; }
         public DbSet<AiConversation> AiConversations { get; set; }
         public DbSet<AiMessage> AiMessages { get; set; }
         public DbSet<AiPendingAction> AiPendingActions { get; set; }

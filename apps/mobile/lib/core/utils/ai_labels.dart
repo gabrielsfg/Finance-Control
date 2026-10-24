@@ -1,11 +1,11 @@
 /// Copy for the AI features that more than one widget shows.
 library;
 
-/// "12/200 mensagens este mês".
+/// "12/150 mensagens este mês".
 String aiUsageLabel(int used, int limit) =>
     limit > 0 ? '$used/$limit mensagens este mês' : '$used mensagens este mês';
 
-/// "Você usou as 200 mensagens deste mês".
+/// "Você usou as 150 mensagens deste mês".
 String aiChatQuotaLabel(int? limit) => limit != null && limit > 0
     ? 'Você usou as $limit mensagens deste mês'
     : 'Você usou todas as mensagens deste mês';

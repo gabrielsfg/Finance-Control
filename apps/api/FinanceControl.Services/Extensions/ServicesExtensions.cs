@@ -1,12 +1,16 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Ai;
 using FinanceControl.Services.Ai.Tools;
+using FinanceControl.Services.Asaas;
+using FinanceControl.Services.Billing;
 using FinanceControl.Services.Brapi;
 using FinanceControl.Services.Email;
 using FinanceControl.Services.Investments;
 using FinanceControl.Services.Mcp;
+using FinanceControl.Services.Pluggy;
+using FinanceControl.Services.Retention;
 using FinanceControl.Services.Seeds;
 using FinanceControl.Services.Services;
 using Microsoft.Extensions.Configuration;
@@ -91,7 +95,70 @@ namespace FinanceControl.Services.Extensions
             services.AddSingleton<BrapiPriceUpdateJobService>();
             services.AddSingleton<BrapiCleanupJobService>();
 
+            AddBilling(services, configuration);
+            AddOpenFinance(services, configuration);
+
             return services;
+        }
+
+        private static void AddBilling(IServiceCollection services, IConfiguration configuration)
+        {
+            services.Configure<AsaasSettings>(configuration.GetSection("AsaasSettings"));
+            services.Configure<BillingSettings>(configuration.GetSection("BillingSettings"));
+            services.Configure<TurnstileSettings>(configuration.GetSection("TurnstileSettings"));
+
+            services.AddHttpClient<AsaasClient>((provider, client) =>
+            {
+                var settings = provider.GetRequiredService<IOptions<AsaasSettings>>().Value;
+
+                // Relative paths ("payments") only resolve under the base when it ends in a slash.
+                client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+                client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(settings.UserAgent);
+
+                // A missing key is a supported state (local dev without Asaas): the client
+                // refuses every call itself instead of sending an empty header.
+                if (!string.IsNullOrWhiteSpace(settings.ApiKey))
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("access_token", settings.ApiKey);
+            });
+            services.AddHttpClient<TurnstileVerifier>(client => client.Timeout = TimeSpan.FromSeconds(10));
+
+            services.AddSingleton<BillingSecrets>();
+            services.AddScoped<BillingNotifier>();
+            services.AddScoped<BillingEngine>();
+            services.AddScoped<ISubscriptionService, SubscriptionService>();
+            services.AddScoped<ISubscriptionAccessService, SubscriptionAccessService>();
+
+            services.AddSingleton<SubscriptionBillingJobService>();
+            services.AddSingleton<AsaasWebhookProcessorJobService>();
+        }
+
+        private static void AddOpenFinance(IServiceCollection services, IConfiguration configuration)
+        {
+            services.Configure<PluggySettings>(configuration.GetSection("PluggySettings"));
+            services.Configure<OpenFinanceSettings>(configuration.GetSection("OpenFinanceSettings"));
+
+            // The key lives two hours; the typed client is per request, its cache is not.
+            services.AddSingleton<PluggyApiKeyCache>();
+            services.AddHttpClient<PluggyClient>((provider, client) =>
+            {
+                var settings = provider.GetRequiredService<IOptions<PluggySettings>>().Value;
+
+                // Relative paths ("items/...") only resolve under the base when it ends in a slash.
+                client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+                client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+            });
+
+            services.AddScoped<OpenFinanceInvestmentSyncService>();
+            services.AddScoped<OpenFinanceSyncService>();
+            services.AddScoped<IOpenFinanceService, OpenFinanceService>();
+
+            services.AddSingleton<OpenFinanceWebhookProcessorJobService>();
+            services.AddSingleton<OpenFinanceMaintenanceJobService>();
+            services.AddSingleton<OpenFinanceEntitlementJobService>();
+
+            services.Configure<DataRetentionSettings>(configuration.GetSection("DataRetentionSettings"));
+            services.AddSingleton<DataRetentionJobService>();
         }
     }
 }

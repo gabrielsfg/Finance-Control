@@ -34,6 +34,7 @@ namespace FinanceControl.Data.Mappings
 
             // One global row per ticker — the dedup guarantee.
             builder.HasIndex(a => a.Ticker).IsUnique();
+            builder.HasIndex(a => a.OwnerUserId);
         }
     }
 }

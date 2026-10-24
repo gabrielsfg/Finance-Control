@@ -22,6 +22,9 @@ namespace FinanceControl.Domain.Interfaces.Services
         Task<Result<CreateTransactionResponseDto>> UpdateTransactionAsync(UpdateTransactionRequestDto requestDto, int id, int userId);
         Task<Result<IEnumerable<GetTransactionResponseDto>>> DeleteTransactionAsync(int id, int userId);
 
+        /// Confirms bank-synced transactions as they are. Returns how many were still pending review.
+        Task<Result<int>> MarkReviewedAsync(ReviewTransactionsRequestDto requestDto, int userId);
+
         /// <summary>
         /// Main Page Endpoints
         /// </summary>

@@ -1,4 +1,5 @@
 ﻿using FinanceControl.Domain.Entities;
+using FinanceControl.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
@@ -27,6 +28,17 @@ namespace FinanceControl.Data.Mappings
                 .HasConversion<string>();
             builder.Property(t => t.InstallmentNumber);
             builder.Property(t => t.TotalInstallments);
+            builder.Property(t => t.Source)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(EnumTransactionSource.Manual)
+                .IsRequired();
+            builder.Property(t => t.ExternalId).HasMaxLength(100);
+            builder.Property(t => t.ExternalCounterpartId).HasMaxLength(100);
+            builder.Property(t => t.ExternalProviderId).HasMaxLength(200);
+            builder.Property(t => t.NeedsReview).HasDefaultValue(false).IsRequired();
+            builder.Property(t => t.ExternalModified).HasDefaultValue(false).IsRequired();
+            builder.Property(t => t.PossibleDuplicate).HasDefaultValue(false).IsRequired();
             builder.Property(t => t.CreatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("now()")
@@ -77,6 +89,18 @@ namespace FinanceControl.Data.Mappings
                 .HasDatabaseName("IX_Transactions_UserId_Type_TransactionDate");
             builder.HasIndex(t => new { t.UserId, t.PaymentType, t.TransactionDate })
                 .HasDatabaseName("IX_Transactions_UserId_PaymentType_TransactionDate");
+
+            // Bank sync upserts on it; the uniqueness is the last line against a row
+            // imported twice by two overlapping syncs.
+            builder.HasIndex(t => new { t.UserId, t.ExternalId })
+                .IsUnique()
+                .HasFilter("\"ExternalId\" IS NOT NULL")
+                .HasDatabaseName("IX_Transactions_UserId_ExternalId");
+
+            // The "to review" badge counts these on every screen load.
+            builder.HasIndex(t => new { t.UserId, t.NeedsReview })
+                .HasFilter("\"NeedsReview\"")
+                .HasDatabaseName("IX_Transactions_UserId_NeedsReview");
         }
     }
 }

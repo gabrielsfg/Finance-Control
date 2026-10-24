@@ -1,4 +1,5 @@
 using FinanceControl.Data.Data;
+using FinanceControl.Services.Billing;
 using FinanceControl.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,7 +9,7 @@ namespace FinanceControl.Services.Ai
     /// The entitlement check every in-app AI feature runs before it touches user data.
     /// </summary>
     /// <remarks>
-    /// Callers must run this before building any payload: a Free account, or one that
+    /// Callers must run this before building any payload: an account without Premium, or one that
     /// switched the AI off, never has its data serialized for a model, let alone sent.
     /// Quotas are feature-specific and stay with each caller.
     /// </remarks>
@@ -25,16 +26,18 @@ namespace FinanceControl.Services.Ai
 
         public async Task<EnumAiAvailability> CheckAsync(int userId)
         {
-            var user = await _context.Users
+            var aiEnabled = await _context.Users
                 .AsNoTracking()
                 .Where(u => u.Id == userId)
-                .Select(u => new { u.Plan, u.AiEnabled })
+                .Select(u => (bool?)u.AiEnabled)
                 .FirstOrDefaultAsync();
 
-            if (user is null || user.Plan != EnumUserPlan.Premium)
+            // Premium means an active subscription on the Premium plan — see SubscriptionRules.
+            var access = await SubscriptionRules.GetAccessAsync(_context, userId, DateTime.UtcNow);
+            if (aiEnabled is null || !access.IsPremium)
                 return EnumAiAvailability.NotPremium;
 
-            if (!user.AiEnabled)
+            if (!aiEnabled.Value)
                 return EnumAiAvailability.AiDisabled;
 
             if (!_client.IsConfigured)

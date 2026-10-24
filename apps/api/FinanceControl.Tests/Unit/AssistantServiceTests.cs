@@ -18,13 +18,22 @@ namespace FinanceControl.Tests.Unit
     public class AssistantServiceTests
     {
         private static (AssistantService Service, ApplicationDbContext Context) Create(
-            EnumUserPlan plan,
+            EnumSubscriptionPlan? plan,
             bool aiEnabled,
             bool configured,
             int monthlyLimit = 200)
         {
             var context = DbContextHelper.CreateInMemory();
-            context.Users.Add(new User { Id = 1, Email = "a@b.com", Name = "Ana", PasswordHash = "x", Plan = plan, AiEnabled = aiEnabled });
+            context.Users.Add(new User { Id = 1, Email = "a@b.com", Name = "Ana", PasswordHash = "x", AiEnabled = aiEnabled });
+            if (plan is not null)
+                context.Subscriptions.Add(new Subscription
+                {
+                    UserId = 1,
+                    Plan = plan.Value,
+                    Status = EnumSubscriptionStatus.Active,
+                    CurrentPeriodStart = DateTime.UtcNow.AddDays(-1),
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(29)
+                });
             context.SaveChanges();
 
             var settings = Options.Create(new AnthropicSettings
@@ -49,7 +58,7 @@ namespace FinanceControl.Tests.Unit
         [Fact]
         public async Task FreePlan_GetsNotPremium_AndNothingIsStored()
         {
-            var (service, context) = Create(EnumUserPlan.Free, aiEnabled: true, configured: true);
+            var (service, context) = Create(null, aiEnabled: true, configured: true);
 
             var result = await service.SendMessageAsync(Question, 1);
 
@@ -61,7 +70,7 @@ namespace FinanceControl.Tests.Unit
         [Fact]
         public async Task AiSwitchedOff_GetsAiDisabled_AndNothingIsStored()
         {
-            var (service, context) = Create(EnumUserPlan.Premium, aiEnabled: false, configured: true);
+            var (service, context) = Create(EnumSubscriptionPlan.Premium, aiEnabled: false, configured: true);
 
             var result = await service.SendMessageAsync(Question, 1);
 
@@ -72,7 +81,7 @@ namespace FinanceControl.Tests.Unit
         [Fact]
         public async Task IntegrationOff_GetsUnavailable()
         {
-            var (service, context) = Create(EnumUserPlan.Premium, aiEnabled: true, configured: false);
+            var (service, context) = Create(EnumSubscriptionPlan.Premium, aiEnabled: true, configured: false);
 
             var result = await service.SendMessageAsync(Question, 1);
 
@@ -83,7 +92,7 @@ namespace FinanceControl.Tests.Unit
         [Fact]
         public async Task MonthlyLimitReached_GetsQuotaExceeded()
         {
-            var (service, context) = Create(EnumUserPlan.Premium, aiEnabled: true, configured: true, monthlyLimit: 2);
+            var (service, context) = Create(EnumSubscriptionPlan.Premium, aiEnabled: true, configured: true, monthlyLimit: 2);
             for (var i = 0; i < 2; i++)
             {
                 context.AiGenerationLogs.Add(new AiGenerationLog
@@ -107,7 +116,7 @@ namespace FinanceControl.Tests.Unit
         [Fact]
         public async Task ConfirmingAnotherUsersAction_IsRefused()
         {
-            var (service, context) = Create(EnumUserPlan.Premium, aiEnabled: true, configured: true);
+            var (service, context) = Create(EnumSubscriptionPlan.Premium, aiEnabled: true, configured: true);
             context.Users.Add(new User { Id = 2, Email = "c@d.com", Name = "Bia", PasswordHash = "x" });
             var conversation = new AiConversation { UserId = 2, Title = "t", LastMessageAt = DateTime.UtcNow };
             context.AiConversations.Add(conversation);
@@ -132,7 +141,7 @@ namespace FinanceControl.Tests.Unit
         [Fact]
         public async Task ExpiredAction_CannotBeConfirmed()
         {
-            var (service, context) = Create(EnumUserPlan.Premium, aiEnabled: true, configured: true);
+            var (service, context) = Create(EnumSubscriptionPlan.Premium, aiEnabled: true, configured: true);
             var conversation = new AiConversation { UserId = 1, Title = "t", LastMessageAt = DateTime.UtcNow };
             context.AiConversations.Add(conversation);
             context.SaveChanges();

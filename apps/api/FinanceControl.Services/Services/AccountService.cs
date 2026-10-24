@@ -1,5 +1,6 @@
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
+using FinanceControl.Services.Helpers;
 using FinanceControl.Shared.Enums;
 using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Shared.Dtos.Others;
@@ -14,7 +15,6 @@ namespace FinanceControl.Services.Services
     public class AccountService : IAccountService
     {
         /// <summary>Name of the system category/subcategory seeded for balance corrections.</summary>
-        private const string BalanceUpdateName = "BalanceUpdate";
 
         private readonly ApplicationDbContext _context;
 
@@ -99,6 +99,40 @@ namespace FinanceControl.Services.Services
                     CreditLimit = a.CreditLimit
                 })
                 .ToListAsync();
+
+            // One query for every bank link, so the list stays two round trips whatever
+            // the number of accounts.
+            var accountIds = accounts.Select(a => a.Id).ToList();
+            var links = await _context.BankConnectionAccounts
+                .AsNoTracking()
+                .Where(b => b.UserId == userId
+                    && b.Status == EnumBankAccountLinkStatus.Linked
+                    && b.AccountId != null
+                    && accountIds.Contains(b.AccountId.Value)
+                    && b.BankConnection.Status != EnumBankConnectionStatus.Disconnected)
+                .Select(b => new
+                {
+                    AccountId = b.AccountId!.Value,
+                    b.BankConnectionId,
+                    b.BankConnection.ConnectorName,
+                    b.BankConnection.ConnectorImageUrl,
+                    b.BankConnection.Status,
+                    b.BankConnection.LastSyncedAt,
+                    b.ExternalBalance
+                })
+                .ToListAsync();
+
+            foreach (var link in links)
+            {
+                var account = accounts.First(a => a.Id == link.AccountId);
+                account.IsConnected = true;
+                account.BankConnectionId = link.BankConnectionId;
+                account.ConnectorName = link.ConnectorName;
+                account.ConnectorImageUrl = link.ConnectorImageUrl;
+                account.ConnectionStatus = link.Status;
+                account.LastSyncedAt = link.LastSyncedAt;
+                account.ExternalBalance = link.ExternalBalance;
+            }
 
             return accounts;
         }
@@ -222,37 +256,8 @@ namespace FinanceControl.Services.Services
         /// subcategory with those names, so lowering an account balance silently wrote
         /// nothing and the balance stayed put.
         /// </summary>
-        private async Task<int> GetBalanceUpdateSubCategoryIdAsync(int userId)
-        {
-            var existing = await _context.SubCategories
-                .Where(s => s.UserId == userId && s.IsSystem && s.Name == BalanceUpdateName)
-                .Select(s => (int?)s.Id)
-                .FirstOrDefaultAsync();
-
-            if (existing.HasValue)
-                return existing.Value;
-
-            var category = await _context.Categories
-                .FirstOrDefaultAsync(c => c.UserId == userId && c.IsSystem && c.Name == BalanceUpdateName);
-
-            if (category is null)
-            {
-                category = new Category { UserId = userId, Name = BalanceUpdateName, IsSystem = true };
-                _context.Categories.Add(category);
-                await _context.SaveChangesAsync();
-            }
-
-            var subCategory = new SubCategory
-            {
-                UserId = userId,
-                CategoryId = category.Id,
-                Name = BalanceUpdateName,
-                IsSystem = true,
-            };
-            _context.SubCategories.Add(subCategory);
-            await _context.SaveChangesAsync();
-            return subCategory.Id;
-        }
+        private Task<int> GetBalanceUpdateSubCategoryIdAsync(int userId) =>
+            BalanceUpdateSubCategoryHelper.GetIdAsync(_context, userId);
 
         public async Task<Result<IEnumerable<GetAccountItemResponseDto>>> DeleteAccountByIdAsync(int id, int userId)
         {

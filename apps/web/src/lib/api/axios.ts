@@ -1,5 +1,5 @@
 import axios from "axios";
-import { clearPersistedQueryCache } from "@/lib/queryClient";
+import { clearPersistedQueryCache, getQueryClient } from "@/lib/queryClient";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api";
 
@@ -141,6 +141,13 @@ api.interceptors.response.use(
         clearPersistedQueryCache();
         await useAuthStore.getState().logout();
       }
+    }
+
+    // The paywall answered. Refetch the subscription so the layout swaps the page for
+    // the "subscribe to continue" screen — the state changed under us (a renewal that
+    // was not paid, a refund) and every other query on the page would just keep failing.
+    if (error.response?.status === 403 && error.response?.data?.error === "SUBSCRIPTION_REQUIRED") {
+      getQueryClient().invalidateQueries({ queryKey: ["subscription"] });
     }
 
     return Promise.reject(error);

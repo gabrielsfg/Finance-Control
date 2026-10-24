@@ -280,6 +280,18 @@ namespace FinanceControl.Services.Seeds
                 .ToArray();
         }
 
+        /// <summary>
+        /// Every locale's name for a default category or subcategory key — how a default is
+        /// found again in a user's list, whatever language it was seeded in.
+        /// </summary>
+        public static IReadOnlyList<string> GetLabels(string key) =>
+            _labels.Values
+                .Select(map => map.TryGetValue(key, out var label) ? label : null)
+                .Where(label => label is not null)
+                .Select(label => label!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
         public static string GetWalletName(string? preferredLanguage)
         {
             var map = GetLocale(preferredLanguage);

@@ -300,6 +300,15 @@ namespace FinanceControl.Tests.Integration
                 if (!await context.Users.AnyAsync(u => u.Id == 1))
                 {
                     context.Users.Add(new User { Id = 1, Email = "ana@test.com", Name = "Ana", PasswordHash = "x" });
+                    // The connector sits behind the same paywall as the app.
+                    context.Subscriptions.Add(new Subscription
+                    {
+                        UserId = 1,
+                        Plan = FinanceControl.Shared.Enums.EnumSubscriptionPlan.Basic,
+                        Status = FinanceControl.Shared.Enums.EnumSubscriptionStatus.Active,
+                        CurrentPeriodStart = DateTime.UtcNow.AddDays(-1),
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(29)
+                    });
                     context.Tags.Add(new Tag { UserId = 1, Name = "Viagem" });
                     await context.SaveChangesAsync();
                 }

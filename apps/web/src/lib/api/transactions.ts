@@ -42,4 +42,10 @@ export const transactionsApi = {
   delete: async (id: number): Promise<void> => {
     await api.delete(`/transaction/${id}`);
   },
+
+  /** Confirms bank-synced transactions as they are. */
+  markReviewed: async (ids: number[]): Promise<{ updated: number }> => {
+    const res = await api.post<{ updated: number }>("/transaction/review", { ids });
+    return res.data;
+  },
 };

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers/overlay_provider.dart';
 import '../../features/ai/presentation/assistant_speed_dial.dart';
+import '../../features/subscription/presentation/subscription_gate.dart';
 import 'app_widgets.dart';
 
 class AppShell extends ConsumerWidget {
@@ -30,7 +31,9 @@ class AppShell extends ConsumerWidget {
       child: Scaffold(
         extendBody: true,
         backgroundColor: Colors.transparent,
-        body: child,
+        // The paywall wraps the tab content only — the nav bar stays, so the user can
+        // still reach the menu and the profile (export, delete account).
+        body: SubscriptionGate(location: location, child: child),
         // One button: it opens upwards with "create" and "chat com IA".
         floatingActionButton: overlayOpen
             ? null
