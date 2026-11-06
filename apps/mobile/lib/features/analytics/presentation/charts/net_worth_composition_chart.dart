@@ -14,7 +14,7 @@ class NetWorthCompositionChart extends ConsumerWidget {
 
   final bool compact;
 
-  // Quantia categorical palette — cycled across the stacked account segments.
+  // Helmo categorical palette — cycled across the stacked account segments.
   List<Color> _paletteFor(AppThemeTokens t) => [
         t.accent,
         t.moss,

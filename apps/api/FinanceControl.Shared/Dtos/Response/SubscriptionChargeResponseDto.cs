@@ -19,6 +19,12 @@ namespace FinanceControl.Shared.Dtos.Response
         public DateTime? ConfirmedAt { get; set; }
         public DateTime? RefundedAt { get; set; }
 
+        /// Cents returned, when refunded in full or in part.
+        public int? RefundedAmount { get; set; }
+
+        /// The NFS-e PDF, once the city has authorized it.
+        public string? InvoicePdfUrl { get; set; }
+
         /// Asaas' payment page (works for Pix and Boleto).
         public string? InvoiceUrl { get; set; }
         public string? BankSlipUrl { get; set; }

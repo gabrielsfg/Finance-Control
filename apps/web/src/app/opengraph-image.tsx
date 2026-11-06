@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { siteName, siteTagline } from "@/lib/config/site";
 
@@ -8,12 +10,16 @@ export const contentType = "image/png";
 /**
  * Generated rather than a checked-in PNG so the card can never drift from the
  * brand tokens. Satori has no access to next/font, so this leans on weight and
- * spacing instead of the display face — the seal carries the identity.
+ * spacing instead of the display face — the helm carries the identity. Satori
+ * cannot fetch a relative URL, so the mark goes in as a data URI.
  *
  * Every element declares `display: flex`: Satori has no block layout and throws
  * on a div with more than one child otherwise.
  */
-export default function OpengraphImage() {
+export default async function OpengraphImage() {
+  const mark = await readFile(join(process.cwd(), "public/brand/helmo-mark.png"));
+  const markSrc = `data:image/png;base64,${mark.toString("base64")}`;
+
   return new ImageResponse(
     <div
       style={{
@@ -28,15 +34,23 @@ export default function OpengraphImage() {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-        <svg width="72" height="72" viewBox="0 0 36 36" fill="none">
-          <rect width="36" height="36" rx="9" fill="#1F3CE0" />
-          <path d="M0 9C0 4 4 0 9 0H18A18 18 0 0 1 0 18Z" fill="#EFEBE1" />
-          <path d="M36 27c0 5-4 9-9 9H18A18 18 0 0 1 36 18Z" fill="#EFEBE1" />
-          <circle cx="18" cy="18" r="3.4" fill="#2C6B57" />
-        </svg>
-        <div style={{ display: "flex", fontSize: 46, fontWeight: 700, letterSpacing: -1.5 }}>
-          <span>Quan</span>
-          <span style={{ color: "#8197FF" }}>tia</span>
+        {/* White tile: the indigo helm loses contrast straight on the dark gradient. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 76,
+            height: 76,
+            borderRadius: 18,
+            background: "#FFFFFF",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- Satori renders plain img only */}
+          <img src={markSrc} width={50} height={58} alt="" />
+        </div>
+        <div style={{ display: "flex", fontSize: 50, fontWeight: 500, letterSpacing: -1 }}>
+          helmo
         </div>
       </div>
 

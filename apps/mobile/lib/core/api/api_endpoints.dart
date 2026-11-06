@@ -21,6 +21,10 @@ abstract class ApiEndpoints {
 
   // Anonymous — the registration screen links to these before an account exists.
   static String legalDocument(String type) => '/api/legal/$type';
+  static String legalDocumentVersions(String type) => '/api/legal/$type/versions';
+  // Signed in, but open without a subscription — re-accepting updated documents.
+  static const String legalPending = '/api/legal/pending';
+  static const String legalAccept = '/api/legal/accept';
   static const String userProfile = '/api/user/profile';
   static const String deleteAccount = '/api/user/me';
   static const String resetData = '/api/user/me/reset-data';
@@ -150,7 +154,7 @@ abstract class ApiEndpoints {
   static const String importParse = '/api/import/parse';
   static const String importConfirm = '/api/import/confirm';
 
-  // AI — weekly analyses and the "IA no Quantia" settings (InsightController)
+  // AI — weekly analyses and the "IA no Helmo" settings (InsightController)
   static const String insightSpending = '/api/insight/spending';
   static const String insightPortfolio = '/api/insight/portfolio';
   static const String insights = '/api/insight';

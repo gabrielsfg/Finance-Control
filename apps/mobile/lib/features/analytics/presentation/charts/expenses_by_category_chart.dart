@@ -23,7 +23,7 @@ class _ExpensesByCategoryChartState
     extends ConsumerState<ExpensesByCategoryChart> {
   int? _touched;
 
-  // Quantia categorical palette — cycled across the pie slices.
+  // Helmo categorical palette — cycled across the pie slices.
   List<Color> _paletteFor(AppThemeTokens t) => [
         t.accent,
         t.moss,

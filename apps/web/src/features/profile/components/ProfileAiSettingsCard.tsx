@@ -18,18 +18,18 @@ import {
   useUpdateAiSettings,
 } from "@/features/insights/hooks/useInsight";
 import { useDeleteAllConversations } from "@/features/assistant/hooks/useAssistant";
+import { useSubscription } from "@/features/subscription/hooks/useSubscription";
 
 const SENT = [
   "Transações, separadas por conta",
   "Nome e saldo das contas (ex.: Nubank)",
   "Categorias, orçamentos e metas",
   "Investimentos",
-  "Seu primeiro nome",
 ];
 
 const NEVER_SENT = [
   "CPF e documentos",
-  "E-mail",
+  "Seu nome e e-mail",
   "Número de cartão",
   "Agência e número da conta bancária",
   "Senhas e códigos de acesso",
@@ -39,13 +39,17 @@ const NEVER_SENT = [
 type PendingDelete = "insights" | "conversations" | null;
 
 /**
- * "IA no Quantia": the user's switch for every in-app AI feature, and a plain account of
+ * "IA no Helmo": the user's switch for every in-app AI feature, and a plain account of
  * what leaves the app when it is on. Said here rather than only in the privacy policy —
  * the switch is where the decision is made, so the explanation has to sit next to it.
  */
 export const ProfileAiSettingsCard = () => {
   const { data: settings, isLoading, isError } = useAiSettings();
   const update = useUpdateAiSettings();
+  // Without a subscription the card stays open for the LGPD actions (see and delete what is
+  // stored); the switch needs an active plan, since the API refuses that call.
+  const { data: subscription } = useSubscription();
+  const locked = subscription ? !subscription.hasAccess : false;
   const deleteInsights = useDeleteInsights();
   const deleteConversations = useDeleteAllConversations();
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
@@ -53,7 +57,7 @@ export const ProfileAiSettingsCard = () => {
   const [doneMessage, setDoneMessage] = useState<string | null>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
 
-  // "Perfil → IA no Quantia" links land here with a hash. The page renders behind a
+  // "Perfil → IA no Helmo" links land here with a hash. The page renders behind a
   // loading state first, so the browser's own jump finds nothing — scroll once mounted.
   useEffect(() => {
     if (window.location.hash === "#ai-settings") {
@@ -90,15 +94,15 @@ export const ProfileAiSettingsCard = () => {
     <div id="ai-settings" ref={anchorRef} className="scroll-mt-6">
       <Card>
         <CardHead
-          title="IA no Quantia"
+          title="IA no Helmo"
           subtitle="Análises semanais, assistente e categorização da importação"
           right={
             settings && (
               <Switch
                 value={settings.aiEnabled}
                 onChange={(aiEnabled) => update.mutate({ aiEnabled })}
-                disabled={update.isPending}
-                aria-label="Usar IA no Quantia"
+                disabled={update.isPending || locked}
+                aria-label="Usar IA no Helmo"
               />
             )
           }

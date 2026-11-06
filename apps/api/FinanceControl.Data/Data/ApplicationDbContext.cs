@@ -60,6 +60,9 @@ namespace FinanceControl.Data.Data
         public DbSet<McpGrant> McpGrants { get; set; }
         public DbSet<McpPersonalToken> McpPersonalTokens { get; set; }
         public DbSet<McpAccessLog> McpAccessLogs { get; set; }
+        public DbSet<AccessLog> AccessLogs { get; set; }
+        public DbSet<TrialUsage> TrialUsages { get; set; }
+        public DbSet<BillingRecord> BillingRecords { get; set; }
 
         public override int SaveChanges()
         {

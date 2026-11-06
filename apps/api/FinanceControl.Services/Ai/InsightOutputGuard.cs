@@ -45,43 +45,43 @@ namespace FinanceControl.Services.Ai
             IReadOnlyCollection<string> ownedTickers)
         {
             if (string.IsNullOrWhiteSpace(output.Headline))
-                return InsightGuardResult.Rejected("Empty headline.");
+                return InsightGuardResult.Rejected(AiReasonCodes.EmptyHeadline);
 
             if (output.Headline.Length > MaxHeadlineLength)
-                return InsightGuardResult.Rejected($"Headline exceeds {MaxHeadlineLength} characters.");
+                return InsightGuardResult.Rejected(AiReasonCodes.HeadlineTooLong);
 
             if (output.Paragraphs.Count == 0)
-                return InsightGuardResult.Rejected("No paragraphs returned.");
+                return InsightGuardResult.Rejected(AiReasonCodes.NoParagraphs);
 
             if (output.Paragraphs.Count > MaxParagraphs)
-                return InsightGuardResult.Rejected($"More than {MaxParagraphs} paragraphs returned.");
+                return InsightGuardResult.Rejected(AiReasonCodes.TooManyParagraphs);
 
             foreach (var paragraph in output.Paragraphs)
             {
                 if (string.IsNullOrWhiteSpace(paragraph.Text))
-                    return InsightGuardResult.Rejected("Empty paragraph.");
+                    return InsightGuardResult.Rejected(AiReasonCodes.EmptyParagraph);
 
                 if (paragraph.Text.Length > MaxParagraphLength)
-                    return InsightGuardResult.Rejected($"Paragraph exceeds {MaxParagraphLength} characters.");
+                    return InsightGuardResult.Rejected(AiReasonCodes.ParagraphTooLong);
             }
 
             var fullText = output.Headline + " " + string.Join(" ", output.Paragraphs.Select(p => p.Text));
             var normalized = Normalize(fullText);
 
             if (FindTerm(normalized, InsightGuardTerms.RecommendationTerms) is { } recommendation)
-                return InsightGuardResult.Rejected($"Recommendation term: \"{recommendation}\".");
+                return InsightGuardResult.Rejected(AiReasonCodes.BlockedRecommendationTerm, recommendation);
 
             if (FindTerm(normalized, InsightGuardTerms.AdequacyTerms) is { } adequacy)
-                return InsightGuardResult.Rejected($"Adequacy judgement: \"{adequacy}\".");
+                return InsightGuardResult.Rejected(AiReasonCodes.BlockedAdequacyTerm, adequacy);
 
             if (FindTerm(normalized, InsightGuardTerms.OutOfScopeTerms) is { } outOfScope)
-                return InsightGuardResult.Rejected($"Out of scope: \"{outOfScope}\".");
+                return InsightGuardResult.Rejected(AiReasonCodes.BlockedOutOfScopeTerm, outOfScope);
 
             var owned = new HashSet<string>(ownedTickers, StringComparer.OrdinalIgnoreCase);
             foreach (Match match in TickerPattern.Matches(fullText))
             {
                 if (!owned.Contains(match.Value))
-                    return InsightGuardResult.Rejected($"Ticker not held by the user: {match.Value}.");
+                    return InsightGuardResult.Rejected(AiReasonCodes.BlockedTicker);
             }
 
             var allowedFigures = CollectFigures(snapshotJson);
@@ -93,7 +93,7 @@ namespace FinanceControl.Services.Ai
                     continue;
 
                 if (!allowedFigures.Contains(figure))
-                    return InsightGuardResult.Rejected($"Figure not present in the snapshot: {match.Value.Trim()}.");
+                    return InsightGuardResult.Rejected(AiReasonCodes.FigureNotInSnapshot);
             }
 
             // A paragraph that declares a figure it did not take from the snapshot is the
@@ -105,7 +105,7 @@ namespace FinanceControl.Services.Ai
                     continue;
 
                 if (!allowedFigures.Contains(figure))
-                    return InsightGuardResult.Rejected($"Declared figure not in the snapshot: {declared}.");
+                    return InsightGuardResult.Rejected(AiReasonCodes.DeclaredFigureNotInSnapshot);
             }
 
             return InsightGuardResult.Approved();

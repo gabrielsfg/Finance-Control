@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
-/// Material theme wired to the Quantia tokens. Screens mostly read
+/// Material theme wired to the Helmo tokens. Screens mostly read
 /// `AppThemeTokens.of(context)` directly; this theme covers the Material
 /// primitives (dialogs, inputs, buttons, text defaults, selection).
 abstract class AppTheme {
@@ -145,7 +145,7 @@ abstract class AppTheme {
 }
 
 /// Small holder so the theme file doesn't import app_spacing (avoids a cycle
-/// with widgets that import both). Mirrors the Quantia input/button radius.
+/// with widgets that import both). Mirrors the Helmo input/button radius.
 class AppRadiusValue {
   AppRadiusValue._();
   static const double input = 13;

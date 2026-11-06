@@ -4,7 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 
-/// Quantia tag/badge (`.tagx` / `.st-pill`): mono, pill-shaped, with a
+/// Helmo tag/badge (`.tagx` / `.st-pill`): mono, pill-shaped, with a
 /// translucent tint of its own color (`color-mix` 14%) and full-color text.
 /// Set [solid] for the "ink" variant (solid background, inverted text).
 class TonalTag extends StatelessWidget {

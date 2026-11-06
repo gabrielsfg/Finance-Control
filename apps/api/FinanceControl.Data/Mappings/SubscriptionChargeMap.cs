@@ -25,6 +25,10 @@ namespace FinanceControl.Data.Mappings
             builder.Property(c => c.BankSlipUrl).HasMaxLength(500);
             builder.Property(c => c.PixPayload).HasMaxLength(1000);
             builder.Property(c => c.FailureReason).HasMaxLength(300);
+            builder.Property(c => c.ManualRefundPending).HasDefaultValue(false).IsRequired();
+            builder.Property(c => c.AsaasInvoiceId).HasMaxLength(64);
+            builder.Property(c => c.InvoiceStatus).HasMaxLength(40);
+            builder.Property(c => c.InvoicePdfUrl).HasMaxLength(500);
 
             builder.Property(c => c.PeriodStart).HasColumnType("timestamp with time zone").IsRequired();
             builder.Property(c => c.PeriodEnd).HasColumnType("timestamp with time zone").IsRequired();

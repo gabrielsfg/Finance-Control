@@ -67,7 +67,7 @@ export const useUpsertAiContext = () => {
 
 export const aiSettingsQueryKey = ["insight", "settings"] as const;
 
-/** The "IA no Quantia" card: the user's switch, the provider and what is stored. */
+/** The "IA no Helmo" card: the user's switch, the provider and what is stored. */
 export const useAiSettings = (enabled = true) =>
   useQuery<AiSettings>({
     queryKey: aiSettingsQueryKey,

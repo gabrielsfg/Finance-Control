@@ -3,6 +3,7 @@ import type {
   ChangeSubscriptionPlanRequest,
   ChangeSubscriptionPlanResponse,
   CreateSubscriptionRequest,
+  SubscriptionCancellationPreview,
   SubscriptionPixQrCode,
   SubscriptionPlans,
   SubscriptionState,
@@ -23,6 +24,11 @@ export const subscriptionApi = {
   /** Card data goes straight to our API and on to Asaas — never stored in the browser. */
   create: async (data: CreateSubscriptionRequest): Promise<SubscriptionState> => {
     const res = await api.post<SubscriptionState>("/subscription", data);
+    return res.data;
+  },
+
+  getCancellationPreview: async (): Promise<SubscriptionCancellationPreview> => {
+    const res = await api.get<SubscriptionCancellationPreview>("/subscription/cancel-preview");
     return res.data;
   },
 

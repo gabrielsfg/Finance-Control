@@ -13,6 +13,7 @@ import {
   useRevokeMcpConnection,
   useRevokeMcpToken,
 } from "@/features/mcp/hooks/useMcp";
+import { useSubscription } from "@/features/subscription/hooks/useSubscription";
 import { formatDateFull, formatRelativeTime } from "@/lib/utils/formatDate";
 import { cn } from "@/lib/utils";
 
@@ -48,17 +49,17 @@ function clientSetup(client: ClientId, url: string): { steps: string[]; snippet?
     case "claude-code":
       return {
         steps: ["Rode no terminal:"],
-        snippet: `claude mcp add --transport http quantia ${url}`,
+        snippet: `claude mcp add --transport http helmo ${url}`,
       };
     case "codex":
       return {
         steps: ["Adicione ao arquivo ~/.codex/config.toml:"],
-        snippet: `[mcp_servers.quantia]\nurl = "${url}"`,
+        snippet: `[mcp_servers.helmo]\nurl = "${url}"`,
       };
     case "cursor":
       return {
         steps: ["Adicione ao seu mcp.json:"],
-        snippet: JSON.stringify({ mcpServers: { quantia: { url } } }, null, 2),
+        snippet: JSON.stringify({ mcpServers: { helmo: { url } } }, null, 2),
       };
   }
 }
@@ -67,10 +68,14 @@ function clientSetup(client: ClientId, url: string): { steps: string[]; snippet?
  * "Conexões de IA": connect an outside assistant (Claude, ChatGPT, Cursor…) to the MCP
  * server, see which ones are connected and revoke them, and manage personal tokens for
  * clients that cannot run the OAuth flow. Available on every plan — the data is read
- * only, and processed by the provider the user picked, not by Quantia.
+ * only, and processed by the provider the user picked, not by Helmo.
  */
 export const ProfileAiConnectionsCard = () => {
-  const { data: info, isLoading: infoLoading, isError: infoError } = useMcpInfo();
+  // Without a subscription the card only lists and revokes (LGPD): connecting a new AI or
+  // creating a token needs an active plan, and the API refuses those endpoints anyway.
+  const { data: subscription } = useSubscription();
+  const locked = subscription ? !subscription.hasAccess : false;
+  const { data: info, isLoading: infoLoading, isError: infoError } = useMcpInfo(!locked);
   const [client, setClient] = useState<ClientId>("claude");
   const [tokenDrawerOpen, setTokenDrawerOpen] = useState(false);
 
@@ -81,17 +86,24 @@ export const ProfileAiConnectionsCard = () => {
     <Card>
       <CardHead
         title="Conexões de IA"
-        subtitle="Use seus dados do Quantia no Claude, ChatGPT e outras IAs — somente leitura"
+        subtitle="Use seus dados do Helmo no Claude, ChatGPT e outras IAs — somente leitura"
       />
 
-      {infoLoading && (
+      {locked && (
+        <p className="text-[13px] leading-relaxed text-[var(--text-sub)]">
+          Sem uma assinatura ativa não é possível conectar novas IAs, mas você pode ver e revogar
+          as conexões e os tokens existentes abaixo.
+        </p>
+      )}
+
+      {!locked && infoLoading && (
         <div className="flex items-center gap-2 py-2 text-[13px] text-[var(--text-sub)]">
           <Loader2 size={14} className="animate-spin" />
           Carregando...
         </div>
       )}
 
-      {infoError && (
+      {!locked && infoError && (
         <p className="text-[13px] text-[var(--text-sub)]">
           Não foi possível carregar os dados de conexão. Tente novamente mais tarde.
         </p>
@@ -129,7 +141,7 @@ export const ProfileAiConnectionsCard = () => {
       <ConnectionsList />
 
       <LedgerRule />
-      <TokensList onCreate={() => setTokenDrawerOpen(true)} canCreate={!!info} />
+      <TokensList onCreate={() => setTokenDrawerOpen(true)} canCreate={!!info && !locked} />
 
       {tokenDrawerOpen && (
         <CreateMcpTokenDrawer onClose={() => setTokenDrawerOpen(false)} scopes={info?.scopes ?? []} />

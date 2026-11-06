@@ -19,7 +19,7 @@ String paywallMessage(SubscriptionState state) {
       ? 'Não recebemos o pagamento da renovação. '
       : '';
   return '${reason}Seus dados continuam guardados. Para assinar ou renovar, '
-      'acesse a Quantia pelo navegador, no computador ou no celular, e entre com esta conta.';
+      'acesse o Helmo pelo navegador, no computador ou no celular, e entre com esta conta.';
 }
 
 /// The banner shown on every screen while something needs the user's attention:

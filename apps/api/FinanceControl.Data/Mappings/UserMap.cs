@@ -41,6 +41,8 @@ namespace FinanceControl.Data.Mappings
             builder.Property(u => u.PreferredCurrency).HasDefaultValue("BRL").IsRequired();
             builder.Property(u => u.PreferredLanguage).HasDefaultValue("pt-BR").IsRequired();
             builder.Property(u => u.Country).HasMaxLength(2);
+            builder.Property(u => u.RetentionNoticeSentAt)
+                .HasColumnType("timestamp with time zone");
 
             // Webhooks are resolved back to the user through it.
             builder.HasIndex(u => u.ExternalRef).IsUnique();

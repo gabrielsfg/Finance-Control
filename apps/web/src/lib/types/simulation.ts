@@ -58,6 +58,8 @@ export interface BenchmarkRates {
   selicAnnual: number;
   ipcaTrailing12m: number;
   fetchedAt: string;
+  /** Séries ("CDI", "SELIC", "IPCA") com taxa anual fixa estimada porque o Banco Central estava indisponível. */
+  fallbackSeries: string[];
 }
 
 export interface HistoricalSimulationPoint {
@@ -81,6 +83,8 @@ export interface HistoricalSimulation {
   points: HistoricalSimulationPoint[];
   isPartialData: boolean;
   dataNote: string | null;
+  /** Benchmarks que usaram a taxa anual fixa estimada em pelo menos um mês. */
+  fallbackSeries: string[];
 }
 
 export interface TaxResult {
@@ -457,4 +461,6 @@ export interface PortfolioBacktestResult {
   effectiveEndDate: string;
   isPartialData: boolean;
   dataNote: string | null;
+  /** Ativos de referência que usaram a taxa anual fixa estimada em pelo menos um mês. */
+  fallbackSeries: string[];
 }

@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// Rounded-square cobalt avatar with display-font initials (Quantia `.avatar`).
+/// Rounded-square cobalt avatar with display-font initials (Helmo `.avatar`).
 class AppAvatar extends StatelessWidget {
   final String initials;
   final double size;

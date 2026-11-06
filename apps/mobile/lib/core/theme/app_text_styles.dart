@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Quantia typography — three families, three roles.
+/// Helmo typography — three families, three roles.
 ///
 /// - **Display** Bricolage Grotesque → page/card titles, big labels.
 /// - **Text/UI** Hanken Grotesk → body, navigation, buttons, descriptions.

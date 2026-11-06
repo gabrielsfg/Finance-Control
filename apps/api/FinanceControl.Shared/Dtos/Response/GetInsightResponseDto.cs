@@ -4,6 +4,9 @@ namespace FinanceControl.Shared.Dtos.Response
 {
     public class GetInsightResponseDto
     {
+        /// <summary>The stored analysis; null on a fallback, which is never stored. Used to report the content.</summary>
+        public int? Id { get; set; }
+
         public EnumInsightKind Kind { get; set; }
         public DateOnly PeriodStart { get; set; }
         public string Headline { get; set; } = string.Empty;

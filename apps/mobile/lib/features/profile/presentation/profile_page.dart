@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -421,7 +422,7 @@ class _PrivacySection extends ConsumerWidget {
         ShareParams(
           files: [XFile(file.path, mimeType: 'application/json')],
           fileNameOverrides: [export.fileName],
-          subject: 'Meus dados — Quantia',
+          subject: 'Meus dados — Helmo',
           // iPad anchors the share popover to a rect; without one the sheet
           // has nowhere to point and the call throws.
           sharePositionOrigin: _shareOrigin(context),
@@ -596,7 +597,7 @@ class _AccountSection extends ConsumerWidget {
       builder: (_) => _PasswordConfirmDialog(
         title: 'Excluir conta',
         warning:
-            'Isso vai excluir permanentemente sua conta e todos os dados associados. Esta ação não pode ser desfeita.',
+            'Isso vai excluir permanentemente sua conta e todos os dados associados, desconectar os bancos e encerrar a assinatura (no plano anual, devolvemos os meses não iniciados, descontada a multa de 10% após os 7 primeiros dias). Esta ação não pode ser desfeita.',
         confirmLabel: 'Excluir',
         isDestructive: true,
         onConfirm: (password) async {
@@ -653,11 +654,15 @@ class _PasswordConfirmDialogState extends State<_PasswordConfirmDialog> {
     try {
       await widget.onConfirm(password);
       if (mounted) Navigator.of(context).pop();
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
+        // 503: the subscription refund could not be made, so the account was kept.
+        final refundFailed = error is DioException && error.response?.statusCode == 503;
         setState(() {
           _loading = false;
-          _error = 'Senha inválida.';
+          _error = refundFailed
+              ? 'Não conseguimos processar o reembolso da assinatura agora. Sua conta foi mantida; tente de novo em alguns minutos.'
+              : 'Senha inválida.';
         });
       }
     }
@@ -764,7 +769,7 @@ class _AppVersion extends StatelessWidget {
     final t = AppThemeTokens.of(context);
     return Center(
       child: Text(
-        'FinanceControl v1.0.0',
+        'Helmo v1.0.0',
         style: AppTextStyles.caption(t.txtDisabled),
       ),
     );

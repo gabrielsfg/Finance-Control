@@ -1,10 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { Loader2, Zap } from "lucide-react";
 import { usePortfolioInsight } from "../hooks/useInsight";
 import { PremiumNotice } from "@/components/shared/PremiumNotice";
 import { AiStatusNotice } from "./AiStatusNotice";
 import { usePlan } from "@/lib/hooks/usePlan";
+import {
+  ReportAiContentButton,
+  ReportAiContentForm,
+} from "@/features/feedback/components/ReportAiContent";
 
 const CARD_STYLE = {
   background:
@@ -23,6 +28,8 @@ const CARD_STYLE = {
 export const PortfolioInsightCard = () => {
   const { isPremium, isLoading: planLoading } = usePlan();
   const { data: result, isLoading } = usePortfolioInsight(isPremium);
+  const [reporting, setReporting] = useState(false);
+  const [reportedId, setReportedId] = useState<number | null>(null);
 
   if (planLoading) return null;
 
@@ -79,11 +86,33 @@ export const PortfolioInsightCard = () => {
         ))}
       </div>
 
-      <p className="text-[11px] leading-snug text-[var(--text-muted)]">
-        {insight.generatedByAi
-          ? "Análise gerada por inteligência artificial a partir dos ativos que você cadastrou. É informativa, pode conter erros e não é recomendação de investimento."
-          : "Resumo calculado a partir dos ativos que você cadastrou. É informativo e não é recomendação de investimento."}
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] leading-snug text-[var(--text-muted)]">
+          {insight.generatedByAi
+            ? "Análise gerada por inteligência artificial a partir dos ativos que você cadastrou. É informativa, pode conter erros e não é recomendação de investimento."
+            : "Resumo calculado a partir dos ativos que você cadastrou. É informativo e não é recomendação de investimento."}
+        </p>
+
+        {/* Only a stored, model-written analysis can be reported; the fallback is our own text. */}
+        {insight.generatedByAi && insight.id !== null && (
+          <ReportAiContentButton
+            active={reporting}
+            reported={reportedId === insight.id}
+            onClick={() => setReporting((open) => !open)}
+          />
+        )}
+      </div>
+
+      {reporting && insight.generatedByAi && insight.id !== null && (
+        <div className="mt-3">
+          <ReportAiContentForm
+            key={insight.id}
+            target={{ aiInsightId: insight.id }}
+            onClose={() => setReporting(false)}
+            onReported={() => setReportedId(insight.id)}
+          />
+        </div>
+      )}
 
       {status === "QuotaExceeded" && (
         <div className="mt-3">

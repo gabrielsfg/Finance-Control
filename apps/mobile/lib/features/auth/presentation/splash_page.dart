@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_widgets.dart';
 
@@ -39,17 +38,11 @@ class _SplashPageState extends State<SplashPage> {
                 const Spacer(flex: 3),
 
                 // ── Logo ──────────────────────────────────────────────────
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: AppShadows.logoShadow,
-                  ),
-                  child: const AppLogo(size: 100),
-                ),
+                const AppLogo(size: 100),
                 const SizedBox(height: 28),
 
                 Text(
-                  'FinanceControl',
+                  'Helmo',
                   style: AppTextStyles.h1(t.txtPrimary).copyWith(
                     fontSize: 28,
                     fontWeight: FontWeight.w700,

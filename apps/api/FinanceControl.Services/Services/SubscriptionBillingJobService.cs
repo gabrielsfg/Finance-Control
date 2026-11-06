@@ -94,6 +94,48 @@ namespace FinanceControl.Services.Services
 
             if (now.Hour >= settings.EmailStartHourUtc)
                 await IsolatedAsync("send reminders", 0, (scope, ct) => SendRemindersAsync(scope, now, settings, ct), cancellationToken);
+
+            await IsolatedAsync("issue invoices", 0, (scope, ct) => IssueInvoicesAsync(scope, now, ct), cancellationToken);
+        }
+
+        /// <summary>
+        /// NFS-e for every paid charge: scheduled at Asaas once confirmed, then followed
+        /// until the city authorizes it (the PDF link shows in the charge history).
+        /// </summary>
+        private static async Task IssueInvoicesAsync(IServiceProvider services, DateTime now, CancellationToken cancellationToken)
+        {
+            var settings = services.GetRequiredService<IOptions<InvoiceSettings>>().Value;
+            if (!settings.Enabled)
+                return;
+
+            var context = services.GetRequiredService<ApplicationDbContext>();
+            var engine = services.GetRequiredService<BillingEngine>();
+            var backfillFrom = now.AddDays(-settings.MaxBackfillDays);
+
+            var toSchedule = await context.SubscriptionCharges
+                .Include(c => c.Subscription)
+                .Where(c => c.AsaasInvoiceId == null
+                    && c.InvoiceStatus == null
+                    && !c.Subscription.IsComplimentary
+                    && c.ConfirmedAt != null
+                    && c.ConfirmedAt >= backfillFrom
+                    && (c.Status == EnumChargeStatus.Confirmed || c.Status == EnumChargeStatus.PartiallyRefunded))
+                .Take(50)
+                .ToListAsync(cancellationToken);
+
+            foreach (var charge in toSchedule)
+                await engine.ScheduleInvoiceAsync(charge, settings, cancellationToken);
+
+            var toRefresh = await context.SubscriptionCharges
+                .Where(c => c.AsaasInvoiceId != null
+                    && (c.InvoiceStatus == "SCHEDULED" || c.InvoiceStatus == "PROCESSING_CANCELLATION"))
+                .Take(50)
+                .ToListAsync(cancellationToken);
+
+            foreach (var charge in toRefresh)
+                await engine.RefreshInvoiceAsync(charge, cancellationToken);
+
+            await context.SaveChangesAsync(cancellationToken);
         }
 
         private static async Task ReconcileChargeAsync(IServiceProvider services, int chargeId, CancellationToken cancellationToken)
@@ -319,6 +361,39 @@ namespace FinanceControl.Services.Services
                     user => BillingEmailTemplates.TrialEnding(
                         user.Name, user.PreferredLanguage, daysLeft, amount, trial.Cycle,
                         trial.TrialEndsAt.Value, profile?.CardLast4, notifier.ManageUrl),
+                    cancellationToken);
+            }
+
+            // Yearly card plan: one notice ahead of the automatic renewal, with the exact
+            // amount and installments that will be charged.
+            var yearly = await context.Subscriptions
+                .AsNoTracking()
+                .Where(s => s.Status == EnumSubscriptionStatus.Active
+                    && !s.IsComplimentary
+                    && s.BillingMethod == EnumBillingMethod.CreditCard
+                    && s.Cycle == EnumBillingCycle.Yearly
+                    && s.CurrentPeriodEnd > now
+                    && s.CurrentPeriodEnd <= now.AddDays(settings.YearlyRenewalNoticeDays + 1))
+                .ToListAsync(cancellationToken);
+
+            foreach (var subscription in yearly)
+            {
+                var daysLeft = BillingClock.ToLocalDate(subscription.CurrentPeriodEnd).DayNumber - today.DayNumber;
+                if (daysLeft != settings.YearlyRenewalNoticeDays)
+                    continue;
+
+                // The renewal charge applies a scheduled change (BuildCharge), so does the notice.
+                var renewal = BillingEngine.BuildCharge(
+                    subscription, subscription.CurrentPeriodEnd, today, applyPendingChange: true);
+                var profile = await context.BillingProfiles.AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.UserId == subscription.UserId, cancellationToken);
+
+                await notifier.SendOnceAsync(
+                    subscription.UserId,
+                    $"yearly-renewal-{subscription.Id}-{subscription.CurrentPeriodEnd:yyyyMMdd}",
+                    user => BillingEmailTemplates.YearlyRenewalNotice(
+                        user.Name, user.PreferredLanguage, daysLeft, renewal.Amount, renewal.InstallmentCount,
+                        subscription.CurrentPeriodEnd, profile?.CardLast4, notifier.ManageUrl),
                     cancellationToken);
             }
 

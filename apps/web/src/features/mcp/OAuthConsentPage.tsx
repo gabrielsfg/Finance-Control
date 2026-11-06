@@ -82,7 +82,7 @@ function OAuthConsentContent() {
       <>
         <h1 className="font-display text-[20px] leading-snug font-bold tracking-[-0.015em] text-[var(--text)]">
           <span className="text-[var(--brand-accent)]">{request.clientName}</span> quer acessar seus
-          dados do Quantia (somente leitura)
+          dados do Helmo (somente leitura)
         </h1>
 
         <div className="mt-3 flex items-center gap-2 text-[12.5px] text-[var(--text-sub)]">

@@ -48,7 +48,9 @@ namespace FinanceControl.Domain.Interfaces.Service
 
         Task<bool> LogoutAsync(string refreshToken);
 
-        Task<bool> DeleteAccountAsync(int userId, string password);
+        /// Fails with INVALID_PASSWORD, or with a BillingErrors code when the subscription
+        /// refund could not be made (the account is then kept).
+        Task<Result> DeleteAccountAsync(int userId, string password);
 
         Task<bool> ResetDataAsync(int userId, string password);
     }

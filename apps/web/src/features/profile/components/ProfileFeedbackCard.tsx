@@ -14,7 +14,7 @@ export const ProfileFeedbackCard = () => {
         <CardHead title="Fale com a gente" />
 
         <p className="text-[12.5px] leading-relaxed text-[var(--text-sub)]">
-          Achou um problema ou tem uma ideia para o Quantia? Conte aqui. Cada relato vai
+          Achou um problema ou tem uma ideia para o Helmo? Conte aqui. Cada relato vai
           direto para a fila de quem cuida do produto.
         </p>
 

@@ -59,7 +59,7 @@ namespace FinanceControl.Tests.Unit
 
             Assert.False(node.ContainsKey("userId"));
             Assert.False(node.ContainsKey("email"));
-            Assert.Equal("Ana", node["firstName"]!.GetValue<string>());
+            Assert.False(node.ContainsKey("firstName"));
 
             var account = node["accounts"]![0]!.AsObject();
             Assert.False(account.ContainsKey("accountNumber"));

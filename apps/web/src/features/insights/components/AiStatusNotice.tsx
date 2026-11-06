@@ -78,7 +78,7 @@ export function AiStatusNotice({
             href={AI_SETTINGS_HREF}
             className="mt-2 inline-block font-mono text-[11px] tracking-[0.1em] text-[var(--brand-accent)] uppercase hover:underline"
           >
-            Perfil → IA no Quantia
+            Perfil → IA no Helmo
           </Link>
         )}
       </div>

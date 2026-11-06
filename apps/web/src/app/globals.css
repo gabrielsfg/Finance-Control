@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Fonts — Quantia design system */
+  /* Fonts — Helmo design system */
   --font-display: var(--font-bricolage);
   --font-sans: var(--font-hanken);
   --font-mono: var(--font-ibm-plex-mono);
@@ -51,7 +51,7 @@
   --color-panel-fg: var(--panel-foreground);
   --color-panel-muted: var(--panel-muted);
 
-  /* Border radius — Quantia scale */
+  /* Border radius — Helmo scale */
   --radius-sm: 9px;
   --radius-md: 13px;
   --radius-lg: 20px;

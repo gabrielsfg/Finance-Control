@@ -1,3 +1,4 @@
+using FinanceControl.WebApi.Filters;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Extensions;
 using FinanceControl.Shared.Dtos.Request;
@@ -28,6 +29,8 @@ namespace FinanceControl.WebApi.Controllers
             _sendMessageValidator = sendMessageValidator;
         }
 
+        // LGPD: a user without a subscription can still see and remove this.
+        [SkipSubscriptionCheck]
         [HttpGet("conversations")]
         public async Task<IActionResult> ListConversationsAsync()
         {
@@ -47,6 +50,7 @@ namespace FinanceControl.WebApi.Controllers
             return conversation is null ? NotFound(new { error = "Conversation not found." }) : Ok(conversation);
         }
 
+        [SkipSubscriptionCheck]
         [HttpDelete("conversations/{id}")]
         public async Task<IActionResult> DeleteConversationAsync(int id)
         {
@@ -61,6 +65,7 @@ namespace FinanceControl.WebApi.Controllers
         }
 
         /// Deletes the whole chat history of the user — the "Apagar conversas" button.
+        [SkipSubscriptionCheck]
         [HttpDelete("conversations")]
         public async Task<IActionResult> DeleteAllConversationsAsync()
         {

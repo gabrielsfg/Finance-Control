@@ -93,7 +93,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     // just turns a rejected request into an unticked box the user can see.
     final termsErr = _acceptedTerms
         ? null
-        : 'Você precisa aceitar os Termos de Uso e a Política de Privacidade';
+        : 'Você precisa ter 18 anos ou mais e aceitar os Termos de Uso e a '
+            'Política de Privacidade';
 
     setState(() {
       _nameError = nameErr;
@@ -412,7 +413,9 @@ class _ConsentCheckbox extends StatelessWidget {
                   style: AppTextStyles.bodySm(t.txtSecondary)
                       .copyWith(height: 1.45),
                   children: [
-                    const TextSpan(text: 'Li e aceito os '),
+                    const TextSpan(
+                      text: 'Declaro ter 18 anos ou mais e li e aceito os ',
+                    ),
                     TextSpan(
                       text: 'Termos de Uso',
                       style: linkStyle,

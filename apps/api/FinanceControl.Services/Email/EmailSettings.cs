@@ -8,7 +8,7 @@ namespace FinanceControl.Services.Email
         /// <summary>Sender address. Its domain must be verified in Resend before it will send.</summary>
         public string FromEmail { get; set; } = string.Empty;
 
-        public string FromName { get; set; } = "Quantia";
+        public string FromName { get; set; } = "Helmo";
 
         public string ApiBaseUrl { get; set; } = "https://api.resend.com/";
     }

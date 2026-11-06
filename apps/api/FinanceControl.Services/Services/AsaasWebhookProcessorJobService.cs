@@ -57,9 +57,11 @@ namespace FinanceControl.Services.Services
                 if (now - _lastCleanup > TimeSpan.FromHours(1))
                 {
                     _lastCleanup = now;
+                    // Counted from arrival, as the privacy policy states. Failed events go too:
+                    // 90 days is long enough for a look by hand.
                     var cutoff = now - Retention;
                     await context.AsaasWebhookEvents
-                        .Where(e => e.Status == EnumWebhookEventStatus.Done && e.CreatedAt < cutoff)
+                        .Where(e => e.Status != EnumWebhookEventStatus.Pending && e.CreatedAt < cutoff)
                         .ExecuteDeleteAsync(cancellationToken);
                 }
             }

@@ -68,11 +68,48 @@ namespace FinanceControl.Services.Email
             return (subject, Layout(heading, intro, code, expiryLine, warning));
         }
 
+        /// <summary>
+        /// The warning before an account without a subscription is deleted at the end of the
+        /// retention period the privacy policy states.
+        /// </summary>
+        public static (string Subject, string Html) InactiveAccountDeletionNotice(
+            string userName, string? language, DateTime deleteOn, string appUrl)
+        {
+            var isPtBr = language is null || language.StartsWith("pt", StringComparison.OrdinalIgnoreCase);
+            var name = WebUtility.HtmlEncode(userName);
+            var date = deleteOn.ToString("dd/MM/yyyy");
+            var url = WebUtility.HtmlEncode(appUrl);
+
+            var (subject, heading, body, action) = isPtBr
+                ? ("Sua conta será excluída",
+                   "Sua conta será excluída",
+                   $"Olá, {name}. Sua conta está sem assinatura há 5 anos e, como informa nossa Política de Privacidade, ela e todos os seus dados serão excluídos definitivamente a partir de {date}.",
+                   "Para manter seus dados, basta assinar novamente antes dessa data. Se preferir guardar uma cópia, entre na conta e exporte seus dados em Perfil.")
+                : ("Your account will be deleted",
+                   "Your account will be deleted",
+                   $"Hi {name}. Your account has had no subscription for 5 years and, as our Privacy Policy states, it and all its data will be permanently deleted from {date}.",
+                   "To keep your data, just subscribe again before that date. To keep a copy, sign in and export your data from your profile.");
+
+            var html = $"""
+            <div style="margin:0;padding:32px 16px;background:{Paper};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+              <div style="max-width:480px;margin:0 auto;background:#FFFFFF;border-radius:16px;padding:32px;">
+                <div style="font-size:13px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:{Cobalt};">Helmo</div>
+                <h1 style="margin:16px 0 8px;font-size:22px;line-height:1.3;color:{Ink};">{heading}</h1>
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:{Ink};">{body}</p>
+                <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:{Ink};">{action}</p>
+                <a href="{url}" style="display:inline-block;margin:0 0 8px;padding:12px 20px;background:{Cobalt};color:#FFFFFF;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">{(isPtBr ? "Acessar minha conta" : "Open my account")}</a>
+              </div>
+            </div>
+            """;
+
+            return (subject, html);
+        }
+
         private static string Layout(string heading, string intro, string code, string expiryLine, string warning) =>
             $"""
             <div style="margin:0;padding:32px 16px;background:{Paper};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
               <div style="max-width:480px;margin:0 auto;background:#FFFFFF;border-radius:16px;padding:32px;">
-                <div style="font-size:13px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:{Cobalt};">Quantia</div>
+                <div style="font-size:13px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:{Cobalt};">Helmo</div>
                 <h1 style="margin:16px 0 8px;font-size:22px;line-height:1.3;color:{Ink};">{heading}</h1>
                 <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:{Ink};">{intro}</p>
                 <div style="margin:0 0 20px;padding:20px;background:{Paper};border-radius:12px;text-align:center;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:32px;font-weight:700;letter-spacing:0.24em;color:{Ink};">{code}</div>

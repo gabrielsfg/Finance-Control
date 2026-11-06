@@ -189,7 +189,7 @@ namespace FinanceControl.Services.Billing
         public async Task<bool> ConfirmChargeAsync(
             Subscription subscription, SubscriptionCharge charge, DateTime now, CancellationToken cancellationToken)
         {
-            if (charge.Status is EnumChargeStatus.Confirmed or EnumChargeStatus.Refunded)
+            if (charge.Status is EnumChargeStatus.Confirmed or EnumChargeStatus.Refunded or EnumChargeStatus.PartiallyRefunded)
                 return false;
 
             charge.Status = EnumChargeStatus.Confirmed;
@@ -309,6 +309,168 @@ namespace FinanceControl.Services.Billing
             return removed;
         }
 
+        /// <summary>
+        /// The early-termination math for a yearly charge canceled at <paramref name="now"/>.
+        /// Every month started counts as used — the user keeps access until it ends — and
+        /// the fee applies only to what is refunded.
+        /// </summary>
+        public static EarlyTerminationQuote QuoteEarlyTermination(SubscriptionCharge charge, DateTime now, int feePercent)
+        {
+            const int months = 12;
+            var monthsUsed = 1;
+            while (monthsUsed < months && charge.PeriodStart.AddMonths(monthsUsed) <= now)
+                monthsUsed++;
+
+            var remainingValue = (int)Math.Round(
+                charge.Amount * (months - monthsUsed) / (decimal)months, MidpointRounding.AwayFromZero);
+            var fee = (int)Math.Round(remainingValue * feePercent / 100m, MidpointRounding.AwayFromZero);
+
+            return new EarlyTerminationQuote(
+                monthsUsed,
+                charge.PeriodStart.AddMonths(monthsUsed),
+                remainingValue,
+                fee,
+                remainingValue - fee);
+        }
+
+        /// <summary>
+        /// Asks Asaas to give back <paramref name="amount"/> cents of a paid charge and records
+        /// it on the charge. Does not save.
+        /// </summary>
+        /// <remarks>
+        /// A card installment plan is refunded as a plan (Asaas spreads it over the
+        /// installments); a card or Pix charge through the payment. A boleto cannot be
+        /// refunded by API, so the amount is recorded as owed and flagged for a manual
+        /// Pix or transfer — the user is told so by e-mail.
+        /// </remarks>
+        public async Task<RefundOutcome> RefundAsync(
+            SubscriptionCharge charge, int amount, string description, DateTime now, CancellationToken cancellationToken)
+        {
+            var isFull = amount >= charge.Amount;
+            var outcome = RefundOutcome.Requested;
+
+            if (charge.BillingMethod == EnumBillingMethod.Boleto)
+            {
+                outcome = RefundOutcome.ManualPending;
+                charge.ManualRefundPending = true;
+                _logger.LogError(
+                    "Charge {ChargeId} of user {UserId} was paid by boleto: refund {Amount} cents by hand.",
+                    charge.Id, charge.UserId, amount);
+            }
+            else
+            {
+                var result = !string.IsNullOrEmpty(charge.AsaasInstallmentId)
+                    ? await _asaas.RefundInstallmentAsync(charge.AsaasInstallmentId, isFull ? null : amount, cancellationToken)
+                    : await _asaas.RefundPaymentAsync(
+                        charge.AsaasPaymentId!,
+                        new AsaasRefundRequest { Value = isFull ? null : AsaasClient.ToReais(amount), Description = description },
+                        cancellationToken);
+
+                if (result.IsInconclusive)
+                    return RefundOutcome.Unavailable;
+                if (!result.IsSuccess)
+                {
+                    _logger.LogError(
+                        "Refund of charge {ChargeId} was rejected by Asaas ({ErrorCode}).", charge.Id, result.ErrorCode);
+                    return RefundOutcome.Rejected;
+                }
+            }
+
+            charge.Status = isFull ? EnumChargeStatus.Refunded : EnumChargeStatus.PartiallyRefunded;
+            charge.RefundedAmount = Math.Min(amount, charge.Amount);
+            charge.RefundedAt = now;
+
+            // A fully refunded service has no invoice to stand on. A partial refund keeps
+            // it: the months used were rendered — the accountant settles the difference.
+            if (isFull && !string.IsNullOrEmpty(charge.AsaasInvoiceId))
+            {
+                var canceled = await _asaas.CancelInvoiceAsync(charge.AsaasInvoiceId, cancellationToken);
+                if (canceled.IsSuccess)
+                    charge.InvoiceStatus = canceled.Value?.Status ?? "PROCESSING_CANCELLATION";
+                else
+                    _logger.LogWarning(
+                        "Could not cancel invoice {InvoiceId} of refunded charge {ChargeId}.", charge.AsaasInvoiceId, charge.Id);
+            }
+
+            return outcome;
+        }
+
+        /// <summary>
+        /// Schedules the NFS-e of a paid charge at Asaas, once. Does not save. The city
+        /// authorizes it later; <see cref="RefreshInvoiceAsync"/> follows it.
+        /// </summary>
+        public async Task ScheduleInvoiceAsync(SubscriptionCharge charge, InvoiceSettings settings, CancellationToken cancellationToken)
+        {
+            if (!string.IsNullOrEmpty(charge.AsaasInvoiceId) || charge.ConfirmedAt is null)
+                return;
+
+            var request = new AsaasInvoiceRequest
+            {
+                ServiceDescription = $"{settings.ServiceDescription} - {Describe(charge)}",
+                Observations = settings.Observations,
+                ExternalReference = charge.IdempotencyKey,
+                Value = AsaasClient.ToReais(charge.Amount),
+                Deductions = 0,
+                EffectiveDate = AsaasClient.FormatDate(BillingClock.ToLocalDate(charge.ConfirmedAt.Value)),
+                MunicipalServiceId = string.IsNullOrWhiteSpace(settings.MunicipalServiceId) ? null : settings.MunicipalServiceId,
+                MunicipalServiceCode = string.IsNullOrWhiteSpace(settings.MunicipalServiceCode) ? null : settings.MunicipalServiceCode,
+                MunicipalServiceName = settings.MunicipalServiceName,
+                Taxes = new AsaasInvoiceTaxes
+                {
+                    RetainIss = settings.RetainIss,
+                    Iss = settings.Iss,
+                    Pis = settings.Pis,
+                    Cofins = settings.Cofins,
+                    Csll = settings.Csll,
+                    Inss = settings.Inss,
+                    Ir = settings.Ir
+                }
+            };
+
+            // One invoice for the whole plan when it is paid in installments.
+            if (!string.IsNullOrEmpty(charge.AsaasInstallmentId))
+                request.Installment = charge.AsaasInstallmentId;
+            else
+                request.Payment = charge.AsaasPaymentId;
+
+            var result = await _asaas.ScheduleInvoiceAsync(request, cancellationToken);
+            if (result.IsSuccess && !string.IsNullOrEmpty(result.Value?.Id))
+            {
+                charge.AsaasInvoiceId = result.Value.Id;
+                charge.InvoiceStatus = result.Value.Status ?? "SCHEDULED";
+                charge.InvoicePdfUrl = result.Value.PdfUrl;
+                return;
+            }
+
+            if (!result.IsInconclusive)
+            {
+                // Rejected (configuration, city data): mark it so the job does not retry
+                // every hour; fixing the settings and clearing the column retries it.
+                charge.InvoiceStatus = "ERROR";
+                _logger.LogError(
+                    "Asaas rejected the invoice of charge {ChargeId} ({ErrorCode}: {Error}).",
+                    charge.Id, result.ErrorCode, result.ErrorDescription);
+            }
+        }
+
+        /// <summary>Follows a scheduled invoice until the city settles it. Does not save.</summary>
+        public async Task RefreshInvoiceAsync(SubscriptionCharge charge, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrEmpty(charge.AsaasInvoiceId))
+                return;
+
+            var result = await _asaas.GetInvoiceAsync(charge.AsaasInvoiceId, cancellationToken);
+            if (!result.IsSuccess || result.Value is null)
+                return;
+
+            charge.InvoiceStatus = result.Value.Status ?? charge.InvoiceStatus;
+            charge.InvoicePdfUrl = result.Value.PdfUrl ?? charge.InvoicePdfUrl;
+            if (charge.InvoiceStatus == "ERROR")
+                _logger.LogError(
+                    "Invoice {InvoiceId} of charge {ChargeId} failed at the city: {Description}.",
+                    charge.AsaasInvoiceId, charge.Id, result.Value.StatusDescription);
+        }
+
         public async Task SendPaymentConfirmedAsync(
             Subscription subscription, SubscriptionCharge charge, CancellationToken cancellationToken) =>
             await _notifier.SendOnceAsync(
@@ -359,7 +521,8 @@ namespace FinanceControl.Services.Billing
 
                 case "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED":
                 case "PAYMENT_REPROVED_BY_RISK_ANALYSIS":
-                    if (charge.Status is EnumChargeStatus.Confirmed or EnumChargeStatus.Refunded or EnumChargeStatus.Failed)
+                    if (charge.Status is EnumChargeStatus.Confirmed or EnumChargeStatus.Refunded
+                        or EnumChargeStatus.PartiallyRefunded or EnumChargeStatus.Failed)
                         break;
 
                     charge.Status = EnumChargeStatus.Failed;
@@ -377,12 +540,15 @@ namespace FinanceControl.Services.Billing
                     break;
 
                 case "PAYMENT_REFUNDED":
-                    // An installment plan refunds every installment; the first event does the work.
-                    if (charge.Status == EnumChargeStatus.Refunded)
+                    // An installment plan refunds every installment; the first event does the
+                    // work. A partial refund is ours (an early termination): the installments
+                    // it returns must not end the subscription, which already has its date.
+                    if (charge.Status is EnumChargeStatus.Refunded or EnumChargeStatus.PartiallyRefunded)
                         break;
 
                     charge.Status = EnumChargeStatus.Refunded;
                     charge.RefundedAt = now;
+                    charge.RefundedAmount ??= charge.Amount;
                     if (SubscriptionRules.IsLive(subscription.Status) && charge.PeriodEnd >= subscription.CurrentPeriodEnd)
                         Expire(subscription, EnumSubscriptionEndReason.Refunded, now);
                     break;
@@ -450,7 +616,7 @@ namespace FinanceControl.Services.Billing
         };
 
         private static string Describe(SubscriptionCharge charge) =>
-            $"Quantia {BillingCatalog.GetName(charge.Plan)} - {(charge.Cycle == EnumBillingCycle.Yearly ? "anual" : "mensal")}";
+            $"Helmo {BillingCatalog.GetName(charge.Plan)} - {(charge.Cycle == EnumBillingCycle.Yearly ? "anual" : "mensal")}";
 
         private static string Truncate(string value, int max) => value.Length <= max ? value : value[..max];
     }

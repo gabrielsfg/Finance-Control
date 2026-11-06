@@ -18,7 +18,19 @@ namespace FinanceControl.Domain.Interfaces.Services
         Task<Result<GetSubscriptionResponseDto>> CreateSubscriptionAsync(
             CreateSubscriptionRequestDto requestDto, int userId, string? remoteIp, CancellationToken cancellationToken = default);
 
+        /// What canceling now would do (refund, fee, access end), for the confirmation dialog.
+        Task<Result<SubscriptionCancellationPreviewResponseDto>> GetCancellationPreviewAsync(
+            int userId, CancellationToken cancellationToken = default);
+
         Task<Result<GetSubscriptionResponseDto>> CancelSubscriptionAsync(int userId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Ends the subscription of an account about to be deleted, under the same rules as
+        /// a cancellation: a yearly plan is refunded (in full inside the withdrawal window,
+        /// the unused months minus the fee after it). Fails — and the deletion must stop —
+        /// when the refund cannot be made.
+        /// </summary>
+        Task<Result> TerminateForAccountDeletionAsync(int userId, CancellationToken cancellationToken = default);
 
         Task<Result<GetSubscriptionResponseDto>> ResumeSubscriptionAsync(int userId, CancellationToken cancellationToken = default);
 

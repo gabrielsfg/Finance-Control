@@ -4,12 +4,18 @@ using Microsoft.Extensions.Logging;
 
 namespace FinanceControl.Workers
 {
+    // Runs once a day after the B3 close to store the official closing history.
     public class BrapiPriceUpdateHostedService : IHostedService, IDisposable
     {
         private readonly BrapiPriceUpdateJobService _jobService;
         private readonly ILogger<BrapiPriceUpdateHostedService> _logger;
         private Timer? _timer;
         private CancellationTokenSource? _cts;
+
+        // 21:30 UTC = 18:30 Brasília (UTC-3, no daylight saving since 2019).
+        // B3 regular session closes at 18:00 Brasília, so the last price is already the official close.
+        private const int TargetHourUtc = 21;
+        private const int TargetMinuteUtc = 30;
 
         public BrapiPriceUpdateHostedService(
             BrapiPriceUpdateJobService jobService,
@@ -23,7 +29,7 @@ namespace FinanceControl.Workers
         {
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            var initialDelay = ComputeDelayUntilNext19hUtc();
+            var initialDelay = ComputeDelayUntilNextRun();
             _logger.LogInformation(
                 "BrapiPriceUpdateHostedService scheduled. First run in {Delay:hh\\:mm\\:ss}.",
                 initialDelay);
@@ -65,13 +71,11 @@ namespace FinanceControl.Workers
             }
         }
 
-        // 19:00 UTC = 16:00 BRT, after market close + after-market (B3 closes 18:00 BRT = 21:00 UTC,
-        // but after-market ends 18:00 BRT). Using 19:00 UTC ensures last price is the official close.
-        private static TimeSpan ComputeDelayUntilNext19hUtc()
+        private static TimeSpan ComputeDelayUntilNextRun()
         {
             var now = DateTime.UtcNow;
-            var todayAt19h = now.Date.AddHours(19);
-            var target = now < todayAt19h ? todayAt19h : todayAt19h.AddDays(1);
+            var todayTarget = now.Date.AddHours(TargetHourUtc).AddMinutes(TargetMinuteUtc);
+            var target = now < todayTarget ? todayTarget : todayTarget.AddDays(1);
             return target - now;
         }
 

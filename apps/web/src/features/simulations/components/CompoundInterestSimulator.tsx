@@ -11,9 +11,9 @@ import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrenc
 import { cn, matchesSearch, assetTypeKeywords } from "@/lib/utils";
 import { Info, ChevronDown, ChevronUp, Check, Search, TrendingUp, ArrowUpRight } from "lucide-react";
 import { simulateMonthly, aggregateAnnual } from "../utils/taxCalc";
-import type { AssetCategory } from "@/lib/types/simulation";
+import type { AssetCategory, BenchmarkRates } from "@/lib/types/simulation";
 import { ASSET_CATEGORY_LABELS } from "@/lib/types/simulation";
-import { useAvailableBenchmarks, useAssetRateForPeriod } from "../hooks/useSimulation";
+import { useAvailableBenchmarks, useAssetRateForPeriod, useBenchmarkRates } from "../hooks/useSimulation";
 import type { AvailableBenchmark } from "@/lib/api/simulation";
 import {
   CHART_GRID, axisTick, SERIES, FieldLabel, FieldShell, MoneyPrefix, UnitSuffix, fieldMono,
@@ -24,11 +24,41 @@ import { chartAnim } from "@/lib/config/chartAnimation";
 type ViewMode = "gross" | "net";
 type BenchmarkId = "cdi" | "ipca5" | "ibov";
 
-const BENCHMARK_RATES: Record<BenchmarkId, { label: string; rate: number; color: string; note: string }> = {
-  cdi:   { label: "CDI",       rate: 10.65, color: SERIES.cobalt, note: "~10,65% a.a. — CDI médio recente" },
-  ipca5: { label: "IPCA+5%",   rate: 10.2,  color: SERIES.gold,   note: "~10,2% a.a. — IPCA(~5,2%) + 5%" },
-  ibov:  { label: "IBOV",      rate: 13.0,  color: SERIES.violet, note: "~13% a.a. — média histórica longo prazo" },
-};
+type BenchmarkInfo = { label: string; rate: number; color: string; note: string; isEstimated: boolean };
+
+// Fixed rates used until the Banco Central rates load (or when the API reports them unavailable).
+const DEFAULT_CDI_RATE   = 10.65;
+const DEFAULT_IPCA5_RATE = 10.2;
+const IBOV_AVERAGE_RATE  = 13.0;
+
+const formatRate = (rate: number) => rate.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+
+/** CDI and IPCA+5% come from the Banco Central (via API); IBOV is always a long-term average. */
+function buildBenchmarks(rates?: BenchmarkRates): Record<BenchmarkId, BenchmarkInfo> {
+  const fallback   = rates?.fallbackSeries ?? [];
+  const cdiLive    = rates !== undefined && !fallback.includes("CDI");
+  const ipcaLive   = rates !== undefined && !fallback.includes("IPCA");
+  const cdiRate    = rates ? rates.cdiAnnual : DEFAULT_CDI_RATE;
+  const ipca5Rate  = rates ? Math.round(((1 + rates.ipcaTrailing12m / 100) * 1.05 - 1) * 10000) / 100 : DEFAULT_IPCA5_RATE;
+  return {
+    cdi: {
+      label: "CDI", rate: cdiRate, color: SERIES.cobalt, isEstimated: !cdiLive,
+      note: cdiLive
+        ? `${formatRate(cdiRate)}% a.a. — CDI acumulado em 12 meses (Banco Central)`
+        : `${formatRate(cdiRate)}% a.a. — taxa fixa estimada (Banco Central indisponível)`,
+    },
+    ipca5: {
+      label: "IPCA+5%", rate: ipca5Rate, color: SERIES.gold, isEstimated: !ipcaLive,
+      note: ipcaLive
+        ? `${formatRate(ipca5Rate)}% a.a. — IPCA 12 meses (Banco Central) + 5%`
+        : `${formatRate(ipca5Rate)}% a.a. — taxa fixa estimada (Banco Central indisponível)`,
+    },
+    ibov: {
+      label: "IBOV", rate: IBOV_AVERAGE_RATE, color: SERIES.violet, isEstimated: true,
+      note: `~${formatRate(IBOV_AVERAGE_RATE)}% a.a. — média histórica longo prazo`,
+    },
+  };
+}
 
 /** Tokenised `.field` input — mono, bordered, cobalt focus halo. */
 const inputCls =
@@ -245,6 +275,8 @@ export const CompoundInterestSimulator = () => {
 
   const { data: availableBenchmarks = [], isLoading: loadingBenchmarks } = useAvailableBenchmarks();
   const { data: refRate, isFetching: loadingRefRate } = useAssetRateForPeriod(refTicker, refPeriod);
+  const { data: benchmarkRates } = useBenchmarkRates();
+  const benchmarks = useMemo(() => buildBenchmarks(benchmarkRates), [benchmarkRates]);
 
   const totalMonths = customMonths ? (parseInt(customMonths) || 0) : presetMonths;
 
@@ -266,13 +298,13 @@ export const CompoundInterestSimulator = () => {
     const initial = parseFloat(initialAmount.replace(",", ".")) * 100 || 0;
     const monthly = parseFloat(monthlyContrib.replace(",", ".")) * 100 || 0;
     const result = {} as Record<BenchmarkId, Map<string, number>>;
-    for (const [id, bm] of Object.entries(BENCHMARK_RATES) as [BenchmarkId, typeof BENCHMARK_RATES[BenchmarkId]][]) {
+    for (const [id, bm] of Object.entries(benchmarks) as [BenchmarkId, BenchmarkInfo][]) {
       const pts = simulateMonthly(initial, monthly, bm.rate, totalMonths, "renda_fixa_bancaria");
       const agg = useAnnual ? aggregateAnnual(pts) : pts;
       result[id] = new Map(agg.map((p) => [p.shortLabel ?? p.label, p.grossValue]));
     }
     return result;
-  }, [initialAmount, monthlyContrib, totalMonths, useAnnual, chartPoints.length]);
+  }, [initialAmount, monthlyContrib, totalMonths, useAnnual, chartPoints.length, benchmarks]);
 
   const mergedChartPoints = useMemo(() => {
     return chartPoints.map((p) => {
@@ -436,7 +468,7 @@ export const CompoundInterestSimulator = () => {
           {/* Benchmark selector */}
           <div className="mb-3 flex items-center gap-2 flex-wrap">
             <span className="text-text-muted text-[11px]">Comparar com:</span>
-            {(Object.entries(BENCHMARK_RATES) as [BenchmarkId, typeof BENCHMARK_RATES[BenchmarkId]][]).map(([id, bm]) => (
+            {(Object.entries(benchmarks) as [BenchmarkId, BenchmarkInfo][]).map(([id, bm]) => (
               <button
                 key={id}
                 onClick={() => toggleBenchmark(id)}
@@ -498,9 +530,13 @@ export const CompoundInterestSimulator = () => {
                 <span className="text-text-muted text-[13px]">{label}</span>
               </div>
             ))}
-            {activeBenchmarks.has("cdi")   && <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: SERIES_COLORS.cdi }}   /><span className="text-text-muted text-[13px]">CDI ({BENCHMARK_RATES.cdi.rate}% a.a.)</span></div>}
-            {activeBenchmarks.has("ipca5") && <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: SERIES_COLORS.ipca5 }} /><span className="text-text-muted text-[13px]">IPCA+5% ({BENCHMARK_RATES.ipca5.rate}% a.a.)</span></div>}
-            {activeBenchmarks.has("ibov")  && <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: SERIES_COLORS.ibov }}  /><span className="text-text-muted text-[13px]">IBOV* ({BENCHMARK_RATES.ibov.rate}% a.a.)</span></div>}
+            {(["cdi", "ipca5", "ibov"] as BenchmarkId[]).filter((id) => activeBenchmarks.has(id)).map((id) => (
+              <div key={id} className="flex items-center gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: SERIES_COLORS[id] }} />
+                <span className="text-text-muted text-[13px]">{benchmarks[id].label}{id === "ibov" ? "*" : ""} ({formatRate(benchmarks[id].rate)}% a.a.)</span>
+                {benchmarks[id].isEstimated && <span className="rounded px-1.5 py-0.5 text-[10px] text-[var(--gold)]" style={{ background: "color-mix(in srgb, var(--gold) 12%, transparent)" }}>estimado</span>}
+              </div>
+            ))}
           </div>
           {activeBenchmarks.has("ibov") && (
             <p className="text-text-muted text-[11px] mt-1">* IBOV usa média histórica de longo prazo. Resultados passados não garantem retornos futuros.</p>

@@ -43,5 +43,18 @@ namespace FinanceControl.Domain.Entities
         public DateTime? ConfirmedAt { get; set; }
         public DateTime? RefundedAt { get; set; }
         public string? FailureReason { get; set; }
+
+        /// Cents returned to the payer, set when we ask for the refund (full or partial).
+        public int? RefundedAmount { get; set; }
+
+        /// A refund Asaas cannot do by API (a paid boleto): the amount is owed and has to be
+        /// paid back by hand, by Pix or transfer.
+        public bool ManualRefundPending { get; set; }
+
+        /// The NFS-e scheduled at Asaas for this charge, and where its PDF lives once the
+        /// city authorizes it.
+        public string? AsaasInvoiceId { get; set; }
+        public string? InvoiceStatus { get; set; }
+        public string? InvoicePdfUrl { get; set; }
     }
 }

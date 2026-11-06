@@ -79,7 +79,7 @@ class AppLocale {
   }
 
   /// Splits [cents] into its display parts so a widget can style the currency
-  /// symbol and the decimals differently from the integer (the Quantia "money
+  /// symbol and the decimals differently from the integer (the Helmo "money
   /// as typography" signature). `decimal` includes the separator (",56"/".56").
   ({String symbol, String integer, String decimal, bool negative})
       currencyParts(int cents) {

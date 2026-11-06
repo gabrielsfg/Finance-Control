@@ -46,19 +46,25 @@ namespace FinanceControl.Services.Services
         private readonly IEmailService _emailService;
         private readonly ILegalService _legalService;
         private readonly IOpenFinanceService? _openFinanceService;
+        private readonly ISubscriptionService? _subscriptionService;
+
+        /// Error of <see cref="DeleteAccountAsync"/> when the password does not match.
+        public const string InvalidPasswordError = "INVALID_PASSWORD";
 
         public UserService(
             ApplicationDbContext context,
             IConfiguration configuration,
             IEmailService emailService,
             ILegalService legalService,
-            IOpenFinanceService? openFinanceService = null)
+            IOpenFinanceService? openFinanceService = null,
+            ISubscriptionService? subscriptionService = null)
         {
             _context = context;
             _configuration = configuration;
             _emailService = emailService;
             _legalService = legalService;
             _openFinanceService = openFinanceService;
+            _subscriptionService = subscriptionService;
         }
 
         public async Task<Result> RegisterUserAsync(CreateUserRequestDto requestDto, string? ipAddress, string? userAgent)
@@ -463,20 +469,29 @@ namespace FinanceControl.Services.Services
             return true;
         }
 
-        public async Task<bool> DeleteAccountAsync(int userId, string password)
+        public async Task<Result> DeleteAccountAsync(int userId, string password)
         {
             var user = await _context.Users.FindAsync(userId);
-            if (user is null)
-                return false;
+            if (user is null || new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, password) == PasswordVerificationResult.Failed)
+                return Result.Failure(InvalidPasswordError);
 
-            if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, password) == PasswordVerificationResult.Failed)
-                return false;
+            // The subscription first, under the cancellation rules (a yearly plan is
+            // refunded). A refund that cannot be made stops the deletion: the user would
+            // have no account left to claim it from.
+            if (_subscriptionService is not null)
+            {
+                var termination = await _subscriptionService.TerminateForAccountDeletionAsync(userId);
+                if (termination.IsFailure)
+                    return termination;
+            }
 
-            // Bank connections first: deleting the rows here would leave the items (and
+            // Bank connections next: deleting the rows here would leave the items (and
             // the Open Finance consents) alive at Pluggy.
             if (_openFinanceService is not null)
                 await _openFinanceService.RemoveAllConnectionsAsync(userId);
 
+            // Saved together with the deletion: paid charges and the trial outlive the account.
+            await BillingArchive.AddForDeletedAccountAsync(_context, userId);
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
 
@@ -484,7 +499,7 @@ namespace FinanceControl.Services.Services
             // investments went with the cascade above, so they can go now.
             _context.MarketAssets.RemoveRange(_context.MarketAssets.Where(a => a.OwnerUserId == userId));
             await _context.SaveChangesAsync();
-            return true;
+            return Result.Success();
         }
 
         public async Task<bool> ResetDataAsync(int userId, string password)
@@ -517,7 +532,19 @@ namespace FinanceControl.Services.Services
             {
                 await using var dbTransaction = await _context.Database.BeginTransactionAsync();
 
+                // "Apagar todos os dados" covers what the user wrote or the app derived from
+                // it, not only the ledger: alerts, notifications, feedback, AI conversations,
+                // insights, the AI context note and the declared investor profile.
+                await _context.AlertRules.Where(a => a.UserId == userId).ExecuteDeleteAsync();
+                await _context.Notifications.Where(n => n.UserId == userId).ExecuteDeleteAsync();
+                await _context.UserFeedbacks.Where(f => f.UserId == userId).ExecuteDeleteAsync();
+                await _context.AiConversations.Where(c => c.UserId == userId).ExecuteDeleteAsync();
+                await _context.UserInsights.Where(i => i.UserId == userId).ExecuteDeleteAsync();
+                await _context.UserAiContexts.Where(c => c.UserId == userId).ExecuteDeleteAsync();
+                await _context.UserRiskProfiles.Where(p => p.UserId == userId).ExecuteDeleteAsync();
+
                 await _context.Transactions.Where(t => t.UserId == userId).ExecuteDeleteAsync();
+                await _context.Tags.Where(t => t.UserId == userId).ExecuteDeleteAsync();
                 await _context.IgnoredExternalTransactions.Where(i => i.UserId == userId).ExecuteDeleteAsync();
                 await _context.RecurringTransactions.Where(t => t.UserId == userId).ExecuteDeleteAsync();
                 await _context.BudgetSubcategoryAllocations

@@ -19,19 +19,19 @@ class AppSpacing {
   static const EdgeInsets cardPaddingSm   = EdgeInsets.all(14);
 }
 
-/// Quantia radius scale — intentional, not 16px on everything.
+/// Helmo radius scale — intentional, not 16px on everything.
 ///   hero 26 · card 20 · button/input 13 · chip 9 · pill 999
 /// Legacy names are kept (screens reference them) but remapped to the new scale.
 class AppRadius {
   AppRadius._();
 
-  static const double sm   = 9;   // chips, swatches, small badges (Quantia r-sm)
+  static const double sm   = 9;   // chips, swatches, small badges (Helmo r-sm)
   static const double md   = 11;  // segment toggles, compact controls
-  static const double base = 13;  // inputs, primary buttons, icons (Quantia r-md)
+  static const double base = 13;  // inputs, primary buttons, icons (Helmo r-md)
   static const double lg   = 16;  // mini cards, nested surfaces
-  static const double xl   = 20;  // main cards (Quantia r-lg)
+  static const double xl   = 20;  // main cards (Helmo r-lg)
   static const double xl2  = 22;  // content sections
-  static const double xl3  = 26;  // bottom sheets, hero panel (Quantia r-xl)
+  static const double xl3  = 26;  // bottom sheets, hero panel (Helmo r-xl)
   static const double hero = 26;  // hero panel
   static const double card = 20;  // canonical card radius
   static const double full = 44;  // avatars, FAB
@@ -50,7 +50,7 @@ class AppRadius {
   static BorderRadius get pillAll => BorderRadius.circular(pill);
 }
 
-/// Quantia shadows — soft, never a generic hard drop. Light uses a low-opacity
+/// Helmo shadows — soft, never a generic hard drop. Light uses a low-opacity
 /// petroleum-ink shadow; dark cards lean on their border instead. Brand
 /// controls (FAB, primary button, logo) carry a subtle cobalt-tinted glow.
 class AppShadows {

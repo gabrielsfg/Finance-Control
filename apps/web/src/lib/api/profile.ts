@@ -32,6 +32,11 @@ export const profileApi = {
     await api.post("/user/me/reset-data", data);
   },
 
+  /** Deletes the user's account for good. A yearly plan is refunded under the cancellation rules first. */
+  deleteAccount: async (data: ResetDataRequest): Promise<void> => {
+    await api.delete("/user/me", { data });
+  },
+
   /**
    * Data portability. Comes back as a file, so the response is a blob and the
    * filename is read from Content-Disposition rather than invented here.

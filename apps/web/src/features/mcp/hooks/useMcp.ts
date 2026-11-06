@@ -2,12 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { mcpApi, oauthApi } from "@/lib/api/mcp";
 import type { CreateMcpTokenRequest } from "@/lib/types/mcp.types";
 
-export const useMcpInfo = () =>
+export const useMcpInfo = (enabled = true) =>
   useQuery({
     queryKey: ["mcp", "info"],
     queryFn: mcpApi.getInfo,
     // The server URL and the scope list are configuration — they do not change in a session.
     staleTime: Infinity,
+    enabled,
   });
 
 export const useMcpConnections = () =>

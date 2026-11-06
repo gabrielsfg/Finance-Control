@@ -49,7 +49,7 @@ namespace FinanceControl.WebApi.Mcp
                 ["authorization_servers"] = new[] { settings.Issuer },
                 ["scopes_supported"] = McpScopes.All,
                 ["bearer_methods_supported"] = new[] { "header" },
-                ["resource_name"] = "Quantia"
+                ["resource_name"] = "Helmo"
             });
         }
 

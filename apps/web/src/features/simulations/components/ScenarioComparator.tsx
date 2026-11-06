@@ -53,19 +53,25 @@ const ALL_PRESET_BRAPI_TICKERS = [
   ),
 ];
 
+type BacenRates = { cdiAnnual: number; selicAnnual: number; fallbackSeries: string[] };
+
+const FALLBACK_SOURCE = "taxa fixa estimada — Banco Central indisponível";
+
 // Resolves the effective annual rate for a preset given live Brapi data.
 function resolveRate(
   asset: PresetAsset,
   assetRateMap: Map<string, AssetRate>,
-  bacenRates?: { cdiAnnual: number; selicAnnual: number },
+  bacenRates?: BacenRates,
 ): { rate: number; isStub: boolean; rateSource: string } {
-  // BACEN-driven presets always use live rates
+  // BACEN-driven presets use live rates, or the API's fixed fallback rate (flagged as estimated)
   if (bacenRates) {
-    if (asset.id === "cdi_100")       return { rate: bacenRates.cdiAnnual,                                    isStub: false, rateSource: "BACEN (dinâmico)" };
-    if (asset.id === "cdi_110")       return { rate: Math.round(bacenRates.cdiAnnual * 1.1 * 100) / 100,      isStub: false, rateSource: "CDI × 1,1 (BACEN)" };
-    if (asset.id === "lci_95")        return { rate: Math.round(bacenRates.cdiAnnual * 0.95 * 100) / 100,     isStub: false, rateSource: "CDI × 0,95 (BACEN)" };
-    if (asset.id === "tesouro_selic") return { rate: bacenRates.selicAnnual,                                   isStub: false, rateSource: "BACEN (dinâmico)" };
-    if (asset.id === "poupanca")      return { rate: Math.round(bacenRates.selicAnnual * 0.7 * 100) / 100,    isStub: false, rateSource: "Regra legal (SELIC atual)" };
+    const cdiFallback   = bacenRates.fallbackSeries.includes("CDI");
+    const selicFallback = bacenRates.fallbackSeries.includes("SELIC");
+    if (asset.id === "cdi_100")       return { rate: bacenRates.cdiAnnual,                                    isStub: cdiFallback,   rateSource: cdiFallback   ? `CDI: ${FALLBACK_SOURCE}`   : "BACEN (dinâmico)" };
+    if (asset.id === "cdi_110")       return { rate: Math.round(bacenRates.cdiAnnual * 1.1 * 100) / 100,      isStub: cdiFallback,   rateSource: cdiFallback   ? `CDI × 1,1: ${FALLBACK_SOURCE}`  : "CDI × 1,1 (BACEN)" };
+    if (asset.id === "lci_95")        return { rate: Math.round(bacenRates.cdiAnnual * 0.95 * 100) / 100,     isStub: cdiFallback,   rateSource: cdiFallback   ? `CDI × 0,95: ${FALLBACK_SOURCE}` : "CDI × 0,95 (BACEN)" };
+    if (asset.id === "tesouro_selic") return { rate: bacenRates.selicAnnual,                                   isStub: selicFallback, rateSource: selicFallback ? `SELIC: ${FALLBACK_SOURCE}` : "BACEN (dinâmico)" };
+    if (asset.id === "poupanca")      return { rate: Math.round(bacenRates.selicAnnual * 0.7 * 100) / 100,    isStub: selicFallback, rateSource: selicFallback ? `SELIC: ${FALLBACK_SOURCE}` : "Regra legal (SELIC atual)" };
   }
 
   // Brapi CAGR: try brapiTicker first, then ticker
@@ -95,7 +101,7 @@ function AssetPicker({
 }: {
   onSelect: (asset: PresetAsset) => void;
   onClose: () => void;
-  rates?: { cdiAnnual: number; selicAnnual: number };
+  rates?: BacenRates;
   assetRateMap: Map<string, AssetRate>;
 }) {
   const [search, setSearch]           = useState("");
@@ -301,7 +307,11 @@ export const ScenarioComparator = () => {
       if (!s.presetId) return s;
       const preset = PRESET_ASSETS.find((a) => a.id === s.presetId);
       if (!preset) return s;
-      const resolved = resolveRate(preset, assetRateMap, rates ?? undefined);
+      const resolved = resolveRate(
+        preset,
+        assetRateMap,
+        rates ? { cdiAnnual: rates.cdiAnnual, selicAnnual: rates.selicAnnual, fallbackSeries: rates.fallbackSeries ?? [] } : undefined,
+      );
       return { ...s, annualRate: resolved.rate, isStub: resolved.isStub, rateSource: resolved.rateSource };
     });
   }, [scenarios, rates, assetRateMap]);
@@ -382,7 +392,7 @@ export const ScenarioComparator = () => {
     <>
       {pickerFor && (
         <AssetPicker
-          rates={rates ? { cdiAnnual: rates.cdiAnnual, selicAnnual: rates.selicAnnual } : undefined}
+          rates={rates ? { cdiAnnual: rates.cdiAnnual, selicAnnual: rates.selicAnnual, fallbackSeries: rates.fallbackSeries ?? [] } : undefined}
           assetRateMap={assetRateMap}
           onSelect={handlePickerSelect}
           onClose={() => setPickerFor(null)}
@@ -440,16 +450,26 @@ export const ScenarioComparator = () => {
                 </div>
                 <div className="flex flex-col gap-2">
                   {[
-                    { label: "CDI",       value: rates.cdiAnnual.toFixed(2)        },
-                    { label: "SELIC",     value: rates.selicAnnual.toFixed(2)       },
-                    { label: "IPCA 12m",  value: rates.ipcaTrailing12m.toFixed(2)   },
+                    { label: "CDI",       value: rates.cdiAnnual.toFixed(2),       series: "CDI"   },
+                    { label: "SELIC",     value: rates.selicAnnual.toFixed(2),     series: "SELIC" },
+                    { label: "IPCA 12m",  value: rates.ipcaTrailing12m.toFixed(2), series: "IPCA"  },
                   ].map((r) => (
                     <div key={r.label} className="flex items-center justify-between">
-                      <span className="text-[12px] text-[var(--text-sub)]">{r.label}</span>
+                      <span className="flex items-center gap-1.5 text-[12px] text-[var(--text-sub)]">
+                        {r.label}
+                        {rates.fallbackSeries?.includes(r.series) && (
+                          <span className="rounded px-1.5 py-0.5 text-[10px] text-[var(--gold)]" style={{ background: "color-mix(in srgb, var(--gold) 12%, transparent)" }}>estimado</span>
+                        )}
+                      </span>
                       <span className="font-mono text-[13px] font-medium tabular-nums text-[var(--moss)]">{r.value}% a.a.</span>
                     </div>
                   ))}
                 </div>
+                {(rates.fallbackSeries?.length ?? 0) > 0 && (
+                  <p className="mt-2.5 text-[11px] leading-relaxed text-[var(--gold)]">
+                    Banco Central indisponível no momento. Taxas marcadas como estimado usam uma taxa anual fixa.
+                  </p>
+                )}
               </Card>
             )}
 

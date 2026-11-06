@@ -29,6 +29,10 @@ import {
 import { getApiErrorMessage } from "../utils/apiError";
 import { MessageContent } from "./MessageContent";
 import { ActionCard } from "./ActionCard";
+import {
+  ReportAiContentButton,
+  ReportAiContentForm,
+} from "@/features/feedback/components/ReportAiContent";
 import type { AiMessage } from "@/lib/types/assistant.types";
 
 /** Matches the API validator. */
@@ -455,6 +459,23 @@ function MessageBubble({
 }) {
   if (message.role === "User") return <UserBubble content={message.content} />;
 
+  return <AssistantBubble message={message} conversationId={conversationId} onRetry={onRetry} retryDisabled={retryDisabled} />;
+}
+
+function AssistantBubble({
+  message,
+  conversationId,
+  onRetry,
+  retryDisabled,
+}: {
+  message: AiMessage;
+  conversationId: number | null;
+  onRetry?: () => void;
+  retryDisabled: boolean;
+}) {
+  const [reporting, setReporting] = useState(false);
+  const [reported, setReported] = useState(false);
+
   return (
     <div className="flex max-w-[92%] flex-col gap-2.5">
       <MessageContent
@@ -465,6 +486,25 @@ function MessageBubble({
         )}
       />
       {message.isError && onRetry && <RetryButton onClick={onRetry} disabled={retryDisabled} />}
+      {/* The fixed apology after a provider failure is our text, not the model's: nothing to report. */}
+      {!message.isError && (
+        <div className="-mt-1.5 flex items-center gap-1.5">
+          <span className="text-[10.5px] text-[var(--text-muted)]">Gerado por IA</span>
+          <ReportAiContentButton
+            active={reporting}
+            reported={reported}
+            onClick={() => setReporting((open) => !open)}
+            className="h-6 w-6"
+          />
+        </div>
+      )}
+      {reporting && (
+        <ReportAiContentForm
+          target={{ aiMessageId: message.id }}
+          onClose={() => setReporting(false)}
+          onReported={() => setReported(true)}
+        />
+      )}
       {conversationId !== null &&
         message.actions.map((action) => (
           <ActionCard key={action.id} action={action} conversationId={conversationId} />

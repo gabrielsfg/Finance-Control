@@ -11,7 +11,7 @@ export const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:30
   "",
 );
 
-export const siteName = "Quantia";
+export const siteName = "Helmo";
 
 export const siteTagline = "Seu dinheiro, organizado";
 

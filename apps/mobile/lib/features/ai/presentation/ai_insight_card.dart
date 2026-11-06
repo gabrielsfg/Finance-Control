@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/ai_labels.dart';
 import '../../../core/utils/app_locale.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../feedback/presentation/report_ai_content_sheet.dart';
 import '../data/ai_models.dart';
 import '../providers/insight_provider.dart';
 import 'ai_state_notice.dart';
@@ -126,11 +127,26 @@ class _InsightBody extends StatelessWidget {
           const SizedBox(height: 8),
         ],
         const SizedBox(height: 2),
-        Text(
-          insight.generatedByAi
-              ? 'Gerado por IA em ${fmt.formatDate(insight.generatedAt)} · pode conter imprecisões'
-              : 'Resumo automático de ${fmt.formatDate(insight.generatedAt)}',
-          style: AppTextStyles.caption(t.txtTertiary),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                insight.generatedByAi
+                    ? 'Gerado por IA em ${fmt.formatDate(insight.generatedAt)} · pode conter imprecisões'
+                    : 'Resumo automático de ${fmt.formatDate(insight.generatedAt)}',
+                style: AppTextStyles.caption(t.txtTertiary),
+              ),
+            ),
+            // Only a stored, model-written analysis can be reported; the
+            // fallback is our own text.
+            if (insight.generatedByAi && insight.id != null)
+              ReportAiContentButton(
+                onPressed: () => showReportAiContentSheet(
+                  context,
+                  aiInsightId: insight.id,
+                ),
+              ),
+          ],
         ),
       ],
     );

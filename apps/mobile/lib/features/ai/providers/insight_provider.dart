@@ -41,7 +41,7 @@ class PortfolioInsightNotifier
 final portfolioInsightProvider = AsyncNotifierProvider.autoDispose<
     PortfolioInsightNotifier, AiInsightResult>(PortfolioInsightNotifier.new);
 
-// ── Settings ("IA no Quantia") ───────────────────────────────────────────────
+// ── Settings ("IA no Helmo") ───────────────────────────────────────────────
 
 /// Null while signed out. Also read by the chat entry point to decide between
 /// the chat and the Premium notice.

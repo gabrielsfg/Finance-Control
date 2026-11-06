@@ -20,6 +20,11 @@ namespace FinanceControl.Shared.Dtos.Request
         /// Required when BillingMethod is CreditCard.
         public SubscriptionCardRequestDto? Card { get; set; }
 
+        /// What the checkout showed: true when it promised the free trial. A card signup
+        /// that turns out not to be eligible (the CPF already had a trial) is then refused
+        /// with TRIAL_NOT_ELIGIBLE instead of charged, so the user sees the price first.
+        public bool ExpectTrial { get; set; }
+
         /// Cloudflare Turnstile token from the form.
         public string? CaptchaToken { get; set; }
 

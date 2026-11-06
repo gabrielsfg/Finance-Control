@@ -23,8 +23,8 @@ namespace FinanceControl.Tests.Unit
 
         private static readonly McpSettings Settings = new()
         {
-            PublicBaseUrl = "https://api.quantia.test",
-            WebBaseUrl = "https://app.quantia.test"
+            PublicBaseUrl = "https://api.helmo.test",
+            WebBaseUrl = "https://app.helmo.test"
         };
 
         private static string Challenge(string verifier) =>
@@ -80,7 +80,7 @@ namespace FinanceControl.Tests.Unit
 
             var outcome = await service.AuthorizeAsync("code", client.ClientId, RedirectUri, Challenge(Verifier), "S256", null, "s", null);
 
-            Assert.StartsWith("https://app.quantia.test/oauth/consent?request=", outcome.RedirectUrl);
+            Assert.StartsWith("https://app.helmo.test/oauth/consent?request=", outcome.RedirectUrl);
         }
 
         [Fact]

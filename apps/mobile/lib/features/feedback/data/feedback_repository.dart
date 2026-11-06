@@ -12,7 +12,8 @@ final feedbackRepositoryProvider = Provider<FeedbackRepository>(
 /// screen — never send the translated word.
 enum FeedbackType {
   bug('Bug'),
-  suggestion('Suggestion');
+  suggestion('Suggestion'),
+  aiContent('AiContent');
 
   const FeedbackType(this.wire);
   final String wire;
@@ -37,6 +38,28 @@ class FeedbackRepository {
         'title': title,
         'description': description,
         'source': 'mobile',
+      },
+    );
+  }
+
+  /// Reports an incorrect or inappropriate AI answer ([aiMessageId]) or
+  /// analysis ([aiInsightId]) — exactly one of them. The title is filled in by
+  /// the API.
+  Future<void> reportAiContent({
+    int? aiMessageId,
+    int? aiInsightId,
+    String? comment,
+  }) async {
+    assert((aiMessageId == null) != (aiInsightId == null));
+    await _dio.post(
+      ApiEndpoints.feedback,
+      data: {
+        'type': FeedbackType.aiContent.wire,
+        'title': '',
+        'description': comment,
+        'source': 'mobile',
+        'aiMessageId': aiMessageId,
+        'aiInsightId': aiInsightId,
       },
     );
   }

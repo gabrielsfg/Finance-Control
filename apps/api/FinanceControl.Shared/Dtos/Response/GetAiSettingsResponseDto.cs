@@ -1,6 +1,6 @@
 namespace FinanceControl.Shared.Dtos.Response
 {
-    /// <summary>What the "IA no Quantia" profile card shows.</summary>
+    /// <summary>What the "IA no Helmo" profile card shows.</summary>
     public class GetAiSettingsResponseDto
     {
         /// <summary>The user's own switch for the in-app AI features.</summary>

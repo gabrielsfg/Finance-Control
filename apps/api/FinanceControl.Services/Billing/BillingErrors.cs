@@ -21,5 +21,9 @@ namespace FinanceControl.Services.Billing
         public const string NotPaidByCard = "NOT_PAID_BY_CARD";
         public const string NoPendingPix = "NO_PENDING_PIX";
         public const string UserNotFound = "USER_NOT_FOUND";
+
+        /// The checkout promised a free trial, but the CPF already had one: nothing was
+        /// charged, and the client shows the price and asks again.
+        public const string TrialNotEligible = "TRIAL_NOT_ELIGIBLE";
     }
 }

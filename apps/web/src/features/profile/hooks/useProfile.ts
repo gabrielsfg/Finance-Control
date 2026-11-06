@@ -39,6 +39,11 @@ export const useResetData = () =>
     mutationFn: (data: ResetDataRequest) => profileApi.resetData(data),
   });
 
+export const useDeleteUserAccount = () =>
+  useMutation({
+    mutationFn: (data: ResetDataRequest) => profileApi.deleteAccount(data),
+  });
+
 /**
  * Downloads the export. The object URL is revoked right after the click because
  * it pins the whole file in memory until it is.

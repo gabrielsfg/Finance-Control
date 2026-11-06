@@ -75,7 +75,7 @@ namespace FinanceControl.Services.Services
 
             if (await IsQuotaExceededAsync(kind, userId))
             {
-                await LogAsync(userId, kind, EnumAiOutcome.QuotaExceeded, null, 0, "Monthly quota reached.");
+                await LogAsync(userId, kind, EnumAiOutcome.QuotaExceeded, null, 0, AiReasonCodes.QuotaExceeded);
 
                 // The cached analysis, when there is one, beats an empty card.
                 return new InsightResultResponseDto
@@ -122,8 +122,8 @@ namespace FinanceControl.Services.Services
                     // Worth a warning rather than information: a rejection means either the
                     // model drifted or the prompt was weakened, and both need a human.
                     _logger.LogWarning(
-                        "Insight rejected by the guard for user {UserId}, kind {Kind}: {Reason}",
-                        userId, kind, verdict.Reason);
+                        "Insight rejected by the guard for user {UserId}, kind {Kind}: {Reason} {Detail}",
+                        userId, kind, verdict.Reason, verdict.Detail);
 
                     await LogAsync(userId, kind, EnumAiOutcome.GuardRejected, generation, (int)stopwatch.ElapsedMilliseconds, verdict.Reason);
                     output = Fallback(kind, snapshot);
@@ -336,6 +336,7 @@ namespace FinanceControl.Services.Services
 
             return new GetInsightResponseDto
             {
+                Id = insight.Id,
                 Kind = insight.Kind,
                 PeriodStart = insight.PeriodStart,
                 Headline = content.Headline,

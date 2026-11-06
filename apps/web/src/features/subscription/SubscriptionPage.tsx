@@ -7,9 +7,10 @@ import { PageTopbar } from "@/components/layout/PageTopbar";
 import { Card, CardHead, LedgerRule } from "@/components/shared/Card";
 import { Money } from "@/components/shared/Money";
 import { cn } from "@/lib/utils";
-import type { SubscriptionState } from "@/lib/types/subscription.types";
+import type { SubscriptionCancellationPreview, SubscriptionState } from "@/lib/types/subscription.types";
 import {
   useCancelSubscription,
+  useCancellationPreview,
   useRefundSubscription,
   useResumeSubscription,
   useSubscription,
@@ -84,6 +85,7 @@ function LiveSubscription({ subscription }: { subscription: SubscriptionState })
   const cancel = useCancelSubscription();
   const resume = useResumeSubscription();
   const refund = useRefundSubscription();
+  const preview = useCancellationPreview(confirm === "cancel");
 
   const isTrial = subscription.status === "Trialing";
   const isCanceled = subscription.status === "Canceled";
@@ -153,7 +155,8 @@ function LiveSubscription({ subscription }: { subscription: SubscriptionState })
 
           {isCanceled && (
             <p className="mt-4 text-[12.5px] text-[var(--text-sub)]">
-              Nada mais será cobrado. Mudou de ideia? Você pode retomar até {formatBillingDate(subscription.currentPeriodEnd)}.
+              A assinatura não será renovada e nenhuma nova cobrança será gerada.
+              {subscription.canResume && ` Mudou de ideia? Você pode retomar até ${formatBillingDate(subscription.currentPeriodEnd)}.`}
             </p>
           )}
 
@@ -212,8 +215,9 @@ function LiveSubscription({ subscription }: { subscription: SubscriptionState })
         <Card>
           <CardHead title="Seus direitos" />
           <ul className="flex list-disc flex-col gap-2 pl-4 text-[12.5px] leading-relaxed text-[var(--text-sub)]">
-            <li>Cancele a qualquer momento, em um clique. O acesso continua até o fim do período já pago.</li>
+            <li>Cancele a qualquer momento, em um clique. O acesso continua até a próxima data de cobrança.</li>
             <li>Reembolso integral do primeiro pagamento em até 7 dias.</li>
+            <li>No plano anual, depois desses 7 dias, o cancelamento devolve os meses não iniciados, descontada multa de 10% sobre o valor deles.</li>
             <li>Seus dados continuam disponíveis para exportação mesmo sem assinatura.</li>
           </ul>
         </Card>
@@ -231,10 +235,12 @@ function LiveSubscription({ subscription }: { subscription: SubscriptionState })
               ? `Nada será cobrado. Você continua com acesso até ${formatBillingDate(subscription.currentPeriodEnd)}.`
               : isPending
                 ? "A cobrança em aberto será cancelada."
-                : `Nada mais será cobrado. Você continua com acesso até ${formatBillingDate(subscription.currentPeriodEnd)}.`
+                : preview.data
+                  ? cancellationText(preview.data)
+                  : "Calculando o que acontece com o cancelamento…"
         }
         confirmLabel={confirm === "refund" ? "Pedir reembolso" : "Cancelar assinatura"}
-        pending={action.isPending}
+        pending={action.isPending || (confirm === "cancel" && !isTrial && !isPending && !preview.data)}
         error={action.isError ? billingErrorMessage(action.error) : null}
         onConfirm={() => action.mutate(undefined, { onSuccess: () => setConfirm(null) })}
         onClose={() => {
@@ -294,7 +300,19 @@ function ChargesCard({ subscription }: { subscription: SubscriptionState }) {
               </span>
               <span className="text-[12px] text-[var(--text-muted)]">
                 {formatBillingDate(charge.confirmedAt ?? charge.dueDate)} · {CHARGE_STATUS_LABEL[charge.status]}
+                {charge.status === "PartiallyRefunded" && charge.refundedAmount != null &&
+                  ` (${formatCents(charge.refundedAmount)} devolvidos)`}
               </span>
+              {charge.invoicePdfUrl && (
+                <a
+                  href={charge.invoicePdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[12px] text-[var(--brand-accent)] hover:underline"
+                >
+                  Nota fiscal (PDF)
+                </a>
+              )}
             </div>
             <Money cents={charge.amount} className="text-[15px]" />
           </div>
@@ -302,4 +320,21 @@ function ChargesCard({ subscription }: { subscription: SubscriptionState }) {
       </div>
     </Card>
   );
+}
+
+/** The confirmation text for a cancellation, from what the API says it will do. */
+function cancellationText(preview: SubscriptionCancellationPreview): string {
+  const manual = preview.refundIsManual
+    ? " Como o pagamento foi por boleto, a devolução é feita por Pix ou transferência — entraremos em contato por e-mail."
+    : " O estorno volta pelo mesmo meio de pagamento; no cartão, aparece na fatura em até 10 dias úteis, conforme o emissor.";
+  switch (preview.kind) {
+    case "Withdrawal":
+      return `Você está dentro dos 7 dias do direito de arrependimento: devolvemos ${formatCents(preview.refundAmount)} e o acesso termina agora.${manual}`;
+    case "EarlyTermination":
+      return `Você usou ${preview.monthsUsed} ${preview.monthsUsed === 1 ? "mês" : "meses"} do plano anual. Devolvemos ${formatCents(preview.refundAmount)} dos meses não iniciados, já descontada a multa de ${formatCents(preview.feeAmount)} (10% do valor deles). O acesso continua até ${formatBillingDate(preview.accessUntil)}, e esse cancelamento não pode ser desfeito.${manual}`;
+    case "Immediate":
+      return "A cobrança em aberto será cancelada.";
+    default:
+      return `A assinatura não será renovada e nenhuma nova cobrança será gerada. Você continua com acesso até ${formatBillingDate(preview.accessUntil)}.`;
+  }
 }

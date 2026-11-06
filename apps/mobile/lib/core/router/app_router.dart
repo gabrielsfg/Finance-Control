@@ -42,7 +42,10 @@ import '../../features/menu/presentation/menu_page.dart';
 import '../../features/notifications/presentation/notification_preferences_page.dart';
 import '../../features/notifications/presentation/notifications_page.dart';
 import '../../features/legal/data/legal_repository.dart';
+import '../../features/legal/data/models/pending_legal_document.dart';
+import '../../features/legal/presentation/legal_consent_page.dart';
 import '../../features/legal/presentation/legal_document_page.dart';
+import '../../features/legal/providers/legal_consent_provider.dart';
 import '../../features/recurrences/presentation/recurrences_page.dart';
 import '../../features/transactions/data/models/transaction_item.dart';
 import '../../features/transactions/presentation/add_transaction_page.dart';
@@ -75,6 +78,10 @@ const _openRoutes = {
   '/legal/terms',
 };
 
+/// The blocking re-acceptance screen. The legal documents it links to stay
+/// reachable through [_openRoutes].
+const _legalConsentRoute = '/legal/consent';
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = _RouterListenable(ref);
 
@@ -95,6 +102,21 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (!isAuthenticated && !isOnAuthRoute) return '/login';
       if (isAuthenticated && isOnAuthRoute) return '/';
+
+      // Updated legal documents close the whole app until accepted. Fails open
+      // while loading or on error — the check is a courtesy of the client, and a
+      // broken request must not lock a user out of their own data.
+      if (isAuthenticated) {
+        final pending =
+            ref.read(pendingLegalDocumentsProvider).valueOrNull ?? const [];
+        final isOnConsent = state.matchedLocation == _legalConsentRoute;
+        // The documents themselves and the profile (export, delete the account)
+        // stay open: not accepting must still leave the exits the Terms promise.
+        final isOpenWithoutConsent = state.matchedLocation.startsWith('/legal/') ||
+            state.matchedLocation.startsWith('/profile');
+        if (pending.isNotEmpty && !isOnConsent && !isOpenWithoutConsent) return _legalConsentRoute;
+        if (pending.isEmpty && isOnConsent) return '/';
+      }
       return null;
     },
     routes: [
@@ -129,17 +151,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/legal/privacy',
-        builder: (_, _) => const LegalDocumentPage(
+        builder: (_, state) => LegalDocumentPage(
+          // Keyed per version so opening another version builds a new page.
+          key: ValueKey('privacy-${state.uri.queryParameters['v']}'),
           type: LegalDocumentTypes.privacyPolicy,
           title: 'Política de Privacidade',
+          version: int.tryParse(state.uri.queryParameters['v'] ?? ''),
         ),
       ),
       GoRoute(
         path: '/legal/terms',
-        builder: (_, _) => const LegalDocumentPage(
+        builder: (_, state) => LegalDocumentPage(
+          key: ValueKey('terms-${state.uri.queryParameters['v']}'),
           type: LegalDocumentTypes.termsOfUse,
           title: 'Termos de Uso',
+          version: int.tryParse(state.uri.queryParameters['v'] ?? ''),
         ),
+      ),
+      GoRoute(
+        path: _legalConsentRoute,
+        builder: (_, _) => const LegalConsentPage(),
       ),
       GoRoute(
         path: '/analytics',
@@ -326,13 +357,22 @@ class _RouterListenable extends ChangeNotifier {
       authNotifierProvider,
       (_, _) => notifyListeners(),
     );
+    // Also re-evaluated when the pending legal documents change: a newly
+    // published version closes the app, and accepting it opens it again.
+    _legalSubscription = ref.listen<AsyncValue<List<PendingLegalDocument>>>(
+      pendingLegalDocumentsProvider,
+      (_, _) => notifyListeners(),
+    );
   }
 
   ProviderSubscription<AsyncValue<AuthState>>? _subscription;
+  ProviderSubscription<AsyncValue<List<PendingLegalDocument>>>?
+      _legalSubscription;
 
   @override
   void dispose() {
     _subscription?.close();
+    _legalSubscription?.close();
     super.dispose();
   }
 }

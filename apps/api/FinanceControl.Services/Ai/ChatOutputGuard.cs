@@ -43,13 +43,13 @@ namespace FinanceControl.Services.Ai
             var normalized = Normalize(answer);
             var advice = AdviceTerms.FirstOrDefault(term => normalized.Contains(term, StringComparison.Ordinal));
             if (advice is not null)
-                return InsightGuardResult.Rejected($"Advice term: \"{advice.Trim()}\".");
+                return InsightGuardResult.Rejected(AiReasonCodes.BlockedAdviceTerm, advice.Trim());
 
             var allowed = new HashSet<string>(allowedTickers, StringComparer.OrdinalIgnoreCase);
             foreach (Match match in TickerPattern.Matches(answer))
             {
                 if (!allowed.Contains(match.Value))
-                    return InsightGuardResult.Rejected($"Ticker volunteered by the model: {match.Value}.");
+                    return InsightGuardResult.Rejected(AiReasonCodes.BlockedTicker);
             }
 
             return InsightGuardResult.Approved();

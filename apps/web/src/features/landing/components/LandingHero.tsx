@@ -28,7 +28,7 @@ export function LandingHero() {
           </h1>
 
           <p className="mt-5 max-w-[520px] text-[16.5px] leading-relaxed text-[var(--text-sub)]">
-            O Quantia junta contas, cartões, orçamento, metas e investimentos na mesma tela. Você
+            O Helmo junta contas, cartões, orçamento, metas e investimentos na mesma tela. Você
             lança uma vez e enxerga o mês inteiro, sem planilha e sem quebra-cabeça no fim do mês.
           </p>
 
@@ -49,7 +49,7 @@ export function LandingHero() {
           </div>
 
           <p className="mt-4 text-[13px] text-[var(--text-sub)]">
-            Grátis para usar. Sem cartão de crédito.
+            30 dias de teste grátis no cartão. Cancele quando quiser.
           </p>
         </div>
 

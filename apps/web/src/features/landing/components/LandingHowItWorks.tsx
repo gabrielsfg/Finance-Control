@@ -5,7 +5,7 @@ const steps = [
   },
   {
     title: "Registre o que acontece",
-    body: "Um lançamento leva segundos. Se for parcelado ou recorrente, o Quantia cria as parcelas e repete o lançamento nas datas certas por você.",
+    body: "Um lançamento leva segundos. Se for parcelado ou recorrente, o Helmo cria as parcelas e repete o lançamento nas datas certas por você.",
   },
   {
     title: "Enxergue o mês",

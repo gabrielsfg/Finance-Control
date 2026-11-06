@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Quantia design-system palette.
+/// Helmo design-system palette.
 ///
 /// Thesis: money is the material — cobalt-on-osso in light, cobalt-on-graphite
 /// in dark. Signals are never crayon: positive = moss (petrol green),
@@ -107,7 +107,7 @@ class AppColors {
     colors: [Color(0xFF3D5BFF), Color(0xFF152BB0)],
   );
 
-  // Avatar — cobalt to deep cobalt (matches Quantia .avatar).
+  // Avatar — cobalt to deep cobalt (matches Helmo .avatar).
   static const avatarGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -183,10 +183,10 @@ class AppThemeTokens {
     required this.isDark,
   });
 
-  /// Alias — Quantia calls the hairline "mist".
+  /// Alias — Helmo calls the hairline "mist".
   Color get mist => divider;
 
-  /// Alias — Quantia calls the recessed surface "surface-2".
+  /// Alias — Helmo calls the recessed surface "surface-2".
   Color get surface2 => surfaceEl;
 
   static const light = AppThemeTokens._(

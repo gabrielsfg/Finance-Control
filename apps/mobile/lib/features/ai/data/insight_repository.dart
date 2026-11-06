@@ -9,7 +9,7 @@ final insightRepositoryProvider = Provider<InsightRepository>(
   (ref) => InsightRepository(ref.read(apiClientProvider).dio),
 );
 
-/// Weekly analyses and the "IA no Quantia" settings — InsightController.
+/// Weekly analyses and the "IA no Helmo" settings — InsightController.
 class InsightRepository {
   const InsightRepository(this._dio);
 

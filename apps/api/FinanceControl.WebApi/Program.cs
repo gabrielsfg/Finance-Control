@@ -144,7 +144,7 @@ builder.Services.AddControllers(options => options.Filters.Add<SubscriptionAcces
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo {Title = "Finance Control API", Version = "v1"});
+    options.SwaggerDoc("v1", new OpenApiInfo {Title = "Helmo API", Version = "v1"});
     
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -195,12 +195,12 @@ builder.Services.AddMcpServer(options =>
     {
         options.ServerInfo = new ModelContextProtocol.Protocol.Implementation
         {
-            Name = "quantia",
-            Title = "Quantia",
+            Name = "helmo",
+            Title = "Helmo",
             Version = "1.0.0"
         };
         options.ServerInstructions =
-            "Read-only access to the user's personal finances in Quantia (Brazil, BRL). " +
+            "Read-only access to the user's personal finances in Helmo (Brazil, BRL). " +
             "Integer money fields are in cents (12345 = R$ 123,45) unless the field name says 'formatted'. " +
             "Use list_accounts, list_categories and list_tags to discover ids before filtering. " +
             "For 'how much did I spend' questions prefer summarize_transactions; use search_transactions to list rows. " +
@@ -397,6 +397,9 @@ app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// After authentication, so it knows the user; Marco Civil art. 15 access records.
+app.UseMiddleware<FinanceControl.WebApi.Middleware.AccessLogMiddleware>();
 
 app.MapControllers().RequireRateLimiting("general");
 

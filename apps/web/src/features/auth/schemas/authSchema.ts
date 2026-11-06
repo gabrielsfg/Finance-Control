@@ -22,7 +22,7 @@ export const registerSchema = z
     // The backend refuses a registration without it either way; blocking here just
     // turns a rejected request into an unchecked box the user can see.
     acceptedTerms: z.boolean().refine((accepted) => accepted, {
-      message: "Você precisa aceitar os Termos de Uso e a Política de Privacidade",
+      message: "Você precisa ter 18 anos ou mais e aceitar os Termos de Uso e a Política de Privacidade",
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {

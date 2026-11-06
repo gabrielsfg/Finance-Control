@@ -57,6 +57,11 @@ function CheckoutContent({ open, onClose, option, trialDays, isTrialEligible }: 
   const [method, setMethod] = useState<BillingMethod>("CreditCard");
   const [installments, setInstallments] = useState("1");
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  // A token is single-use: every failed attempt remounts the widget for a fresh one.
+  const [captchaKey, setCaptchaKey] = useState(0);
+  // The API found this CPF already had a trial: nothing was charged, and the summary
+  // now shows the price so the user confirms knowing it.
+  const [trialRefused, setTrialRefused] = useState(false);
   const [result, setResult] = useState<SubscriptionState | null>(null);
   const create = useCreateSubscription();
 
@@ -78,7 +83,7 @@ function CheckoutContent({ open, onClose, option, trialDays, isTrialEligible }: 
   const [trialEnd] = useState(() => new Date(Date.now() + trialDays * 86_400_000).toISOString());
 
   const isCard = method === "CreditCard";
-  const withTrial = isCard && isTrialEligible;
+  const withTrial = isCard && isTrialEligible && !trialRefused;
   const canSplit = isCard && option.cycle === "Yearly";
   const installmentCount = canSplit ? Number(installments) : 1;
   const price = `${formatCents(option.price)}${CYCLE_SUFFIX[option.cycle]}`;
@@ -105,9 +110,16 @@ function CheckoutContent({ open, onClose, option, trialDays, isTrialEligible }: 
         postalCode: payload.postalCode,
         addressNumber: payload.addressNumber,
         card: isCard ? payload.card : undefined,
+        expectTrial: withTrial,
         captchaToken: captchaToken ?? undefined,
       },
       {
+        onError: (err) => {
+          setCaptchaToken(null);
+          setCaptchaKey((key) => key + 1);
+          const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+          if (code === "TRIAL_NOT_ELIGIBLE") setTrialRefused(true);
+        },
         onSuccess: (state) => {
           setResult(state);
           // The card is gone from the form the moment it has been used.
@@ -202,9 +214,11 @@ function CheckoutContent({ open, onClose, option, trialDays, isTrialEligible }: 
               </>
             )}{" "}
             Em até 7 dias após o primeiro pagamento, você pode pedir o reembolso integral.
+            {option.cycle === "Yearly" &&
+              " Depois disso, ao cancelar o plano anual devolvemos os meses não iniciados, descontada multa de 10% sobre o valor deles."}
           </div>
 
-          <TurnstileWidget onToken={setCaptchaToken} />
+          <TurnstileWidget key={captchaKey} onToken={setCaptchaToken} />
 
           {create.isError && <p className="text-[12.5px] text-[var(--clay)]">{billingErrorMessage(create.error)}</p>}
 

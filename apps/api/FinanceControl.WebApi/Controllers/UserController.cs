@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using FinanceControl.Domain.Interfaces.Service;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Extensions;
+using FinanceControl.Services.Services;
 using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
@@ -382,9 +383,11 @@ namespace FinanceControl.WebApi.Controllers
             if (string.IsNullOrWhiteSpace(requestDto.Password))
                 return BadRequest("Password is required.");
 
-            var success = await _userService.DeleteAccountAsync(GetUserId(), requestDto.Password);
-            if (!success)
+            var result = await _userService.DeleteAccountAsync(GetUserId(), requestDto.Password);
+            if (result.Error == UserService.InvalidPasswordError)
                 return BadRequest("Invalid password.");
+            if (result.IsFailure)
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = result.Error });
 
             ClearRefreshTokenCookie();
             ClearTrustedDeviceCookie();

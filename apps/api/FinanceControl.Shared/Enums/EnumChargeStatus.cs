@@ -9,6 +9,9 @@ namespace FinanceControl.Shared.Enums
         Confirmed,
         Failed,
         Refunded,
-        Canceled
+        Canceled,
+        /// Paid, then partly returned: a yearly plan canceled early keeps the months used
+        /// plus the early-termination fee.
+        PartiallyRefunded
     }
 }

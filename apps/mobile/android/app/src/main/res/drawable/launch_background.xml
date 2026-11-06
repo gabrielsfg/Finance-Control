@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Splash before Android 12: paper (graphite in dark mode) with the Quantia seal centred.
+<!-- Splash before Android 12: paper (graphite in dark mode) with the Helmo seal centred.
      Android 12+ ignores this and draws its own splash from values-v31/styles.xml. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />

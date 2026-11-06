@@ -12,6 +12,8 @@ namespace FinanceControl.Shared.Dtos.Response.Simulation
         public List<HistoricalSimulationPointDto> Points { get; set; } = [];
         public bool IsPartialData { get; set; }
         public string? DataNote { get; set; }
+        // Benchmarks that used the fixed fallback annual rate in at least one month.
+        public List<string> FallbackSeries { get; set; } = [];
     }
 
     public class HistoricalSimulationPointDto

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 
-/// Quantia section title (`.section-title`): a display heading, an optional
+/// Helmo section title (`.section-title`): a display heading, an optional
 /// hairline rule that fills the remaining width, and an optional mono action
 /// link on the right (e.g. "VER TUDO").
 class SectionHeader extends StatelessWidget {

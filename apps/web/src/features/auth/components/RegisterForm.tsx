@@ -171,7 +171,7 @@ export const RegisterForm = ({
             className="accent-green border-border mt-0.5 size-[15px] shrink-0 cursor-pointer rounded-[4px]"
           />
           <span className="text-text-sub text-[12.5px] leading-relaxed">
-            Li e aceito os{" "}
+            Declaro ter 18 anos ou mais e li e aceito os{" "}
             <a
               href="/terms"
               target="_blank"

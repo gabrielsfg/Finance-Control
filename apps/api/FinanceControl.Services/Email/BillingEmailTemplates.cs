@@ -146,26 +146,46 @@ namespace FinanceControl.Services.Email
         }
 
         public static (string Subject, string Html) SubscriptionCanceled(
-            string userName, string? language, DateTime accessUntil, string manageUrl)
+            string userName, string? language, DateTime accessUntil, string manageUrl,
+            int refundAmount = 0, int feeAmount = 0, bool manualRefund = false)
         {
             var pt = IsPtBr(language);
             var name = Html(userName);
 
+            // A yearly plan ended early: the unused months come back, minus the fee, and the
+            // cancellation is final.
+            if (refundAmount > 0)
+            {
+                return pt
+                    ? ("Cancelamento do plano anual confirmado",
+                       Layout("Cancelamento confirmado",
+                           [$"Olá, {name}. Seu plano anual foi cancelado e não será renovado. Você continua com acesso até {Date(accessUntil)}, o fim do mês em curso.",
+                            $"Vamos devolver {Money(refundAmount)} referentes aos meses não utilizados, já descontada a multa de {Money(feeAmount)} (10% do valor desses meses).",
+                            RefundTimingText(manualRefund, pt)],
+                           "Ver assinatura", manageUrl, pt))
+                    : ("Yearly plan cancellation confirmed",
+                       Layout("Cancellation confirmed",
+                           [$"Hi {name}. Your yearly plan is canceled and will not renew. You keep access until {Date(accessUntil)}, the end of the current month.",
+                            $"We will refund {Money(refundAmount)} for the unused months, after the {Money(feeAmount)} fee (10% of their value).",
+                            RefundTimingText(manualRefund, pt)],
+                           "View subscription", manageUrl, pt));
+            }
+
             return pt
                 ? ("Cancelamento confirmado",
                    Layout("Cancelamento confirmado",
-                       [$"Olá, {name}. Sua assinatura foi cancelada e nada mais será cobrado.",
+                       [$"Olá, {name}. Sua assinatura foi cancelada e não será renovada: nenhuma nova cobrança será gerada.",
                         $"Você continua com acesso até {Date(accessUntil)}. Mudou de ideia? Dá para retomar até lá."],
                        "Retomar assinatura", manageUrl, pt))
                 : ("Cancellation confirmed",
                    Layout("Cancellation confirmed",
-                       [$"Hi {name}. Your subscription is canceled and nothing more will be charged.",
+                       [$"Hi {name}. Your subscription is canceled and will not renew: no new charge will be made.",
                         $"You keep access until {Date(accessUntil)}. Changed your mind? You can resume until then."],
                        "Resume subscription", manageUrl, pt));
         }
 
         public static (string Subject, string Html) Refunded(
-            string userName, string? language, int amount, string subscribeUrl)
+            string userName, string? language, int amount, string subscribeUrl, bool manualRefund = false)
         {
             var pt = IsPtBr(language);
             var name = Html(userName);
@@ -173,15 +193,49 @@ namespace FinanceControl.Services.Email
             return pt
                 ? ("Reembolso solicitado",
                    Layout("Reembolso solicitado",
-                       [$"Olá, {name}. Pedimos o estorno de {Money(amount)} e sua assinatura foi encerrada.",
-                        "O prazo para o valor aparecer de volta depende do seu banco ou do emissor do cartão."],
+                       [$"Olá, {name}. Sua assinatura foi encerrada e vamos devolver {Money(amount)}.",
+                        RefundTimingText(manualRefund, pt)],
                        "Ver planos", subscribeUrl, pt))
                 : ("Refund requested",
                    Layout("Refund requested",
-                       [$"Hi {name}. We requested the refund of {Money(amount)} and your subscription has ended.",
-                        "How long the amount takes to show up again depends on your bank or card issuer."],
+                       [$"Hi {name}. Your subscription has ended and we will refund {Money(amount)}.",
+                        RefundTimingText(manualRefund, pt)],
                        "See plans", subscribeUrl, pt));
         }
+
+        public static (string Subject, string Html) YearlyRenewalNotice(
+            string userName, string? language, int daysLeft, int amount, int installments, DateTime chargeAt,
+            string? cardLast4, string manageUrl)
+        {
+            var pt = IsPtBr(language);
+            var name = Html(userName);
+            var date = Date(chargeAt);
+            var card = CardText(cardLast4, pt);
+            var split = installments > 1
+                ? pt ? $" em {installments} parcelas sem juros" : $" in {installments} interest-free installments"
+                : string.Empty;
+
+            return pt
+                ? ($"Seu plano anual renova {DaysText(daysLeft, pt)}",
+                   Layout("Renovação do plano anual",
+                       [$"Olá, {name}! Em {date} seu plano anual será renovado automaticamente com a cobrança de {Money(amount)}{split}{card}.",
+                        "Se não quiser renovar, cancele antes dessa data na página da sua assinatura e nada será cobrado."],
+                       "Cancelar ou gerenciar", manageUrl, pt))
+                : ($"Your yearly plan renews {DaysText(daysLeft, pt)}",
+                   Layout("Yearly plan renewal",
+                       [$"Hi {name}, on {date} your yearly plan renews automatically and {Money(amount)}{split} is charged{card}.",
+                        "If you do not want to renew, cancel before that date on your subscription page and nothing is charged."],
+                       "Cancel or manage", manageUrl, pt));
+        }
+
+        // The money goes back the way it came; a boleto has no way back but by hand.
+        private static string RefundTimingText(bool manualRefund, bool pt) => manualRefund
+            ? pt
+                ? "Como o pagamento foi por boleto, a devolução é feita por Pix ou transferência: entraremos em contato por este e-mail para pedir os dados bancários."
+                : "As the payment was made by boleto, the refund goes by Pix or bank transfer: we will reply to this e-mail asking for your bank details."
+            : pt
+                ? "O estorno é solicitado na hora. No cartão de crédito, o valor aparece como crédito na fatura em até 10 dias úteis, conforme o emissor; no Pix, volta para a conta de origem."
+                : "The refund is requested right away. On a credit card it shows up as a credit on your statement within 10 business days, depending on the issuer; a Pix goes back to the paying account.";
 
         private static bool IsPtBr(string? language) =>
             language is null || language.StartsWith("pt", StringComparison.OrdinalIgnoreCase);
@@ -207,13 +261,13 @@ namespace FinanceControl.Services.Email
             var body = string.Join(string.Empty, paragraphs.Select(p =>
                 $"""<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:{Ink};">{p}</p>"""));
             var footer = pt
-                ? "Você recebe este e-mail porque tem uma assinatura na Quantia."
-                : "You get this email because you have a Quantia subscription.";
+                ? "Você recebe este e-mail porque tem uma assinatura no Helmo."
+                : "You get this email because you have a Helmo subscription.";
 
             return $"""
             <div style="margin:0;padding:32px 16px;background:{Paper};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
               <div style="max-width:480px;margin:0 auto;background:#FFFFFF;border-radius:16px;padding:32px;">
-                <div style="font-size:13px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:{Cobalt};">Quantia</div>
+                <div style="font-size:13px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:{Cobalt};">Helmo</div>
                 <h1 style="margin:16px 0 16px;font-size:22px;line-height:1.3;color:{Ink};">{Html(heading)}</h1>
                 {body}
                 <a href="{WebUtility.HtmlEncode(ctaUrl)}" style="display:inline-block;margin:8px 0 24px;padding:12px 20px;background:{Cobalt};color:#FFFFFF;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">{Html(ctaText)}</a>

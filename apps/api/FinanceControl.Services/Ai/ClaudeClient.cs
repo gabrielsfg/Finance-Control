@@ -84,7 +84,7 @@ namespace FinanceControl.Services.Ai
             CancellationToken cancellationToken = default) where T : class
         {
             if (!IsConfigured)
-                return ClaudeCallResult<T>.Failed("Anthropic integration is disabled or unconfigured.");
+                return ClaudeCallResult<T>.Failed(AiReasonCodes.NotConfigured);
 
             try
             {
@@ -117,7 +117,7 @@ namespace FinanceControl.Services.Ai
                 var cachedTokens = (int)(response.Usage.CacheReadInputTokens ?? 0);
 
                 if (response.StopReason == "refusal")
-                    return new ClaudeCallResult<T>(null, inputTokens, outputTokens, cachedTokens, "Model refused the request.");
+                    return new ClaudeCallResult<T>(null, inputTokens, outputTokens, cachedTokens, AiReasonCodes.ModelRefusal);
 
                 var text = string.Concat(response.Content
                     .Select(block => block.Value)
@@ -125,11 +125,11 @@ namespace FinanceControl.Services.Ai
                     .Select(block => block.Text));
 
                 if (string.IsNullOrWhiteSpace(text))
-                    return new ClaudeCallResult<T>(null, inputTokens, outputTokens, cachedTokens, "Model returned no text.");
+                    return new ClaudeCallResult<T>(null, inputTokens, outputTokens, cachedTokens, AiReasonCodes.EmptyOutput);
 
                 var output = JsonSerializer.Deserialize<T>(text, OutputSerializerOptions);
                 if (output is null)
-                    return new ClaudeCallResult<T>(null, inputTokens, outputTokens, cachedTokens, "Model output did not match the schema.");
+                    return new ClaudeCallResult<T>(null, inputTokens, outputTokens, cachedTokens, AiReasonCodes.SchemaMismatch);
 
                 return new ClaudeCallResult<T>(output, inputTokens, outputTokens, cachedTokens, null);
             }
@@ -138,7 +138,9 @@ namespace FinanceControl.Services.Ai
                 // Deliberately broad: a provider outage, a schema drift or a serialisation
                 // problem all mean the same thing to the caller — no answer this time.
                 _logger.LogError(exception, "Structured Claude call failed.");
-                return ClaudeCallResult<T>.Failed(exception.GetType().Name + ": " + exception.Message);
+                // The caller stores the error, so it gets a fixed code; the exception itself goes
+                // to the application log only.
+                return ClaudeCallResult<T>.Failed(AiReasonCodes.FromException(exception));
             }
         }
 

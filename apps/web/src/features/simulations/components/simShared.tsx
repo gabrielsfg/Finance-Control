@@ -2,7 +2,7 @@
 
 /**
  * Shared presentational primitives for the Simulations feature, tokenised to
- * the Quantia design system. Logic-free — purely the `.field`, `.seg-row`,
+ * the Helmo design system. Logic-free — purely the `.field`, `.seg-row`,
  * chart-token and tooltip idioms reused across the six simulators.
  */
 

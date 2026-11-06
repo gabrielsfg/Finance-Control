@@ -152,7 +152,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   const SizedBox(height: 12),
                   Center(
                     child: Text(
-                      'FinanceControl',
+                      'Helmo',
                       style: AppTextStyles.h3(t.txtPrimary)
                           .copyWith(fontWeight: FontWeight.w700),
                     ),

@@ -13,7 +13,9 @@ export const useBenchmarkRates = () =>
   useQuery({
     queryKey: ["simulation", "benchmark-rates"],
     queryFn: simulationApi.getBenchmarkRates,
-    staleTime: 6 * 60 * 60 * 1000, // 6h — rates don't change often
+    // 6h — rates don't change often; 30 min while the API is serving fixed fallback rates
+    staleTime: (query) =>
+      query.state.data?.fallbackSeries?.length ? 30 * 60 * 1000 : 6 * 60 * 60 * 1000,
     retry: 1,
   });
 

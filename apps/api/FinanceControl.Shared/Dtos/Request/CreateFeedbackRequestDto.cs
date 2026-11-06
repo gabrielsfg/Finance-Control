@@ -10,5 +10,11 @@ namespace FinanceControl.Shared.Dtos.Request
 
         /// Set by the client ("web" | "mobile"); ignored when it is anything else.
         public string? Source { get; set; }
+
+        /// The reported assistant message — AiContent reports only.
+        public int? AiMessageId { get; set; }
+
+        /// The reported analysis — AiContent reports only.
+        public int? AiInsightId { get; set; }
     }
 }

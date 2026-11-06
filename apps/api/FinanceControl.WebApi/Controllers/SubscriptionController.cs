@@ -63,6 +63,11 @@ namespace FinanceControl.WebApi.Controllers
             return result.IsFailure ? ToError(result.Error) : Ok(result.Value);
         }
 
+        /// <summary>What canceling now would do: refund, fee and when access ends.</summary>
+        [HttpGet("cancel-preview")]
+        public async Task<IActionResult> GetCancellationPreviewAsync(CancellationToken cancellationToken) =>
+            Unwrap(await _subscriptionService.GetCancellationPreviewAsync(GetUserId(), cancellationToken));
+
         [HttpPost("cancel")]
         public async Task<IActionResult> CancelAsync(CancellationToken cancellationToken) =>
             Unwrap(await _subscriptionService.CancelSubscriptionAsync(GetUserId(), cancellationToken));
@@ -115,7 +120,7 @@ namespace FinanceControl.WebApi.Controllers
 
         private IActionResult ToError(string? code) => code switch
         {
-            BillingErrors.AlreadySubscribed => Conflict(new { error = code }),
+            BillingErrors.AlreadySubscribed or BillingErrors.TrialNotEligible => Conflict(new { error = code }),
             BillingErrors.NoSubscription or BillingErrors.NoPendingPix or BillingErrors.UserNotFound
                 => NotFound(new { error = code }),
             BillingErrors.CardAttemptsExceeded => StatusCode(StatusCodes.Status429TooManyRequests, new { error = code }),

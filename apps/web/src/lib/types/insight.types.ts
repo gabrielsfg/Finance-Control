@@ -5,6 +5,8 @@ export type InsightParagraph = {
 };
 
 export type Insight = {
+  /** The stored analysis; null on a fallback, which is never stored. Used to report the content. */
+  id: number | null;
   kind: InsightKind;
   periodStart: string;
   headline: string;

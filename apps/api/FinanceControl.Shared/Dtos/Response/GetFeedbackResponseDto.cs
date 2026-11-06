@@ -11,6 +11,8 @@ namespace FinanceControl.Shared.Dtos.Response
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public EnumFeedbackStatus Status { get; set; }
+        public int? AiMessageId { get; set; }
+        public int? AiInsightId { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

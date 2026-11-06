@@ -1,4 +1,4 @@
-export type FeedbackType = "Bug" | "Suggestion";
+export type FeedbackType = "Bug" | "Suggestion" | "AiContent";
 
 export type FeedbackStatus = "New" | "UnderReview" | "Done" | "Dismissed";
 
@@ -8,6 +8,10 @@ export type CreateFeedbackRequest = {
   description?: string;
   /** Which client sent it — the API only stores "web" and "mobile". */
   source: "web";
+  /** The reported assistant message — AiContent reports only. */
+  aiMessageId?: number;
+  /** The reported analysis — AiContent reports only. */
+  aiInsightId?: number;
 };
 
 export type FeedbackItem = {
@@ -16,5 +20,7 @@ export type FeedbackItem = {
   title: string;
   description: string | null;
   status: FeedbackStatus;
+  aiMessageId: number | null;
+  aiInsightId: number | null;
   createdAt: string;
 };

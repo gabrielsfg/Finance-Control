@@ -1,27 +1,25 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+/** Width over height of the helm artwork in /brand/helmo-mark.png. */
+const MARK_ASPECT = 0.867;
+
 /**
- * The Quantia seal — cobalt tile, two osso quarter-circles, moss centre.
- *
- * Hard-coded hexes rather than tokens on purpose: a logo keeps its colours in
- * both themes. It reads on the warm osso background and on graphite alike.
+ * The Helmo helm — the ship's wheel with the pie quarter. A raster placeholder
+ * cut from the logo artwork until there is a vector version; `size` is its height.
  */
 export function BrandGlyph({ size = 38, className }: { size?: number; className?: string }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 36 36"
-      fill="none"
+    <Image
+      src="/brand/helmo-mark.png"
+      alt=""
       aria-hidden="true"
-      className={cn("shrink-0 drop-shadow-[0_6px_14px_rgba(31,60,224,0.28)]", className)}
-    >
-      <rect width="36" height="36" rx="9" fill="#1F3CE0" />
-      <path d="M0 9C0 4 4 0 9 0H18A18 18 0 0 1 0 18Z" fill="#EFEBE1" />
-      <path d="M36 27c0 5-4 9-9 9H18A18 18 0 0 1 36 18Z" fill="#EFEBE1" />
-      <circle cx="18" cy="18" r="3.4" fill="#2C6B57" />
-    </svg>
+      width={Math.round(size * MARK_ASPECT)}
+      height={size}
+      priority
+      className={cn("shrink-0", className)}
+    />
   );
 }
 
@@ -43,10 +41,10 @@ export function BrandMark({
     <Link href="/" className={cn("flex items-center gap-[11px]", className)}>
       <BrandGlyph size={glyphSize} />
       <span
-        className="font-display font-extrabold tracking-[-0.02em] text-[var(--text)]"
+        className="font-display font-medium tracking-[-0.01em] text-[var(--text)]"
         style={{ fontSize: textSize }}
       >
-        Quan<span className="text-[var(--brand-accent)]">tia</span>
+        helmo
       </span>
     </Link>
   );

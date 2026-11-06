@@ -1,3 +1,4 @@
+using FinanceControl.Domain.Entities;
 using FinanceControl.Services.Services;
 using FinanceControl.Services.Validations;
 using FinanceControl.Shared.Dtos.Request;
@@ -109,6 +110,80 @@ namespace FinanceControl.Tests.Unit
         {
             var request = ValidRequest();
             request.Description = new string('a', 2001);
+            Assert.False(_validator.Validate(request).IsValid);
+        }
+
+        private static async Task<int> SeedAssistantMessageAsync(FinanceControl.Data.Data.ApplicationDbContext context, int userId)
+        {
+            var conversation = new AiConversation { UserId = userId, Title = "Gastos" };
+            context.AiConversations.Add(conversation);
+            await context.SaveChangesAsync();
+
+            var message = new AiMessage
+            {
+                UserId = userId,
+                ConversationId = conversation.Id,
+                Role = EnumAiMessageRole.Assistant,
+                Content = "Você gastou R$ 100,00."
+            };
+            context.AiMessages.Add(message);
+            await context.SaveChangesAsync();
+            return message.Id;
+        }
+
+        [Fact]
+        public async Task Create_AiContentReport_StoresTheReferenceWithADefaultTitle()
+        {
+            await using var context = DbContextHelper.CreateInMemory();
+            var messageId = await SeedAssistantMessageAsync(context, userId: 3);
+            var service = new FeedbackService(context);
+
+            var request = new CreateFeedbackRequestDto { Type = EnumFeedbackType.AiContent, AiMessageId = messageId, Source = "web" };
+            Assert.True(_validator.Validate(request).IsValid);
+
+            var result = await service.CreateFeedbackAsync(request, userId: 3);
+
+            Assert.True(result.IsSuccess);
+            var stored = await context.UserFeedbacks.SingleAsync();
+            Assert.Equal(EnumFeedbackType.AiContent, stored.Type);
+            Assert.Equal(messageId, stored.AiMessageId);
+            Assert.Null(stored.AiInsightId);
+            Assert.False(string.IsNullOrWhiteSpace(stored.Title));
+        }
+
+        [Fact]
+        public async Task Create_AiContentReport_OnAnotherUsersMessageFails()
+        {
+            await using var context = DbContextHelper.CreateInMemory();
+            var messageId = await SeedAssistantMessageAsync(context, userId: 3);
+            var service = new FeedbackService(context);
+
+            var request = new CreateFeedbackRequestDto { Type = EnumFeedbackType.AiContent, AiMessageId = messageId };
+            var result = await service.CreateFeedbackAsync(request, userId: 4);
+
+            Assert.True(result.IsFailure);
+            Assert.Empty(context.UserFeedbacks);
+        }
+
+        [Fact]
+        public void Validator_RejectsAnAiContentReportWithoutReference()
+        {
+            var request = new CreateFeedbackRequestDto { Type = EnumFeedbackType.AiContent };
+            Assert.False(_validator.Validate(request).IsValid);
+        }
+
+        [Fact]
+        public void Validator_RejectsAnAiContentReportWithBothReferences()
+        {
+            var request = new CreateFeedbackRequestDto { Type = EnumFeedbackType.AiContent, AiMessageId = 1, AiInsightId = 2 };
+            Assert.False(_validator.Validate(request).IsValid);
+        }
+
+        [Fact]
+        public void Validator_RejectsAReferenceOnABugReport()
+        {
+            var request = ValidRequest();
+            request.AiMessageId = 1;
             Assert.False(_validator.Validate(request).IsValid);
         }
 

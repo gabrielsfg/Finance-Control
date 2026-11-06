@@ -3,16 +3,29 @@
 import { useState } from "react";
 import { TriangleAlert, Eye, EyeOff } from "lucide-react";
 import { Card, CardHead } from "@/components/shared/Card";
-import { useResetData } from "@/features/profile/hooks/useProfile";
+import { useDeleteUserAccount, useResetData } from "@/features/profile/hooks/useProfile";
 import { useAuthStore } from "@/lib/stores/authStore";
 
+type DangerAction = "reset" | "delete";
+
+/** The API answers a failed refund with a billing code; anything else on 400 is the password. */
+function dangerErrorMessage(err: unknown): string {
+  const response = (err as { response?: { status?: number } })?.response;
+  return response?.status === 503
+    ? "Não conseguimos processar o reembolso da sua assinatura agora, então a conta foi mantida. Tente novamente em alguns minutos."
+    : "Senha incorreta. Tente novamente.";
+}
+
 export const ProfileDangerZoneCard = () => {
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirming, setConfirming] = useState<DangerAction | null>(null);
+  const showConfirm = confirming !== null;
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { mutate: resetData, isPending } = useResetData();
+  const { mutate: resetData, isPending: isResetting } = useResetData();
+  const { mutate: deleteAccount, isPending: isDeleting } = useDeleteUserAccount();
+  const isPending = isResetting || isDeleting;
   const logout = useAuthStore((s) => s.logout);
 
   const handleReset = () => {
@@ -21,17 +34,18 @@ export const ProfileDangerZoneCard = () => {
       return;
     }
     setError(null);
-    resetData(
+    const run = confirming === "delete" ? deleteAccount : resetData;
+    run(
       { password },
       {
         onSuccess: () => logout(),
-        onError: () => setError("Senha incorreta. Tente novamente."),
+        onError: (err) => setError(dangerErrorMessage(err)),
       },
     );
   };
 
   const handleCancel = () => {
-    setShowConfirm(false);
+    setConfirming(null);
     setPassword("");
     setError(null);
     setShowPassword(false);
@@ -64,22 +78,46 @@ export const ProfileDangerZoneCard = () => {
           <p className="text-[13.5px] font-semibold text-[var(--text)]">Resetar dados da conta</p>
         </div>
         <p className="text-[12.5px] leading-relaxed text-[var(--text-sub)]">
-          Remove permanentemente todas as transações, contas, orçamentos, investimentos, metas e
-          categorias. Sua conta é preservada. Esta ação não pode ser desfeita.
+          Remove permanentemente todas as transações, contas, orçamentos, investimentos, metas,
+          categorias, etiquetas, alertas, conversas e análises da IA. Sua conta é preservada. Esta
+          ação não pode ser desfeita.
+        </p>
+      </div>
+
+      <div
+        className="mt-3.5 rounded-[13px] border p-3.5"
+        style={{
+          borderColor: "color-mix(in srgb, var(--clay) 35%, transparent)",
+          background: "color-mix(in srgb, var(--clay) 7%, transparent)",
+        }}
+      >
+        <div className="mb-1.5 flex items-center gap-2">
+          <TriangleAlert size={14} strokeWidth={2.2} className="shrink-0 text-[var(--clay)]" />
+          <p className="text-[13.5px] font-semibold text-[var(--text)]">Excluir minha conta</p>
+        </div>
+        <p className="text-[12.5px] leading-relaxed text-[var(--text-sub)]">
+          Exclui sua conta e todos os seus dados, desconecta os bancos e revoga as conexões de IA. A
+          assinatura é encerrada: no plano anual, devolvemos os meses não iniciados (descontada a multa
+          de 10% após os 7 primeiros dias). Exporte seus dados antes, se quiser guardá-los.
         </p>
       </div>
 
       {!showConfirm ? (
-        <button
-          onClick={() => setShowConfirm(true)}
-          className="mt-3.5 inline-flex w-full items-center justify-center rounded-[13px] border px-[18px] py-2.5 text-[14px] font-semibold transition-colors"
-          style={{
-            borderColor: "color-mix(in srgb, var(--clay) 45%, transparent)",
-            color: "var(--clay)",
-          }}
-        >
-          Resetar dados
-        </button>
+        <div className="mt-3.5 flex flex-col gap-2 sm:flex-row">
+          {(["reset", "delete"] as const).map((action) => (
+            <button
+              key={action}
+              onClick={() => setConfirming(action)}
+              className="inline-flex w-full items-center justify-center rounded-[13px] border px-[18px] py-2.5 text-[14px] font-semibold transition-colors"
+              style={{
+                borderColor: "color-mix(in srgb, var(--clay) 45%, transparent)",
+                color: "var(--clay)",
+              }}
+            >
+              {action === "reset" ? "Resetar dados" : "Excluir conta"}
+            </button>
+          ))}
+        </div>
       ) : (
         <div className="mt-3.5 flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
@@ -127,7 +165,9 @@ export const ProfileDangerZoneCard = () => {
               className="flex-1 rounded-[13px] py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               style={{ background: "var(--clay)" }}
             >
-              {isPending ? "Resetando…" : "Confirmar reset"}
+              {confirming === "delete"
+                ? isPending ? "Excluindo…" : "Excluir definitivamente"
+                : isPending ? "Resetando…" : "Confirmar reset"}
             </button>
           </div>
         </div>

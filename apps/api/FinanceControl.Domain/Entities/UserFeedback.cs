@@ -16,5 +16,12 @@ namespace FinanceControl.Domain.Entities
         /// Which client it came from ("web", "mobile"). Kept because the same
         /// complaint often only reproduces on one of them.
         public string? Source { get; set; }
+
+        /// The reported assistant message, on an AiContent report. A plain id with no
+        /// foreign key: the report outlives the conversation when the user deletes it.
+        public int? AiMessageId { get; set; }
+
+        /// The reported analysis (UserInsight), on an AiContent report. Same rule as above.
+        public int? AiInsightId { get; set; }
     }
 }

@@ -5,7 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/utils/app_locale.dart';
 
-/// The Quantia money signature. Every monetary value in the app renders through
+/// The Helmo money signature. Every monetary value in the app renders through
 /// this widget: IBM Plex Mono, tabular figures, with the currency symbol and
 /// the centavos set smaller and dimmed so the integer reads as the hero.
 ///

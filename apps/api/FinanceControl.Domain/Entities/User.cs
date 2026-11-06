@@ -41,6 +41,10 @@ namespace FinanceControl.Domain.Entities
         /// </summary>
         public Guid? ExternalRef { get; set; }
 
+        /// When the "your account will be deleted" e-mail went out, ahead of the deletion of
+        /// an account left without a subscription for the retention period.
+        public DateTime? RetentionNoticeSentAt { get; set; }
+
         public string PreferredCurrency { get; set; } = "BRL";
         public string PreferredLanguage { get; set; } = "pt-BR";
         public string? Country { get; set; }

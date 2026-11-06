@@ -106,6 +106,7 @@ namespace FinanceControl.Services.Extensions
             services.Configure<AsaasSettings>(configuration.GetSection("AsaasSettings"));
             services.Configure<BillingSettings>(configuration.GetSection("BillingSettings"));
             services.Configure<TurnstileSettings>(configuration.GetSection("TurnstileSettings"));
+            services.Configure<InvoiceSettings>(configuration.GetSection("InvoiceSettings"));
 
             services.AddHttpClient<AsaasClient>((provider, client) =>
             {

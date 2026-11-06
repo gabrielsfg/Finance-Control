@@ -11,6 +11,8 @@ namespace FinanceControl.Shared.Dtos.Response.Simulation
         public string EffectiveEndDate { get; set; } = string.Empty;
         public bool IsPartialData { get; set; }
         public string? DataNote { get; set; }
+        // Fixed benchmarks that used the fixed fallback annual rate in at least one month of the effective range.
+        public List<string> FallbackSeries { get; set; } = [];
     }
 
     public class PortfolioBacktestPointDto

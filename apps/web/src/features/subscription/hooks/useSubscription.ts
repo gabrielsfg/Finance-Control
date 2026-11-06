@@ -34,6 +34,14 @@ export const useCreateSubscription = () => {
   });
 };
 
+export const useCancellationPreview = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["subscription", "cancel-preview"],
+    queryFn: subscriptionApi.getCancellationPreview,
+    enabled,
+    staleTime: 0,
+  });
+
 export const useCancelSubscription = () => {
   const queryClient = useQueryClient();
   return useMutation({

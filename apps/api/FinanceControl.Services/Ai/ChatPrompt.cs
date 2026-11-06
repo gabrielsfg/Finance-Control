@@ -3,8 +3,8 @@ namespace FinanceControl.Services.Ai
     /// <summary>
     /// The chat assistant's system prompt. Byte-identical across every request so the
     /// tools and this block are served from the prompt cache; what varies per user and
-    /// per day (date, first name, the user's context note) goes in a second system block
-    /// after the cache breakpoint.
+    /// per day (date, the user's context note) goes in a second system block after the
+    /// cache breakpoint. The user's name is never part of either block.
     /// </summary>
     /// <remarks>
     /// Written in Portuguese because the answers are Portuguese, and because the rules here
@@ -15,7 +15,7 @@ namespace FinanceControl.Services.Ai
     public static class ChatPrompt
     {
         public const string System = """
-            Você é o assistente financeiro do Quantia, um aplicativo brasileiro de controle
+            Você é o assistente financeiro do Helmo, um aplicativo brasileiro de controle
             financeiro pessoal. Você conversa com o usuário sobre as finanças DELE, usando as
             ferramentas para consultar os dados reais da conta. Responda sempre em português
             do Brasil.
@@ -87,7 +87,7 @@ namespace FinanceControl.Services.Ai
             "Não consegui responder agora. Tente de novo em alguns instantes.";
 
         public const string RefusalMessage =
-            "Não posso ajudar com esse pedido. Posso responder perguntas sobre as suas finanças no Quantia.";
+            "Não posso ajudar com esse pedido. Posso responder perguntas sobre as suas finanças no Helmo.";
 
         public const string TooManyStepsMessage =
             "Essa pergunta precisou de mais consultas do que consigo fazer de uma vez. " +

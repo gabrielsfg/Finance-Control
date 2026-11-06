@@ -27,6 +27,7 @@ namespace FinanceControl.Data.Mappings
             builder.Property(s => s.CurrentPeriodEnd).HasColumnType("timestamp with time zone").IsRequired();
             builder.Property(s => s.CanceledAt).HasColumnType("timestamp with time zone");
             builder.Property(s => s.EndedAt).HasColumnType("timestamp with time zone");
+            builder.Property(s => s.EarlyTerminatedAt).HasColumnType("timestamp with time zone");
             builder.Property(s => s.CreatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("now()")

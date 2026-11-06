@@ -18,7 +18,7 @@ namespace FinanceControl.Services.Asaas
         public string WebhookToken { get; set; } = string.Empty;
 
         /// Mandatory for accounts created after 2024-06-13; Asaas rejects calls without it.
-        public string UserAgent { get; set; } = "FinanceControl/1.0";
+        public string UserAgent { get; set; } = "Helmo/1.0";
 
         /// Card operations can take long at the acquirer; Asaas recommends at least 60s.
         public int TimeoutSeconds { get; set; } = 60;

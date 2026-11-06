@@ -1,25 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-
-/// Cobalt brand tile (rounded square, Quantia glyph placeholder).
+/// The Helmo helm (ship's wheel with the pie quarter). A raster placeholder cut
+/// from the logo artwork until there is a vector version; `size` is its height.
 class AppLogo extends StatelessWidget {
   final double size;
   const AppLogo({super.key, this.size = 80});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
+    return Image.asset(
+      'assets/brand/helmo_mark.png',
       height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * 0.28),
-        gradient: AppColors.logoGradient,
-        boxShadow: AppShadows.logoShadow,
-      ),
-      child: Icon(LucideIcons.wallet, color: Colors.white, size: size * 0.44),
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      semanticLabel: 'Helmo',
     );
   }
 }

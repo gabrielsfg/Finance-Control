@@ -32,11 +32,14 @@ namespace FinanceControl.Services.Services
             ["SP500_BRL"] = "IVVB11",  // proxy ETF in BRL; native S&P500 not confirmed available
         };
 
-        // Fallback annual rates used when Brapi data is unavailable for a benchmark.
+        // Fixed annual rates used when the public source (BCB SGS for CDI/SELIC/IPCA, Brapi for
+        // equity indices) has no data for a month. Every use is reported to the client through
+        // IsPartialData / FallbackSeries so the UI can mark the result as estimated.
         private static readonly Dictionary<string, decimal> FallbackAnnualReturns = new()
         {
             ["CDI"]       = 10.5m,
             ["SELIC"]     = 10.75m,
+            ["IPCA"]      = 4.5m,
             ["IPCA+6"]    = 10.5m,
             ["IPCA+5"]    = 9.5m,
             ["IPCA+4"]    = 8.5m,
@@ -97,23 +100,31 @@ namespace FinanceControl.Services.Services
             var selicRates = await FetchBacenMonthlyAsync(SgsSelic, from12m, today);
             var ipcaRates  = await FetchBacenMonthlyAsync(SgsIpca,  from12m, today);
 
-            // Annualise from monthly compounding
-            decimal AnnualFromMonthly(Dictionary<string, decimal> rates)
+            var fallbackSeries = new List<string>();
+
+            // Annualise from monthly compounding; an unavailable series uses its fixed fallback rate.
+            decimal AnnualFromMonthly(Dictionary<string, decimal> rates, string series)
             {
-                if (rates.Count == 0) return 0m;
+                if (rates.Count == 0)
+                {
+                    fallbackSeries.Add(series);
+                    return FallbackAnnualReturns[series];
+                }
                 var compound = rates.Values.Aggregate(1m, (acc, r) => acc * (1 + r / 100));
                 return Math.Round((compound - 1) * 100, 2);
             }
 
             var dto = new BenchmarkRatesDto
             {
-                CdiAnnual       = AnnualFromMonthly(cdiRates),
-                SelicAnnual     = AnnualFromMonthly(selicRates),
-                IpcaTrailing12m = AnnualFromMonthly(ipcaRates),
+                CdiAnnual       = AnnualFromMonthly(cdiRates, "CDI"),
+                SelicAnnual     = AnnualFromMonthly(selicRates, "SELIC"),
+                IpcaTrailing12m = AnnualFromMonthly(ipcaRates, "IPCA"),
                 FetchedAt       = DateTime.UtcNow,
+                FallbackSeries  = fallbackSeries,
             };
 
-            _cache.Set(cacheKey, dto, TimeSpan.FromHours(6));
+            // Retry the public source sooner while any fallback rate is in use.
+            _cache.Set(cacheKey, dto, fallbackSeries.Count > 0 ? TimeSpan.FromMinutes(30) : TimeSpan.FromHours(6));
             return dto;
         }
 
@@ -131,7 +142,8 @@ namespace FinanceControl.Services.Services
             bool isDbTicker = !isFixedBenchmark;
             bool brapiDataEmpty = isEquityBenchmark && monthly.Count == 0;
             // For DB tickers, no fallback — missing months use 0% return (data gaps).
-            bool isPartial = !isEquityBenchmark && !isDbTicker && monthly.Count == 0;
+            // For fixed benchmarks every month without public data uses the fixed fallback rate.
+            int fallbackMonths = 0;
 
             var points = new List<HistoricalSimulationPointDto>();
             long value    = initialAmount;
@@ -144,9 +156,16 @@ namespace FinanceControl.Services.Services
                 value    += monthlyContribution;
 
                 var key = $"{cursor.Year:D4}-{cursor.Month:D2}";
-                var monthReturnPct = monthly.TryGetValue(key, out var r) ? r
-                    : isDbTicker ? 0m
-                    : GetFallbackMonthly(benchmark);
+                decimal monthReturnPct;
+                if (monthly.TryGetValue(key, out var r))
+                    monthReturnPct = r;
+                else if (isDbTicker)
+                    monthReturnPct = 0m;
+                else
+                {
+                    monthReturnPct = GetFallbackMonthly(benchmark);
+                    fallbackMonths++;
+                }
 
                 value = (long)Math.Round(value * (1 + (double)monthReturnPct / 100));
 
@@ -177,7 +196,8 @@ namespace FinanceControl.Services.Services
                     (decimal)(Math.Pow(ratio, 12.0 / months) - 1) * 100, 2);
             }
 
-            string? note = GetDataNote(benchmark, isPartial, brapiDataEmpty);
+            bool usedFallback = fallbackMonths > 0;
+            string? note = usedFallback ? GetDataNote(benchmark, brapiDataEmpty, fallbackMonths, months) : null;
 
             return new HistoricalSimulationDto
             {
@@ -189,8 +209,9 @@ namespace FinanceControl.Services.Services
                 TotalReturnPct       = totalReturnPct,
                 AnnualizedReturnPct  = annualizedReturnPct,
                 Points               = points,
-                IsPartialData        = isPartial || IsStubBenchmark(benchmark, brapiDataEmpty),
+                IsPartialData        = usedFallback,
                 DataNote             = note,
+                FallbackSeries       = usedFallback ? [benchmark] : [],
             };
         }
 
@@ -230,14 +251,23 @@ namespace FinanceControl.Services.Services
             static bool IsFixedBenchmark(string t) => t is "CDI" or "SELIC" or "IPCA+6" or "IPCA+5" or "IPCA+4"
                                                           or "IBOVESPA" or "IFIX" or "SP500_BRL";
             var stubbedTickers = new List<string>();
+            var fallbackKeysByTicker = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             foreach (var ticker in seriesByTicker.Keys.ToList())
             {
                 if (!IsFixedBenchmark(ticker)) continue;
-                var series = seriesByTicker[ticker];
+                // Copy before filling: the series may be the cached dictionary from the data source.
+                var series = new Dictionary<string, decimal>(seriesByTicker[ticker]);
+                seriesByTicker[ticker] = series;
                 bool wasEmpty = series.Count == 0;
                 var fallback = GetFallbackMonthly(ticker);
+                var filledKeys = new HashSet<string>();
                 foreach (var key in requestedKeys)
-                    if (!series.ContainsKey(key)) series[key] = fallback;
+                {
+                    if (series.ContainsKey(key)) continue;
+                    series[key] = fallback;
+                    filledKeys.Add(key);
+                }
+                fallbackKeysByTicker[ticker] = filledKeys;
                 if (wasEmpty && ticker is "IBOVESPA" or "IFIX" or "SP500_BRL")
                     stubbedTickers.Add(ticker);
             }
@@ -339,9 +369,23 @@ namespace FinanceControl.Services.Services
             var effectiveEnd   = orderedKeys[^1];
             bool isReducedRange = monthCount < requestedKeys.Count;
 
+            // Fixed benchmarks that used the fallback rate in at least one month of the effective range.
+            var fallbackSeries = fallbackKeysByTicker
+                .Select(kv => (Ticker: kv.Key, Months: orderedKeys.Count(kv.Value.Contains)))
+                .Where(x => x.Months > 0)
+                .ToList();
+
             string? note = null;
             if (stubbedTickers.Count > 0)
                 note = $"Dados estimados (média histórica) para: {string.Join(", ", stubbedTickers)}. Ative o plano Pro da Brapi para dados reais.";
+            var partialFallback = fallbackSeries.Where(x => !stubbedTickers.Contains(x.Ticker)).ToList();
+            if (partialFallback.Count > 0)
+            {
+                var parts = partialFallback.Select(x =>
+                    $"{x.Ticker} ({FormatAnnualRate(x.Ticker)} a.a. em {x.Months} de {monthCount} {(monthCount == 1 ? "mês" : "meses")})");
+                var fallbackNote = $"Taxa anual fixa estimada usada nos meses sem dados da fonte pública para: {string.Join(", ", parts)}.";
+                note = note is null ? fallbackNote : $"{note} {fallbackNote}";
+            }
             if (isReducedRange)
             {
                 var rangeNote = $"Período reduzido para {effectiveStart} → {effectiveEnd} ({monthCount} meses), o intervalo com cobertura de dados para todos os ativos.";
@@ -357,8 +401,9 @@ namespace FinanceControl.Services.Services
                 AnnualizedReturnPct = annualizedReturnPct,
                 EffectiveStartDate  = $"{effectiveStart}-01",
                 EffectiveEndDate    = $"{effectiveEnd}-01",
-                IsPartialData       = isReducedRange || stubbedTickers.Count > 0,
+                IsPartialData       = isReducedRange || fallbackSeries.Count > 0,
                 DataNote            = note,
+                FallbackSeries      = fallbackSeries.Select(x => x.Ticker).ToList(),
             };
         }
 
@@ -678,16 +723,20 @@ namespace FinanceControl.Services.Services
             return Math.Round((decimal)(Math.Pow(1 + (double)annual / 100, 1.0 / 12) - 1) * 100, 6);
         }
 
-        private static bool IsStubBenchmark(string benchmark, bool brapiDataEmpty) =>
-            benchmark is "IBOVESPA" or "IFIX" or "SP500_BRL" && brapiDataEmpty;
+        private static string FormatAnnualRate(string benchmark)
+        {
+            var annual = FallbackAnnualReturns.TryGetValue(benchmark, out var a) ? a : 10m;
+            return $"{annual.ToString("0.##", new CultureInfo("pt-BR"))}%";
+        }
 
-        private static string? GetDataNote(string benchmark, bool noData, bool brapiDataEmpty) => benchmark switch
+        private static string GetDataNote(string benchmark, bool brapiDataEmpty, int fallbackMonths, int totalMonths) => benchmark switch
         {
             "IBOVESPA" when brapiDataEmpty  => "Dados simulados com base na média histórica do Ibovespa. Ative o plano Pro da Brapi para dados reais.",
             "IFIX"     when brapiDataEmpty  => "Dados simulados com base na média histórica do IFIX. Ative o plano Pro da Brapi para dados reais.",
             "SP500_BRL" when brapiDataEmpty => "Dados simulados com base na média histórica do S&P 500 em BRL. Ative o plano Pro da Brapi para dados reais.",
-            _ when noData => "Não foi possível obter dados históricos reais. Usando estimativa baseada em média histórica.",
-            _             => null,
+            _ when fallbackMonths >= totalMonths =>
+                $"Não foi possível obter os dados da fonte pública. Usando a taxa anual fixa estimada de {FormatAnnualRate(benchmark)} a.a. em todo o período.",
+            _ => $"Taxa anual fixa estimada de {FormatAnnualRate(benchmark)} a.a. usada em {fallbackMonths} de {totalMonths} {(totalMonths == 1 ? "mês" : "meses")} sem dados da fonte pública.",
         };
 
         // Fetches BACEN SGS monthly series and returns values as double (for backward compat)

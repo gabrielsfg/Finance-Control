@@ -1,11 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { Loader2, RefreshCw, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRefreshSpendingInsight, useSpendingInsight } from "@/features/insights/hooks/useInsight";
 import { PremiumNotice } from "@/components/shared/PremiumNotice";
 import { AiStatusNotice } from "@/features/insights/components/AiStatusNotice";
 import { usePlan } from "@/lib/hooks/usePlan";
+import {
+  ReportAiContentButton,
+  ReportAiContentForm,
+} from "@/features/feedback/components/ReportAiContent";
 
 const CARD_STYLE = {
   background:
@@ -30,6 +35,8 @@ export const AiInsightCard = () => {
   const { isPremium, isLoading: planLoading } = usePlan();
   const { data: result, isLoading } = useSpendingInsight(isPremium);
   const refresh = useRefreshSpendingInsight();
+  const [reporting, setReporting] = useState(false);
+  const [reportedId, setReportedId] = useState<number | null>(null);
 
   // Nothing at all until the plan is known — a lock flashed at a subscriber reads as an
   // expired subscription.
@@ -75,6 +82,8 @@ export const AiInsightCard = () => {
   }
 
   const quotaReached = status === "QuotaExceeded";
+  // Only a stored, model-written analysis can be reported; the fallback is our own text.
+  const reportableId = insight.generatedByAi ? insight.id : null;
 
   return (
     <div className="rounded-[20px] border p-[22px]" style={CARD_STYLE}>
@@ -101,6 +110,14 @@ export const AiInsightCard = () => {
             : "Resumo calculado a partir dos dados que você cadastrou. É informativo e não é recomendação de investimento."}
         </p>
 
+        {reportableId !== null && (
+          <ReportAiContentButton
+            active={reporting}
+            reported={reportedId === reportableId}
+            onClick={() => setReporting((open) => !open)}
+          />
+        )}
+
         {/* Regenerating spends quota, so the button goes once there is none left. */}
         {!quotaReached && (
           <Button
@@ -119,6 +136,17 @@ export const AiInsightCard = () => {
           </Button>
         )}
       </div>
+
+      {reporting && reportableId !== null && (
+        <div className="mt-3">
+          <ReportAiContentForm
+            key={reportableId}
+            target={{ aiInsightId: reportableId }}
+            onClose={() => setReporting(false)}
+            onReported={() => setReportedId(reportableId)}
+          />
+        </div>
+      )}
 
       {quotaReached && (
         <div className="mt-3">

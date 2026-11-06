@@ -3,7 +3,8 @@ import { Download, KeyRound, MailCheck, Trash2, type LucideIcon } from "lucide-r
 
 /**
  * Every claim here maps to something that exists in the API today — email
- * verification, opt-in TOTP, the export endpoint, the cascade delete. Nothing
+ * verification, opt-in two-step login with a code sent by email (and a trusted
+ * device remembered for 30 days), the export endpoint, the cascade delete. Nothing
  * aspirational goes on this section.
  */
 const guarantees: { icon: LucideIcon; title: string; body: string }[] = [
@@ -15,17 +16,17 @@ const guarantees: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: KeyRound,
     title: "Duas etapas, se você quiser",
-    body: "Verificação em duas etapas opcional, ligada e desligada por você no perfil.",
+    body: "Verificação em duas etapas opcional, com um código enviado ao seu e-mail a cada login. Você pode confiar no dispositivo por 30 dias.",
   },
   {
     icon: Download,
     title: "Seus dados saem quando você quiser",
-    body: "Exporte a conta inteira de uma vez, ou só as transações que estiver vendo, em CSV.",
+    body: "Exporte a conta inteira de uma vez, em JSON, ou só as transações que estiver vendo, em CSV.",
   },
   {
     icon: Trash2,
     title: "Excluir é excluir",
-    body: "Apagar a conta remove seus dados junto. De imediato, sem cópia guardada para depois.",
+    body: "Apagar a conta remove seus dados financeiros na hora. Guardamos só o que a lei exige, como registros de pagamento e de acesso, pelo prazo legal.",
   },
 ];
 

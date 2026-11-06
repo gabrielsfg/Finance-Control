@@ -62,7 +62,7 @@ namespace FinanceControl.WebApi.Mcp
             {
                 var access = await services.GetRequiredService<ISubscriptionAccessService>().GetAccessAsync(userId, cancellationToken);
                 if (!access.HasAccess)
-                    return Error("This Quantia account has no active subscription. Subscribe at the Quantia website to use this connector again.");
+                    return Error("This Helmo account has no active subscription. Subscribe at the Helmo website to use this connector again.");
             }
 
             var arguments = request.Params?.Arguments is { } args

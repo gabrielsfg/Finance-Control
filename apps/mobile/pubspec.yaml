@@ -1,5 +1,5 @@
 name: finance_control_front
-description: "Quantia - personal finance tracking app"
+description: "Helmo - personal finance tracking app"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -63,3 +63,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/brand/

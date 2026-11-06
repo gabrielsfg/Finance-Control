@@ -12,7 +12,7 @@ String aiChatQuotaLabel(int? limit) => limit != null && limit > 0
 
 const aiDisabledTitle = 'Você desligou a IA';
 const aiDisabledBody =
-    'Ative em Perfil → IA no Quantia para voltar a receber análises e usar o assistente.';
+    'Ative em Perfil → IA no Helmo para voltar a receber análises e usar o assistente.';
 const aiUnavailableLabel = 'Indisponível no momento';
 const aiQuotaExceededLabel = 'Limite do mês atingido';
 const aiNotEnoughDataLabel =

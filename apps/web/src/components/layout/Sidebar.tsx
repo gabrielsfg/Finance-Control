@@ -196,7 +196,7 @@ export const Sidebar = () => {
     >
       {/* Collapse toggle — a squared handle straddling the rail edge, vertically
           centred on the brand glyph so it reads as part of the header chrome.
-          Squared radius (not a circle) to stay inside the Quantia radius scale;
+          Squared radius (not a circle) to stay inside the Helmo radius scale;
           one icon that rotates, so the control animates with the rail. */}
       <button
         onClick={toggleSidebar}
@@ -222,8 +222,8 @@ export const Sidebar = () => {
         <BrandGlyph />
         {!collapsed && (
           <div className="anim-fade">
-            <div className="font-display text-[22px] font-extrabold tracking-[-0.02em] text-[var(--text)]">
-              Quan<span className="text-[var(--brand-accent)]">tia</span>
+            <div className="font-display text-[22px] font-medium tracking-[-0.01em] text-[var(--text)]">
+              helmo
             </div>
             <span className="font-mono text-[9.5px] tracking-[0.22em] uppercase text-[var(--text-sub)] mt-[-3px] block">
               controle financeiro

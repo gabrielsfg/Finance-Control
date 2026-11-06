@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 
-/** Quantia switch — 40×23 pill, cobalt fill + translated knob when on. */
+/** Helmo switch — 40×23 pill, cobalt fill + translated knob when on. */
 export function Switch({
   value,
   onChange,

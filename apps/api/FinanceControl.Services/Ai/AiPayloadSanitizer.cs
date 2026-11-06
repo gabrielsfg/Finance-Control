@@ -39,6 +39,7 @@ namespace FinanceControl.Services.Ai
         private static readonly HashSet<string> BlockedProperties = new(StringComparer.OrdinalIgnoreCase)
         {
             "userId", "email", "emailAddress", "password", "passwordHash",
+            "firstName", "lastName", "fullName", "userName",
             "cpf", "cnpj", "document", "documentNumber", "rg",
             "phone", "phoneNumber", "address",
             "token", "accessToken", "refreshToken", "apiKey", "secret",

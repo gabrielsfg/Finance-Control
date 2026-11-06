@@ -91,10 +91,33 @@ namespace FinanceControl.Services.Asaas
             string paymentId, AsaasRefundRequest request, CancellationToken cancellationToken = default) =>
             SendAsync<JsonElement>(HttpMethod.Post, $"payments/{paymentId}/refund", request, cancellationToken);
 
-        /// <summary>Refunds every installment of a card installment plan at once.</summary>
+        /// <summary>
+        /// Refunds a card installment plan: the whole plan when <paramref name="valueCents"/>
+        /// is null, otherwise that amount of it.
+        /// </summary>
         public Task<AsaasResult<JsonElement>> RefundInstallmentAsync(
-            string installmentId, CancellationToken cancellationToken = default) =>
-            SendAsync<JsonElement>(HttpMethod.Post, $"installments/{installmentId}/refund", new { }, cancellationToken);
+            string installmentId, int? valueCents = null, CancellationToken cancellationToken = default) =>
+            SendAsync<JsonElement>(
+                HttpMethod.Post,
+                $"installments/{installmentId}/refund",
+                new AsaasRefundRequest { Value = valueCents is { } cents ? ToReais(cents) : null },
+                cancellationToken);
+
+        /// <summary>
+        /// Schedules the NFS-e of a charge. Scheduling is not issuing: the city authorizes
+        /// it later, and the invoice is looked up until its status settles.
+        /// </summary>
+        public Task<AsaasResult<AsaasInvoiceResponse>> ScheduleInvoiceAsync(
+            AsaasInvoiceRequest request, CancellationToken cancellationToken = default) =>
+            SendAsync<AsaasInvoiceResponse>(HttpMethod.Post, "invoices", request, cancellationToken);
+
+        public Task<AsaasResult<AsaasInvoiceResponse>> GetInvoiceAsync(
+            string invoiceId, CancellationToken cancellationToken = default) =>
+            SendAsync<AsaasInvoiceResponse>(HttpMethod.Get, $"invoices/{invoiceId}", null, cancellationToken);
+
+        public Task<AsaasResult<AsaasInvoiceResponse>> CancelInvoiceAsync(
+            string invoiceId, CancellationToken cancellationToken = default) =>
+            SendAsync<AsaasInvoiceResponse>(HttpMethod.Post, $"invoices/{invoiceId}/cancel", new { }, cancellationToken);
 
         public Task<AsaasResult<AsaasPixQrCodeResponse>> GetPixQrCodeAsync(
             string paymentId, CancellationToken cancellationToken = default) =>

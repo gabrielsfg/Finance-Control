@@ -146,7 +146,7 @@ class AiStateNotice extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(left: 28),
               child: Text(
-                'Abrir IA no Quantia →',
+                'Abrir IA no Helmo →',
                 style: AppTextStyles.eyebrow(t.accent)
                     .copyWith(letterSpacing: 0.4),
               ),

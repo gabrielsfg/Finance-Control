@@ -1,3 +1,4 @@
+using FinanceControl.WebApi.Filters;
 using FinanceControl.Domain.Interfaces.Services;
 using FinanceControl.Services.Extensions;
 using FinanceControl.Shared.Dtos.Request;
@@ -58,6 +59,8 @@ namespace FinanceControl.WebApi.Controllers
 
         /// Deletes every stored analysis and the snapshot each one was generated from. The
         /// next visit generates a new one, still counted against the monthly quota.
+        // LGPD: a user without a subscription can still remove the stored analyses.
+        [SkipSubscriptionCheck]
         [HttpDelete]
         public async Task<IActionResult> DeleteInsightsAsync()
         {
@@ -86,7 +89,10 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(context);
         }
 
-        /// The "IA no Quantia" profile card: the user's switch, usage and what is stored.
+        /// The "IA no Helmo" profile card: the user's switch, usage and what is stored.
+        // Reachable without a subscription: it is what tells the privacy screen how many
+        // analyses and conversations are stored, so the delete buttons can say what they remove.
+        [SkipSubscriptionCheck]
         [HttpGet("settings")]
         public async Task<IActionResult> GetSettingsAsync()
         {

@@ -25,8 +25,8 @@ export function LandingCta() {
               Comece hoje. O primeiro lançamento leva menos de um minuto.
             </h2>
             <p className="mt-4 text-[15px] leading-relaxed text-[var(--text-sub)]">
-              Crie a conta, confirme o e-mail e o app já está pronto para usar, com categorias e
-              carteira configuradas.
+              Crie a conta, confirme o e-mail, escolha seu plano e o app já está pronto para usar,
+              com categorias e carteira configuradas.
             </p>
             <Link
               href="/login?mode=register"

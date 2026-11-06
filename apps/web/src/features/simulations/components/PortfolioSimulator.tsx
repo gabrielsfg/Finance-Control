@@ -229,8 +229,13 @@ function PortfolioBacktest({
               borderColor: "color-mix(in srgb, var(--brand-cobalt) 30%, transparent)",
             }}
           >
-            <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: "var(--brand-cobalt)" }}>
-              CARTEIRA · BACKTEST
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: "var(--brand-cobalt)" }}>
+                CARTEIRA · BACKTEST
+              </span>
+              {(data.fallbackSeries?.length ?? 0) > 0 && (
+                <span className="rounded px-1.5 py-0.5 text-[10px] text-[var(--gold)]" style={{ background: "color-mix(in srgb, var(--gold) 12%, transparent)" }}>estimado</span>
+              )}
             </div>
             <p className="font-mono text-[32px] font-bold leading-none tabular-nums text-[var(--text)]">
               {formatCurrency(data.finalValue / 100)}
@@ -426,6 +431,8 @@ function PortfolioProjection({
   const [customMonths, setCustomMonths] = useState("");
   const [suggestionPeriod, setSuggestionPeriod] = useState<SuggestionPeriod>("5 anos");
   const { mutate: runBacktest, isPending: isSuggesting } = usePortfolioBacktest();
+  // Reference assets whose suggested rate came from the API's fixed fallback rate.
+  const [suggestedFallback, setSuggestedFallback] = useState<string[]>([]);
 
   const handleSuggestRates = useCallback(() => {
     if (!canRun) return;
@@ -454,6 +461,7 @@ function PortfolioProjection({
               return { ...a, annualRatePct: Math.round(cagr * 100) / 100 };
             }),
           );
+          setSuggestedFallback(data.fallbackSeries ?? []);
           onSuggestedPeriodChange(suggestionPeriod);
         },
       },
@@ -592,6 +600,12 @@ function PortfolioProjection({
               {suggestedPeriodLabel && !isSuggesting && (
                 <p className="text-center text-[10px] text-[var(--brand-accent)]">
                   Taxas baseadas em {suggestedPeriodLabel} de histórico. Edite manualmente se preferir.
+                </p>
+              )}
+              {suggestedPeriodLabel && !isSuggesting && suggestedFallback.length > 0 && (
+                <p className="flex items-center justify-center gap-1.5 text-center text-[10px] text-[var(--gold)]">
+                  <span className="rounded px-1.5 py-0.5 text-[10px] text-[var(--gold)]" style={{ background: "color-mix(in srgb, var(--gold) 12%, transparent)" }}>estimado</span>
+                  Taxa anual fixa usada para {suggestedFallback.join(", ")} (fonte pública indisponível).
                 </p>
               )}
             </div>

@@ -23,6 +23,7 @@ export const CHARGE_STATUS_LABEL: Record<ChargeStatus, string> = {
   Failed: "Recusado",
   Refunded: "Estornado",
   Canceled: "Cancelado",
+  PartiallyRefunded: "Estornado em parte",
 };
 
 const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -153,6 +154,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   NOTHING_TO_CHANGE: "Esse já é o seu plano.",
   NOT_PAID_BY_CARD: "Sua assinatura não é paga com cartão.",
   NO_PENDING_PIX: "Não há cobrança Pix em aberto.",
+  TRIAL_NOT_ELIGIBLE: "Este CPF já usou o período grátis. Nada foi cobrado — confira o valor e confirme se quiser assinar.",
 };
 
 /** The pt-BR message for a failed billing request: our error code, a validation message, or a fallback. */

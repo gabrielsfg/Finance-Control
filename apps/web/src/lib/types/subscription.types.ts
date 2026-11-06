@@ -3,7 +3,8 @@ export type BillingCycle = "Monthly" | "Yearly";
 export type BillingMethod = "CreditCard" | "Pix" | "Boleto";
 export type SubscriptionStatus = "Trialing" | "PendingPayment" | "Active" | "Canceled" | "Expired";
 export type SubscriptionEndReason = "Canceled" | "PaymentFailed" | "Refunded" | "Chargeback";
-export type ChargeStatus = "Creating" | "Pending" | "Confirmed" | "Failed" | "Refunded" | "Canceled";
+export type ChargeStatus = "Creating" | "Pending" | "Confirmed" | "Failed" | "Refunded" | "Canceled" | "PartiallyRefunded";
+export type CancellationKind = "EndOfPeriod" | "Withdrawal" | "EarlyTermination" | "Immediate";
 
 export type SubscriptionPlanOption = {
   plan: SubscriptionPlan;
@@ -37,6 +38,10 @@ export type SubscriptionCharge = {
   periodEnd: string;
   confirmedAt: string | null;
   refundedAt: string | null;
+  /** Cents returned, when refunded in full or in part. */
+  refundedAmount: number | null;
+  /** NFS-e PDF, once the city authorized it. */
+  invoicePdfUrl: string | null;
   invoiceUrl: string | null;
   bankSlipUrl: string | null;
 };
@@ -92,7 +97,19 @@ export type CreateSubscriptionRequest = {
   postalCode: string;
   addressNumber: string;
   card?: SubscriptionCard;
+  /** True when the checkout promised the free trial; the API refuses (TRIAL_NOT_ELIGIBLE) instead of charging. */
+  expectTrial: boolean;
   captchaToken?: string;
+};
+
+/** What canceling now would do. Cents. */
+export type SubscriptionCancellationPreview = {
+  kind: CancellationKind;
+  accessUntil: string | null;
+  refundAmount: number;
+  feeAmount: number;
+  monthsUsed: number | null;
+  refundIsManual: boolean;
 };
 
 export type UpdateSubscriptionCardRequest = {

@@ -18,7 +18,7 @@ export function AssistantLauncher() {
   const pathname = usePathname();
 
   // The drawer covers the page, so a route change can only come from a link inside it
-  // ("Perfil → IA no Quantia", say) — get out of the way of the page it opened.
+  // ("Perfil → IA no Helmo", say) — get out of the way of the page it opened.
   useEffect(() => {
     close();
   }, [pathname, close]);

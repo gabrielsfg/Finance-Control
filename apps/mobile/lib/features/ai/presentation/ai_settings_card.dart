@@ -7,10 +7,11 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/ai_labels.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../subscription/providers/subscription_provider.dart';
 import '../data/ai_models.dart';
 import '../providers/insight_provider.dart';
 
-/// Perfil → "IA no Quantia": the user's switch, a plain account of what is
+/// Perfil → "IA no Helmo": the user's switch, a plain account of what is
 /// sent and to whom, usage, and the two erase buttons.
 class AiSettingsCard extends ConsumerWidget {
   const AiSettingsCard({super.key});
@@ -25,7 +26,7 @@ class AiSettingsCard extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 2, bottom: 10),
-          child: Text('IA NO QUANTIA',
+          child: Text('IA NO HELMO',
               style: AppTextStyles.eyebrow(t.txtSecondary)),
         ),
         GlassCard(
@@ -65,6 +66,10 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
   Widget build(BuildContext context) {
     final t = AppThemeTokens.of(context);
     final s = widget.settings;
+    // Without a subscription the card stays open for the LGPD actions (see and
+    // erase what is stored); the switch needs an active plan — the API refuses it.
+    final subscription = ref.watch(subscriptionProvider).valueOrNull;
+    final locked = subscription != null && !subscription.hasAccess;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,7 +91,7 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Usar IA no Quantia',
+                    'Usar IA no Helmo',
                     style: AppTextStyles.body(t.txtPrimary).copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -103,7 +108,7 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
             ),
             Switch.adaptive(
               value: s.aiEnabled,
-              onChanged: _toggling ? null : _toggle,
+              onChanged: _toggling || locked ? null : _toggle,
             ),
           ],
         ),
@@ -130,12 +135,12 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
               'Para gerar as análises e responder no assistente, enviamos seus '
               'dados financeiros — transações separadas por conta, nome e saldo '
               'das contas (ex.: Nubank), categorias, orçamentos, metas e '
-              'investimentos — e o seu primeiro nome.',
+              'investimentos.',
         ),
         const SizedBox(height: 12),
         const _InfoBlock(
           title: 'O que nunca é enviado',
-          text: 'CPF, e-mail, número de cartão, agência e número da conta '
+          text: 'Nome, CPF, e-mail, número de cartão, agência e número da conta '
               'bancária, senhas ou qualquer outro dado sensível.',
         ),
         const SizedBox(height: 12),

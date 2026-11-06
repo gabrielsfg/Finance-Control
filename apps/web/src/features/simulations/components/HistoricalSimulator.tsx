@@ -446,8 +446,13 @@ export const HistoricalSimulator = () => {
                 borderColor: "color-mix(in srgb, var(--brand-cobalt) 30%, transparent)",
               }}
             >
-              <div className="mb-3 truncate font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: "var(--brand-cobalt)" }}>
-                {benchmarkLabel(selectedBenchmark).toUpperCase()}
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <span className="truncate font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: "var(--brand-cobalt)" }}>
+                  {benchmarkLabel(selectedBenchmark).toUpperCase()}
+                </span>
+                {(data.fallbackSeries?.length ?? 0) > 0 && (
+                  <span className="rounded px-1.5 py-0.5 text-[10px] text-[var(--gold)]" style={{ background: "color-mix(in srgb, var(--gold) 12%, transparent)" }}>estimado</span>
+                )}
               </div>
 
               <p className="font-mono text-[32px] font-bold leading-none tabular-nums text-[var(--text)]">

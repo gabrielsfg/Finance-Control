@@ -111,7 +111,7 @@ namespace FinanceControl.Tests.Unit
             var result = InsightOutputGuard.Inspect(output, SnapshotJson, OwnedTickers);
 
             Assert.False(result.IsApproved);
-            Assert.Contains("VALE3", result.Reason);
+            Assert.Equal(AiReasonCodes.BlockedTicker, result.Reason);
         }
 
         [Fact]
@@ -133,6 +133,8 @@ namespace FinanceControl.Tests.Unit
             var result = InsightOutputGuard.Inspect(output, SnapshotJson, OwnedTickers);
 
             Assert.False(result.IsApproved);
+            Assert.Equal(AiReasonCodes.FigureNotInSnapshot, result.Reason);
+            Assert.Null(result.Detail);
         }
 
         [Fact]

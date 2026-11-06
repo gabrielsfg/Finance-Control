@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Quantia motion scale — one curve, three durations.
+/// Helmo motion scale — one curve, three durations.
 ///
 /// The rule the whole app follows: motion should *register*, never delay. Every
 /// entrance and every value change lands inside 500 ms, and they all decelerate

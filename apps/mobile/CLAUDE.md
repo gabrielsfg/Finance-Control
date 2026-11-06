@@ -312,7 +312,7 @@ Before implementing any API call, check the .NET controllers in `apps/api/` to g
 
 ### The theme
 
-The app runs the **Quantia** design system (`core/theme/app_colors.dart`, `app_text_styles.dart`, `app_spacing.dart`), read through `AppThemeTokens.of(context)`. Design reference: `design/DESIGN-SYSTEM.md`. Never hardcode a colour — take it from the tokens.
+The app runs the **Helmo** design system (`core/theme/app_colors.dart`, `app_text_styles.dart`, `app_spacing.dart`), read through `AppThemeTokens.of(context)`. Design reference: `design/DESIGN-SYSTEM.md`. Never hardcode a colour — take it from the tokens.
 
 ### API connectivity
 

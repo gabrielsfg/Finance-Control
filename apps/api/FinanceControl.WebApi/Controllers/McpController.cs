@@ -1,3 +1,4 @@
+using FinanceControl.WebApi.Filters;
 using FinanceControl.Services.Extensions;
 using FinanceControl.Services.Mcp;
 using FinanceControl.Shared.Dtos.Request;
@@ -30,10 +31,13 @@ namespace FinanceControl.WebApi.Controllers
         [HttpGet("info")]
         public IActionResult GetInfo() => Ok(_oauthService.GetInfo());
 
+        // LGPD: a user without a subscription can still see and remove this.
+        [SkipSubscriptionCheck]
         [HttpGet("connections")]
         public async Task<IActionResult> ListConnectionsAsync() =>
             Ok(await _oauthService.ListConnectionsAsync(GetUserId()));
 
+        [SkipSubscriptionCheck]
         [HttpDelete("connections/{id}")]
         public async Task<IActionResult> RevokeConnectionAsync(int id)
         {
@@ -47,6 +51,7 @@ namespace FinanceControl.WebApi.Controllers
             return Ok(await _oauthService.ListConnectionsAsync(GetUserId()));
         }
 
+        [SkipSubscriptionCheck]
         [HttpGet("tokens")]
         public async Task<IActionResult> ListTokensAsync() =>
             Ok(await _oauthService.ListPersonalTokensAsync(GetUserId()));
@@ -62,6 +67,7 @@ namespace FinanceControl.WebApi.Controllers
             return Created("/api/mcp/tokens", created);
         }
 
+        [SkipSubscriptionCheck]
         [HttpDelete("tokens/{id}")]
         public async Task<IActionResult> RevokeTokenAsync(int id)
         {

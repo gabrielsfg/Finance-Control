@@ -129,13 +129,16 @@ namespace FinanceControl.Services.Services
                 EndedAt = subscription.EndedAt,
                 IsComplimentary = subscription.IsComplimentary,
                 PendingCharge = pendingCharge is null ? null : ToChargeDto(pendingCharge),
+                // The renewal charge is issued RenewalNoticeDays before its due date (the
+                // boleto's sits earlier than the period end), so its existence is the notice.
                 ShowRenewalReminder = subscription.Status == EnumSubscriptionStatus.Active
                     && !subscription.IsComplimentary
                     && pendingCharge is not null
-                    && pendingCharge.PeriodStart >= subscription.CurrentPeriodEnd
-                    && now >= subscription.CurrentPeriodEnd.AddDays(-_settings.RenewalNoticeDays),
+                    && pendingCharge.PeriodStart >= subscription.CurrentPeriodEnd,
                 CanRequestRefund = FindRefundableCharge(subscription, charges, now) is not null,
-                CanResume = subscription.Status == EnumSubscriptionStatus.Canceled && now < subscription.CurrentPeriodEnd,
+                CanResume = subscription.Status == EnumSubscriptionStatus.Canceled
+                    && subscription.EarlyTerminatedAt is null
+                    && now < subscription.CurrentPeriodEnd,
                 Charges = charges.Where(c => c.Status != EnumChargeStatus.Creating).Select(ToChargeDto).ToList()
             };
 
@@ -187,13 +190,20 @@ namespace FinanceControl.Services.Services
             var cpfHash = _secrets.HashCpf(cpf);
 
             // One trial per person: this account never had one, and no other account with
-            // the same CPF did either. Only cards get a trial — Pix and boleto cannot be
-            // charged at its end without the user acting.
+            // the same CPF did either — including accounts deleted since (TrialUsages
+            // outlives them). Only cards get a trial — Pix and boleto cannot be charged at
+            // its end without the user acting.
             var trialEligible = payByCard
                 && profile.TrialConsumedAt is null
+                && !await _context.TrialUsages.AnyAsync(t => t.CpfHash == cpfHash, cancellationToken)
                 && !await _context.BillingProfiles.AnyAsync(
                     p => p.CpfHash == cpfHash && p.TrialConsumedAt != null && p.UserId != userId,
                     cancellationToken);
+
+            // The checkout promised a trial it cannot give: charge nothing, let the client
+            // show the price and ask again.
+            if (payByCard && requestDto.ExpectTrial && !trialEligible)
+                return Fail(BillingErrors.TrialNotEligible);
 
             var customerError = await EnsureCustomerAsync(
                 profile, user, cpf, requestDto.MobilePhone, requestDto.PostalCode, requestDto.AddressNumber, cancellationToken);
@@ -238,6 +248,7 @@ namespace FinanceControl.Services.Services
                 subscription.TrialEndsAt = now.AddDays(_settings.TrialDays);
                 subscription.CurrentPeriodEnd = subscription.TrialEndsAt.Value;
                 profile.TrialConsumedAt = now;
+                _context.TrialUsages.Add(new TrialUsage { CpfHash = cpfHash, UsedAt = now });
             }
             else
             {
@@ -291,6 +302,48 @@ namespace FinanceControl.Services.Services
             return Result<GetSubscriptionResponseDto>.Success(await GetSubscriptionAsync(userId));
         }
 
+        public async Task<Result<SubscriptionCancellationPreviewResponseDto>> GetCancellationPreviewAsync(
+            int userId, CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+            var subscription = await GetLiveSubscriptionAsync(userId, cancellationToken);
+            if (subscription is null || subscription.Status == EnumSubscriptionStatus.Canceled)
+                return Result<SubscriptionCancellationPreviewResponseDto>.Failure(BillingErrors.NoSubscription);
+
+            var plan = PlanCancellation(subscription, await GetChargesAsync(subscription, cancellationToken), now);
+
+            return Result<SubscriptionCancellationPreviewResponseDto>.Success(plan.Kind switch
+            {
+                EnumCancellationKind.Withdrawal => new SubscriptionCancellationPreviewResponseDto
+                {
+                    Kind = plan.Kind,
+                    RefundAmount = plan.Charge!.Amount,
+                    RefundIsManual = plan.Charge.BillingMethod == EnumBillingMethod.Boleto
+                },
+                EnumCancellationKind.EarlyTermination => new SubscriptionCancellationPreviewResponseDto
+                {
+                    Kind = plan.Kind,
+                    AccessUntil = plan.Quote!.AccessUntil,
+                    RefundAmount = plan.Quote.Refund,
+                    FeeAmount = plan.Quote.Fee,
+                    MonthsUsed = plan.Quote.MonthsUsed,
+                    RefundIsManual = plan.Charge!.BillingMethod == EnumBillingMethod.Boleto
+                },
+                EnumCancellationKind.Immediate => new SubscriptionCancellationPreviewResponseDto { Kind = plan.Kind },
+                _ => new SubscriptionCancellationPreviewResponseDto
+                {
+                    Kind = plan.Kind,
+                    AccessUntil = subscription.CurrentPeriodEnd
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cancels the subscription. Monthly plans and trials stop renewing and keep access
+        /// until the period paid for ends. A yearly plan inside the withdrawal window is
+        /// refunded in full; after it, the months not started are refunded minus the
+        /// early-termination fee and access lasts until the current month of the plan ends.
+        /// </summary>
         public async Task<Result<GetSubscriptionResponseDto>> CancelSubscriptionAsync(
             int userId, CancellationToken cancellationToken = default)
         {
@@ -302,38 +355,61 @@ namespace FinanceControl.Services.Services
             if (subscription.Status == EnumSubscriptionStatus.Canceled)
                 return Result<GetSubscriptionResponseDto>.Success(await GetSubscriptionAsync(userId));
 
-            var openCharges = await _context.SubscriptionCharges
-                .Where(c => c.UserId == userId && c.SubscriptionId == subscription.Id
-                    && (c.Status == EnumChargeStatus.Pending || c.Status == EnumChargeStatus.Creating)
-                    && c.BillingMethod != EnumBillingMethod.CreditCard)
-                .ToListAsync(cancellationToken);
+            await CancelOpenManualChargesAsync(subscription, cancellationToken);
 
-            foreach (var charge in openCharges)
-                await _engine.CancelRemoteChargeAsync(charge, cancellationToken);
+            var plan = PlanCancellation(subscription, await GetChargesAsync(subscription, cancellationToken), now);
 
-            if (subscription.Status == EnumSubscriptionStatus.PendingPayment)
+            switch (plan.Kind)
             {
-                // Never paid: nothing to keep access to.
-                BillingEngine.Expire(subscription, EnumSubscriptionEndReason.Canceled, now);
-                await _context.SaveChangesAsync(cancellationToken);
-                return Result<GetSubscriptionResponseDto>.Success(await GetSubscriptionAsync(userId));
+                case EnumCancellationKind.Immediate:
+                    // Never paid: nothing to keep access to.
+                    BillingEngine.Expire(subscription, EnumSubscriptionEndReason.Canceled, now);
+                    await _context.SaveChangesAsync(cancellationToken);
+                    return Result<GetSubscriptionResponseDto>.Success(await GetSubscriptionAsync(userId));
+
+                case EnumCancellationKind.Withdrawal:
+                {
+                    var error = await WithdrawAsync(subscription, plan.Charge!, now, cancellationToken);
+                    return error is not null
+                        ? Fail(error)
+                        : Result<GetSubscriptionResponseDto>.Success(await GetSubscriptionAsync(userId));
+                }
+
+                case EnumCancellationKind.EarlyTermination:
+                {
+                    var quote = plan.Quote!;
+                    var outcome = await _engine.RefundAsync(
+                        plan.Charge!, quote.Refund, "Cancelamento antecipado do plano anual", now, cancellationToken);
+                    if (ToRefundError(outcome) is { } error)
+                        return Fail(error);
+
+                    MarkCanceled(subscription, now);
+                    subscription.EarlyTerminatedAt = now;
+                    subscription.CurrentPeriodEnd = quote.AccessUntil;
+                    await _context.SaveChangesAsync(cancellationToken);
+
+                    await _notifier.SendOnceAsync(
+                        userId,
+                        $"canceled-{subscription.Id}-{now:yyyyMMddHHmm}",
+                        user => BillingEmailTemplates.SubscriptionCanceled(
+                            user.Name, user.PreferredLanguage, quote.AccessUntil, _notifier.ManageUrl,
+                            quote.Refund, quote.Fee, outcome == RefundOutcome.ManualPending),
+                        cancellationToken);
+                    return Result<GetSubscriptionResponseDto>.Success(await GetSubscriptionAsync(userId));
+                }
+
+                default:
+                    MarkCanceled(subscription, now);
+                    await _context.SaveChangesAsync(cancellationToken);
+
+                    await _notifier.SendOnceAsync(
+                        userId,
+                        $"canceled-{subscription.Id}-{now:yyyyMMddHHmm}",
+                        user => BillingEmailTemplates.SubscriptionCanceled(
+                            user.Name, user.PreferredLanguage, subscription.CurrentPeriodEnd, _notifier.ManageUrl),
+                        cancellationToken);
+                    return Result<GetSubscriptionResponseDto>.Success(await GetSubscriptionAsync(userId));
             }
-
-            subscription.Status = EnumSubscriptionStatus.Canceled;
-            subscription.CanceledAt = now;
-            subscription.PendingPlan = null;
-            subscription.PendingCycle = null;
-            subscription.PendingInstallmentCount = null;
-            await _context.SaveChangesAsync(cancellationToken);
-
-            await _notifier.SendOnceAsync(
-                userId,
-                $"canceled-{subscription.Id}-{now:yyyyMMddHHmm}",
-                user => BillingEmailTemplates.SubscriptionCanceled(
-                    user.Name, user.PreferredLanguage, subscription.CurrentPeriodEnd, _notifier.ManageUrl),
-                cancellationToken);
-
-            return Result<GetSubscriptionResponseDto>.Success(await GetSubscriptionAsync(userId));
         }
 
         public async Task<Result<GetSubscriptionResponseDto>> ResumeSubscriptionAsync(
@@ -341,7 +417,12 @@ namespace FinanceControl.Services.Services
         {
             var now = DateTime.UtcNow;
             var subscription = await GetLiveSubscriptionAsync(userId, cancellationToken);
-            if (subscription is null || subscription.Status != EnumSubscriptionStatus.Canceled || now >= subscription.CurrentPeriodEnd)
+
+            // An early termination was refunded; it cannot be taken back.
+            if (subscription is null
+                || subscription.Status != EnumSubscriptionStatus.Canceled
+                || subscription.EarlyTerminatedAt is not null
+                || now >= subscription.CurrentPeriodEnd)
                 return Fail(BillingErrors.NotResumable);
 
             // Still inside the trial when the period is the trial itself.
@@ -362,43 +443,144 @@ namespace FinanceControl.Services.Services
             if (subscription is null)
                 return Fail(BillingErrors.NotRefundable);
 
-            var charges = await _context.SubscriptionCharges
-                .Where(c => c.UserId == userId && c.SubscriptionId == subscription.Id)
-                .ToListAsync(cancellationToken);
-
-            var charge = FindRefundableCharge(subscription, charges, now);
+            var charge = FindRefundableCharge(subscription, await GetChargesAsync(subscription, cancellationToken), now);
             if (charge is null)
                 return Fail(BillingErrors.NotRefundable);
 
-            var result = !string.IsNullOrEmpty(charge.AsaasInstallmentId)
-                ? await _asaas.RefundInstallmentAsync(charge.AsaasInstallmentId, cancellationToken)
-                : await _asaas.RefundPaymentAsync(
-                    charge.AsaasPaymentId!,
-                    new AsaasRefundRequest { Description = "Direito de arrependimento" },
-                    cancellationToken);
+            var error = await WithdrawAsync(subscription, charge, now, cancellationToken);
+            return error is not null
+                ? Fail(error)
+                : Result<GetSubscriptionResponseDto>.Success(await GetSubscriptionAsync(userId));
+        }
 
-            if (result.IsInconclusive)
-                return Fail(BillingErrors.GatewayUnavailable);
-            if (!result.IsSuccess)
+        public async Task<Result> TerminateForAccountDeletionAsync(int userId, CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+            var subscription = await GetLiveSubscriptionAsync(userId, cancellationToken);
+            if (subscription is null)
+                return Result.Success();
+
+            await CancelOpenManualChargesAsync(subscription, cancellationToken);
+
+            var plan = PlanCancellation(subscription, await GetChargesAsync(subscription, cancellationToken), now);
+            var refund = plan.Kind switch
             {
-                _logger.LogError(
-                    "Refund of charge {ChargeId} was rejected by Asaas ({ErrorCode}).", charge.Id, result.ErrorCode);
-                return Fail(BillingErrors.GatewayRejected);
+                EnumCancellationKind.Withdrawal => plan.Charge!.Amount,
+                EnumCancellationKind.EarlyTermination => plan.Quote!.Refund,
+                _ => 0
+            };
+
+            if (refund > 0)
+            {
+                var outcome = await _engine.RefundAsync(
+                    plan.Charge!, refund,
+                    plan.Kind == EnumCancellationKind.Withdrawal ? "Direito de arrependimento" : "Cancelamento antecipado do plano anual",
+                    now, cancellationToken);
+                if (ToRefundError(outcome) is { } error)
+                    return Result.Failure(error);
+
+                // Sent before the account goes: the e-mail address goes with it.
+                await _notifier.SendOnceAsync(
+                    userId,
+                    $"refunded-{plan.Charge!.Id}",
+                    user => BillingEmailTemplates.Refunded(
+                        user.Name, user.PreferredLanguage, refund, _notifier.PlansUrl, outcome == RefundOutcome.ManualPending),
+                    cancellationToken);
             }
 
-            charge.Status = EnumChargeStatus.Refunded;
-            charge.RefundedAt = now;
+            BillingEngine.Expire(subscription, EnumSubscriptionEndReason.Canceled, now);
+            await _context.SaveChangesAsync(cancellationToken);
+            return Result.Success();
+        }
+
+        private sealed record CancellationPlan(
+            EnumCancellationKind Kind, SubscriptionCharge? Charge = null, EarlyTerminationQuote? Quote = null);
+
+        private CancellationPlan PlanCancellation(Subscription subscription, List<SubscriptionCharge> charges, DateTime now)
+        {
+            if (subscription.Status == EnumSubscriptionStatus.PendingPayment)
+                return new CancellationPlan(EnumCancellationKind.Immediate);
+
+            if (subscription.IsComplimentary
+                || subscription.Cycle != EnumBillingCycle.Yearly
+                || subscription.Status != EnumSubscriptionStatus.Active)
+                return new CancellationPlan(EnumCancellationKind.EndOfPeriod);
+
+            var withdrawal = FindRefundableCharge(subscription, charges, now);
+            if (withdrawal is not null)
+                return new CancellationPlan(EnumCancellationKind.Withdrawal, withdrawal);
+
+            // The charge that paid for the year in course.
+            var paid = charges
+                .Where(c => c.Status == EnumChargeStatus.Confirmed
+                    && c.Cycle == EnumBillingCycle.Yearly
+                    && c.PeriodEnd == subscription.CurrentPeriodEnd
+                    && (c.AsaasPaymentId is not null || c.AsaasInstallmentId is not null))
+                .OrderByDescending(c => c.ConfirmedAt)
+                .FirstOrDefault();
+            if (paid is null)
+                return new CancellationPlan(EnumCancellationKind.EndOfPeriod);
+
+            var quote = BillingEngine.QuoteEarlyTermination(paid, now, _settings.EarlyTerminationFeePercent);
+            return quote.Refund > 0
+                ? new CancellationPlan(EnumCancellationKind.EarlyTermination, paid, quote)
+                : new CancellationPlan(EnumCancellationKind.EndOfPeriod);
+        }
+
+        /// Full refund of the first payment and the end of the subscription (CDC art. 49).
+        /// Returns an error code, or null when done.
+        private async Task<string?> WithdrawAsync(
+            Subscription subscription, SubscriptionCharge charge, DateTime now, CancellationToken cancellationToken)
+        {
+            var outcome = await _engine.RefundAsync(charge, charge.Amount, "Direito de arrependimento", now, cancellationToken);
+            if (ToRefundError(outcome) is { } error)
+                return error;
+
             BillingEngine.Expire(subscription, EnumSubscriptionEndReason.Refunded, now);
             await _context.SaveChangesAsync(cancellationToken);
 
             await _notifier.SendOnceAsync(
-                userId,
+                subscription.UserId,
                 $"refunded-{charge.Id}",
-                user => BillingEmailTemplates.Refunded(user.Name, user.PreferredLanguage, charge.Amount, _notifier.PlansUrl),
+                user => BillingEmailTemplates.Refunded(
+                    user.Name, user.PreferredLanguage, charge.Amount, _notifier.PlansUrl, outcome == RefundOutcome.ManualPending),
                 cancellationToken);
-
-            return Result<GetSubscriptionResponseDto>.Success(await GetSubscriptionAsync(userId));
+            return null;
         }
+
+        private static string? ToRefundError(RefundOutcome outcome) => outcome switch
+        {
+            RefundOutcome.Unavailable => BillingErrors.GatewayUnavailable,
+            RefundOutcome.Rejected => BillingErrors.GatewayRejected,
+            _ => null
+        };
+
+        private static void MarkCanceled(Subscription subscription, DateTime now)
+        {
+            subscription.Status = EnumSubscriptionStatus.Canceled;
+            subscription.CanceledAt = now;
+            subscription.PendingPlan = null;
+            subscription.PendingCycle = null;
+            subscription.PendingInstallmentCount = null;
+        }
+
+        // A Pix or boleto renewal already issued must not be paid after a cancel.
+        private async Task CancelOpenManualChargesAsync(Subscription subscription, CancellationToken cancellationToken)
+        {
+            var openCharges = await _context.SubscriptionCharges
+                .Where(c => c.UserId == subscription.UserId && c.SubscriptionId == subscription.Id
+                    && (c.Status == EnumChargeStatus.Pending || c.Status == EnumChargeStatus.Creating)
+                    && c.BillingMethod != EnumBillingMethod.CreditCard)
+                .ToListAsync(cancellationToken);
+
+            foreach (var charge in openCharges)
+                await _engine.CancelRemoteChargeAsync(charge, cancellationToken);
+        }
+
+        private Task<List<SubscriptionCharge>> GetChargesAsync(Subscription subscription, CancellationToken cancellationToken) =>
+            _context.SubscriptionCharges
+                .Where(c => c.UserId == subscription.UserId && c.SubscriptionId == subscription.Id)
+                .ToListAsync(cancellationToken);
 
         public async Task<Result<ChangeSubscriptionPlanResponseDto>> ChangePlanAsync(
             ChangeSubscriptionPlanRequestDto requestDto, int userId, CancellationToken cancellationToken = default)
@@ -767,6 +949,8 @@ namespace FinanceControl.Services.Services
             PeriodEnd = charge.PeriodEnd,
             ConfirmedAt = charge.ConfirmedAt,
             RefundedAt = charge.RefundedAt,
+            RefundedAmount = charge.RefundedAmount,
+            InvoicePdfUrl = charge.InvoiceStatus == "AUTHORIZED" ? charge.InvoicePdfUrl : null,
             InvoiceUrl = charge.InvoiceUrl,
             BankSlipUrl = charge.BankSlipUrl
         };

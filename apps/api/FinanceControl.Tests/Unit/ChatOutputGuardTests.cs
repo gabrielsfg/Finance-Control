@@ -39,6 +39,19 @@ namespace FinanceControl.Tests.Unit
             var verdict = ChatOutputGuard.Inspect("Uma alternativa seria olhar VALE3.", Owned);
 
             Assert.False(verdict.IsApproved);
+            Assert.Equal(AiReasonCodes.BlockedTicker, verdict.Reason);
+            Assert.Null(verdict.Detail);
+        }
+
+        /// <summary>The stored reason is a fixed code: the matched text never reaches the log table.</summary>
+        [Fact]
+        public void Rejects_Advice_WithFixedReasonCode()
+        {
+            var verdict = ChatOutputGuard.Inspect("Eu recomendo que você venda PETR4 agora.", Owned);
+
+            Assert.False(verdict.IsApproved);
+            Assert.Equal(AiReasonCodes.BlockedAdviceTerm, verdict.Reason);
+            Assert.DoesNotContain("PETR4", verdict.Reason);
         }
 
         [Fact]

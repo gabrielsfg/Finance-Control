@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 
-/// The base card. Quantia is flat and editorial (no frosted glass): a calm
+/// The base card. Helmo is flat and editorial (no frosted glass): a calm
 /// surface with a hairline `mist` border and a soft shadow in light mode; in
 /// dark mode the border alone separates it from the background.
 ///

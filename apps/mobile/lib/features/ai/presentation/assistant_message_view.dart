@@ -6,6 +6,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/chat_content.dart';
 import '../data/ai_models.dart';
+import '../../feedback/presentation/report_ai_content_sheet.dart';
 import 'ai_action_card.dart';
 
 /// One message of the chat: a bubble (user on the right, assistant on the
@@ -65,6 +66,29 @@ class AssistantMessageView extends StatelessWidget {
             isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Opacity(opacity: pending ? 0.6 : 1, child: bubble),
+          // Labelled as AI output, like the web chat. The fixed apology after a
+          // provider failure is our own text, so it carries neither the label
+          // nor the report action.
+          if (!isUser && !message.isError && !pending)
+            Padding(
+              padding: const EdgeInsets.only(top: 2, left: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Gerado por IA',
+                    style: AppTextStyles.caption(t.txtTertiary),
+                  ),
+                  const SizedBox(width: 2),
+                  ReportAiContentButton(
+                    onPressed: () => showReportAiContentSheet(
+                      context,
+                      aiMessageId: message.id,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (message.isError && onRetry != null) ...[
             const SizedBox(height: 6),
             GestureDetector(

@@ -30,6 +30,11 @@ namespace FinanceControl.Domain.Entities
         public DateTime? CanceledAt { get; set; }
         public DateTime? EndedAt { get; set; }
 
+        /// A yearly plan canceled before its year was over: the unused months were refunded
+        /// (minus the fee) and access was cut to the end of the current month. Such a
+        /// cancellation cannot be undone.
+        public DateTime? EarlyTerminatedAt { get; set; }
+
         /// A plan change that waits for the next renewal (downgrade, cycle switch, or the
         /// price side of an upgrade). Applied when that renewal's charge is created.
         public EnumSubscriptionPlan? PendingPlan { get; set; }

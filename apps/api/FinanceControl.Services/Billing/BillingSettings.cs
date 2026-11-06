@@ -16,6 +16,14 @@ namespace FinanceControl.Services.Billing
         /// Right of withdrawal (CDC art. 49): the first paid charge is refundable this long.
         public int RefundWindowDays { get; set; } = 7;
 
+        /// A yearly plan canceled after the withdrawal window refunds its unused months
+        /// minus this share of their value (the early-termination fee).
+        public int EarlyTerminationFeePercent { get; set; } = 10;
+
+        /// Yearly card plans renew automatically; the notice e-mail goes out this many days
+        /// before the charge.
+        public int YearlyRenewalNoticeDays { get; set; } = 7;
+
         /// Declined cards per user per rolling day before card attempts are refused — the
         /// brake on someone using the form to test stolen cards.
         public int MaxCardFailuresPerDay { get; set; } = 5;

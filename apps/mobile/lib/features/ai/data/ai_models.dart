@@ -1,4 +1,4 @@
-// Domain models for the AI features: weekly analyses, the "IA no Quantia"
+// Domain models for the AI features: weekly analyses, the "IA no Helmo"
 // settings and the chat assistant. Plain classes with manual fromJson — the
 // API serializes enums as their names and money as integer cents.
 
@@ -80,6 +80,7 @@ enum AiInsightKind { spending, portfolio }
 
 class AiInsight {
   const AiInsight({
+    this.id,
     required this.kind,
     required this.periodStart,
     required this.headline,
@@ -87,6 +88,10 @@ class AiInsight {
     required this.generatedAt,
     required this.generatedByAi,
   });
+
+  /// The stored analysis; null on a fallback, which is never stored. Used to
+  /// report the content.
+  final int? id;
 
   /// "SpendingWeekly" | "PortfolioSnapshot"
   final String kind;
@@ -99,6 +104,7 @@ class AiInsight {
   final bool generatedByAi;
 
   factory AiInsight.fromJson(Map<String, dynamic> json) => AiInsight(
+        id: (json['id'] as num?)?.toInt(),
         kind: json['kind'] as String? ?? '',
         periodStart: DateTime.tryParse(json['periodStart'] as String? ?? '') ??
             DateTime.now(),

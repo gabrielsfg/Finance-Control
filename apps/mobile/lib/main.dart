@@ -30,7 +30,7 @@ class FinanceControlApp extends ConsumerWidget {
     return AppLocaleScope(
       locale: appLocale,
       child: MaterialApp.router(
-        title: 'FinanceControl',
+        title: 'Helmo',
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: themeMode,
