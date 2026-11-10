@@ -19,6 +19,7 @@ import {
   CHARGE_STATUS_LABEL,
   CYCLE_LABEL,
   CYCLE_SUFFIX,
+  MANUAL_REFUND_NOTICE,
   METHOD_LABEL,
   billingErrorMessage,
   formatBillingDate,
@@ -58,6 +59,7 @@ export const SubscriptionPage = () => {
 
 function NoSubscription({ subscription }: { subscription: SubscriptionState }) {
   const failed = subscription.endReason === "PaymentFailed";
+  const manualRefund = subscription.charges.some((c) => c.manualRefundPending);
   return (
     <Card className="max-w-[560px]">
       <CardHead title={subscription.status ? statusLabel(subscription) : "Você ainda não assina"} />
@@ -65,7 +67,9 @@ function NoSubscription({ subscription }: { subscription: SubscriptionState }) {
         {failed
           ? "Não recebemos o pagamento da renovação, então a assinatura foi cancelada. Seus dados continuam guardados — é só assinar de novo para voltar."
           : subscription.endReason === "Refunded"
-            ? "O reembolso foi solicitado e a assinatura foi encerrada. Seus dados continuam guardados."
+            ? manualRefund
+              ? `A assinatura foi encerrada. ${MANUAL_REFUND_NOTICE} Seus dados continuam guardados.`
+              : "O reembolso foi solicitado e a assinatura foi encerrada. Seus dados continuam guardados."
             : subscription.status
               ? `Sua assinatura terminou em ${formatBillingDate(subscription.endedAt)}. Seus dados continuam guardados.`
               : "Assine para usar o app. Você pode exportar seus dados a qualquer momento no perfil."}
@@ -216,8 +220,7 @@ function LiveSubscription({ subscription }: { subscription: SubscriptionState })
           <CardHead title="Seus direitos" />
           <ul className="flex list-disc flex-col gap-2 pl-4 text-[12.5px] leading-relaxed text-[var(--text-sub)]">
             <li>Cancele a qualquer momento, em um clique. O acesso continua até a próxima data de cobrança.</li>
-            <li>Reembolso integral do primeiro pagamento em até 7 dias.</li>
-            <li>No plano anual, depois desses 7 dias, o cancelamento devolve os meses não iniciados, descontada multa de 10% sobre o valor deles.</li>
+            <li>No plano anual, o cancelamento devolve os meses não iniciados, descontada multa de 10% sobre o valor deles.</li>
             <li>Seus dados continuam disponíveis para exportação mesmo sem assinatura.</li>
           </ul>
         </Card>
@@ -325,7 +328,7 @@ function ChargesCard({ subscription }: { subscription: SubscriptionState }) {
 /** The confirmation text for a cancellation, from what the API says it will do. */
 function cancellationText(preview: SubscriptionCancellationPreview): string {
   const manual = preview.refundIsManual
-    ? " Como o pagamento foi por boleto, a devolução é feita por Pix ou transferência — entraremos em contato por e-mail."
+    ? ` Como o pagamento foi por boleto, a devolução não volta automaticamente. ${MANUAL_REFUND_NOTICE}`
     : " O estorno volta pelo mesmo meio de pagamento; no cartão, aparece na fatura em até 10 dias úteis, conforme o emissor.";
   switch (preview.kind) {
     case "Withdrawal":

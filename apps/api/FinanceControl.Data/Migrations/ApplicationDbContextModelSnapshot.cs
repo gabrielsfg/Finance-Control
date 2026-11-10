@@ -68,6 +68,10 @@ namespace FinanceControl.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("BankSlug")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
                     b.Property<int?>("BillingClosingDay")
                         .HasColumnType("integer");
 
@@ -498,6 +502,10 @@ namespace FinanceControl.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("BankSlug")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
                     b.Property<int>("ConnectorId")
                         .HasColumnType("integer");
 
@@ -602,6 +610,12 @@ namespace FinanceControl.Data.Migrations
 
                     b.Property<DateTime?>("ExternalBalanceAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ExternalBillClosingDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ExternalBillDueDay")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("ExternalCreditLimit")
                         .HasColumnType("integer");
@@ -1376,6 +1390,73 @@ namespace FinanceControl.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("LegalDocuments", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceControl.Domain.Entities.ManualRefund", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Amount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AsaasCustomerId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("AsaasPaymentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("BillingMethod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTime?>("NotifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("SubscriptionChargeId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotifiedAt");
+
+                    b.ToTable("ManualRefunds", (string)null);
                 });
 
             modelBuilder.Entity("FinanceControl.Domain.Entities.MarketAsset", b =>
@@ -2752,6 +2833,10 @@ namespace FinanceControl.Data.Migrations
                         .HasMaxLength(2)
                         .HasColumnType("character varying(2)");
 
+                    b.Property<string>("CpfHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -2813,6 +2898,8 @@ namespace FinanceControl.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CpfHash");
 
                     b.HasIndex("Email")
                         .IsUnique();

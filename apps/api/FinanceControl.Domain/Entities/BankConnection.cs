@@ -21,6 +21,11 @@ namespace FinanceControl.Domain.Entities
         public string? ConnectorImageUrl { get; set; }
         public string? ConnectorPrimaryColor { get; set; }
 
+        /// The real bank behind the connector, as a <c>BankCatalog</c> slug. Differs from
+        /// the connector for aggregators such as MeuPluggy, where it is recognized from
+        /// the account names.
+        public string? BankSlug { get; set; }
+
         public EnumBankConnectionStatus Status { get; set; } = EnumBankConnectionStatus.Syncing;
         public string? ExecutionStatus { get; set; }
         public string? LastErrorCode { get; set; }

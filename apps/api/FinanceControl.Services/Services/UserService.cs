@@ -9,6 +9,7 @@ using FinanceControl.Shared.Dtos;
 using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Dtos.Response;
 using FinanceControl.Shared.Enums;
+using FinanceControl.Shared.Helpers;
 using FinanceControl.Shared.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,7 @@ namespace FinanceControl.Services.Services
         private readonly ILegalService _legalService;
         private readonly IOpenFinanceService? _openFinanceService;
         private readonly ISubscriptionService? _subscriptionService;
+        private readonly BillingSecrets? _billingSecrets;
 
         /// Error of <see cref="DeleteAccountAsync"/> when the password does not match.
         public const string InvalidPasswordError = "INVALID_PASSWORD";
@@ -57,7 +59,8 @@ namespace FinanceControl.Services.Services
             IEmailService emailService,
             ILegalService legalService,
             IOpenFinanceService? openFinanceService = null,
-            ISubscriptionService? subscriptionService = null)
+            ISubscriptionService? subscriptionService = null,
+            BillingSecrets? billingSecrets = null)
         {
             _context = context;
             _configuration = configuration;
@@ -65,6 +68,7 @@ namespace FinanceControl.Services.Services
             _legalService = legalService;
             _openFinanceService = openFinanceService;
             _subscriptionService = subscriptionService;
+            _billingSecrets = billingSecrets;
         }
 
         public async Task<Result> RegisterUserAsync(CreateUserRequestDto requestDto, string? ipAddress, string? userAgent)
@@ -80,6 +84,7 @@ namespace FinanceControl.Services.Services
             user.Email = requestDto.Email;
             user.Name = requestDto.Name;
             user.PasswordHash = hasedPassword;
+            user.CpfHash = _billingSecrets?.HashCpf(CpfHelper.Normalize(requestDto.Cpf));
 
             _context.Add(user);
             await _context.SaveChangesAsync();

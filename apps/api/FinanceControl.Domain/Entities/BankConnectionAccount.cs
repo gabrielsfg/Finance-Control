@@ -37,6 +37,11 @@ namespace FinanceControl.Domain.Entities
         public DateTime? ExternalBalanceAt { get; set; }
         public int? ExternalCreditLimit { get; set; }
 
+        /// A card's bill days as the bank reports them (closing is estimated from the due
+        /// day when the bank leaves it out). Copied to the app account when it has none.
+        public int? ExternalBillDueDay { get; set; }
+        public int? ExternalBillClosingDay { get; set; }
+
         public BankConnection BankConnection { get; set; } = null!;
         public Account? Account { get; set; }
     }

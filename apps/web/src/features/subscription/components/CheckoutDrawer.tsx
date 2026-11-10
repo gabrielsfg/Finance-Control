@@ -25,6 +25,7 @@ import {
   cardWithHolderSchema,
   holderSchema,
   toCardPayload,
+  toHolderPayload,
   type CardWithHolderForm,
 } from "../utils/schemas";
 import { BillingDrawer, PRIMARY_BUTTON_CLASS, SECONDARY_BUTTON_CLASS } from "./BillingDrawer";
@@ -98,18 +99,16 @@ function CheckoutContent({ open, onClose, option, trialDays, isTrialEligible }: 
   });
 
   const onSubmit = handleSubmit((values) => {
-    const payload = toCardPayload(values);
+    // Pix and boleto validate with the holder schema, which leaves the card fields out.
+    const holder = toHolderPayload(values);
     create.mutate(
       {
         plan: option.plan,
         cycle: option.cycle,
         billingMethod: method,
         installmentCount,
-        cpf: payload.cpf,
-        mobilePhone: payload.mobilePhone,
-        postalCode: payload.postalCode,
-        addressNumber: payload.addressNumber,
-        card: isCard ? payload.card : undefined,
+        ...holder,
+        card: isCard ? toCardPayload(values).card : undefined,
         expectTrial: withTrial,
         captchaToken: captchaToken ?? undefined,
       },
@@ -212,10 +211,9 @@ function CheckoutContent({ open, onClose, option, trialDays, isTrialEligible }: 
                 geramos uma nova cobrança por {method === "Pix" ? "Pix" : "boleto"} e avisamos você nos 5 dias antes do vencimento.
                 Sem o pagamento até o vencimento, a assinatura é cancelada.
               </>
-            )}{" "}
-            Em até 7 dias após o primeiro pagamento, você pode pedir o reembolso integral.
+            )}
             {option.cycle === "Yearly" &&
-              " Depois disso, ao cancelar o plano anual devolvemos os meses não iniciados, descontada multa de 10% sobre o valor deles."}
+              " Ao cancelar o plano anual, devolvemos os meses não iniciados, descontada multa de 10% sobre o valor deles."}
           </div>
 
           <TurnstileWidget key={captchaKey} onToken={setCaptchaToken} />

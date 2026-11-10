@@ -7,8 +7,9 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { parseLocalDate } from "@/lib/utils/budgetPeriod";
 import { ACCOUNT_TYPE_CONFIG } from "@/lib/config/accountTypes";
+import { BankLogo } from "@/components/shared/BankLogo";
 import { useAccountRecentTransactions } from "@/features/accounts/hooks/useAccountTransactions";
-import type { AccountItem } from "@/lib/types/accounts.types";
+import type { AccountItem, CreditCardBills } from "@/lib/types/accounts.types";
 
 type AccountCardProps = {
   account: AccountItem;
@@ -35,6 +36,7 @@ export const AccountCard = ({
   const creditUsed = isCredit ? Math.abs(account.currentAmount) : 0;
   const creditLimit = isCredit && account.creditLimit ? account.creditLimit : 0;
   const creditUsedPercent = creditLimit > 0 ? Math.min((creditUsed / creditLimit) * 100, 100) : 0;
+  const bills = isCredit ? account.bills : null;
   const creditBarColor = creditUsedPercent >= 90 ? "#F25F5C" : creditUsedPercent >= 70 ? "#F5A623" : "#7C6FE0";
 
   // Fetched only once the panel is opened — a grid of accounts would otherwise fire one
@@ -66,12 +68,18 @@ export const AccountCard = ({
 
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]"
-          style={{ backgroundColor: `${color}1a` }}
-        >
-          <Icon size={18} strokeWidth={1.75} style={{ color }} />
-        </div>
+        <BankLogo
+          slug={account.bankSlug}
+          size={40}
+          fallback={
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]"
+              style={{ backgroundColor: `${color}1a` }}
+            >
+              <Icon size={18} strokeWidth={1.75} style={{ color }} />
+            </div>
+          }
+        />
         <div className="min-w-0 flex-1">
           <p className="font-medium text-[var(--text)] truncate text-[15px]">{account.name}</p>
           <div className="mt-0.5 flex items-center gap-1.5">
@@ -84,13 +92,16 @@ export const AccountCard = ({
                   : "bg-surface2 text-text-muted border-border",
               )}
             >
-              {isConnected ? account.connectorName ?? "Conectado" : "Manual"}
+              {isConnected ? "Open Finance" : "Manual"}
             </span>
           </div>
         </div>
       </div>
 
       {/* Balance */}
+      {bills ? (
+        <CardBills bills={bills} totalOwed={creditUsed} />
+      ) : (
       <div>
         <p className="text-text-muted mb-0.5 text-[11px] tracking-[0.04em] uppercase">
           {isCredit ? "Fatura atual" : "Saldo atual"}
@@ -104,6 +115,7 @@ export const AccountCard = ({
           {formatCurrency(Math.abs(account.currentAmount / 100))}
         </p>
       </div>
+      )}
 
       {/* Credit limit progress bar */}
       {isCredit && creditLimit > 0 && (
@@ -205,3 +217,66 @@ export const AccountCard = ({
     </div>
   );
 };
+
+const shortDate = (iso: string) =>
+  parseLocalDate(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+
+const billMonth = (iso: string) => {
+  const label = parseLocalDate(iso).toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "");
+  return label.charAt(0).toUpperCase() + label.slice(1);
+};
+
+/** The open bill up front; a closed unpaid one and the coming ones (installments) below. */
+function CardBills({ bills, totalOwed }: { bills: CreditCardBills; totalOwed: number }) {
+  const [showUpcoming, setShowUpcoming] = useState(false);
+  const { currentBill, closedBill, upcomingBills } = bills;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div>
+        <p className="text-text-muted mb-0.5 text-[11px] tracking-[0.04em] uppercase">Fatura atual</p>
+        <p className={cn("font-money text-[22px] font-bold tracking-tight", currentBill.amount > 0 ? "text-red" : "text-text")}>
+          {formatCurrency(currentBill.amount / 100)}
+        </p>
+        <p className="text-text-muted text-[11px]">
+          Fecha em {shortDate(currentBill.closingDate)} · vence em {shortDate(currentBill.dueDate)}
+        </p>
+      </div>
+
+      {closedBill && (
+        <div className="border-orange/25 bg-orange/8 flex items-center justify-between rounded-[10px] border px-3 py-1.5 text-[12px]">
+          <span className="text-text-sub">Fatura fechada · vence {shortDate(closedBill.dueDate)}</span>
+          <span className="font-money text-text font-medium">{formatCurrency(closedBill.amount / 100)}</span>
+        </div>
+      )}
+
+      {upcomingBills.length > 0 && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => setShowUpcoming((v) => !v)}
+            className="text-text-sub hover:text-text flex w-full items-center gap-1.5 text-[12px] font-medium transition-colors"
+          >
+            <ChevronDown size={13} className={cn("shrink-0 transition-transform", showUpcoming && "rotate-180")} />
+            Próximas faturas ({upcomingBills.length})
+          </button>
+          {showUpcoming && (
+            <div className="mt-1.5 flex flex-col gap-1">
+              {upcomingBills.map((bill) => (
+                <div key={bill.dueDate} className="flex items-center justify-between text-[12px]">
+                  <span className="text-text-sub">
+                    {billMonth(bill.dueDate)} <span className="text-text-muted">· vence {shortDate(bill.dueDate)}</span>
+                  </span>
+                  <span className="font-money text-text">{formatCurrency(bill.amount / 100)}</span>
+                </div>
+              ))}
+              <div className="border-border mt-1 flex items-center justify-between border-t pt-1.5 text-[12px]">
+                <span className="text-text-muted">Total em aberto</span>
+                <span className="font-money text-text font-medium">{formatCurrency(totalOwed / 100)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

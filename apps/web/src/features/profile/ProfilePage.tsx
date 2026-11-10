@@ -38,7 +38,7 @@ export function ProfilePage() {
             never renders when the profile request fails — which is exactly what a dead
             session does. Repeat it here so the way out survives the failure. */}
         <button
-          onClick={logout}
+          onClick={() => void logout("signedOut")}
           className="inline-flex items-center justify-center rounded-[13px] border border-[var(--text)] px-[18px] py-2.5 text-[14px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--text)] hover:text-[var(--bg)]"
         >
           Sair da conta

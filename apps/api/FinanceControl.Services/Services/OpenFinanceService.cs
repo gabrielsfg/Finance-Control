@@ -7,6 +7,7 @@ using FinanceControl.Services.Pluggy;
 using FinanceControl.Shared.Dtos.Request.OpenFinance;
 using FinanceControl.Shared.Dtos.Response.OpenFinance;
 using FinanceControl.Shared.Enums;
+using FinanceControl.Shared.Helpers;
 using FinanceControl.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -296,7 +297,7 @@ namespace FinanceControl.Services.Services
                         if (bankAccount.Status == EnumBankAccountLinkStatus.Linked)
                             return Result<BankConnectionResponseDto>.Failure(OpenFinanceErrors.AlreadyLinked);
 
-                        var name = string.IsNullOrWhiteSpace(item.Name) ? bankAccount.Name : item.Name.Trim();
+                        var name = string.IsNullOrWhiteSpace(item.Name) ? SuggestName(connection, bankAccount) : item.Name.Trim();
                         var account = new Account
                         {
                             UserId = userId,
@@ -304,6 +305,7 @@ namespace FinanceControl.Services.Services
                             Type = SuggestAccountType(bankAccount),
                             CreditLimit = isCard ? bankAccount.ExternalCreditLimit : null
                         };
+                        OpenFinanceSyncService.ApplyBankDefaults(account, bankAccount, OpenFinanceSyncService.BankSlugFor(connection, bankAccount));
                         _context.Accounts.Add(account);
                         bankAccount.Account = account;
                         Link(bankAccount, item.ImportFromDate ?? defaultStart);
@@ -330,6 +332,7 @@ namespace FinanceControl.Services.Services
                             return Result<BankConnectionResponseDto>.Failure(OpenFinanceErrors.AccountTypeMismatch);
 
                         bankAccount.AccountId = account.Id;
+                        OpenFinanceSyncService.ApplyBankDefaults(account, bankAccount, OpenFinanceSyncService.BankSlugFor(connection, bankAccount));
                         Link(bankAccount, item.ImportFromDate ?? defaultStart);
                         anyLinked = true;
                         break;
@@ -434,31 +437,8 @@ namespace FinanceControl.Services.Services
             if (bankAccount.Status != EnumBankAccountLinkStatus.Linked || bankAccount.AccountId is not { } accountId)
                 return Result<BankConnectionResponseDto>.Failure(OpenFinanceErrors.NothingToAdjust);
 
-            var balances = await ComputeBalancesAsync(userId, [accountId], cancellationToken);
-            var difference = BalanceDifference(bankAccount, balances.GetValueOrDefault(accountId));
-            if (difference is null)
+            if (!await AccountBalanceHelper.AddBankAdjustmentAsync(_context, userId, bankAccount, cancellationToken))
                 return Result<BankConnectionResponseDto>.Failure(OpenFinanceErrors.NothingToAdjust);
-
-            var subCategoryId = await BalanceUpdateSubCategoryHelper.GetIdAsync(_context, userId);
-
-            // The first adjustment stands for the history before the import started, so it
-            // is dated just before it; later ones (pending rows, bank corrections) today.
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var openingDate = bankAccount.ImportFromDate?.AddDays(-1);
-            var hasAdjustment = await _context.Transactions.AnyAsync(t =>
-                t.UserId == userId && t.AccountId == accountId && t.SubCategoryId == subCategoryId, cancellationToken);
-
-            _context.Transactions.Add(new Transaction
-            {
-                UserId = userId,
-                AccountId = accountId,
-                SubCategoryId = subCategoryId,
-                Value = Math.Abs(difference.Value),
-                Type = difference.Value > 0 ? EnumTransactionType.Income : EnumTransactionType.Expense,
-                PaymentType = EnumPaymentType.OneTime,
-                TransactionDate = !hasAdjustment && openingDate is { } opening ? opening : today,
-                Description = "Ajuste de saldo (Open Finance)"
-            });
             await _context.SaveChangesAsync(cancellationToken);
 
             return Result<BankConnectionResponseDto>.Success(await BuildResponseAsync(connectionId, userId, cancellationToken));
@@ -491,11 +471,15 @@ namespace FinanceControl.Services.Services
         /// </summary>
         private async Task DeleteImportedInvestmentsAsync(int userId, int connectionId, CancellationToken cancellationToken)
         {
-            var investments = await _context.BankConnectionInvestments
+            // Include has to sit on the Investments query itself: after a Select into the
+            // navigation EF refuses it ("Cannot apply the 'Include' operation").
+            var importedIds = _context.BankConnectionInvestments
                 .Where(l => l.UserId == userId && l.BankConnectionId == connectionId && l.InvestmentId != null
                     && (l.Status == EnumBankInvestmentLinkStatus.Active || l.Status == EnumBankInvestmentLinkStatus.Closed))
-                .Select(l => l.Investment!)
+                .Select(l => l.InvestmentId!.Value);
+            var investments = await _context.Investments
                 .Include(i => i.MarketAsset)
+                .Where(i => i.UserId == userId && importedIds.Contains(i.Id))
                 .ToListAsync(cancellationToken);
             if (investments.Count == 0)
                 return;
@@ -541,7 +525,7 @@ namespace FinanceControl.Services.Services
                 .Where(a => a.AccountId != null)
                 .Select(a => a.AccountId!.Value)
                 .ToList();
-            var balances = await ComputeBalancesAsync(userId, linkedIds, cancellationToken);
+            var balances = await AccountBalanceHelper.ComputeAsync(_context, userId, linkedIds, cancellationToken);
 
             var now = DateTime.UtcNow;
             var syncAvailableAt = connection.LastManualSyncAt?.AddMinutes(_settings.ManualSyncCooldownMinutes);
@@ -553,6 +537,8 @@ namespace FinanceControl.Services.Services
                 ConnectorName = connection.ConnectorName,
                 ConnectorImageUrl = connection.ConnectorImageUrl,
                 ConnectorPrimaryColor = connection.ConnectorPrimaryColor,
+                BankSlug = connection.BankSlug,
+                BankName = BankCatalog.Find(connection.BankSlug)?.Name ?? connection.ConnectorName,
                 Status = connection.Status,
                 LastErrorMessage = connection.LastErrorMessage,
                 LastSyncedAt = connection.LastSyncedAt,
@@ -574,6 +560,8 @@ namespace FinanceControl.Services.Services
                         {
                             Id = a.Id,
                             Name = a.Name,
+                            SuggestedName = SuggestName(connection, a),
+                            BillClosingDay = a.ExternalBillClosingDay ?? a.Account?.BillingClosingDay,
                             Number = a.Number,
                             ExternalType = a.ExternalType,
                             ExternalSubtype = a.ExternalSubtype,
@@ -590,57 +578,12 @@ namespace FinanceControl.Services.Services
                             BalanceDifference = a.Status == EnumBankAccountLinkStatus.Linked
                                 && a.InitialImportCompletedAt != null
                                 && appBalance is { } balance
-                                    ? BalanceDifference(a, balance)
+                                    ? AccountBalanceHelper.Difference(a, balance)
                                     : null
                         };
                     })
                     .ToList()
             };
-        }
-
-        /// <summary>
-        /// What to add to the app balance to match the bank's. A card's bank balance is the
-        /// used limit, which the app holds as a negative balance (purchases are expenses).
-        /// </summary>
-        private static int? BalanceDifference(BankConnectionAccount bankAccount, int appBalance)
-        {
-            if (bankAccount.ExternalBalance is not { } external)
-                return null;
-
-            var target = IsCard(bankAccount) ? -external : external;
-            var difference = target - appBalance;
-            return difference == 0 ? null : difference;
-        }
-
-        // Same rule as the account list: income +, expense −, transfer − at the source and + at the destination.
-        private async Task<Dictionary<int, int>> ComputeBalancesAsync(int userId, List<int> accountIds, CancellationToken cancellationToken)
-        {
-            if (accountIds.Count == 0)
-                return [];
-
-            var outgoing = await _context.Transactions
-                .Where(t => t.UserId == userId && accountIds.Contains(t.AccountId))
-                .GroupBy(t => t.AccountId)
-                .Select(g => new
-                {
-                    AccountId = g.Key,
-                    Sum = g.Sum(t => t.Type == EnumTransactionType.Income ? t.Value : -t.Value)
-                })
-                .ToListAsync(cancellationToken);
-
-            var incoming = await _context.Transactions
-                .Where(t => t.UserId == userId && t.Type == EnumTransactionType.Transfer
-                    && t.DestinationAccountId != null && accountIds.Contains(t.DestinationAccountId.Value))
-                .GroupBy(t => t.DestinationAccountId!.Value)
-                .Select(g => new { AccountId = g.Key, Sum = g.Sum(t => t.Value) })
-                .ToListAsync(cancellationToken);
-
-            var balances = accountIds.Distinct().ToDictionary(id => id, _ => 0);
-            foreach (var row in outgoing)
-                balances[row.AccountId] += row.Sum;
-            foreach (var row in incoming)
-                balances[row.AccountId] += row.Sum;
-            return balances;
         }
 
         /// Null when the user may use bank connections; otherwise the error code. The number
@@ -668,8 +611,7 @@ namespace FinanceControl.Services.Services
             return user.ExternalRef.Value;
         }
 
-        private static bool IsCard(BankConnectionAccount bankAccount) =>
-            bankAccount.ExternalType.Equals("CREDIT", StringComparison.OrdinalIgnoreCase);
+        private static bool IsCard(BankConnectionAccount bankAccount) => AccountBalanceHelper.IsCard(bankAccount);
 
         private static EnumAccountType SuggestAccountType(BankConnectionAccount bankAccount)
         {
@@ -678,6 +620,22 @@ namespace FinanceControl.Services.Services
             return string.Equals(bankAccount.ExternalSubtype, "SAVINGS_ACCOUNT", StringComparison.OrdinalIgnoreCase)
                 ? EnumAccountType.Savings
                 : EnumAccountType.Checking;
+        }
+
+        /// <summary>
+        /// "Nubank - Cartão de Crédito": bank and kind, whatever the bank calls the product
+        /// ("platinum", "Nu Pagamentos S.A. - Instituição de Pagamento").
+        /// </summary>
+        private static string SuggestName(BankConnection connection, BankConnectionAccount bankAccount)
+        {
+            var bankName = BankCatalog.Find(OpenFinanceSyncService.BankSlugFor(connection, bankAccount))?.Name ?? connection.ConnectorName;
+            var kind = SuggestAccountType(bankAccount) switch
+            {
+                EnumAccountType.Credit => "Cartão de Crédito",
+                EnumAccountType.Savings => "Poupança",
+                _ => "Conta Corrente"
+            };
+            return string.IsNullOrWhiteSpace(bankName) ? kind : $"{bankName} - {kind}";
         }
 
         private static string ProviderError(bool inconclusive) =>

@@ -138,6 +138,10 @@ namespace FinanceControl.Tests.Unit
             creditCardMetadata
         };
 
+        // The first import also adds the transaction that matches the bank's balance.
+        private static readonly System.Linq.Expressions.Expression<Func<Transaction, bool>> NotAdjustment =
+            t => t.Description != FinanceControl.Services.Helpers.AccountBalanceHelper.OpenFinanceAdjustmentDescription;
+
         private static Task SyncAsync(Harness h) =>
             h.Sync.ApplyEventAsync("item/updated", new PluggyWebhookPayload { ItemId = ItemId }, CancellationToken.None);
 
@@ -146,7 +150,85 @@ namespace FinanceControl.Tests.Unit
                 .OrderBy(t => t.TransactionDate).ThenBy(t => t.Id).ToListAsync();
 
         [Fact]
-        public async Task InitialImport_CreatesPostedRowsFromStartDate_InCentsWithDirection()
+        public async Task InitialImport_AdjustsTheBalanceToTheBanks_DatedBeforeTheStart()
+        {
+            var h = await CreateAsync();
+            h.Pluggy.Transactions[CheckingId] = [Tx("t1", -45.9m, "2026-09-05", "DEBIT", "MERCADO")];
+            h.Pluggy.Transactions[CardId] = [Tx("c1", 100m, "2026-09-05", description: "LOJA")];
+
+            await SyncAsync(h);
+
+            var adjustments = await h.Context.Transactions
+                .Where(t => t.Description == FinanceControl.Services.Helpers.AccountBalanceHelper.OpenFinanceAdjustmentDescription)
+                .ToListAsync();
+            // Checking: bank 1500.25, imported −45.90 → +1546.15. Card: owes 300, imported 100 → 200 more.
+            var checking = Assert.Single(adjustments, t => t.AccountId == h.Checking.Id);
+            Assert.Equal((154615, EnumTransactionType.Income, new DateOnly(2026, 8, 31)),
+                (checking.Value, checking.Type, checking.TransactionDate));
+            var card = Assert.Single(adjustments, t => t.AccountId == h.Card.Id);
+            Assert.Equal((20000, EnumTransactionType.Expense), (card.Value, card.Type));
+
+            // A later sync does not adjust again: that stays the user's call.
+            await SyncAsync(h);
+            Assert.Equal(2, await h.Context.Transactions.CountAsync(t =>
+                t.Description == FinanceControl.Services.Helpers.AccountBalanceHelper.OpenFinanceAdjustmentDescription));
+        }
+
+        [Fact]
+        public async Task InitialImport_CardGap_PastWhatFirstPaymentsCover_GoesToTheOpenBill()
+        {
+            var h = await CreateAsync();
+            // Bank owes 300. Imported: purchase 100 and a 500 payment of the bill before the start.
+            h.Pluggy.Transactions[CardId] =
+            [
+                Tx("c1", 100m, "2026-09-05", description: "LOJA"),
+                Tx("c2", -500m, "2026-09-10", description: "PAGAMENTO RECEBIDO")
+            ];
+
+            await SyncAsync(h);
+
+            var adjustments = await h.Context.Transactions
+                .Where(t => t.AccountId == h.Card.Id
+                    && t.Description == FinanceControl.Services.Helpers.AccountBalanceHelper.OpenFinanceAdjustmentDescription)
+                .OrderBy(t => t.TransactionDate)
+                .ToListAsync();
+            Assert.Equal(2, adjustments.Count);
+            Assert.Equal((50000, new DateOnly(2026, 8, 31)), (adjustments[0].Value, adjustments[0].TransactionDate));
+            Assert.Equal((20000, DateOnly.FromDateTime(DateTime.UtcNow)), (adjustments[1].Value, adjustments[1].TransactionDate));
+            Assert.All(adjustments, a => Assert.Equal(EnumTransactionType.Expense, a.Type));
+        }
+
+        [Fact]
+        public async Task Aggregator_RecognizesTheBankFromAccountNames_AndFillsTheCardBillDays()
+        {
+            var h = await CreateAsync();
+            h.Pluggy.On(HttpMethod.Get, $"items/{ItemId}", HttpStatusCode.OK, new
+            {
+                id = ItemId, status = "UPDATED", executionStatus = "SUCCESS", clientUserId = "x",
+                connector = new { id = 200, name = "MeuPluggy", isOpenFinance = false }
+            });
+            h.Pluggy.On(HttpMethod.Get, "accounts", HttpStatusCode.OK, new
+            {
+                results = new object[]
+                {
+                    new { id = CheckingId, itemId = ItemId, type = "BANK", subtype = "CHECKING_ACCOUNT",
+                          name = "Nu Pagamentos S.A. - Instituição de Pagamento", balance = 10m },
+                    new { id = CardId, itemId = ItemId, type = "CREDIT", subtype = "CREDIT_CARD", name = "platinum", balance = 0m,
+                          creditData = new { creditLimit = 5000m, balanceDueDate = "2026-11-11T00:00:00.000Z" } }
+                },
+                page = 1, totalPages = 1, total = 2
+            });
+
+            await SyncAsync(h);
+
+            var connection = await h.Context.BankConnections.FirstAsync();
+            Assert.Equal("nubank", connection.BankSlug);
+            var card = await h.Context.Accounts.FirstAsync(a => a.Id == h.Card.Id);
+            Assert.Equal(("nubank", 11, 4), (card.BankSlug, card.BillingDueDay, card.BillingClosingDay));
+        }
+
+        [Fact]
+        public async Task InitialImport_CreatesRowsFromStartDate_InCentsWithDirection()
         {
             var h = await CreateAsync();
             h.Pluggy.Transactions[CheckingId] =
@@ -159,10 +241,12 @@ namespace FinanceControl.Tests.Unit
 
             await SyncAsync(h);
 
+            // Pending rows are imported like any other: the app has no pending state.
             var rows = await SyncedAsync(h);
-            Assert.Equal(2, rows.Count);
+            Assert.Equal(3, rows.Count);
             Assert.Equal(("t1", 4590, EnumTransactionType.Expense), (rows[0].ExternalId, rows[0].Value, rows[0].Type));
             Assert.Equal(("t2", 300000, EnumTransactionType.Income), (rows[1].ExternalId, rows[1].Value, rows[1].Type));
+            Assert.Equal(("t3", 1000, EnumTransactionType.Expense), (rows[2].ExternalId, rows[2].Value, rows[2].Type));
             Assert.All(rows, r =>
             {
                 Assert.Equal(EnumTransactionSource.OpenFinance, r.Source);
@@ -237,7 +321,7 @@ namespace FinanceControl.Tests.Unit
 
             await SyncAsync(h);
 
-            var all = await h.Context.Transactions.ToListAsync();
+            var all = await h.Context.Transactions.Where(NotAdjustment).ToListAsync();
             var row = Assert.Single(all);
             Assert.Equal("t1", row.ExternalId);
             Assert.Equal("Mercado do mês", row.Description);
@@ -262,7 +346,7 @@ namespace FinanceControl.Tests.Unit
 
             var created = Assert.Single(await h.Context.Transactions.Where(t => t.Source == EnumTransactionSource.OpenFinance).ToListAsync());
             Assert.True(created.PossibleDuplicate);
-            Assert.Equal(2, await h.Context.Transactions.CountAsync(t => t.ExternalId == null));
+            Assert.Equal(2, await h.Context.Transactions.Where(NotAdjustment).CountAsync(t => t.ExternalId == null));
         }
 
         [Fact]
@@ -278,7 +362,7 @@ namespace FinanceControl.Tests.Unit
 
             await SyncAsync(h);
 
-            var rows = await h.Context.Transactions.Where(t => t.AccountId == h.Card.Id).ToListAsync();
+            var rows = await h.Context.Transactions.Where(NotAdjustment).Where(t => t.AccountId == h.Card.Id).ToListAsync();
             var first = rows.Single(r => r.ExternalId == "c1");
             var second = rows.Single(r => r.ExternalId == "c2");
             var refund = rows.Single(r => r.ExternalId == "c3");
@@ -299,7 +383,7 @@ namespace FinanceControl.Tests.Unit
 
             await SyncAsync(h);
 
-            var transfer = Assert.Single(await h.Context.Transactions.ToListAsync());
+            var transfer = Assert.Single(await h.Context.Transactions.Where(NotAdjustment).ToListAsync());
             Assert.Equal(EnumTransactionType.Transfer, transfer.Type);
             Assert.Equal(h.Checking.Id, transfer.AccountId);
             Assert.Equal(h.Card.Id, transfer.DestinationAccountId);
@@ -307,7 +391,72 @@ namespace FinanceControl.Tests.Unit
 
             // The next sync sees both ids again and must not resurrect the folded leg.
             await SyncAsync(h);
-            Assert.Single(await h.Context.Transactions.ToListAsync());
+            Assert.Single(await h.Context.Transactions.Where(NotAdjustment).ToListAsync());
+        }
+
+        [Fact]
+        public async Task PendingCardPurchase_IsImported_AndFollowsTheBankWhenItPosts()
+        {
+            var h = await CreateAsync();
+            h.Pluggy.Transactions[CardId] = [Tx("c1", 120m, "2026-09-08", "DEBIT", "LOJA X", status: "PENDING")];
+
+            await SyncAsync(h);
+            var pending = Assert.Single(await SyncedAsync(h));
+            Assert.Equal((EnumTransactionType.Expense, 12000), (pending.Type, pending.Value));
+
+            h.Pluggy.Transactions[CardId] = [Tx("c1", 118.5m, "2026-09-09", "DEBIT", "LOJA X", status: "POSTED")];
+            await SyncAsync(h);
+
+            var posted = Assert.Single(await SyncedAsync(h));
+            Assert.Equal((pending.Id, 11850, new DateOnly(2026, 9, 9)), (posted.Id, posted.Value, posted.TransactionDate));
+        }
+
+        [Fact]
+        public async Task PendingCardPurchase_CanceledAtTheBank_IsDeleted()
+        {
+            var h = await CreateAsync();
+            h.Pluggy.Transactions[CardId] = [Tx("c1", 120m, "2026-09-08", "DEBIT", "LOJA X", status: "PENDING")];
+            await SyncAsync(h);
+
+            await h.Sync.ApplyEventAsync("transactions/deleted",
+                new PluggyWebhookPayload { ItemId = ItemId, AccountId = CardId, TransactionIds = ["c1"] },
+                CancellationToken.None);
+
+            Assert.Empty(await SyncedAsync(h));
+        }
+
+        [Fact]
+        public async Task BillPayment_WithThePendingCardSide_BecomesATransferFromCheckingToCard()
+        {
+            var h = await CreateAsync();
+            h.Pluggy.Transactions[CheckingId] = [Tx("p1", -4429.91m, "2026-09-09", "DEBIT", "Pagamento de fatura", category: "Transfers")];
+            h.Pluggy.Transactions[CardId] = [Tx("p2", -4429.91m, "2026-09-09", "CREDIT", "Pagamento recebido", status: "PENDING", category: "Credit card payment")];
+
+            await SyncAsync(h);
+
+            var transfer = Assert.Single(await h.Context.Transactions.Where(NotAdjustment).ToListAsync());
+            Assert.Equal(EnumTransactionType.Transfer, transfer.Type);
+            Assert.Equal((h.Checking.Id, h.Card.Id, 442991), (transfer.AccountId, transfer.DestinationAccountId!.Value, transfer.Value));
+        }
+
+        [Fact]
+        public async Task BillPayment_CardSideRepostedUnderANewId_RejoinsTheTransfer()
+        {
+            var h = await CreateAsync();
+            h.Pluggy.Transactions[CheckingId] = [Tx("p1", -500m, "2026-09-10", "DEBIT", "PAGAMENTO FATURA CARTAO")];
+            h.Pluggy.Transactions[CardId] = [Tx("p2", -500m, "2026-09-10", "CREDIT", "PAGAMENTO RECEBIDO", status: "PENDING", category: "Credit card payment")];
+            await SyncAsync(h);
+
+            // Pluggy drops the pending card leg and posts it again under a new id.
+            await h.Sync.ApplyEventAsync("transactions/deleted",
+                new PluggyWebhookPayload { ItemId = ItemId, AccountId = CardId, TransactionIds = ["p2"] },
+                CancellationToken.None);
+            h.Pluggy.Transactions[CardId] = [Tx("p3", -500m, "2026-09-10", "CREDIT", "PAGAMENTO RECEBIDO", category: "Credit card payment")];
+            await SyncAsync(h);
+
+            var transfer = Assert.Single(await h.Context.Transactions.Where(NotAdjustment).ToListAsync());
+            Assert.Equal(EnumTransactionType.Transfer, transfer.Type);
+            Assert.Equal(("p1", "p3"), (transfer.ExternalId, transfer.ExternalCounterpartId));
         }
 
         [Fact]
@@ -339,7 +488,7 @@ namespace FinanceControl.Tests.Unit
                 new PluggyWebhookPayload { ItemId = ItemId, AccountId = CheckingId, TransactionIds = ["t1", "t2"] },
                 CancellationToken.None);
 
-            var remaining = Assert.Single(await h.Context.Transactions.ToListAsync());
+            var remaining = Assert.Single(await h.Context.Transactions.Where(NotAdjustment).ToListAsync());
             Assert.Equal(edited.Id, remaining.Id);
             Assert.Null(remaining.ExternalId);
         }
@@ -363,7 +512,7 @@ namespace FinanceControl.Tests.Unit
             var connection = await h.Context.BankConnections.Include(c => c.Accounts).FirstAsync(c => c.ItemId == "item-2");
             Assert.Equal((UserId, "Outro Banco", EnumBankConnectionStatus.Active), (connection.UserId, connection.ConnectorName, connection.Status));
             Assert.All(connection.Accounts, a => Assert.Equal(EnumBankAccountLinkStatus.PendingLink, a.Status));
-            Assert.Equal(0, await h.Context.Transactions.CountAsync());
+            Assert.Equal(0, await h.Context.Transactions.Where(NotAdjustment).CountAsync());
         }
 
         [Fact]

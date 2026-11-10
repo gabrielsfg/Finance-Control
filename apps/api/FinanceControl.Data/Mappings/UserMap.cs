@@ -47,6 +47,10 @@ namespace FinanceControl.Data.Mappings
             // Webhooks are resolved back to the user through it.
             builder.HasIndex(u => u.ExternalRef).IsUnique();
 
+            // Not unique: the trial check looks it up across accounts, it does not limit them.
+            builder.Property(u => u.CpfHash).HasMaxLength(128);
+            builder.HasIndex(u => u.CpfHash);
+
             // The reset token used to live on this table. It moved to SecurityCodes, which
             // holds the emailed 6-digit codes for verification, reset and two-factor alike
             // — one expiry and one attempt counter covering all three.

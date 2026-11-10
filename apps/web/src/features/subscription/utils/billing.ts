@@ -137,6 +137,10 @@ export function parseExpiry(value: string): { month: string; year: string } | nu
   return { month: d.slice(0, 2), year: String(year) };
 }
 
+/** What the user is promised when Asaas does not make the refund (a boleto, or a refusal). */
+export const MANUAL_REFUND_NOTICE =
+  "Você receberá o estorno por Pix ou transferência em até 48 horas. Se precisarmos dos seus dados bancários, falaremos com você por e-mail.";
+
 // ---- errors -------------------------------------------------------------------------
 
 const ERROR_MESSAGES: Record<string, string> = {

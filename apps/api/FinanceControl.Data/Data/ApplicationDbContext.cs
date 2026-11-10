@@ -61,6 +61,7 @@ namespace FinanceControl.Data.Data
         public DbSet<McpPersonalToken> McpPersonalTokens { get; set; }
         public DbSet<McpAccessLog> McpAccessLogs { get; set; }
         public DbSet<AccessLog> AccessLogs { get; set; }
+        public DbSet<ManualRefund> ManualRefunds { get; set; }
         public DbSet<TrialUsage> TrialUsages { get; set; }
         public DbSet<BillingRecord> BillingRecords { get; set; }
 

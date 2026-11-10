@@ -134,7 +134,7 @@ export const PlansPage = () => {
       <p className="mt-[22px] text-[12px] leading-relaxed text-[var(--text-muted)]">
         Preços em reais. No cartão, a assinatura renova automaticamente ao fim de cada ciclo e você pode cancelar a
         qualquer momento — o acesso continua até o fim do período já pago. Pix e boleto não têm renovação automática:
-        geramos uma nova cobrança antes de cada vencimento. Reembolso integral do primeiro pagamento em até 7 dias.
+        geramos uma nova cobrança antes de cada vencimento.
       </p>
 
       <CheckoutDrawer

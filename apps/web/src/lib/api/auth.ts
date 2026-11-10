@@ -25,6 +25,7 @@ export const authApi = {
     const response = await api.post<RegisterResponse>("/user/register", {
       name: data.name,
       email: data.email,
+      cpf: data.cpf.replace(/\D/g, ""),
       password: data.password,
       acceptedTerms: data.acceptedTerms,
     });

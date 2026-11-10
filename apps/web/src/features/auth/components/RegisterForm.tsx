@@ -9,6 +9,7 @@ import {
   type RegisterFormData,
   getPasswordStrength,
 } from "@/features/auth/schemas/authSchema";
+import { maskCpf } from "@/features/subscription/utils/billing";
 import { authApi } from "@/lib/api/auth";
 import { cn } from "@/lib/utils";
 
@@ -93,6 +94,24 @@ export const RegisterForm = ({
           )}
         />
         {errors.email && <p className="text-red mt-1 text-[13px]">{errors.email.message}</p>}
+      </div>
+
+      {/* CPF */}
+      <div className="mb-3">
+        <label className="text-text-muted mb-1.5 block text-[13px]">CPF</label>
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="000.000.000-00"
+          {...register("cpf", {
+            onChange: (e) => (e.target.value = maskCpf(e.target.value)),
+          })}
+          className={cn(
+            "bg-surface2 text-text placeholder:text-text-muted w-full rounded-[9px] border px-[14px] py-[11px] font-sans text-[14px] focus:outline-none",
+            errors.cpf ? "border-red" : "border-border focus:border-green",
+          )}
+        />
+        {errors.cpf && <p className="text-red mt-1 text-[13px]">{errors.cpf.message}</p>}
       </div>
 
       {/* Password */}

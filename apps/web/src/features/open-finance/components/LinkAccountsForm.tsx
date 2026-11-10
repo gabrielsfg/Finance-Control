@@ -27,12 +27,59 @@ const ACTIONS = [
   { id: "Ignore", label: "Não importar" },
 ] as const;
 
+type ImportPreset = "bill" | "month" | "today" | "all" | "custom";
+
 type Draft = {
   action: BankAccountLinkAction;
   accountId: number | null;
   name: string;
+  preset: ImportPreset;
+  /** Only read when preset is "custom". */
   importFromDate: string;
 };
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const toIso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+/** The last closing date on or before today: where the open bill starts. */
+function currentBillStartIso(closingDay: number): string {
+  const today = new Date();
+  const clamp = (y: number, m: number) => new Date(y, m, Math.min(closingDay, new Date(y, m + 1, 0).getDate()));
+  let start = clamp(today.getFullYear(), today.getMonth());
+  if (start > today) start = clamp(today.getFullYear(), today.getMonth() - 1);
+  return toIso(start);
+}
+
+// Banks share at most about a year of history; any date before that means "everything".
+const FULL_HISTORY_DATE = "2000-01-01";
+
+function presetsFor(account: BankConnectionAccount) {
+  const first =
+    isCard(account) && account.billClosingDay
+      ? ({ id: "bill", label: "Fatura atual" } as const)
+      : ({ id: "month", label: "Início do mês" } as const);
+  return [
+    first,
+    { id: "today", label: "Hoje" },
+    { id: "all", label: "Todo o histórico" },
+    { id: "custom", label: "Outra data" },
+  ] as const;
+}
+
+function resolveImportFrom(account: BankConnectionAccount, draft: Draft): string {
+  switch (draft.preset) {
+    case "bill":
+      return account.billClosingDay ? currentBillStartIso(account.billClosingDay) : firstDayOfMonthIso();
+    case "month":
+      return firstDayOfMonthIso();
+    case "today":
+      return toIso(new Date());
+    case "all":
+      return FULL_HISTORY_DATE;
+    default:
+      return draft.importFromDate;
+  }
+}
 
 type Props = {
   connection: BankConnection;
@@ -44,7 +91,8 @@ const isCard = (account: BankConnectionAccount) => account.externalType === "CRE
 const defaultDraft = (account: BankConnectionAccount): Draft => ({
   action: account.status === "Ignored" ? "Ignore" : "Create",
   accountId: null,
-  name: account.name,
+  name: account.suggestedName || account.name,
+  preset: presetsFor(account)[0].id,
   importFromDate: firstDayOfMonthIso(),
 });
 
@@ -95,7 +143,7 @@ export function LinkAccountsForm({ connection, onDone }: Props) {
           action: draft.action,
           accountId: draft.action === "Link" ? draft.accountId : null,
           name: draft.action === "Create" ? draft.name.trim() : null,
-          importFromDate: draft.action === "Ignore" ? null : draft.importFromDate,
+          importFromDate: draft.action === "Ignore" ? null : resolveImportFrom(a, draft),
         };
       }),
       ...[...stopped].map((id) => ({ bankAccountId: id, action: "Ignore" as const })),
@@ -155,7 +203,7 @@ export function LinkAccountsForm({ connection, onDone }: Props) {
                 <typeConfig.Icon size={16} style={{ color: typeConfig.color }} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-text truncate text-[14px] font-medium">{bankAccount.name}</p>
+                <p className="text-text truncate text-[14px] font-medium">{bankAccount.suggestedName || bankAccount.name}</p>
                 <p className="text-text-muted text-[12px]">
                   {typeConfig.label}
                   {bankAccount.number ? ` · ${card ? "final " : ""}${bankAccount.number}` : ""}
@@ -216,10 +264,25 @@ export function LinkAccountsForm({ connection, onDone }: Props) {
             {draft.action !== "Ignore" && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-text-sub text-[12px]">Importar transações a partir de</label>
-                <DatePickerField
-                  value={draft.importFromDate}
-                  onChange={(importFromDate) => importFromDate && update(bankAccount, { importFromDate })}
+                <TabChips
+                  size="sm"
+                  items={presetsFor(bankAccount)}
+                  value={draft.preset}
+                  onChange={(preset) => update(bankAccount, { preset })}
                 />
+                {draft.preset === "custom" ? (
+                  <DatePickerField
+                    value={draft.importFromDate}
+                    onChange={(importFromDate) => importFromDate && update(bankAccount, { importFromDate })}
+                  />
+                ) : (
+                  <p className="text-text-muted text-[12px]">
+                    {draft.preset === "all"
+                      ? "Tudo o que o banco disponibilizar (geralmente até 12 meses)."
+                      : `A partir de ${resolveImportFrom(bankAccount, draft).split("-").reverse().join("/")}.`}{" "}
+                    O saldo é ajustado automaticamente para bater com o banco.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -234,7 +297,7 @@ export function LinkAccountsForm({ connection, onDone }: Props) {
             return (
               <div key={bankAccount.id} className="border-border flex items-center gap-3 rounded-[12px] border px-3.5 py-2.5">
                 <div className="min-w-0 flex-1">
-                  <p className="text-text truncate text-[13px] font-medium">{bankAccount.name}</p>
+                  <p className="text-text truncate text-[13px] font-medium">{bankAccount.suggestedName || bankAccount.name}</p>
                   <p className="text-text-muted text-[12px]">
                     {isStopped ? "Deixará de importar" : `Importando para ${bankAccount.accountName ?? "—"}`}
                   </p>

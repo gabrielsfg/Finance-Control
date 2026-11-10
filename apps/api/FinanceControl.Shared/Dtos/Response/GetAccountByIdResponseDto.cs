@@ -14,6 +14,7 @@ namespace FinanceControl.Shared.Dtos.Response
         public int? BillingDueDay { get; set; }
         public int? BillingClosingDay { get; set; }
         public int? CreditLimit { get; set; }
+        public string? BankSlug { get; set; }
         public List<RecentTransactionDto> RecentTransactions { get; set; } = [];
     }
 }

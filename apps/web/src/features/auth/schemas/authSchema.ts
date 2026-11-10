@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { isValidCpf } from "@/features/subscription/utils/billing";
 
 export const loginSchema = z.object({
   email: z.string().min(1, "E-mail obrigatório").email("E-mail inválido"),
@@ -17,6 +18,7 @@ export const registerSchema = z
   .object({
     name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
     email: z.string().min(1, "E-mail obrigatório").email("E-mail inválido"),
+    cpf: z.string().min(1, "CPF obrigatório").refine(isValidCpf, "CPF inválido"),
     password: passwordSchema,
     confirmPassword: z.string().min(1, "Confirme sua senha"),
     // The backend refuses a registration without it either way; blocking here just

@@ -14,12 +14,24 @@ namespace FinanceControl.Tests.Unit.Validators
             Email = "user@example.com",
             Password = "Password@1",
             Name = "Test User",
+            Cpf = "529.982.247-25",
             AcceptedTerms = true,
         };
 
         [Fact]
         public void Create_ValidUser_Passes()
             => Assert.True(_createValidator.Validate(ValidCreate()).IsValid);
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("529.982.247-24")]
+        [InlineData("111.111.111-11")]
+        public void Create_MissingOrInvalidCpf_Fails(string cpf)
+        {
+            var dto = ValidCreate();
+            dto.Cpf = cpf;
+            Assert.False(_createValidator.Validate(dto).IsValid);
+        }
 
         /// <summary>
         /// The UI checkbox is a convenience; this is the rule. An account that exists

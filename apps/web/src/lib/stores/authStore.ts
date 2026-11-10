@@ -10,7 +10,11 @@ type AuthState = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   login: (accessToken: string, user?: AuthUser) => void;
-  logout: () => Promise<void>;
+  /**
+   * Ends the session. `signedOut` is a logout the user asked for; anything else (the API
+   * failing to refresh the session) is reported on the login page as an expired session.
+   */
+  logout: (reason?: "signedOut") => Promise<void>;
   setAccessToken: (token: string) => void;
   setUser: (user: AuthUser) => void;
 };
@@ -32,7 +36,7 @@ export const useAuthStore = create<AuthState>()(
         set({ accessToken, user: user ?? null, isAuthenticated: true });
       },
 
-      logout: async () => {
+      logout: async (reason) => {
         if (loggingOut) return;
         loggingOut = true;
 
@@ -55,13 +59,16 @@ export const useAuthStore = create<AuthState>()(
         //
         // A session that dies on the MCP consent page keeps its place: the AI client is
         // waiting on that exact URL, and landing on the dashboard after signing back in
-        // would silently abandon the connection. Everywhere else a voluntary logout
-        // looks the same as an expired one, so nothing else is carried over.
+        // would silently abandon the connection.
+        //
+        // `signedOut` keeps the flag for the middleware but tells the login page not to
+        // say the session expired: the user just pressed "Sair".
         const { pathname, search } = window.location;
         const returnTo = pathname.startsWith("/oauth/")
           ? `&${RETURN_TO_PARAM}=${encodeURIComponent(pathname + search)}`
           : "";
-        window.location.href = `/login?expired=1${returnTo}`;
+        const signedOut = reason === "signedOut" ? "&signedOut=1" : "";
+        window.location.href = `/login?expired=1${signedOut}${returnTo}`;
       },
 
       setAccessToken: (token) => set({ accessToken: token }),

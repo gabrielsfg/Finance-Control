@@ -9,6 +9,12 @@ export type AccountItem = {
   currentAmount: number;
   isDefaultAccount: boolean;
   creditLimit?: number | null;
+  billingDueDay?: number | null;
+  billingClosingDay?: number | null;
+  /** Bank slug from `lib/config/banks`; null shows the account-type icon. */
+  bankSlug?: string | null;
+  /** A card with closing and due days: its balance split into bills. */
+  bills?: CreditCardBills | null;
   /** Imports from a bank through Open Finance. */
   isConnected?: boolean;
   bankConnectionId?: number | null;
@@ -18,6 +24,22 @@ export type AccountItem = {
   lastSyncedAt?: string | null;
   /** Cents, as the bank reports it (a card: the used limit). */
   externalBalance?: number | null;
+};
+
+export type CreditCardBill = {
+  closingDate: string;
+  dueDate: string;
+  /** Cents owed on this bill (positive). */
+  amount: number;
+};
+
+export type CreditCardBills = {
+  /** Closed and not fully paid yet. */
+  closedBill: CreditCardBill | null;
+  /** The open bill. */
+  currentBill: CreditCardBill;
+  /** Later bills with installments already scheduled. */
+  upcomingBills: CreditCardBill[];
 };
 
 export type AccountDetail = {
@@ -30,6 +52,7 @@ export type AccountDetail = {
   billingDueDay: number | null;
   billingClosingDay: number | null;
   creditLimit: number | null;
+  bankSlug: string | null;
 };
 
 export type CreateAccountRequest = {
@@ -40,6 +63,7 @@ export type CreateAccountRequest = {
   billingDueDay?: number | null;
   billingClosingDay?: number | null;
   creditLimit?: number | null;
+  bankSlug?: string | null;
   initialBalance?: number | null;
 };
 
@@ -52,6 +76,7 @@ export type UpdateAccountRequest = {
   billingDueDay?: number | null;
   billingClosingDay?: number | null;
   creditLimit?: number | null;
+  bankSlug?: string | null;
   newBalance?: number | null;
 };
 

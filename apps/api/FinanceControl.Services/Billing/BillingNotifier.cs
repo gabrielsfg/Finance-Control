@@ -1,6 +1,7 @@
 using FinanceControl.Data.Data;
 using FinanceControl.Domain.Entities;
 using FinanceControl.Domain.Interfaces.Service;
+using FinanceControl.Services.Email;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,18 +20,47 @@ namespace FinanceControl.Services.Billing
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
         private readonly BillingSettings _settings;
+        private readonly EmailSettings? _emailSettings;
         private readonly ILogger<BillingNotifier> _logger;
 
         public BillingNotifier(
             ApplicationDbContext context,
             IEmailService emailService,
             IOptions<BillingSettings> settings,
-            ILogger<BillingNotifier> logger)
+            ILogger<BillingNotifier> logger,
+            IOptions<EmailSettings>? emailSettings = null)
         {
             _context = context;
             _emailService = emailService;
             _settings = settings.Value;
+            _emailSettings = emailSettings?.Value;
             _logger = logger;
+        }
+
+        /// <summary>
+        /// Tells the app's inbox about a refund to be paid by hand, and stamps
+        /// <see cref="ManualRefund.NotifiedAt"/> when the provider accepts it. Does not save.
+        /// </summary>
+        public async Task NotifyManualRefundAsync(ManualRefund refund, DateTime now, CancellationToken cancellationToken = default)
+        {
+            var inbox = string.IsNullOrWhiteSpace(_settings.ManualRefundEmail)
+                ? _emailSettings?.FromEmail
+                : _settings.ManualRefundEmail;
+            if (string.IsNullOrWhiteSpace(inbox))
+            {
+                _logger.LogError("Manual refund {RefundId} has no inbox to go to: set BillingSettings:ManualRefundEmail.", refund.Id);
+                return;
+            }
+
+            var (subject, html) = BillingEmailTemplates.ManualRefundNotice(
+                refund.UserName, refund.UserEmail, refund.UserId, refund.Amount, refund.BillingMethod,
+                refund.AsaasCustomerId, refund.AsaasPaymentId, refund.Reason,
+                refund.CreatedAt.AddHours(_settings.ManualRefundHours));
+
+            if (await _emailService.SendAsync(inbox, subject, html, cancellationToken))
+                refund.NotifiedAt = now;
+            else
+                _logger.LogError("Manual refund notice for user {UserId} was not accepted by the provider; the billing job retries.", refund.UserId);
         }
 
         public string ManageUrl => $"{_settings.WebBaseUrl.TrimEnd('/')}/subscription";

@@ -47,7 +47,7 @@ export function DisconnectBankModal({ connection, onClose }: Props) {
           <div className="bg-red/8 border-red/20 flex items-start gap-3 rounded-lg border p-3">
             <TriangleAlert size={15} className="text-red mt-0.5 shrink-0" />
             <p className="text-text-sub text-[13px] leading-relaxed">
-              A autorização com <span className="text-text font-500">{connection?.connectorName}</span> será revogada e
+              A autorização com <span className="text-text font-500">{connection?.bankName}</span> será revogada e
               novas transações deixarão de ser importadas. Suas contas continuam no app.
             </p>
           </div>

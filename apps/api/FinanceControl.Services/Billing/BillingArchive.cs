@@ -51,12 +51,19 @@ namespace FinanceControl.Services.Billing
                 });
             }
 
-            // Trials granted before TrialUsages existed are only on the profile.
-            if (profile is { TrialConsumedAt: not null, CpfHash: not null }
-                && !await context.TrialUsages.AnyAsync(t => t.CpfHash == profile.CpfHash, cancellationToken)
-                && !context.TrialUsages.Local.Any(t => t.CpfHash == profile.CpfHash))
+            // Trials granted before TrialUsages existed are only on the profile. The trial
+            // belongs to the account holder's CPF; old accounts only have the payer's.
+            var accountCpfHash = await context.Users.AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => u.CpfHash)
+                .FirstOrDefaultAsync(cancellationToken);
+            var trialCpfHash = accountCpfHash ?? profile?.CpfHash;
+
+            if (profile is { TrialConsumedAt: not null } && trialCpfHash is not null
+                && !await context.TrialUsages.AnyAsync(t => t.CpfHash == trialCpfHash, cancellationToken)
+                && !context.TrialUsages.Local.Any(t => t.CpfHash == trialCpfHash))
             {
-                context.TrialUsages.Add(new TrialUsage { CpfHash = profile.CpfHash, UsedAt = profile.TrialConsumedAt.Value });
+                context.TrialUsages.Add(new TrialUsage { CpfHash = trialCpfHash, UsedAt = profile.TrialConsumedAt.Value });
             }
         }
     }

@@ -339,9 +339,10 @@ namespace FinanceControl.Services.Billing
         /// </summary>
         /// <remarks>
         /// A card installment plan is refunded as a plan (Asaas spreads it over the
-        /// installments); a card or Pix charge through the payment. A boleto cannot be
-        /// refunded by API, so the amount is recorded as owed and flagged for a manual
-        /// Pix or transfer — the user is told so by e-mail.
+        /// installments); a card or Pix charge through the payment. What Asaas does not
+        /// refund — a boleto, which has no API refund, or a refusal such as an insufficient
+        /// balance — is still owed: it becomes a <see cref="ManualRefund"/>, the app's inbox
+        /// is told, and the user is promised the money by Pix or transfer within 48 hours.
         /// </remarks>
         public async Task<RefundOutcome> RefundAsync(
             SubscriptionCharge charge, int amount, string description, DateTime now, CancellationToken cancellationToken)
@@ -352,10 +353,7 @@ namespace FinanceControl.Services.Billing
             if (charge.BillingMethod == EnumBillingMethod.Boleto)
             {
                 outcome = RefundOutcome.ManualPending;
-                charge.ManualRefundPending = true;
-                _logger.LogError(
-                    "Charge {ChargeId} of user {UserId} was paid by boleto: refund {Amount} cents by hand.",
-                    charge.Id, charge.UserId, amount);
+                await RecordManualRefundAsync(charge, amount, $"{description}. Boleto não tem estorno pela API.", now, cancellationToken);
             }
             else
             {
@@ -370,9 +368,13 @@ namespace FinanceControl.Services.Billing
                     return RefundOutcome.Unavailable;
                 if (!result.IsSuccess)
                 {
-                    _logger.LogError(
-                        "Refund of charge {ChargeId} was rejected by Asaas ({ErrorCode}).", charge.Id, result.ErrorCode);
-                    return RefundOutcome.Rejected;
+                    outcome = RefundOutcome.ManualPending;
+                    await RecordManualRefundAsync(
+                        charge,
+                        amount,
+                        $"{description}. O Asaas recusou o estorno ({result.ErrorCode}: {result.ErrorDescription}).",
+                        now,
+                        cancellationToken);
                 }
             }
 
@@ -393,6 +395,46 @@ namespace FinanceControl.Services.Billing
             }
 
             return outcome;
+        }
+
+        /// <summary>
+        /// Records a refund to be paid by hand and tells the app's inbox. Does not save: the
+        /// row goes in with the caller's changes, and a notice the inbox did not accept is
+        /// sent again by the hourly billing job.
+        /// </summary>
+        private async Task RecordManualRefundAsync(
+            SubscriptionCharge charge, int amount, string reason, DateTime now, CancellationToken cancellationToken)
+        {
+            charge.ManualRefundPending = true;
+            _logger.LogError(
+                "Charge {ChargeId} of user {UserId} has to be refunded by hand: {Amount} cents ({Reason}).",
+                charge.Id, charge.UserId, amount, reason);
+
+            var user = await _context.Users.AsNoTracking()
+                .Where(u => u.Id == charge.UserId)
+                .Select(u => new { u.Name, u.Email })
+                .FirstOrDefaultAsync(cancellationToken);
+            var customerId = await _context.BillingProfiles.AsNoTracking()
+                .Where(p => p.UserId == charge.UserId)
+                .Select(p => p.AsaasCustomerId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var refund = new ManualRefund
+            {
+                UserId = charge.UserId,
+                UserName = user?.Name ?? string.Empty,
+                UserEmail = user?.Email ?? string.Empty,
+                SubscriptionChargeId = charge.Id,
+                AsaasCustomerId = customerId,
+                AsaasPaymentId = charge.AsaasPaymentId,
+                BillingMethod = charge.BillingMethod,
+                Amount = Math.Min(amount, charge.Amount),
+                Reason = reason.Length > 500 ? reason[..500] : reason,
+                CreatedAt = now
+            };
+            _context.ManualRefunds.Add(refund);
+
+            await _notifier.NotifyManualRefundAsync(refund, now, cancellationToken);
         }
 
         /// <summary>

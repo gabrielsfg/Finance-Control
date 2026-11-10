@@ -20,6 +20,7 @@ namespace FinanceControl.Data.Mappings
             builder.Property(a => a.BillingDueDay);
             builder.Property(a => a.BillingClosingDay);
             builder.Property(a => a.CreditLimit);
+            builder.Property(a => a.BankSlug).HasMaxLength(40);
             builder.Property(a => a.CreatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("now()")

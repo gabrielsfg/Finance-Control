@@ -38,7 +38,7 @@ export const ProfileDangerZoneCard = () => {
     run(
       { password },
       {
-        onSuccess: () => logout(),
+        onSuccess: () => logout("signedOut"),
         onError: (err) => setError(dangerErrorMessage(err)),
       },
     );
@@ -57,7 +57,7 @@ export const ProfileDangerZoneCard = () => {
 
       {/* Logout */}
       <button
-        onClick={logout}
+        onClick={() => void logout("signedOut")}
         className="inline-flex w-full items-center justify-center rounded-[13px] border border-[var(--text)] px-[18px] py-2.5 text-[14px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--text)] hover:text-[var(--bg)]"
       >
         Sair da conta
@@ -98,7 +98,7 @@ export const ProfileDangerZoneCard = () => {
         <p className="text-[12.5px] leading-relaxed text-[var(--text-sub)]">
           Exclui sua conta e todos os seus dados, desconecta os bancos e revoga as conexões de IA. A
           assinatura é encerrada: no plano anual, devolvemos os meses não iniciados (descontada a multa
-          de 10% após os 7 primeiros dias). Exporte seus dados antes, se quiser guardá-los.
+          de 10%). Exporte seus dados antes, se quiser guardá-los.
         </p>
       </div>
 

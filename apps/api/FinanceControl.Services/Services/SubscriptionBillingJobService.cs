@@ -96,6 +96,28 @@ namespace FinanceControl.Services.Services
                 await IsolatedAsync("send reminders", 0, (scope, ct) => SendRemindersAsync(scope, now, settings, ct), cancellationToken);
 
             await IsolatedAsync("issue invoices", 0, (scope, ct) => IssueInvoicesAsync(scope, now, ct), cancellationToken);
+
+            await IsolatedAsync("resend manual refund notices", 0, (scope, ct) => ResendManualRefundNoticesAsync(scope, now, ct), cancellationToken);
+        }
+
+        /// <summary>
+        /// A manual refund whose notice the inbox did not accept (e-mail down or not set up)
+        /// is told again every hour until it is — the 48-hour promise runs either way.
+        /// </summary>
+        private static async Task ResendManualRefundNoticesAsync(IServiceProvider services, DateTime now, CancellationToken cancellationToken)
+        {
+            var context = services.GetRequiredService<ApplicationDbContext>();
+            var notifier = services.GetRequiredService<BillingNotifier>();
+
+            var pending = await context.ManualRefunds
+                .Where(r => r.NotifiedAt == null && r.ResolvedAt == null)
+                .OrderBy(r => r.Id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var refund in pending)
+                await notifier.NotifyManualRefundAsync(refund, now, cancellationToken);
+
+            await context.SaveChangesAsync(cancellationToken);
         }
 
         /// <summary>

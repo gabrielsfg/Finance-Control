@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { useCreateAccount, useUpdateAccount } from "@/features/accounts/hooks/useAccounts";
 import { ACCOUNT_TYPE_CONFIG } from "@/lib/config/accountTypes";
+import { BankLogo } from "@/components/shared/BankLogo";
+import { BankPickerField } from "@/components/shared/BankPickerField";
 import type { AccountItem, AccountType } from "@/lib/types/accounts.types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -56,6 +58,7 @@ const baseSchema = z
     billingDueDay: z.string().optional(),
     billingClosingDay: z.string().optional(),
     creditLimit: z.string().optional(),
+    bankSlug: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (CREDIT_TYPES.includes(data.type as AccountType)) {
@@ -175,7 +178,7 @@ function CreateForm({ onClose }: { onClose: () => void }) {
       resolver: zodResolver(createSchema),
       defaultValues: {
         name: "", type: "Checking", isDefaultAccount: false,
-        initialBalance: "", goalAmount: "", billingDueDay: "", billingClosingDay: "", creditLimit: "",
+        initialBalance: "", goalAmount: "", billingDueDay: "", billingClosingDay: "", creditLimit: "", bankSlug: "",
       },
     });
 
@@ -195,6 +198,7 @@ function CreateForm({ onClose }: { onClose: () => void }) {
         billingDueDay: showCreditFields && values.billingDueDay ? Number(values.billingDueDay) : null,
         billingClosingDay: isCredit && values.billingClosingDay ? Number(values.billingClosingDay) : null,
         creditLimit: showCreditFields && values.creditLimit ? Math.round(parseFloat(values.creditLimit) * 100) : null,
+        bankSlug: values.bankSlug || null,
       });
       reset();
       onClose();
@@ -212,6 +216,10 @@ function CreateForm({ onClose }: { onClose: () => void }) {
             placeholder="Ex: Nubank, Bradesco..."
             className={cn(INPUT_CLASS, errors.name && "border-red/60")}
           />
+        </FormField>
+
+        <FormField label="Banco">
+          <BankPickerField value={watch("bankSlug") ?? ""} onChange={(v) => setValue("bankSlug", v)} />
         </FormField>
 
         <FormField label="Tipo">
@@ -301,9 +309,10 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
       type: account.type,
       isDefaultAccount: account.isDefaultAccount,
       goalAmount: "",
-      billingDueDay: "",
-      billingClosingDay: "",
+      billingDueDay: account.billingDueDay ? String(account.billingDueDay) : "",
+      billingClosingDay: account.billingClosingDay ? String(account.billingClosingDay) : "",
       creditLimit: account.creditLimit ? String(account.creditLimit / 100) : "",
+      bankSlug: account.bankSlug ?? "",
       newBalance: "",
     });
     setServerError(null);
@@ -328,6 +337,7 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
           billingDueDay: showCreditFields && values.billingDueDay ? Number(values.billingDueDay) : null,
           billingClosingDay: isCredit && values.billingClosingDay ? Number(values.billingClosingDay) : null,
           creditLimit: showCreditFields && values.creditLimit ? Math.round(parseFloat(values.creditLimit) * 100) : null,
+          bankSlug: values.bankSlug || null,
           newBalance: values.newBalance?.trim() ? Math.round(parseFloat(values.newBalance) * 100) : null,
         },
       });
@@ -345,6 +355,10 @@ function EditForm({ account, onClose }: { account: AccountItem; onClose: () => v
             {...register("name")}
             className={cn(INPUT_CLASS, errors.name && "border-red/60")}
           />
+        </FormField>
+
+        <FormField label="Banco">
+          <BankPickerField value={watch("bankSlug") ?? ""} onChange={(v) => setValue("bankSlug", v)} />
         </FormField>
 
         <FormField label="Tipo">
@@ -460,12 +474,19 @@ function DetailView({
     <div className="flex flex-col gap-6">
       {/* Hero */}
       <div className="flex flex-col items-center gap-3 py-6">
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-[16px]"
-          style={{ backgroundColor: `${color}1a` }}
-        >
-          <Icon size={28} style={{ color }} strokeWidth={1.5} />
-        </div>
+        <BankLogo
+          slug={account.bankSlug}
+          size={64}
+          className="rounded-[16px]"
+          fallback={
+            <div
+              className="flex h-16 w-16 items-center justify-center rounded-[16px]"
+              style={{ backgroundColor: `${color}1a` }}
+            >
+              <Icon size={28} style={{ color }} strokeWidth={1.5} />
+            </div>
+          }
+        />
         <div className="text-center">
           <p className="text-text font-display font-bold text-[20px] tracking-[-0.01em]">{account.name}</p>
           <p className="text-text-muted mt-0.5 text-[13px]">{ACCOUNT_TYPE_LABELS[account.type]}</p>

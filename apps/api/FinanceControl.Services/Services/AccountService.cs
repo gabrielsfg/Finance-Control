@@ -37,6 +37,7 @@ namespace FinanceControl.Services.Services
                 // Closing day is a credit-card concept only (not checking).
                 BillingClosingDay = requestDto.Type == EnumAccountType.Credit ? requestDto.BillingClosingDay : null,
                 CreditLimit = hasCreditFields ? requestDto.CreditLimit : null,
+                BankSlug = requestDto.BankSlug,
             };
 
             var hasAnyAccount = await _context.Accounts.AnyAsync(a => a.UserId == userId);
@@ -96,9 +97,14 @@ namespace FinanceControl.Services.Services
                             .Where(t => t.DestinationAccountId == a.Id && t.UserId == userId && t.Type == EnumTransactionType.Transfer)
                             .Sum(t => (int?)t.Value) ?? 0,
                     IsDefaultAccount = a.IsDefaultAccount,
-                    CreditLimit = a.CreditLimit
+                    CreditLimit = a.CreditLimit,
+                    BillingDueDay = a.BillingDueDay,
+                    BillingClosingDay = a.BillingClosingDay,
+                    BankSlug = a.BankSlug
                 })
                 .ToListAsync();
+
+            await AddCardBillsAsync(accounts, userId);
 
             // One query for every bank link, so the list stays two round trips whatever
             // the number of accounts.
@@ -193,6 +199,7 @@ namespace FinanceControl.Services.Services
                 BillingDueDay = account.BillingDueDay,
                 BillingClosingDay = account.BillingClosingDay,
                 CreditLimit = account.CreditLimit,
+                BankSlug = account.BankSlug,
                 RecentTransactions = recentTransactions
             };
         }
@@ -212,6 +219,7 @@ namespace FinanceControl.Services.Services
             account.BillingDueDay = hasCreditFieldsUpdate ? requestDto.BillingDueDay : null;
             account.BillingClosingDay = requestDto.Type == EnumAccountType.Credit ? requestDto.BillingClosingDay : null;
             account.CreditLimit = hasCreditFieldsUpdate ? requestDto.CreditLimit : null;
+            account.BankSlug = requestDto.BankSlug;
 
             await _context.SaveChangesAsync();
 
@@ -247,6 +255,46 @@ namespace FinanceControl.Services.Services
 
             var accounts = await GetAllAccountAsync(userId);
             return Result<IEnumerable<GetAccountItemResponseDto>>.Success(accounts);
+        }
+
+        /// <summary>
+        /// Splits each card with closing and due days into bills. One query for all of
+        /// them: daily sums, signed as the balance (purchases −, payments and refunds +).
+        /// </summary>
+        private async Task AddCardBillsAsync(List<GetAccountItemResponseDto> accounts, int userId)
+        {
+            var cards = accounts
+                .Where(a => a.Type == EnumAccountType.Credit && a.BillingClosingDay is not null && a.BillingDueDay is not null)
+                .ToList();
+            if (cards.Count == 0)
+                return;
+
+            var ids = cards.Select(c => c.Id).ToList();
+            var outgoing = await _context.Transactions
+                .Where(t => t.UserId == userId && ids.Contains(t.AccountId))
+                .GroupBy(t => new { t.AccountId, t.TransactionDate })
+                .Select(g => new
+                {
+                    g.Key.AccountId,
+                    Date = g.Key.TransactionDate,
+                    Sum = g.Sum(t => t.Type == EnumTransactionType.Income ? t.Value : -t.Value)
+                })
+                .ToListAsync();
+            var incoming = await _context.Transactions
+                .Where(t => t.UserId == userId && t.Type == EnumTransactionType.Transfer
+                    && t.DestinationAccountId != null && ids.Contains(t.DestinationAccountId.Value))
+                .GroupBy(t => new { AccountId = t.DestinationAccountId!.Value, t.TransactionDate })
+                .Select(g => new { g.Key.AccountId, Date = g.Key.TransactionDate, Sum = g.Sum(t => t.Value) })
+                .ToListAsync();
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            foreach (var card in cards)
+            {
+                var movements = outgoing.Where(m => m.AccountId == card.Id).Select(m => (m.Date, m.Sum))
+                    .Concat(incoming.Where(m => m.AccountId == card.Id).Select(m => (m.Date, m.Sum)));
+                card.Bills = CreditCardBillCalculator.Calculate(
+                    card.BillingClosingDay!.Value, card.BillingDueDay!.Value, today, movements);
+            }
         }
 
         /// <summary>

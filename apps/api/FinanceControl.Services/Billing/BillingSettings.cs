@@ -39,6 +39,13 @@ namespace FinanceControl.Services.Billing
         /// Used in email links ("cancel here", "pay the renewal").
         public string WebBaseUrl { get; set; } = "http://localhost:3000";
 
+        /// Inbox that is told about every refund to be paid by hand. Empty means the app's
+        /// own address (EmailSettings:FromEmail).
+        public string ManualRefundEmail { get; set; } = string.Empty;
+
+        /// How long the user is promised a manual refund takes.
+        public int ManualRefundHours { get; set; } = 48;
+
         /// Billing emails go out from this hour on (UTC; 11 = 08:00 in Brasília), so the
         /// hourly job does not send reminders at 3 a.m.
         public int EmailStartHourUtc { get; set; } = 11;

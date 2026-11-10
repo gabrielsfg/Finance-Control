@@ -30,6 +30,10 @@ export type OpenFinanceStatus = {
 export type BankConnectionAccount = {
   id: number;
   name: string;
+  /** Name an account created for it gets: "Nubank - Cartão de Crédito". */
+  suggestedName: string;
+  /** A card's closing day (bank-reported or estimated). */
+  billClosingDay: number | null;
   number: string | null;
   /** Provider type: "BANK" or "CREDIT". */
   externalType: string;
@@ -56,6 +60,10 @@ export type BankConnection = {
   connectorName: string;
   connectorImageUrl: string | null;
   connectorPrimaryColor: string | null;
+  /** The real bank, even behind an aggregator such as MeuPluggy; null when unknown. */
+  bankSlug: string | null;
+  /** Bank name, falling back to the connector's. */
+  bankName: string;
   status: BankConnectionStatus;
   lastErrorMessage: string | null;
   lastSyncedAt: string | null;

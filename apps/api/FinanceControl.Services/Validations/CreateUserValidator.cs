@@ -1,4 +1,5 @@
 using FinanceControl.Shared.Dtos;
+using FinanceControl.Shared.Helpers;
 using FluentValidation;
 
 namespace FinanceControl.Services.Validations;
@@ -21,6 +22,10 @@ public class CreateUserValidator : AbstractValidator<CreateUserRequestDto>
 
         RuleFor(u => u.Name)
             .NotEmpty().WithMessage("Name is required.");
+
+        RuleFor(u => u.Cpf)
+            .NotEmpty().WithMessage("CPF is required.")
+            .Must(CpfHelper.IsValid).WithMessage("Invalid CPF.");
 
         // Enforced here and not only in the UI: the account must not be able to exist
         // without a consent row, whichever client created it.

@@ -33,11 +33,13 @@ function LoginPageContent() {
   );
   const [view, setView] = useState<ChallengeView | null>(null);
 
-  // `?expired=1` is set by logout(), including the involuntary one the API triggers
-  // when a refresh fails. Without a word here the user is dropped on a blank login
-  // form with no idea why they were thrown out.
+  // `?expired=1` is set by every logout(); only the involuntary one — the API failing to
+  // refresh the session — comes without `signedOut=1`. Without a word then, the user is
+  // dropped on a blank login form with no idea why they were thrown out.
   const [notice, setNotice] = useState<string | null>(
-    searchParams.get("expired") === "1" ? "Sua sessão expirou. Entre novamente." : null,
+    searchParams.get("expired") === "1" && searchParams.get("signedOut") !== "1"
+      ? "Sua sessão expirou. Entre novamente."
+      : null,
   );
 
   const backToLogin = () => {

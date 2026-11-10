@@ -114,6 +114,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
+    const { useAuthStore } = require("@/lib/stores/authStore");
 
     // Auth routes are excluded from the recovery below, and not merely because
     // refreshing before /user/refresh would be circular: `logout()` itself issues a
@@ -121,13 +122,19 @@ api.interceptors.response.use(
     // `logout()` again, which requests again — forever. Every level sits awaiting
     // the next, so the redirect at the end of `logout()` is never reached and the
     // user is left on a dead session that never resolves into the login screen.
+    //
+    // Nor after logout() has started: it drops the access token first, so the page's
+    // in-flight queries come back 401. Refreshing for them would race the logout
+    // request and, landing after it, hand the browser a brand-new session — the user
+    // pressed "Sair" and is signed straight back in.
     const isRecoverable =
       error.response?.status === 401 &&
       // Absent on errors raised before a request was built; the retry below writes
       // to it, so it has to be present rather than merely optional-chained.
       original &&
       !original._retry &&
-      !isAuthEndpoint(original.url ?? "");
+      !isAuthEndpoint(original.url ?? "") &&
+      useAuthStore.getState().isAuthenticated;
 
     if (isRecoverable) {
       original._retry = true;
@@ -137,7 +144,6 @@ api.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newToken}`;
         return api(original);
       } catch {
-        const { useAuthStore } = require("@/lib/stores/authStore");
         clearPersistedQueryCache();
         await useAuthStore.getState().logout();
       }

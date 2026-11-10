@@ -175,6 +175,39 @@ namespace FinanceControl.Tests.Unit
         }
 
         [Fact]
+        public async Task CardSignup_SameAccountHolderPayingWithAnotherPersonsCard_IsChargedNow()
+        {
+            var h = Create();
+            var secrets = new BillingSecrets(Options.Create(new BillingSettings { CpfHashKey = "test-cpf-key" }));
+            var first = await AddUserAsync(h.Context, 1);
+            var second = await AddUserAsync(h.Context, 2);
+            first.CpfHash = secrets.HashCpf(ValidCpf);
+            second.CpfHash = secrets.HashCpf(ValidCpf);
+            await h.Context.SaveChangesAsync();
+            await h.Service.CreateSubscriptionAsync(CardRequest(), 1, null);
+
+            var plans = await h.Service.GetPlansAsync(2);
+            var result = await h.Service.CreateSubscriptionAsync(CardRequest(cpf: OtherValidCpf), 2, null);
+
+            Assert.False(plans.IsTrialEligible);
+            Assert.True(result.IsSuccess, result.Error);
+            Assert.Equal(EnumSubscriptionStatus.Active, result.Value!.Status);
+            Assert.Equal(1, h.Asaas.CountOf(HttpMethod.Post, "payments"));
+        }
+
+        [Fact]
+        public async Task CardSignup_AccountWithoutSignupCpf_AdoptsThePayersCpf()
+        {
+            var h = Create();
+            var user = await AddUserAsync(h.Context);
+
+            await h.Service.CreateSubscriptionAsync(CardRequest(), 1, null);
+
+            var secrets = new BillingSecrets(Options.Create(new BillingSettings { CpfHashKey = "test-cpf-key" }));
+            Assert.Equal(secrets.HashCpf(ValidCpf), user.CpfHash);
+        }
+
+        [Fact]
         public async Task CardSignup_Declined_LeavesNoSubscriptionAndCountsTheFailure()
         {
             var asaas = new FakeAsaasHandler().On(HttpMethod.Post, "creditCard/tokenizeCreditCard",

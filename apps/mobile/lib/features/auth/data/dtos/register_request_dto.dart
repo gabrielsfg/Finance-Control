@@ -8,12 +8,17 @@ class RegisterRequestDto {
     required this.email,
     required this.password,
     required this.name,
+    required this.cpf,
     required this.acceptedTerms,
   });
 
   final String email;
   final String password;
   final String name;
+
+  /// The account holder's CPF, digits only. The free trial is one per CPF,
+  /// whoever's card later pays.
+  final String cpf;
 
   /// Only the tick. Which document version was accepted, when, and from where is
   /// decided and recorded by the backend.

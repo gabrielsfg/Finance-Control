@@ -115,7 +115,9 @@ function ConnectBankFlow({ intent, onClose }: { intent: ConnectBankIntent; onClo
     setStep("registering");
     try {
       const registered = await register.mutateAsync(itemId);
-      if (intent.kind === "reconnect") {
+      // A reconnect that brought new accounts (e.g. another bank shared through
+      // MeuPluggy) goes on to choosing where they go.
+      if (intent.kind === "reconnect" && !registered.accounts.some((a) => a.status === "PendingLink")) {
         onClose();
         return;
       }

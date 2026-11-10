@@ -33,13 +33,20 @@ export const EMPTY_CARD_FORM: CardWithHolderForm = {
   cvv: "",
 };
 
-export function toCardPayload(values: CardWithHolderForm) {
-  const expiry = parseExpiry(values.expiry)!;
+/** The holder part alone — what Pix and boleto send. Their resolver drops the card fields. */
+export function toHolderPayload(values: HolderForm) {
   return {
     cpf: onlyDigits(values.cpf),
     mobilePhone: onlyDigits(values.mobilePhone),
     postalCode: onlyDigits(values.postalCode),
     addressNumber: values.addressNumber.trim(),
+  };
+}
+
+export function toCardPayload(values: CardWithHolderForm) {
+  const expiry = parseExpiry(values.expiry)!;
+  return {
+    ...toHolderPayload(values),
     card: {
       holderName: values.holderName.trim(),
       number: onlyDigits(values.number),

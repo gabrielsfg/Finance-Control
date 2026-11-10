@@ -9,6 +9,11 @@ namespace FinanceControl.Shared.Dtos.Response.OpenFinance
         public string ConnectorName { get; set; } = string.Empty;
         public string? ConnectorImageUrl { get; set; }
         public string? ConnectorPrimaryColor { get; set; }
+
+        /// The real bank (BankCatalog slug), recognized even behind an aggregator such as
+        /// MeuPluggy; null when unknown. BankName falls back to the connector's name.
+        public string? BankSlug { get; set; }
+        public string BankName { get; set; } = string.Empty;
         public EnumBankConnectionStatus Status { get; set; }
         public string? LastErrorMessage { get; set; }
         public DateTime? LastSyncedAt { get; set; }

@@ -6,6 +6,7 @@ using FinanceControl.Services.Helpers;
 using FinanceControl.Services.Pluggy;
 using FinanceControl.Services.Seeds;
 using FinanceControl.Shared.Enums;
+using FinanceControl.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -260,7 +261,68 @@ namespace FinanceControl.Services.Services
                 row.ExternalBalance = ToCents(account.Balance);
                 row.ExternalBalanceAt = now;
                 row.ExternalCreditLimit = account.CreditData?.CreditLimit is { } limit ? ToCents(limit) : null;
+                (row.ExternalBillDueDay, row.ExternalBillClosingDay) = BillDays(account.CreditData);
             }
+
+            // Aggregators (MeuPluggy) name themselves, not the bank: recognize the bank
+            // from the connector first, then from the account names Pluggy reports.
+            connection.BankSlug = BankCatalog.MatchAny(
+                    new[] { connection.ConnectorName }
+                        .Concat(result.Value!.Results.Select(a => a.Name))
+                        .Concat(result.Value!.Results.Select(a => a.MarketingName)))
+                ?.Slug ?? connection.BankSlug;
+
+            await FillLinkedAccountsAsync(connection, cancellationToken);
+        }
+
+        /// <summary>
+        /// Gives the app accounts behind this connection what the bank knows and the user
+        /// has not set: the bank, and a card's bill days. Never overwrites the user's.
+        /// </summary>
+        public async Task FillLinkedAccountsAsync(BankConnection connection, CancellationToken cancellationToken)
+        {
+            var links = connection.Accounts.Where(a => a.AccountId != null).ToList();
+            if (links.Count == 0)
+                return;
+
+            var ids = links.Select(a => a.AccountId!.Value).ToList();
+            var accounts = await _context.Accounts
+                .Where(a => a.UserId == connection.UserId && ids.Contains(a.Id))
+                .ToListAsync(cancellationToken);
+
+            foreach (var account in accounts)
+            {
+                var link = links.First(l => l.AccountId == account.Id);
+                ApplyBankDefaults(account, link, BankSlugFor(connection, link));
+            }
+        }
+
+        /// <summary>
+        /// The bank of one account: its own name first ("XP Investimentos" inside a MeuPluggy
+        /// item that also holds Nubank), else the connection's ("platinum" says nothing).
+        /// </summary>
+        public static string? BankSlugFor(BankConnection connection, BankConnectionAccount bankAccount) =>
+            BankCatalog.Match(bankAccount.Name)?.Slug ?? connection.BankSlug;
+
+        public static void ApplyBankDefaults(Account account, BankConnectionAccount link, string? bankSlug)
+        {
+            account.BankSlug ??= bankSlug;
+            if (account.Type != EnumAccountType.Credit)
+                return;
+
+            account.BillingDueDay ??= link.ExternalBillDueDay;
+            account.BillingClosingDay ??= link.ExternalBillClosingDay;
+        }
+
+        /// A card's due day and closing day. Banks often leave the closing date out; a
+        /// week before the due date is the common Brazilian cycle and the user can edit it.
+        public static (int? DueDay, int? ClosingDay) BillDays(PluggyCreditData? credit)
+        {
+            if (credit?.BalanceDueDate is not { } due)
+                return (null, credit?.BalanceCloseDate?.Day);
+
+            var closing = credit.BalanceCloseDate ?? due.AddDays(-7);
+            return (due.Day, closing.Day);
         }
 
         /// <summary>
@@ -290,6 +352,9 @@ namespace FinanceControl.Services.Services
 
                 if (isInitial)
                 {
+                    // History before the start date is not imported, so the balance starts
+                    // off by whatever happened before it; one adjustment makes it the bank's.
+                    await AccountBalanceHelper.AddBankAdjustmentAsync(_context, connection.UserId, link, cancellationToken);
                     link.InitialImportCompletedAt = DateTime.UtcNow;
                     await _context.SaveChangesAsync(cancellationToken);
                 }
@@ -426,8 +491,13 @@ namespace FinanceControl.Services.Services
             var isCard = link.ExternalType.Equals("CREDIT", StringComparison.OrdinalIgnoreCase);
             var startDate = link.ImportFromDate ?? DateOnly.MinValue;
 
+            // Pending rows come in too: on a card every purchase of the open bill stays
+            // PENDING until the bill closes, and a month of spending must not be invisible.
+            // The app has no pending state — a pending row is an ordinary transaction.
+            // Posting keeps the id (an update below); when Pluggy re-posts under a new id
+            // or the purchase is canceled, transactions/deleted removes the old row, and a
+            // refund arrives as its own credit.
             var rows = incoming
-                .Where(t => !IsPending(t))
                 .Select(t => (Source: t, Mapped: Map(t, isCard)))
                 .Where(r => r.Mapped is not null && r.Mapped.Date >= startDate)
                 .GroupBy(r => r.Source.Id)
@@ -739,6 +809,22 @@ namespace FinanceControl.Services.Services
                 var from = row.TransactionDate.AddDays(-MatchWindowDays);
                 var to = row.TransactionDate.AddDays(MatchWindowDays);
 
+                // A leg the bank re-posted under a new id (its pending version was deleted at
+                // Pluggy, leaving the transfer without it) rejoins that transfer instead of
+                // becoming a second row next to it.
+                var orphan = await FindTransferMissingLegAsync(userId, row, from, to, cancellationToken);
+                if (orphan is not null)
+                {
+                    if (row.Type == EnumTransactionType.Income)
+                        orphan.ExternalCounterpartId = row.ExternalId;
+                    else
+                        orphan.ExternalId = row.ExternalId;
+
+                    _context.Transactions.Remove(row);
+                    removedIds.Add(row.Id);
+                    continue;
+                }
+
                 var opposites = await _context.Transactions
                     .Where(t => t.UserId == userId
                         && t.Id != row.Id
@@ -783,6 +869,30 @@ namespace FinanceControl.Services.Services
                 await _context.SaveChangesAsync(cancellationToken);
         }
 
+        /// <summary>
+        /// The bank transfer that lost the leg <paramref name="row"/> would be: a credit on
+        /// this account matches a transfer into it with no counterpart id; a debit matches a
+        /// transfer out of it with no id of its own.
+        /// </summary>
+        private Task<Transaction?> FindTransferMissingLegAsync(
+            int userId, Transaction row, DateOnly from, DateOnly to, CancellationToken cancellationToken)
+        {
+            var query = _context.Transactions.Where(t => t.UserId == userId
+                && t.Id != row.Id
+                && t.Type == EnumTransactionType.Transfer
+                && t.Source == EnumTransactionSource.OpenFinance
+                && !t.ExternalModified
+                && t.Value == row.Value
+                && t.TransactionDate >= from
+                && t.TransactionDate <= to);
+
+            query = row.Type == EnumTransactionType.Income
+                ? query.Where(t => t.DestinationAccountId == row.AccountId && t.ExternalCounterpartId == null && t.ExternalId != null)
+                : query.Where(t => t.AccountId == row.AccountId && t.ExternalId == null && t.ExternalCounterpartId != null);
+
+            return query.OrderBy(t => t.Id).FirstOrDefaultAsync(cancellationToken);
+        }
+
         private static bool LooksLikeTransfer(PluggyTransaction transaction)
         {
             if (transaction.OperationType is { } operation && TransferOperationTypes.Contains(operation))
@@ -802,9 +912,6 @@ namespace FinanceControl.Services.Services
             EnumTransactionType.Transfer => transaction.DestinationAccountId == accountId,
             _ => false
         };
-
-        private static bool IsPending(PluggyTransaction transaction) =>
-            string.Equals(transaction.Status, "PENDING", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// A Pluggy row in our terms, or null when it carries no money. Cards: a positive

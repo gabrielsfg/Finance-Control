@@ -37,7 +37,8 @@ namespace FinanceControl.Tests.Unit
             {
                 CpfHashKey = "test-cpf-key",
                 CardTokenKey = Convert.ToBase64String(new byte[32]),
-                WebBaseUrl = "https://app.test"
+                WebBaseUrl = "https://app.test",
+                ManualRefundEmail = "financeiro@helmo.test"
             });
             var client = new AsaasClient(
                 new HttpClient(asaas) { BaseAddress = new Uri("https://asaas.test/v3/") },
@@ -155,6 +156,28 @@ namespace FinanceControl.Tests.Unit
             Assert.Equal(EnumSubscriptionEndReason.Refunded, result.Value.EndReason);
             var call = asaas.Calls.Single(c => c.Path == "payments/pay_1/refund");
             Assert.DoesNotContain("\"value\"", call.Body);
+        }
+
+        [Fact]
+        public async Task CancelYearly_InsideTheWindow_WhenAsaasRefusesTheRefund_OwesItByHand()
+        {
+            var asaas = new FakeAsaasHandler().On(HttpMethod.Post, "payments/pay_1/refund", HttpStatusCode.BadRequest,
+                """{"errors":[{"code":"invalid_action","description":"Saldo insuficiente."}]}""");
+            var (context, _, service) = Create(asaas);
+            await AddUserAsync(context, 1, trialUsed: true);
+            await service.CreateSubscriptionAsync(YearlyCard(), 1, null);
+
+            var result = await service.CancelSubscriptionAsync(1);
+
+            Assert.True(result.IsSuccess, result.Error);
+            Assert.Equal(EnumSubscriptionEndReason.Refunded, result.Value!.EndReason);
+            Assert.True(result.Value.Charges.Single().ManualRefundPending);
+            var refund = await context.ManualRefunds.SingleAsync();
+            Assert.Equal(1, refund.UserId);
+            Assert.Equal("user1@test.com", refund.UserEmail);
+            Assert.Equal(50000, refund.Amount);
+            Assert.Contains("Saldo insuficiente", refund.Reason);
+            Assert.NotNull(refund.NotifiedAt);
         }
 
         [Fact]

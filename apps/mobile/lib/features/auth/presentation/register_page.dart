@@ -8,6 +8,7 @@ import 'package:dio/dio.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/cpf.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/auth_repository.dart';
 import '../data/dtos/register_request_dto.dart';
@@ -22,6 +23,7 @@ class RegisterPage extends ConsumerStatefulWidget {
 class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _cpfController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -31,6 +33,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool _acceptedTerms = false;
   String? _nameError;
   String? _emailError;
+  String? _cpfError;
   String? _passwordError;
   String? _confirmPasswordError;
   String? _termsError;
@@ -41,6 +44,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _cpfController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -60,6 +64,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool _validate() {
     String? nameErr;
     String? emailErr;
+    String? cpfErr;
     String? passErr;
     String? confirmErr;
 
@@ -75,6 +80,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       emailErr = 'Informe seu e-mail';
     } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
       emailErr = 'E-mail inválido';
+    }
+
+    final cpf = _cpfController.text.trim();
+    if (cpf.isEmpty) {
+      cpfErr = 'Informe seu CPF';
+    } else if (!isValidCpf(cpf)) {
+      cpfErr = 'CPF inválido';
     }
 
     if (_passwordController.text.isEmpty) {
@@ -99,6 +111,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     setState(() {
       _nameError = nameErr;
       _emailError = emailErr;
+      _cpfError = cpfErr;
       _passwordError = passErr;
       _confirmPasswordError = confirmErr;
       _termsError = termsErr;
@@ -106,6 +119,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     return nameErr == null &&
         emailErr == null &&
+        cpfErr == null &&
         passErr == null &&
         confirmErr == null &&
         termsErr == null;
@@ -128,6 +142,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       await ref.read(authRepositoryProvider).register(RegisterRequestDto(
         name: _nameController.text.trim(),
         email: email,
+        cpf: cpfDigits(_cpfController.text),
         password: _passwordController.text,
         acceptedTerms: _acceptedTerms,
       ));
@@ -234,6 +249,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   onChanged: (_) => setState(() => _emailError = null),
+                ),
+                const SizedBox(height: 14),
+
+                // ── CPF ────────────────────────────────────────────────────
+                AppInputField(
+                  placeholder: 'CPF',
+                  controller: _cpfController,
+                  errorText: _cpfError,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [CpfInputFormatter()],
+                  onChanged: (_) => setState(() => _cpfError = null),
                 ),
                 const SizedBox(height: 14),
 

@@ -6,6 +6,8 @@ export type LoginRequest = {
 export type RegisterRequest = {
   name: string;
   email: string;
+  /** The account holder's — the free trial is one per CPF, whoever's card pays. */
+  cpf: string;
   password: string;
   confirmPassword: string;
   /** Which version was accepted, and when, is decided server-side — this is only the tick. */

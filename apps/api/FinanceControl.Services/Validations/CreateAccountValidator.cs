@@ -1,5 +1,6 @@
 ﻿using FinanceControl.Shared.Dtos.Request;
 using FinanceControl.Shared.Enums;
+using FinanceControl.Shared.Helpers;
 using FluentValidation;
 
 namespace FinanceControl.Services.Validations
@@ -9,6 +10,10 @@ namespace FinanceControl.Services.Validations
         public CreateAccountValidator()
         {
             RuleFor(a => a.Name).NotEmpty().WithMessage("Name is required.");
+
+            RuleFor(a => a.BankSlug)
+                .Must(BankCatalog.IsKnown).WithMessage("BankSlug must be a known bank.")
+                .When(a => a.BankSlug is not null);
 
             RuleFor(a => a.CreditLimit)
                 .NotNull().WithMessage("CreditLimit is required for Credit accounts.")

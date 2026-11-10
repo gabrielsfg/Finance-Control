@@ -6,6 +6,13 @@ namespace FinanceControl.Shared.Dtos.Response.OpenFinance
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+
+        /// The name an app account created for it gets: "Nubank - Cartão de Crédito".
+        public string SuggestedName { get; set; } = string.Empty;
+
+        /// A card's closing day as the bank reports it (or estimated), for "import from
+        /// the start of the current bill".
+        public int? BillClosingDay { get; set; }
         public string? Number { get; set; }
 
         /// Pluggy's BANK or CREDIT.

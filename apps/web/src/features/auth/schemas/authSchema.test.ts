@@ -10,6 +10,7 @@ import {
 const validRegistration = {
   name: "Gabriel",
   email: "gabriel@example.com",
+  cpf: "529.982.247-25",
   password: "Senha!123",
   confirmPassword: "Senha!123",
   acceptedTerms: true,
@@ -43,6 +44,15 @@ describe("registerSchema", () => {
       password,
       confirmPassword: password,
     });
+    expect(result.success).toBe(false);
+  });
+
+  it.each([
+    ["missing", ""],
+    ["with a wrong verifier digit", "529.982.247-24"],
+    ["with all digits equal", "111.111.111-11"],
+  ])("rejects a CPF %s", (_label, cpf) => {
+    const result = registerSchema.safeParse({ ...validRegistration, cpf });
     expect(result.success).toBe(false);
   });
 

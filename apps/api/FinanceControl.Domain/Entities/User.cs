@@ -17,6 +17,14 @@ namespace FinanceControl.Domain.Entities
         /// </summary>
         public DateTime? EmailVerifiedAt { get; set; }
 
+        /// <summary>
+        /// HMAC of the CPF given at signup (see <c>BillingSecrets.HashCpf</c>), never the CPF
+        /// itself. The free trial is one per person, and the person is the account holder —
+        /// not whoever's card pays — so it is this hash the trial is checked against. Null on
+        /// accounts created before signup asked for it; their first checkout fills it in.
+        /// </summary>
+        public string? CpfHash { get; set; }
+
         /// <summary>Opt-in, off by default: ask for an emailed code on every untrusted device.</summary>
         public bool TwoFactorEnabled { get; set; } = false;
 

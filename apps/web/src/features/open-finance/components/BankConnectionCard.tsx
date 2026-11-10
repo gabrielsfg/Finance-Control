@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { AlertCircle, Landmark, Loader2, Link2, RefreshCw, Unplug } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BankLogo } from "@/components/shared/BankLogo";
+import { ACCOUNT_TYPE_CONFIG } from "@/lib/config/accountTypes";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { useAdjustBankBalance, useSyncConnection } from "@/features/open-finance/hooks/useOpenFinance";
 import {
@@ -19,6 +21,8 @@ type Props = {
   onReconnect: () => void;
   onDisconnect: () => void;
 };
+
+const MEU_PLUGGY_CONNECTOR_ID = 200;
 
 /** Differences under R$ 1,00 are rounding or a pending fee — not worth an adjustment prompt. */
 const BALANCE_TOLERANCE = 100;
@@ -47,23 +51,30 @@ export function BankConnectionCard({ connection, onLinkAccounts, onReconnect, on
   return (
     <div className="border-border bg-surface2 flex flex-col gap-3 rounded-[16px] border p-4">
       <div className="flex items-center gap-3">
-        {connection.connectorImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- logo hosted by Pluggy, any size
-          <img
-            src={connection.connectorImageUrl}
-            alt=""
-            className="h-10 w-10 shrink-0 rounded-[10px] bg-white object-contain p-1"
-          />
-        ) : (
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]"
-            style={{ backgroundColor: connection.connectorPrimaryColor ? `#${connection.connectorPrimaryColor.replace("#", "")}` : "var(--surface)" }}
-          >
-            <Landmark size={18} className="text-white" />
-          </div>
-        )}
+        <BankLogo
+          slug={connection.bankSlug}
+          size={40}
+          fallback={
+            // MeuPluggy (connector 200) shows its own logo, not the bank's.
+            connection.connectorImageUrl && connection.connectorId !== MEU_PLUGGY_CONNECTOR_ID ? (
+              // eslint-disable-next-line @next/next/no-img-element -- logo hosted by Pluggy, any size
+              <img
+                src={connection.connectorImageUrl}
+                alt=""
+                className="h-10 w-10 shrink-0 rounded-[10px] bg-white object-contain p-1"
+              />
+            ) : (
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]"
+              style={{ backgroundColor: connection.connectorPrimaryColor ? `#${connection.connectorPrimaryColor.replace("#", "")}` : "var(--surface)" }}
+            >
+              <Landmark size={18} className="text-white" />
+            </div>
+            )
+          }
+        />
         <div className="min-w-0 flex-1">
-          <p className="text-text truncate text-[14px] font-medium">{connection.connectorName}</p>
+          <p className="text-text truncate text-[14px] font-medium">{connection.bankName}</p>
           <p className="text-text-muted text-[12px]">
             {connection.isImporting
               ? "Importando transações…"
@@ -113,7 +124,7 @@ export function BankConnectionCard({ connection, onLinkAccounts, onReconnect, on
             return (
               <div key={account.id} className="flex items-center gap-2 text-[12px]">
                 <span className="text-text-sub min-w-0 flex-1 truncate">
-                  {account.name} → <span className="text-text">{account.accountName}</span>
+                  {ACCOUNT_TYPE_CONFIG[account.suggestedAccountType].label} → <span className="text-text">{account.accountName}</span>
                 </span>
                 {showAdjust ? (
                   <button

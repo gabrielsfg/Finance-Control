@@ -40,6 +40,8 @@ export type SubscriptionCharge = {
   refundedAt: string | null;
   /** Cents returned, when refunded in full or in part. */
   refundedAmount: number | null;
+  /** Asaas did not refund it: the money goes back by Pix or transfer within 48 hours. */
+  manualRefundPending: boolean;
   /** NFS-e PDF, once the city authorized it. */
   invoicePdfUrl: string | null;
   invoiceUrl: string | null;

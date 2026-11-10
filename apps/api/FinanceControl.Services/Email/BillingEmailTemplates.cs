@@ -228,11 +228,48 @@ namespace FinanceControl.Services.Email
                        "Cancel or manage", manageUrl, pt));
         }
 
-        // The money goes back the way it came; a boleto has no way back but by hand.
+        /// <summary>
+        /// Internal notice to the app's own inbox: a refund Asaas did not make and that has
+        /// to be paid by hand before <paramref name="deadline"/>. Portuguese only — it is read
+        /// by the team, not by the user.
+        /// </summary>
+        public static (string Subject, string Html) ManualRefundNotice(
+            string userName, string userEmail, int userId, int amount, EnumBillingMethod billingMethod,
+            string? asaasCustomerId, string? asaasPaymentId, string reason, DateTime deadline)
+        {
+            var rows = new (string Label, string Value)[]
+            {
+                ("Valor", Money(amount)),
+                ("Prazo prometido ao usuário", $"{Date(deadline)} (48 horas)"),
+                ("Usuário", $"{userName} (id {userId})"),
+                ("E-mail do usuário", userEmail),
+                ("Pagamento original", billingMethod.ToString()),
+                ("Cliente no Asaas", asaasCustomerId ?? "—"),
+                ("Cobrança no Asaas", asaasPaymentId ?? "—"),
+                ("Motivo", reason)
+            };
+            var table = string.Join(string.Empty, rows.Select(r =>
+                $"""<tr><td style="padding:6px 12px 6px 0;color:{Muted};white-space:nowrap;vertical-align:top;">{Html(r.Label)}</td><td style="padding:6px 0;color:{Ink};">{Html(r.Value)}</td></tr>"""));
+
+            var html = $"""
+            <div style="margin:0;padding:32px 16px;background:{Paper};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+              <div style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;padding:32px;">
+                <div style="font-size:13px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:{Cobalt};">Helmo · interno</div>
+                <h1 style="margin:16px 0 16px;font-size:22px;line-height:1.3;color:{Ink};">Estorno manual pendente</h1>
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:{Ink};">O Asaas não fez este estorno. Devolva o valor por Pix ou transferência até o prazo abaixo e registre a data em ManualRefunds.ResolvedAt.</p>
+                <table style="border-collapse:collapse;font-size:14px;line-height:1.5;">{table}</table>
+              </div>
+            </div>
+            """;
+
+            return ($"Estorno manual pendente: {Money(amount)} para {userName}", html);
+        }
+
+        // The money goes back the way it came; what Asaas did not refund goes back by hand.
         private static string RefundTimingText(bool manualRefund, bool pt) => manualRefund
             ? pt
-                ? "Como o pagamento foi por boleto, a devolução é feita por Pix ou transferência: entraremos em contato por este e-mail para pedir os dados bancários."
-                : "As the payment was made by boleto, the refund goes by Pix or bank transfer: we will reply to this e-mail asking for your bank details."
+                ? "Como esse estorno não pôde ser feito automaticamente, você receberá o valor por Pix ou transferência em até 48 horas. Se precisarmos dos seus dados bancários, falaremos com você por este e-mail."
+                : "As this refund could not be made automatically, you will receive the money by Pix or bank transfer within 48 hours. If we need your bank details, we will contact you at this e-mail."
             : pt
                 ? "O estorno é solicitado na hora. No cartão de crédito, o valor aparece como crédito na fatura em até 10 dias úteis, conforme o emissor; no Pix, volta para a conta de origem."
                 : "The refund is requested right away. On a credit card it shows up as a credit on your statement within 10 business days, depending on the issuer; a Pix goes back to the paying account.";

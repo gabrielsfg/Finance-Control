@@ -22,6 +22,9 @@ namespace FinanceControl.Shared.Dtos.Response
         /// Cents returned, when refunded in full or in part.
         public int? RefundedAmount { get; set; }
 
+        /// <summary>The refund is paid back by hand (Pix or transfer) within 48 hours, not by Asaas.</summary>
+        public bool ManualRefundPending { get; set; }
+
         /// The NFS-e PDF, once the city has authorized it.
         public string? InvoicePdfUrl { get; set; }
 

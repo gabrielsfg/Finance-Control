@@ -53,8 +53,11 @@ namespace FinanceControl.Services.Services
 
         public async Task<GetSubscriptionPlansResponseDto> GetPlansAsync(int userId)
         {
-            var trialConsumed = await _context.BillingProfiles
-                .AnyAsync(p => p.UserId == userId && p.TrialConsumedAt != null);
+            var accountCpfHash = await _context.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.CpfHash)
+                .FirstOrDefaultAsync();
+            var trialConsumed = !await IsTrialAvailableAsync(userId, accountCpfHash, CancellationToken.None);
 
             var options = new List<SubscriptionPlanOptionResponseDto>();
             foreach (var plan in new[] { EnumSubscriptionPlan.Basic, EnumSubscriptionPlan.Premium })
@@ -186,19 +189,20 @@ namespace FinanceControl.Services.Services
             if (!await _turnstile.VerifyAsync(requestDto.CaptchaToken, remoteIp, cancellationToken))
                 return Fail(BillingErrors.CaptchaFailed);
 
+            // The payer's CPF: Asaas needs it for the customer and the card holder. It is not
+            // who the trial belongs to — that is the account holder's CPF, given at signup.
             var cpf = CpfHelper.Normalize(requestDto.Cpf);
             var cpfHash = _secrets.HashCpf(cpf);
 
-            // One trial per person: this account never had one, and no other account with
-            // the same CPF did either — including accounts deleted since (TrialUsages
-            // outlives them). Only cards get a trial — Pix and boleto cannot be charged at
-            // its end without the user acting.
+            // Accounts from before signup asked for the CPF fall back to the payer's, once:
+            // it becomes the account's from here on, so a later card cannot change it.
+            user.CpfHash ??= cpfHash;
+
+            // Only cards get a trial — Pix and boleto cannot be charged at its end without
+            // the user acting.
             var trialEligible = payByCard
                 && profile.TrialConsumedAt is null
-                && !await _context.TrialUsages.AnyAsync(t => t.CpfHash == cpfHash, cancellationToken)
-                && !await _context.BillingProfiles.AnyAsync(
-                    p => p.CpfHash == cpfHash && p.TrialConsumedAt != null && p.UserId != userId,
-                    cancellationToken);
+                && await IsTrialAvailableAsync(userId, user.CpfHash, cancellationToken);
 
             // The checkout promised a trial it cannot give: charge nothing, let the client
             // show the price and ask again.
@@ -248,7 +252,7 @@ namespace FinanceControl.Services.Services
                 subscription.TrialEndsAt = now.AddDays(_settings.TrialDays);
                 subscription.CurrentPeriodEnd = subscription.TrialEndsAt.Value;
                 profile.TrialConsumedAt = now;
-                _context.TrialUsages.Add(new TrialUsage { CpfHash = cpfHash, UsedAt = now });
+                _context.TrialUsages.Add(new TrialUsage { CpfHash = user.CpfHash, UsedAt = now });
             }
             else
             {
@@ -551,7 +555,6 @@ namespace FinanceControl.Services.Services
         private static string? ToRefundError(RefundOutcome outcome) => outcome switch
         {
             RefundOutcome.Unavailable => BillingErrors.GatewayUnavailable,
-            RefundOutcome.Rejected => BillingErrors.GatewayRejected,
             _ => null
         };
 
@@ -902,6 +905,32 @@ namespace FinanceControl.Services.Services
             return profile;
         }
 
+        /// <summary>
+        /// One trial per person, the person being the account holder: this account never had
+        /// one, and no account with the same signup CPF did either — including accounts
+        /// deleted since (TrialUsages outlives them). Profiles from before the CPF moved to
+        /// signup carry the payer's hash instead, so they are matched on that too.
+        /// </summary>
+        private async Task<bool> IsTrialAvailableAsync(int userId, string? accountCpfHash, CancellationToken cancellationToken)
+        {
+            if (await _context.BillingProfiles.AnyAsync(p => p.UserId == userId && p.TrialConsumedAt != null, cancellationToken))
+                return false;
+
+            // Unknown until signup or the first checkout gives it; the checkout checks again.
+            if (accountCpfHash is null)
+                return true;
+
+            if (await _context.TrialUsages.AnyAsync(t => t.CpfHash == accountCpfHash, cancellationToken))
+                return false;
+
+            return !await _context.BillingProfiles.AnyAsync(
+                p => p.UserId != userId
+                    && p.TrialConsumedAt != null
+                    && (p.CpfHash == accountCpfHash
+                        || _context.Users.Any(u => u.Id == p.UserId && u.CpfHash == accountCpfHash)),
+                cancellationToken);
+        }
+
         private Task<bool> HasLiveSubscriptionAsync(int userId, CancellationToken cancellationToken) =>
             _context.Subscriptions.AnyAsync(
                 s => s.UserId == userId && s.Status != EnumSubscriptionStatus.Expired, cancellationToken);
@@ -950,6 +979,7 @@ namespace FinanceControl.Services.Services
             ConfirmedAt = charge.ConfirmedAt,
             RefundedAt = charge.RefundedAt,
             RefundedAmount = charge.RefundedAmount,
+            ManualRefundPending = charge.ManualRefundPending,
             InvoicePdfUrl = charge.InvoiceStatus == "AUTHORIZED" ? charge.InvoicePdfUrl : null,
             InvoiceUrl = charge.InvoiceUrl,
             BankSlipUrl = charge.BankSlipUrl

@@ -15,6 +15,7 @@ namespace FinanceControl.Data.Mappings
             builder.Property(c => c.ConnectorName).HasMaxLength(150).IsRequired();
             builder.Property(c => c.ConnectorImageUrl).HasMaxLength(500);
             builder.Property(c => c.ConnectorPrimaryColor).HasMaxLength(20);
+            builder.Property(c => c.BankSlug).HasMaxLength(40);
             builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
             builder.Property(c => c.ExecutionStatus).HasMaxLength(60);
             builder.Property(c => c.LastErrorCode).HasMaxLength(60);

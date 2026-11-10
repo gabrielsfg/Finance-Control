@@ -161,7 +161,7 @@ function LegalConsentScreen({ pending }: { pending: PendingLegalDocument[] }) {
           </p>
           <button
             type="button"
-            onClick={() => void logout()}
+            onClick={() => void logout("signedOut")}
             className="text-text-sub hover:text-text flex items-center justify-center gap-2 rounded-[13px] px-4 py-2.5 text-[13.5px] font-medium transition-colors"
           >
             <LogOut size={15} />

@@ -597,7 +597,7 @@ class _AccountSection extends ConsumerWidget {
       builder: (_) => _PasswordConfirmDialog(
         title: 'Excluir conta',
         warning:
-            'Isso vai excluir permanentemente sua conta e todos os dados associados, desconectar os bancos e encerrar a assinatura (no plano anual, devolvemos os meses não iniciados, descontada a multa de 10% após os 7 primeiros dias). Esta ação não pode ser desfeita.',
+            'Isso vai excluir permanentemente sua conta e todos os dados associados, desconectar os bancos e encerrar a assinatura (no plano anual, devolvemos os meses não iniciados, descontada a multa de 10%). Esta ação não pode ser desfeita.',
         confirmLabel: 'Excluir',
         isDestructive: true,
         onConfirm: (password) async {
